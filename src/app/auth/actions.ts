@@ -31,7 +31,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
     email,
     password,
     options: {
-      emailRedirectTo: `${origin}/auth/confirm?next=/dashboard`,
+      emailRedirectTo: `${origin}/auth/confirm?next=/profile`,
       data: displayName ? { display_name: displayName } : undefined,
     },
   });
@@ -53,7 +53,7 @@ export async function logIn(_prev: AuthState, formData: FormData): Promise<AuthS
   if (error) return { error: error.message };
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect("/profile");
 }
 
 export async function signOut() {

@@ -3,7 +3,9 @@ import { supabaseEnv } from "@/lib/env";
 import { NextResponse, type NextRequest } from "next/server";
 
 /** Routes that require an authenticated, email-verified user. */
-const PROTECTED_PREFIXES = ["/dashboard"];
+// Routes requiring a signed-in member. /onboarding is included so first-run
+// setup cannot be reached anonymously.
+const PROTECTED_PREFIXES = ["/profile", "/onboarding"];
 
 /**
  * Refreshes the auth session cookie on every request and guards protected

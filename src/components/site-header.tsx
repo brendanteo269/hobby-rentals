@@ -39,8 +39,8 @@ export async function SiteHeader() {
         <div className="flex items-center gap-3">
           {user ? (
             <>
-              <Link href="/dashboard" className="hidden text-sm text-ink-soft hover:text-ink sm:block">
-                Dashboard
+              <Link href="/profile" className="hidden text-sm text-ink-soft hover:text-ink sm:block">
+                Profile
               </Link>
               <form action={signOut}>
                 <button type="submit" className="text-sm text-ink-soft transition-colors hover:text-ink">
