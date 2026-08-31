@@ -25,9 +25,9 @@ const COPY = {
     title: "Log in to HobbyRentals",
     blurb: "Pick up where you left off with your bookings and listings.",
     submit: "Log in",
-    footer: "New to HobbyRentals?",
+    footer: "No account yet?",
     footerHref: "/signup",
-    footerLink: "Create an account",
+    footerLink: "Sign up",
   },
 } as const;
 

@@ -48,13 +48,10 @@ export async function SiteHeader() {
               </form>
             </>
           ) : (
-            <Link href="/login" className="hidden text-sm text-ink-soft transition-colors hover:text-ink sm:block">
-              Log in
-            </Link>
+            <ButtonLink href="/login" className="px-4 py-2 text-xs">
+              Log in / Sign up
+            </ButtonLink>
           )}
-          <ButtonLink href="/signup" className="px-4 py-2 text-xs">
-            List your gear
-          </ButtonLink>
         </div>
       </Container>
     </header>
