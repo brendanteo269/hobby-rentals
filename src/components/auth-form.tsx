@@ -42,6 +42,17 @@ export function AuthForm({ mode, action }: Props) {
       <p className="body-copy mt-3">{copy.blurb}</p>
 
       <form action={formAction} className="mt-8 space-y-5">
+        {mode === "signup" && (
+          <Field
+            label="Display name"
+            id="display_name"
+            name="display_name"
+            type="text"
+            autoComplete="name"
+            hint="Optional. Shown to people you rent with."
+          />
+        )}
+
         <Field
           label="Email address"
           id="email"

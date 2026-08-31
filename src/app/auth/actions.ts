@@ -23,10 +23,17 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   const origin = (await headers()).get("origin") ?? "http://localhost:3000";
   const supabase = await createClient();
 
+  // display_name rides along in user metadata; the on_auth_user_created
+  // trigger copies it into public.profiles when the row is created.
+  const displayName = String(formData.get("display_name") ?? "").trim();
+
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: `${origin}/auth/confirm?next=/dashboard` },
+    options: {
+      emailRedirectTo: `${origin}/auth/confirm?next=/dashboard`,
+      data: displayName ? { display_name: displayName } : undefined,
+    },
   });
 
   if (error) return { error: error.message };
