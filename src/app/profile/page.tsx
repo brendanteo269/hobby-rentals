@@ -8,6 +8,7 @@ import {
   OwnerView,
   type ProfileView,
 } from "@/components/profile-views";
+import { AccountSettings } from "@/components/account-settings";
 
 export const metadata = { title: "Your profile — HobbyRentals" };
 
@@ -15,8 +16,14 @@ export const metadata = { title: "Your profile — HobbyRentals" };
  * The view lives in the URL rather than client state, so it survives a reload
  * and can be linked to. Members who only own default to the owning side.
  */
+const VIEWS: ProfileView[] = ["renter", "owner", "account"];
+
+function isView(value: string | undefined): value is ProfileView {
+  return VIEWS.includes(value as ProfileView);
+}
+
 function resolveView(requested: string | undefined, wantsToOwn: boolean, wantsToRent: boolean) {
-  if (requested === "owner" || requested === "renter") return requested;
+  if (isView(requested)) return requested;
   return wantsToOwn && !wantsToRent ? "owner" : "renter";
 }
 
@@ -54,11 +61,9 @@ export default async function ProfilePage({
       <div className="mt-10">
         <ViewTabs active={active} />
         <div className="mt-8">
-          {active === "renter" ? (
-            <RenterView enabled={profile.wants_to_rent} />
-          ) : (
-            <OwnerView enabled={profile.wants_to_own} />
-          )}
+          {active === "renter" && <RenterView enabled={profile.wants_to_rent} />}
+          {active === "owner" && <OwnerView enabled={profile.wants_to_own} />}
+          {active === "account" && <AccountSettings displayName={profile.display_name} />}
         </div>
       </div>
     </Container>

@@ -2,11 +2,12 @@ import Link from "next/link";
 import { Button, ButtonLink } from "./ui";
 import { enableRenting, enableOwning } from "@/app/profile/actions";
 
-export type ProfileView = "renter" | "owner";
+export type ProfileView = "renter" | "owner" | "account";
 
 const TABS: { view: ProfileView; label: string }[] = [
   { view: "renter", label: "Renting" },
   { view: "owner", label: "Owning" },
+  { view: "account", label: "Account" },
 ];
 
 /** Switches between the two sides of the marketplace. */
@@ -57,7 +58,7 @@ function EmptyState({
  * Shown when the member has not opted into this side yet. Turning it on is a
  * single click, so an early "rent only" choice never becomes a dead end.
  */
-function NotEnabled({ side }: { side: ProfileView }) {
+function NotEnabled({ side }: { side: "renter" | "owner" }) {
   const copy =
     side === "renter"
       ? {
