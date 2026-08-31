@@ -13,7 +13,7 @@ export default async function AuthErrorPage({
     <div className="w-full max-w-md">
       <p className="eyebrow">Something went wrong</p>
       <h1 className="display-caps mt-3 text-3xl">We could not confirm that link</h1>
-      <p className="mt-4 text-sm leading-relaxed text-ink-soft">
+      <p className="mt-4 body-copy">
         Confirmation links expire after 24 hours and can only be used once. Signing up again will
         send a fresh one.
       </p>

@@ -1,9 +1,10 @@
 import Link from "next/link";
+import type { Route } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Container, ButtonLink } from "./ui";
 import { signOut } from "@/app/auth/actions";
 
-const NAV = [
+const NAV: { label: string; href: Route }[] = [
   { label: "Marketplace", href: "/" },
   { label: "Start Renting!", href: "/" },
   { label: "About", href: "/" },

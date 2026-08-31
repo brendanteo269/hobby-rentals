@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { Button } from "./ui";
+import { Button, Field } from "./ui";
 import type { AuthState } from "@/app/auth/actions";
 
 type Props = {
@@ -39,40 +39,28 @@ export function AuthForm({ mode, action }: Props) {
     <div className="w-full max-w-md">
       <p className="eyebrow">{copy.eyebrow}</p>
       <h1 className="display-caps mt-3 text-3xl">{copy.title}</h1>
-      <p className="mt-3 text-sm leading-relaxed text-ink-soft">{copy.blurb}</p>
+      <p className="body-copy mt-3">{copy.blurb}</p>
 
       <form action={formAction} className="mt-8 space-y-5">
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium">
-            Email address
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            className="mt-2 w-full rounded-sm border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-ink"
-          />
-        </div>
+        <Field
+          label="Email address"
+          id="email"
+          name="email"
+          type="email"
+          autoComplete="email"
+          required
+        />
 
-        <div>
-          <label htmlFor="password" className="block text-sm font-medium">
-            Password
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete={mode === "signup" ? "new-password" : "current-password"}
-            required
-            minLength={8}
-            className="mt-2 w-full rounded-sm border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-ink"
-          />
-          {mode === "signup" && (
-            <p className="mt-2 text-xs text-ink-soft">At least 8 characters.</p>
-          )}
-        </div>
+        <Field
+          label="Password"
+          id="password"
+          name="password"
+          type="password"
+          autoComplete={mode === "signup" ? "new-password" : "current-password"}
+          required
+          minLength={8}
+          hint={mode === "signup" ? "At least 8 characters." : undefined}
+        />
 
         {state?.error && (
           <p role="alert" className="border-l-2 border-clay bg-sand px-3 py-2 text-sm text-ink">

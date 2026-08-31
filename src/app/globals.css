@@ -28,6 +28,14 @@ body {
   font-weight: 500;
 }
 
+/* Secondary prose. Used often enough that the three-class combination was
+   drifting between files. */
+@utility body-copy {
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: var(--color-ink-soft);
+}
+
 @utility eyebrow {
   font-size: 0.6875rem;
   letter-spacing: 0.14em;

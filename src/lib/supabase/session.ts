@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { supabaseEnv } from "@/lib/env";
 import { NextResponse, type NextRequest } from "next/server";
 
 /** Routes that require an authenticated, email-verified user. */
@@ -9,11 +10,12 @@ const PROTECTED_PREFIXES = ["/dashboard"];
  * routes. Must run in middleware so Server Components always see a fresh token.
  */
 export async function updateSession(request: NextRequest) {
+  const { url, publishableKey } = supabaseEnv();
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    url,
+    publishableKey,
     {
       cookies: {
         getAll() {
@@ -43,10 +45,10 @@ export async function updateSession(request: NextRequest) {
   const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
 
   if (isProtected && !user) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.searchParams.set("next", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
   return response;

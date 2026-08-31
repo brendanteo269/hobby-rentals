@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Route } from "next";
 import type { ComponentProps, ReactNode } from "react";
 
 /** Page-width container. Matches the wireframe's narrow editorial measure. */
@@ -7,7 +8,7 @@ export function Container({ children, className = "" }: { children: ReactNode; c
 }
 
 /** Section heading with an optional link on the right. */
-export function SectionHead({ title, href, linkLabel }: { title: string; href?: string; linkLabel?: string }) {
+export function SectionHead({ title, href, linkLabel }: { title: string; href?: Route; linkLabel?: string }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
       <h2 className="display-caps text-2xl sm:text-3xl">{title}</h2>
@@ -43,6 +44,36 @@ export function ButtonLink({ variant = "solid", className = "", children, ...pro
     <Link className={`${buttonBase} ${buttonVariants[variant]} ${className}`} {...props}>
       {children}
     </Link>
+  );
+}
+
+const inputBase =
+  "w-full rounded-sm border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-ink";
+
+/** Bare text input carrying the shared field styling. */
+export function Input({ className = "", ...props }: ComponentProps<"input">) {
+  return <input className={`${inputBase} ${className}`} {...props} />;
+}
+
+/**
+ * Labelled input for forms. `hint` sits under the field for guidance such as
+ * password rules; errors are rendered by the form, not here, because they come
+ * from the server action's returned state.
+ */
+export function Field({
+  label,
+  hint,
+  id,
+  ...props
+}: { label: string; hint?: string } & ComponentProps<"input">) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium">
+        {label}
+      </label>
+      <Input id={id} className="mt-2" {...props} />
+      {hint && <p className="mt-2 text-xs text-ink-soft">{hint}</p>}
+    </div>
   );
 }
 
