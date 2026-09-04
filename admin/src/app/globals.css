@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@theme {
+  /* Same palette as the public site, so the two read as one product. */
+  --color-cream: #fbfaf8;
+  --color-sand: #f4f1ec;
+  --color-stone: #e8e4dd;
+  --color-line: #e4e0da;
+  --color-ink: #37343f;
+  --color-ink-soft: #6b6773;
+  --color-clay: #b4714c;
+  --color-blush: #f2dad3;
+
+  /* Status colours, which the public site has no need for. Muted to sit
+     inside the same palette rather than shout over it — they appear only as
+     small dots and rule lines, never as fills. */
+  --color-ok: #4a7c59;
+  --color-warn: #b4714c;
+  --color-bad: #9a3f3f;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-newsreader), ui-serif, Georgia, serif;
+}
+
+body {
+  background: var(--color-sand);
+  color: var(--color-ink);
+}
+
+/* The three text utilities the public site defines, kept identical so copy
+   moved between the two keeps its voice. */
+@utility display-caps {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-weight: 500;
+}
+
+@utility body-copy {
+  font-size: 0.875rem;
+  line-height: 1.625;
+  color: var(--color-ink-soft);
+}
+
+@utility eyebrow {
+  font-size: 0.6875rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+}
