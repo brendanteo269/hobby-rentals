@@ -14,6 +14,12 @@
 -- re-checks authorisation itself rather than trusting the caller to have done
 -- it. The application checks too, but the database does not depend on that.
 --
+-- A caller satisfies those checks one of two ways: by holding the admin role,
+-- or by using the secret key. The portal currently does the latter, because it
+-- gates entry on a shared password rather than on individual accounts. Both
+-- paths are kept so that restoring per-administrator sign-in is a change to
+-- the application alone.
+--
 -- As elsewhere in this schema, nothing here copies data that auth.users
 -- already owns. Verification state is read live, never mirrored.
 
@@ -74,6 +80,28 @@ $$;
 comment on function public.is_admin is
   'True when the given user (default: the caller) holds the admin role.';
 
+/**
+ * Whether the caller is using the project's secret key.
+ *
+ * The admin portal holds that key and gates itself on a shared password, so
+ * it reaches these functions with no end-user session and no auth.uid() to
+ * check. This is the second way to satisfy the guards below.
+ *
+ * It is only ever true for a caller that already has the secret key, which is
+ * server-side by definition — the publishable key cannot produce this claim.
+ */
+create function public.is_service_role()
+returns boolean
+language sql
+stable
+set search_path = ''
+as $$
+  select coalesce(
+    nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'role',
+    ''
+  ) = 'service_role';
+$$;
+
 -- Administrators can read every profile. Without this, the audit trail below
 -- cannot show who performed an action: the profiles policy from the first
 -- migration confines each member to their own row.
@@ -88,7 +116,13 @@ create table public.admin_audit_log (
   id bigint generated always as identity primary key,
   -- Kept when the actor's account is later removed, so the record of what was
   -- done does not disappear along with the person who did it.
+  --
+  -- Null whenever the portal's shared password was used, because a shared
+  -- credential identifies nobody. actor_label carries what can be said
+  -- honestly in that case. Restoring per-administrator sign-in is what makes
+  -- this column meaningful again.
   actor_id uuid references auth.users (id) on delete set null,
+  actor_label text not null default 'Unknown',
   action text not null,
   target_user_id uuid references auth.users (id) on delete set null,
   detail jsonb not null default '{}'::jsonb,
@@ -115,13 +149,17 @@ create policy "Admins can read the audit log"
 /**
  * Records an administrator action.
  *
- * The actor is taken from the session, never from an argument, so a caller
- * cannot attribute their own action to somebody else.
+ * When a real administrator session exists the actor is taken from it, never
+ * from an argument, so one administrator cannot record an action against
+ * another's name. Under the portal's shared password there is no session to
+ * take it from, and actor_label is the only attribution available — it is a
+ * description of how the action was authorised, not a claim about who did it.
  */
 create function public.record_admin_action(
   action text,
   target_user_id uuid,
-  detail jsonb default '{}'::jsonb
+  detail jsonb default '{}'::jsonb,
+  actor_label text default 'Shared admin session'
 )
 returns bigint
 language plpgsql
@@ -132,12 +170,18 @@ declare
   actor uuid := (select auth.uid());
   entry_id bigint;
 begin
-  if not public.is_admin(actor) then
+  if not (public.is_admin(actor) or public.is_service_role()) then
     raise exception 'Not authorised' using errcode = '42501';
   end if;
 
-  insert into public.admin_audit_log (actor_id, action, target_user_id, detail)
-  values (actor, action, target_user_id, coalesce(detail, '{}'::jsonb))
+  insert into public.admin_audit_log (actor_id, action, target_user_id, detail, actor_label)
+  values (
+    actor,
+    action,
+    target_user_id,
+    coalesce(detail, '{}'::jsonb),
+    coalesce(nullif(trim(actor_label), ''), 'Shared admin session')
+  )
   returning id into entry_id;
 
   return entry_id;
@@ -186,7 +230,7 @@ as $$
 declare
   needle text := lower(trim(coalesce(search, '')));
 begin
-  if not public.is_admin() then
+  if not (public.is_admin() or public.is_service_role()) then
     raise exception 'Not authorised' using errcode = '42501';
   end if;
 
@@ -241,7 +285,7 @@ security definer
 set search_path = ''
 as $$
 begin
-  if not public.is_admin() then
+  if not (public.is_admin() or public.is_service_role()) then
     raise exception 'Not authorised' using errcode = '42501';
   end if;
 
@@ -274,8 +318,10 @@ $$;
 
 revoke execute on function public.admin_search_users(text, int, int) from public, anon;
 revoke execute on function public.admin_get_user(uuid) from public, anon;
-revoke execute on function public.record_admin_action(text, uuid, jsonb) from public, anon;
+revoke execute on function public.record_admin_action(text, uuid, jsonb, text) from public, anon;
 
-grant execute on function public.admin_search_users(text, int, int) to authenticated;
-grant execute on function public.admin_get_user(uuid) to authenticated;
-grant execute on function public.record_admin_action(text, uuid, jsonb) to authenticated;
+-- service_role is how the portal calls these today; authenticated is kept so
+-- that restoring per-administrator sign-in needs no grant changes.
+grant execute on function public.admin_search_users(text, int, int) to authenticated, service_role;
+grant execute on function public.admin_get_user(uuid) to authenticated, service_role;
+grant execute on function public.record_admin_action(text, uuid, jsonb, text) to authenticated, service_role;

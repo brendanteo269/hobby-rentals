@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { requireAdmin } from "@/lib/admin";
+import { requirePortalSession } from "@/lib/admin";
 import { searchUsers, PAGE_SIZE } from "@/lib/users";
+import { ROUTES } from "@/lib/routes";
 import { Container, Panel } from "@/components/ui";
 import { UserSearch } from "@/components/user-search";
 import { UserTable } from "@/components/user-table";
@@ -12,10 +13,11 @@ export default async function UsersPage({
 }: {
   searchParams: Promise<{ q?: string; page?: string }>;
 }) {
-  // The proxy already turned away anyone without the role. Repeated here
-  // because a page that reads account data should not depend on middleware
-  // having run — a matcher change is one edit away from silently exposing it.
-  await requireAdmin();
+  // The proxy already turned away anyone without the portal password.
+  // Repeated here because a page that reads account data should not depend on
+  // middleware having run — a matcher change is one edit away from silently
+  // exposing it.
+  await requirePortalSession();
 
   const { q = "", page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
@@ -84,7 +86,7 @@ function PageLink({
 
   return (
     <Link
-      href={search ? `/users?${search}` : "/users"}
+      href={search ? `${ROUTES.users}?${search}` : ROUTES.users}
       className="text-sm text-ink-soft transition-colors hover:text-ink"
     >
       {children}

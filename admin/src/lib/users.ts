@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /** Elevated platform roles, mirroring the app_role enum. */
 export type AppRole = "admin";
@@ -38,12 +38,15 @@ export type UserSearchResult = {
 /**
  * Finds accounts by display name, email address, or account id.
  *
- * The matching happens in admin_search_users, which also re-checks that the
- * caller is an administrator. A non-admin reaching this function gets an
- * error and an empty list, never a partial one.
+ * The matching happens in admin_search_users, which re-checks authorisation
+ * itself. A caller without the secret key gets an error and an empty list,
+ * never a partial one.
+ *
+ * Call only behind requirePortalSession(): the client used here carries the
+ * secret key and so satisfies that check unconditionally.
  */
 export async function searchUsers(query: string, page = 1): Promise<UserSearchResult> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase.rpc("admin_search_users", {
     search: query,
@@ -71,7 +74,7 @@ export async function searchUsers(query: string, page = 1): Promise<UserSearchRe
 
 /** One account by id, or null when no such account exists. */
 export async function getUserById(id: string): Promise<AdminUser | null> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { data, error } = await supabase.rpc("admin_get_user", { target_id: id });
 
   if (error) {

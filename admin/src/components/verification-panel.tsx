@@ -12,8 +12,6 @@ type Props = {
   userId: string;
   email: string | null;
   verified: boolean;
-  /** Reset is refused server-side for one's own account; hidden here to match. */
-  isSelf: boolean;
 };
 
 /**
@@ -22,7 +20,7 @@ type Props = {
  * Each form owns its own state, so a failed resend does not clear the result
  * of a reset, and the pending flag disables only the button that was pressed.
  */
-export function VerificationPanel({ userId, email, verified, isSelf }: Props) {
+export function VerificationPanel({ userId, email, verified }: Props) {
   const [resendState, resendAction, resending] = useActionState<VerificationState, FormData>(
     resendVerificationEmail,
     undefined,
@@ -55,35 +53,27 @@ export function VerificationPanel({ userId, email, verified, isSelf }: Props) {
           </form>
         )}
 
-        {!isSelf && (
-          <form
-            action={resetAction}
-            className={`space-y-3 ${verified ? "" : "border-t border-line pt-6"}`}
-            onSubmit={(event) => {
-              const message = verified
-                ? "Reset verification? This member will be unable to sign in until they confirm their email again."
-                : "Restart verification and send a fresh link?";
-              if (!window.confirm(message)) event.preventDefault();
-            }}
-          >
-            <input type="hidden" name="user_id" value={userId} />
-            <p className="body-copy">
-              {verified
-                ? "Marks the address unverified and sends a fresh link. Use when an address must be proven again."
-                : "Starts the verification process over and sends a fresh link."}
-            </p>
-            <FormMessage state={resetState} />
-            <Button type="submit" variant="outline" disabled={resetting || !email}>
-              {resetting ? "Resetting…" : "Reset verification"}
-            </Button>
-          </form>
-        )}
-
-        {isSelf && (
-          <p className="body-copy border-t border-line pt-6">
-            Verification cannot be reset on your own account.
+        <form
+          action={resetAction}
+          className={`space-y-3 ${verified ? "" : "border-t border-line pt-6"}`}
+          onSubmit={(event) => {
+            const message = verified
+              ? "Reset verification? This member will be unable to sign in until they confirm their email again."
+              : "Restart verification and send a fresh link?";
+            if (!window.confirm(message)) event.preventDefault();
+          }}
+        >
+          <input type="hidden" name="user_id" value={userId} />
+          <p className="body-copy">
+            {verified
+              ? "Marks the address unverified and sends a fresh link. Use when an address must be proven again."
+              : "Starts the verification process over and sends a fresh link."}
           </p>
-        )}
+          <FormMessage state={resetState} />
+          <Button type="submit" variant="outline" disabled={resetting || !email}>
+            {resetting ? "Resetting…" : "Reset verification"}
+          </Button>
+        </form>
       </div>
     </Panel>
   );

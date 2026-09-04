@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge, EmptyState } from "./ui";
+import { ROUTES } from "@/lib/routes";
 import { formatDate, shortId } from "@/lib/format";
 import { accountStatus, roleLabels, userLabel, type AdminUser } from "@/lib/users";
 
@@ -37,7 +38,7 @@ export function UserTable({ users }: { users: AdminUser[] }) {
             return (
               <tr key={user.id} className="border-b border-line last:border-0 hover:bg-sand">
                 <td className="px-6 py-4">
-                  <Link href={`/users/${user.id}`} className="block">
+                  <Link href={ROUTES.user(user.id)} className="block">
                     <span className="font-medium underline-offset-4 hover:underline">
                       {userLabel(user)}
                     </span>

@@ -1,12 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { requireAdmin } from "@/lib/admin";
+import { requirePortalSession } from "@/lib/admin";
 import { recordAdminAction } from "@/lib/audit";
-import { createClient } from "@/lib/supabase/server";
+import { createAnonClient } from "@/lib/supabase/anon";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getUserById, isEmailVerified } from "@/lib/users";
 import { publicSiteUrl } from "@/lib/env";
+import { ROUTES } from "@/lib/routes";
 
 export type VerificationState = { error?: string; success?: string } | undefined;
 
@@ -24,7 +25,7 @@ export async function resendVerificationEmail(
   _prev: VerificationState,
   formData: FormData,
 ): Promise<VerificationState> {
-  const admin = await requireAdmin();
+  await requirePortalSession();
   const userId = String(formData.get("user_id") ?? "");
 
   const user = await getUserById(userId);
@@ -34,8 +35,7 @@ export async function resendVerificationEmail(
     return { error: "This address is already verified. Reset verification to require it again." };
   }
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.resend({
+  const { error } = await createAnonClient().auth.resend({
     type: "signup",
     email: user.email,
     options: { emailRedirectTo: CONFIRM_REDIRECT },
@@ -45,12 +45,9 @@ export async function resendVerificationEmail(
   // how long to wait, so it is worth showing rather than replacing.
   if (error) return { error: error.message };
 
-  await recordAdminAction("verification_email_resent", userId, {
-    email: user.email,
-    actor_email: admin.email,
-  });
+  await recordAdminAction("verification_email_resent", userId, { email: user.email });
 
-  revalidatePath(`/users/${userId}`);
+  revalidatePath(ROUTES.user(userId));
   return { success: `Verification email sent to ${user.email}.` };
 }
 
@@ -59,37 +56,33 @@ export async function resendVerificationEmail(
  *
  * For an address that was confirmed but should be proven again — a support
  * handover, or a suspected compromise. The member cannot sign in until they
- * confirm, which is the point, and also why an administrator is not allowed
- * to do this to their own account: it would lock them out of the portal with
- * no way back in.
+ * confirm, which is the point.
+ *
+ * There is no "not on your own account" guard any more: the portal has no
+ * per-administrator identity to compare against. An administrator's own
+ * member account can be reset from here, and the way back in is the shared
+ * password, which this does not touch.
  */
 export async function resetVerification(
   _prev: VerificationState,
   formData: FormData,
 ): Promise<VerificationState> {
-  const admin = await requireAdmin();
+  await requirePortalSession();
   const userId = String(formData.get("user_id") ?? "");
-
-  if (userId === admin.id) {
-    return { error: "You cannot reset verification on your own account." };
-  }
 
   const user = await getUserById(userId);
   if (!user?.email) return { error: "That account no longer exists." };
 
   const wasVerified = isEmailVerified(user);
 
-  // The only step in this file that needs the secret key: clearing a
-  // confirmation is an admin-API write, and there is no user session to do it
-  // under. requireAdmin() above is what stands in for one.
-  const adminClient = createAdminClient();
-  const { error: clearError } = await adminClient.auth.admin.updateUserById(userId, {
+  // Clearing a confirmation is an Auth admin write, so it needs the secret
+  // key. requirePortalSession() above is what stands in for a session.
+  const { error: clearError } = await createAdminClient().auth.admin.updateUserById(userId, {
     email_confirm: false,
   });
   if (clearError) return { error: clearError.message };
 
-  const supabase = await createClient();
-  const { error: sendError } = await supabase.auth.resend({
+  const { error: sendError } = await createAnonClient().auth.resend({
     type: "signup",
     email: user.email,
     options: { emailRedirectTo: CONFIRM_REDIRECT },
@@ -97,14 +90,13 @@ export async function resetVerification(
 
   await recordAdminAction("verification_reset", userId, {
     email: user.email,
-    actor_email: admin.email,
     was_verified: wasVerified,
     // The reset itself landed; only the email did not. Recorded so the
     // timeline does not imply a message the member never received.
     email_sent: !sendError,
   });
 
-  revalidatePath(`/users/${userId}`);
+  revalidatePath(ROUTES.user(userId));
 
   if (sendError) {
     return {

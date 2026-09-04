@@ -27,53 +27,61 @@ npm run dev:all
 
 ## Setup
 
-The portal needs one migration and one admin account.
-
 **1. Apply the migration.** `supabase/migrations/20260904000000_admin_user_management.sql`
 in the repository root adds the roles table, the audit log, and the lookup
 functions. Apply it with the Supabase CLI, or paste it into the SQL editor.
 
-**2. Grant yourself the role.** There is deliberately no way to do this from
-the portal — a UI that can grant admin is a UI that can escalate. Run it
-against the database directly:
+**2. Fill in `SUPABASE_SECRET_KEY`.** Every account lookup uses it — see below.
 
-```sql
-insert into public.user_roles (user_id, role)
-select id, 'admin' from auth.users where email = 'you@example.com';
-```
+There is no admin account to create. Entry is the shared password.
 
-Without both steps the portal is reachable but empty: `is_admin()` does not
-exist or returns false, and every route refuses. That is the intended failure
-mode — it fails closed.
+## How access works
 
-## How access is enforced
+> **This is a proof-of-concept gate, not production authentication.**
 
-Three independent layers, because the data here is not protected by Row Level
-Security. Email and verification state live in `auth.users`, which has no
-policies to apply, so a single missed check would expose every account.
+One password opens the whole portal, defaulting to `password` when
+`ADMIN_PORTAL_PASSWORD` is unset. What that trades away, stated plainly:
 
-| Layer | Where | What it stops |
-| ----- | ----- | ------------- |
-| Proxy | `src/proxy.ts` | A non-admin before any page renders |
-| `requireAdmin()` | Every page and action | One that reaches a route anyway |
-| SQL functions | `admin_search_users`, `admin_get_user`, `record_admin_action` | One that reaches the database anyway |
+- **It identifies nobody.** The audit trail records that an action was taken
+  through the portal, not who took it. Entries read "Shared admin session".
+- **It cannot be revoked for one person**, only changed for everyone.
+- **It does not expire**, beyond the eight-hour session cookie.
+- **The default lives in this repository**, so an unset variable in a deployed
+  environment is an open door rather than a locked one.
 
-The database layer is the one that matters. The two above it are convenience
-and good manners; the functions themselves refuse a caller who is not an
-administrator, so a bug in this app cannot turn into a data leak.
+The password is never sent to the browser. The session cookie holds a SHA-256
+digest of it rather than the password itself, is `httpOnly`, and is compared
+in constant time — so it cannot be forged by inventing a cookie, and changing
+the password invalidates every session issued under the old one.
+
+Two layers enforce it: `src/proxy.ts` before any page renders, and
+`requirePortalSession()` in every page and server action, so a change to the
+proxy matcher cannot silently open a route.
+
+### Restoring per-administrator sign-in
+
+The pieces are still in place. `user_roles`, `is_admin()`, and the
+`authenticated` grants remain in the migration, and every SQL function accepts
+either an administrator session or the secret key. Returning to real accounts
+is a change to this app — swap `requirePortalSession()` for a role check and
+read through the caller's session — not to the schema.
 
 ## The secret key
 
-`SUPABASE_SECRET_KEY` bypasses Row Level Security entirely. It is read lazily
-by `supabaseSecretKey()`, used by exactly one action — resetting a member's
-verification, which is an Auth admin write with no user session to perform it
-under — and must never be given a `NEXT_PUBLIC_` prefix. Everything else in
-the portal reads through the caller's own session, so the ordinary path is
-guarded by the database rather than trusted to this app.
+`SUPABASE_SECRET_KEY` bypasses Row Level Security entirely and is **required**.
+With no per-administrator session, there is no identity for the database to
+check, so lookups are made with this key and the portal password is what
+stands in front of them. It must never be given a `NEXT_PUBLIC_` prefix.
+
+The one exception is resending a member's confirmation email, which goes
+through `createAnonClient()` on the publishable key — that is a public
+endpoint, and using the secret key would send the member a different email
+from the one they got at signup.
 
 ## Audit trail
 
 Administrator actions are written to `public.admin_audit_log` through
-`record_admin_action()`, which stamps the actor from the session rather than
-from an argument. The table has no insert, update, or delete policy: an audit
-trail the audited party can edit is not an audit trail.
+`record_admin_action()`. The table has no insert, update, or delete policy: an
+audit trail the audited party can edit is not an audit trail. `actor_id` is
+null while the shared password is in use, and `actor_label` carries what can
+honestly be said instead.

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { requireAdmin } from "@/lib/admin";
+import { requirePortalSession } from "@/lib/admin";
+import { ROUTES } from "@/lib/routes";
 import { getUserAuditTrail } from "@/lib/audit";
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
@@ -21,7 +22,7 @@ export default async function UserDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const admin = await requireAdmin();
+  await requirePortalSession();
   const { id } = await params;
 
   const user = await getUserById(id);
@@ -36,7 +37,7 @@ export default async function UserDetailPage({
   return (
     <Container className="py-12">
       <Link
-        href="/users"
+        href={ROUTES.users}
         className="text-sm text-ink-soft transition-colors hover:text-ink"
       >
         ← All accounts
@@ -101,12 +102,7 @@ export default async function UserDetailPage({
             />
           </Panel>
 
-          <VerificationPanel
-            userId={user.id}
-            email={user.email}
-            verified={verified}
-            isSelf={user.id === admin.id}
-          />
+          <VerificationPanel userId={user.id} email={user.email} verified={verified} />
         </div>
 
         <AuditTrail entries={auditEntries} />

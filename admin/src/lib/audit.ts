@@ -1,5 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
-import { shortId } from "@/lib/format";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Every action the portal is allowed to record.
@@ -15,11 +14,20 @@ export const AUDIT_ACTIONS = {
 
 export type AuditAction = keyof typeof AUDIT_ACTIONS;
 
+/**
+ * How an action is attributed while the portal uses one shared password.
+ *
+ * It describes the door that was opened, not the person who walked through
+ * it — there is no way to tell them apart. Restoring per-administrator
+ * sign-in is what would make this a name.
+ */
+const ACTOR_LABEL = "Shared admin session";
+
 export type AuditEntry = {
   id: number;
   action: AuditAction;
   label: string;
-  actorName: string;
+  actorLabel: string;
   detail: Record<string, unknown>;
   created_at: string;
 };
@@ -27,7 +35,7 @@ export type AuditEntry = {
 type AuditRow = {
   id: number;
   action: string;
-  actor_id: string | null;
+  actor_label: string;
   detail: Record<string, unknown> | null;
   created_at: string;
 };
@@ -37,20 +45,13 @@ function labelFor(action: string): string {
   return AUDIT_ACTIONS[action as AuditAction] ?? action;
 }
 
-/**
- * The audit trail for one account, newest first.
- *
- * Actor names are fetched separately rather than joined: admin_audit_log
- * references auth.users, not profiles, so there is no foreign key for
- * PostgREST to follow. One extra query for the handful of distinct actors on
- * a page is cheaper than reshaping the table around the query.
- */
+/** The audit trail for one account, newest first. */
 export async function getUserAuditTrail(userId: string, limit = 20): Promise<AuditEntry[]> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase
     .from("admin_audit_log")
-    .select("id, action, actor_id, detail, created_at")
+    .select("id, action, actor_label, detail, created_at")
     .eq("target_user_id", userId)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -60,52 +61,34 @@ export async function getUserAuditTrail(userId: string, limit = 20): Promise<Aud
     return [];
   }
 
-  const rows = (data ?? []) as AuditRow[];
-  const actorNames = await getActorNames(rows);
-
-  return rows.map((row) => ({
+  return ((data ?? []) as AuditRow[]).map((row) => ({
     id: row.id,
     action: row.action as AuditAction,
     label: labelFor(row.action),
-    actorName: row.actor_id
-      ? (actorNames.get(row.actor_id) ?? `Admin ${shortId(row.actor_id)}`)
-      : "Deleted account",
+    actorLabel: row.actor_label,
     detail: row.detail ?? {},
     created_at: row.created_at,
   }));
-}
-
-async function getActorNames(rows: AuditRow[]): Promise<Map<string, string>> {
-  const ids = [...new Set(rows.map((r) => r.actor_id).filter((id): id is string => id !== null))];
-  if (ids.length === 0) return new Map();
-
-  const supabase = await createClient();
-  const { data } = await supabase.from("profiles").select("id, display_name").in("id", ids);
-
-  return new Map(
-    (data ?? [])
-      .filter((p): p is { id: string; display_name: string } => p.display_name !== null)
-      .map((p) => [p.id, p.display_name]),
-  );
 }
 
 /**
  * Writes an entry to the audit trail.
  *
  * Goes through record_admin_action rather than inserting directly: the table
- * has no insert policy, and the function stamps the actor from the session so
- * an action cannot be recorded against somebody else's name.
+ * has no insert policy, and the function is what decides whether the caller
+ * is allowed to write at all.
  */
 export async function recordAdminAction(
   action: AuditAction,
   targetUserId: string,
   detail: Record<string, unknown> = {},
 ): Promise<void> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
   const { error } = await supabase.rpc("record_admin_action", {
     action,
     target_user_id: targetUserId,
     detail,
+    actor_label: ACTOR_LABEL,
   });
 
   // An action that succeeded but went unrecorded is worth knowing about, but

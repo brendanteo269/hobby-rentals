@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Button, Input } from "./ui";
+import { ROUTES } from "@/lib/routes";
 
 /**
  * Search box for the user list.
@@ -31,7 +32,7 @@ export function UserSearch({ query }: { query: string }) {
       <Button type="submit">Search</Button>
       {query && (
         <Link
-          href="/users"
+          href={ROUTES.users}
           className="px-1 pb-3 text-sm text-ink-soft underline underline-offset-4 hover:text-ink"
         >
           Clear

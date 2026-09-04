@@ -32,27 +32,46 @@ export function supabaseEnv() {
  *
  * Verification links are followed by members, who belong on the member site,
  * not in this portal — a link back to :3001 would land them on a page that
- * refuses them. Defaults to the local main app.
+ * asks them for the admin password. Defaults to the local main app.
  */
 export function publicSiteUrl(): string {
   return process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 }
 
 /**
+ * The single password that opens the portal.
+ *
+ * Falls back to a known value because this is a proof of concept and a
+ * default that works out of the box is the point. That fallback is also
+ * exactly why the portal must not be deployed anywhere public as it stands:
+ * the default is in the repository, so an unset variable in production is an
+ * open door rather than a locked one.
+ *
+ * Server-only. No NEXT_PUBLIC_ prefix, so it is never sent to the browser.
+ */
+export function portalPassword(): string {
+  return process.env.ADMIN_PORTAL_PASSWORD ?? "password";
+}
+
+/**
  * Reads the Supabase secret key, which bypasses Row Level Security.
  *
- * Separate from supabaseEnv() and read lazily, at the point of use, so that
- * the whole portal does not fail to boot over a key only two actions need —
- * and so that no code path can pick it up by accident. It must never be
- * prefixed NEXT_PUBLIC_, and must never be passed to a Client Component.
+ * Read lazily, at the point of use, so a missing key fails with its own name
+ * rather than as a broken page — and so no code path can pick it up by
+ * accident. It must never be prefixed NEXT_PUBLIC_, and must never be passed
+ * to a Client Component.
+ *
+ * Required for everything in the portal, not just writes: with the shared
+ * password there is no per-administrator session, so account lookups are made
+ * with this key too.
  */
 export function supabaseSecretKey() {
   const secretKey = process.env.SUPABASE_SECRET_KEY;
 
   if (!secretKey) {
     throw new Error(
-      "Missing SUPABASE_SECRET_KEY. This action needs the Supabase secret key; " +
-        "add it to admin/.env.local. It must not be exposed to the browser.",
+      "Missing SUPABASE_SECRET_KEY. The admin portal reads account data with the " +
+        "Supabase secret key; add it to admin/.env.local. It must not be exposed to the browser.",
     );
   }
 

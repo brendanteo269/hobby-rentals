@@ -25,7 +25,7 @@ export function AuditTrail({ entries }: { entries: AuditEntry[] }) {
             <li key={entry.id} className="border-l-2 border-line pl-4">
               <p className="text-sm font-medium">{entry.label}</p>
               <p className="mt-0.5 text-xs text-ink-soft">
-                {entry.actorName} · {formatDateTime(entry.created_at)}
+                {entry.actorLabel} · {formatDateTime(entry.created_at)}
               </p>
               {entry.detail.email_sent === false && (
                 <p className="mt-1 text-xs text-bad">The email failed to send.</p>

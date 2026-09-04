@@ -1,44 +1,34 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { ROUTES } from "@/lib/routes";
+import { endPortalSession, isCorrectPassword, startPortalSession } from "@/lib/portal-auth";
 
 export type AuthState = { error?: string } | undefined;
 
 /**
- * Signs an administrator in.
+ * Opens the portal for anyone who knows the shared password.
  *
- * The role is not checked here. Supabase issues a session to any valid
- * account, and refusing to complete the sign-in for non-admins would tell an
- * attacker which addresses hold the role. Instead the session is granted and
- * the proxy sends anyone without the role to /forbidden, which shows nothing.
+ * The failure message says only that the password was wrong. There is no
+ * account to be found or not found here, so there is nothing else to say, and
+ * nothing to be learned by asking repeatedly.
  */
-export async function logIn(_prev: AuthState, formData: FormData): Promise<AuthState> {
-  const email = String(formData.get("email") ?? "").trim();
+export async function enterPortal(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const password = String(formData.get("password") ?? "");
 
-  if (!email || !password) return { error: "Email and password are both required." };
+  if (!password) return { error: "Enter the admin password." };
 
-  const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  // Never logged, never echoed back in the returned state.
+  if (!(await isCorrectPassword(password))) {
+    return { error: "That password is not correct." };
+  }
 
-  if (error) return { error: error.message };
-
-  revalidatePath("/", "layout");
-  redirect("/users");
+  await startPortalSession();
+  redirect(ROUTES.users);
 }
 
-/**
- * Ends the session.
- *
- * In local development this also signs the account out of the public site on
- * port 3000: cookies are scoped by host, and ports do not distinguish hosts.
- * In production the two run on separate hostnames and hold separate sessions.
- */
-export async function signOut() {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
-  revalidatePath("/", "layout");
-  redirect("/login");
+/** Closes the portal on this browser. Nothing else is signed out. */
+export async function leavePortal() {
+  await endPortalSession();
+  redirect(ROUTES.login);
 }
