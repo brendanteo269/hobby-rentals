@@ -9,6 +9,7 @@ export type WalletTransaction = {
   amountCents: number;
   date: string;
   status: TransactionStatus;
+  paymentIntentId?: string;
 };
 
 export type WalletState = {
@@ -16,6 +17,22 @@ export type WalletState = {
   heldCents: number;
   transactions: WalletTransaction[];
 };
+
+export const EMPTY_WALLET: WalletState = { availableCents: 0, heldCents: 0, transactions: [] };
+
+type WalletApiResponse = {
+  available_balance_cents: number;
+  held_balance_cents: number;
+  transactions: Array<{ id: string; type: TransactionType; description: string; amount_cents: number; created_at: string; status: TransactionStatus; stripe_payment_intent_id?: string }>;
+};
+
+export function mapWalletResponse(data: WalletApiResponse): WalletState {
+  return {
+    availableCents: data.available_balance_cents,
+    heldCents: data.held_balance_cents,
+    transactions: data.transactions.map((tx) => ({ id: tx.id, type: tx.type, description: tx.description, amountCents: tx.amount_cents, date: tx.created_at, status: tx.status, paymentIntentId: tx.stripe_payment_intent_id })),
+  };
+}
 
 export const INITIAL_WALLET: WalletState = {
   availableCents: 8650,
