@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { Button, Field } from "./ui";
 import { updateDisplayName, changePassword, type FormState } from "@/app/profile/actions";
+import { CreditWallet } from "./credit-wallet";
 
 /** Renders the outcome of a settings form, success or failure. */
 function FormMessage({ state }: { state: FormState }) {
@@ -105,6 +106,7 @@ function PasswordForm() {
 export function AccountSettings({ displayName }: { displayName: string | null }) {
   return (
     <div className="space-y-10">
+      <CreditWallet />
       <DisplayNameForm current={displayName} />
       <PasswordForm />
     </div>

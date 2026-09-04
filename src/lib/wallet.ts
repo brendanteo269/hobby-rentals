@@ -1,0 +1,44 @@
+export type TransactionType = "TOPUP" | "ESCROW_HOLD" | "ESCROW_RELEASE" | "WITHDRAWAL" | "REFUND";
+export type TransactionStatus = "COMPLETED" | "PENDING" | "REFUNDED";
+export type TransactionFilter = "all" | "topups" | "escrow" | "releases" | "withdrawals";
+
+export type WalletTransaction = {
+  id: string;
+  type: TransactionType;
+  description: string;
+  amountCents: number;
+  date: string;
+  status: TransactionStatus;
+};
+
+export type WalletState = {
+  availableCents: number;
+  heldCents: number;
+  transactions: WalletTransaction[];
+};
+
+export const INITIAL_WALLET: WalletState = {
+  availableCents: 8650,
+  heldCents: 12000,
+  transactions: [
+    { id: "tx-1", type: "ESCROW_HOLD", description: "Security deposit reserved for camera booking", amountCents: -12000, date: "2026-08-28T09:30:00Z", status: "COMPLETED" },
+    { id: "tx-2", type: "ESCROW_RELEASE", description: "Deposit released after lens return", amountCents: 7500, date: "2026-08-20T04:15:00Z", status: "COMPLETED" },
+    { id: "tx-3", type: "TOPUP", description: "Credit top-up via card ending in 4242", amountCents: 10000, date: "2026-08-12T11:00:00Z", status: "COMPLETED" },
+    { id: "tx-4", type: "WITHDRAWAL", description: "Withdrawal to DBS •••• 4821", amountCents: -5000, date: "2026-08-03T06:20:00Z", status: "COMPLETED" },
+  ],
+};
+
+export function simulateWalletRequest<T>(value: T, delay = 700): Promise<T> {
+  return new Promise((resolve) => setTimeout(() => resolve(value), delay));
+}
+
+export const walletCurrency = new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD" });
+export function formatWalletAmount(cents: number) { return walletCurrency.format(cents / 100); }
+
+export function filterTransactions(transactions: WalletTransaction[], filter: TransactionFilter) {
+  if (filter === "all") return transactions;
+  if (filter === "topups") return transactions.filter((tx) => tx.type === "TOPUP");
+  if (filter === "escrow") return transactions.filter((tx) => tx.type === "ESCROW_HOLD");
+  if (filter === "releases") return transactions.filter((tx) => tx.type === "ESCROW_RELEASE");
+  return transactions.filter((tx) => tx.type === "WITHDRAWAL");
+}
