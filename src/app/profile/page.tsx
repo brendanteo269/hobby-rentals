@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/lib/profile";
+import { formatMonthYear } from "@/lib/format";
 import { Container } from "@/components/ui";
 import {
   ViewTabs,
@@ -47,10 +48,7 @@ export default async function ProfilePage({
   const { view } = await searchParams;
   const active: ProfileView = resolveView(view, profile.wants_to_own, profile.wants_to_rent);
 
-  const memberSince = new Date(profile.created_at).toLocaleDateString("en-SG", {
-    month: "long",
-    year: "numeric",
-  });
+  const memberSince = formatMonthYear(profile.created_at);
 
   return (
     <Container className="py-16">

@@ -14,16 +14,21 @@ import {
 import { Badge, Container, DescriptionList, Panel } from "@/components/ui";
 import { VerificationPanel } from "@/components/verification-panel";
 import { AuditTrail } from "@/components/audit-trail";
+import { AUDIT_PAGE_SIZE } from "@/lib/audit";
 
 export const metadata = { title: "Account — HobbyRentals Admin" };
 
 export default async function UserDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ auditPage?: string }>;
 }) {
   await requirePortalSession();
   const { id } = await params;
+  const { auditPage: auditPageParam } = await searchParams;
+  const auditPage = Math.max(1, Number(auditPageParam) || 1);
 
   const user = await getUserById(id);
   // Covers both a malformed id and one that does not exist. The two are not
@@ -32,7 +37,8 @@ export default async function UserDetailPage({
 
   const status = accountStatus(user);
   const verified = isEmailVerified(user);
-  const auditEntries = await getUserAuditTrail(user.id);
+  const { entries: auditEntries, total: auditTotal } = await getUserAuditTrail(user.id, auditPage);
+  const auditLastPage = Math.max(1, Math.ceil(auditTotal / AUDIT_PAGE_SIZE));
 
   return (
     <Container className="py-12">
@@ -105,7 +111,12 @@ export default async function UserDetailPage({
           <VerificationPanel userId={user.id} email={user.email} verified={verified} />
         </div>
 
-        <AuditTrail entries={auditEntries} />
+        <AuditTrail
+          entries={auditEntries}
+          page={auditPage}
+          lastPage={auditLastPage}
+          hrefForPage={(p) => (p > 1 ? `${ROUTES.user(user.id)}?auditPage=${p}` : ROUTES.user(user.id))}
+        />
       </div>
     </Container>
   );

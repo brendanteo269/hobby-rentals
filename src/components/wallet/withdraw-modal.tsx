@@ -1,10 +1,88 @@
 "use client";
+
 import { useState } from "react";
 import { Button, Field } from "../ui";
 import { simulateWalletRequest, formatWalletAmount } from "@/lib/wallet";
 import { WalletDialog } from "./wallet-dialog";
-export function WithdrawModal({ availableCents, onClose, onSuccess }: { availableCents: number; onClose: () => void; onSuccess: (amountCents: number, destination: string) => void }) {
-  const [amount, setAmount] = useState((availableCents / 100).toFixed(2)); const [destination, setDestination] = useState("DBS •••• 4821"); const [error, setError] = useState(""); const [loading, setLoading] = useState(false);
-  async function submit(e: React.FormEvent) { e.preventDefault(); const cents = Math.round(Number(amount) * 100); if (!Number.isFinite(cents) || cents <= 0 || cents > availableCents) { setError(`Enter an amount up to your available balance of ${formatWalletAmount(availableCents)}. Escrow funds cannot be withdrawn.`); return; } setLoading(true); await simulateWalletRequest(null); setLoading(false); onSuccess(cents, destination); }
-  return <WalletDialog title="Withdraw funds" onClose={onClose}><form className="mt-6 space-y-5" onSubmit={submit}><div className="border border-line bg-sand p-4"><p className="eyebrow">Withdrawable now</p><p className="mt-1 text-3xl">{formatWalletAmount(availableCents)}</p><p className="body-copy mt-2">Funds held in escrow stay locked until the related booking is released.</p></div><Field label="Amount" id="withdraw-amount" type="number" min="0.01" max={availableCents / 100} step="0.01" value={amount} onChange={(e) => { setAmount(e.target.value); setError(""); }} />{error && <p role="alert" className="text-sm text-clay">{error}</p>}<div><label htmlFor="destination" className="block text-sm font-medium">Payout destination</label><select id="destination" className="mt-2 w-full rounded-sm border border-line bg-white px-3 py-2.5 text-sm" value={destination} onChange={(e) => setDestination(e.target.value)}><option>DBS •••• 4821</option><option>OCBC •••• 1098</option></select></div><div className="flex justify-end gap-3"><Button type="button" variant="outline" onClick={onClose}>Cancel</Button><Button type="submit" disabled={loading}>{loading ? "Submitting…" : "Withdraw funds"}</Button></div></form></WalletDialog>;
+
+export function WithdrawModal({
+  availableCents,
+  onClose,
+  onSuccess,
+}: {
+  availableCents: number;
+  onClose: () => void;
+  onSuccess: (amountCents: number, destination: string) => void;
+}) {
+  const [amount, setAmount] = useState((availableCents / 100).toFixed(2));
+  const [destination, setDestination] = useState("DBS •••• 4821");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const cents = Math.round(Number(amount) * 100);
+    if (!Number.isFinite(cents) || cents <= 0 || cents > availableCents) {
+      setError(
+        `Enter an amount up to your available balance of ${formatWalletAmount(availableCents)}. Escrow funds cannot be withdrawn.`,
+      );
+      return;
+    }
+    setLoading(true);
+    await simulateWalletRequest(null);
+    setLoading(false);
+    onSuccess(cents, destination);
+  }
+
+  return (
+    <WalletDialog title="Withdraw funds" onClose={onClose}>
+      <form className="mt-6 space-y-5" onSubmit={submit}>
+        <div className="border border-line bg-sand p-4">
+          <p className="eyebrow">Withdrawable now</p>
+          <p className="mt-1 text-3xl">{formatWalletAmount(availableCents)}</p>
+          <p className="body-copy mt-2">Funds held in escrow stay locked until the related booking is released.</p>
+        </div>
+        <Field
+          label="Amount"
+          id="withdraw-amount"
+          type="number"
+          min="0.01"
+          max={availableCents / 100}
+          step="0.01"
+          value={amount}
+          onChange={(e) => {
+            setAmount(e.target.value);
+            setError("");
+          }}
+        />
+        {error && (
+          <p role="alert" className="text-sm text-clay">
+            {error}
+          </p>
+        )}
+        <div>
+          <label htmlFor="destination" className="block text-sm font-medium">
+            Payout destination
+          </label>
+          <select
+            id="destination"
+            className="mt-2 w-full rounded-sm border border-line bg-white px-3 py-2.5 text-sm"
+            value={destination}
+            onChange={(e) => setDestination(e.target.value)}
+          >
+            <option>DBS •••• 4821</option>
+            <option>OCBC •••• 1098</option>
+          </select>
+        </div>
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" disabled={loading}>
+            {loading ? "Submitting…" : "Withdraw funds"}
+          </Button>
+        </div>
+      </form>
+    </WalletDialog>
+  );
 }

@@ -29,6 +29,12 @@ export async function AdminHeader() {
           >
             Users
           </Link>
+          <Link
+            href={ROUTES.wallets}
+            className="text-sm text-ink-soft transition-colors hover:text-ink"
+          >
+            Wallets
+          </Link>
           <form action={leavePortal}>
             <button
               type="submit"

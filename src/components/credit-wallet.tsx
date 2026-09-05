@@ -38,7 +38,7 @@ export function CreditWallet() {
         <p className="body-copy mt-2">Keep credits ready for your next hobby, or withdraw funds you have earned.</p>
       </div>
       {apiError && <p role="alert" className="border-l-2 border-clay bg-sand px-3 py-2 text-sm">{apiError}</p>}
-      {loading ? <p role="status">Loading wallet…</p> : apiError ? <p>Wallet balances are unavailable.</p> : <><BalanceSummaryCard wallet={wallet} onOpenTopUp={() => { void openTopUp(); }} onOpenWithdraw={() => setModal("withdraw")} /><TransactionHistoryTable transactions={wallet.transactions} /></>}
+      {loading ? <p role="status">Loading wallet…</p> : apiError ? <p>Wallet balances are unavailable.</p> : <><BalanceSummaryCard wallet={wallet} onOpenTopUp={openTopUp} onOpenWithdraw={() => setModal("withdraw")} /><TransactionHistoryTable transactions={wallet.transactions} /></>}
       {modal === "topup" && <TopUpModal apiUrl={apiUrl} onClose={closeModal} onWalletRefresh={refreshWallet} />}
       {modal === "withdraw" && <WithdrawModal availableCents={wallet.availableCents} onClose={closeModal} onSuccess={(amountCents, destination) => { setWallet((current) => ({ ...current, availableCents: current.availableCents - amountCents, transactions: [{ id: crypto.randomUUID(), type: "WITHDRAWAL", description: `Withdrawal to ${destination}`, amountCents: -amountCents, date: new Date().toISOString(), status: "PENDING" }, ...current.transactions] })); closeModal(); }} />}
     </section>

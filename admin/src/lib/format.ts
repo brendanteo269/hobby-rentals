@@ -25,3 +25,10 @@ export function formatDateTime(value: string | null, fallback = "—"): string {
 export function shortId(id: string): string {
   return id.slice(0, 8);
 }
+
+const MONEY = new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD" });
+
+/** cents is a signed integer: negative renders with a minus sign, not stripped. */
+export function formatMoney(cents: number): string {
+  return MONEY.format(cents / 100);
+}
