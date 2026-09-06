@@ -4,17 +4,21 @@ import { useState } from "react";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { Button, Field } from "../ui";
-import { formatWalletAmount, simulateWalletRequest, type WalletState } from "@/lib/wallet";
-import { createClient } from "@/lib/supabase/client";
+import { formatWalletAmount, simulateWalletRequest, walletAuthHeader, type WalletState } from "@/lib/wallet";
 import { WalletDialog } from "./wallet-dialog";
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
   : null;
 
-type Props = { apiUrl: string; onClose: () => void; onWalletRefresh: () => Promise<WalletState> };
+type Props = {
+  apiUrl: string;
+  onClose: () => void;
+  onWalletRefresh: () => Promise<WalletState>;
+  onSuccess: (message: string) => void;
+};
 
-export function TopUpModal({ apiUrl, onClose, onWalletRefresh }: Props) {
+export function TopUpModal({ apiUrl, onClose, onWalletRefresh, onSuccess }: Props) {
   const [step, setStep] = useState<"amount" | "payment" | "confirmed">("amount");
   const [amount, setAmount] = useState("50");
   const [amountCents, setAmountCents] = useState(0);
@@ -39,13 +43,10 @@ export function TopUpModal({ apiUrl, onClose, onWalletRefresh }: Props) {
       return;
     }
     try {
-      const {
-        data: { session },
-      } = await createClient().auth.getSession();
-      if (!session) throw new Error("Please sign in again.");
+      const headers = await walletAuthHeader();
       const response = await fetch(`${apiUrl}/wallet/topups/intent`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.access_token}` },
+        headers: { "Content-Type": "application/json", ...headers },
         body: JSON.stringify({ amount_cents: cents }),
       });
       if (!response.ok) throw new Error("Unable to start payment.");
@@ -71,7 +72,7 @@ export function TopUpModal({ apiUrl, onClose, onWalletRefresh }: Props) {
       const completed = wallet.transactions.some(
         (tx) => tx.type === "TOPUP" && tx.paymentIntentId === paymentIntentId && tx.status === "COMPLETED",
       );
-      if (completed) onClose();
+      if (completed) onSuccess(`Top-up of ${formatWalletAmount(amountCents)} completed.`);
     } catch {
       setError("Payment succeeded, but your balance is still updating.");
     } finally {
@@ -87,7 +88,7 @@ export function TopUpModal({ apiUrl, onClose, onWalletRefresh }: Props) {
       const completed = wallet.transactions.some(
         (tx) => tx.type === "TOPUP" && tx.paymentIntentId === paymentIntentId && tx.status === "COMPLETED",
       );
-      if (completed) onClose();
+      if (completed) onSuccess(`Top-up of ${formatWalletAmount(amountCents)} completed.`);
       else setError("Your payment is still being finalized. Please refresh again shortly.");
     } catch {
       setError("Unable to refresh your wallet right now.");

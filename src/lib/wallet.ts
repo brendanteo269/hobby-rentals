@@ -1,3 +1,5 @@
+import { createClient } from "@/lib/supabase/client";
+
 export type TransactionType = "TOPUP" | "ESCROW_HOLD" | "ESCROW_RELEASE" | "WITHDRAWAL" | "REFUND" | "ADMIN_CREDIT" | "ADMIN_DEBIT";
 export type TransactionStatus = "COMPLETED" | "PENDING" | "REFUNDED";
 export type TransactionFilter = "all" | "topups" | "escrow" | "releases" | "withdrawals" | "adjustments";
@@ -36,6 +38,15 @@ export function mapWalletResponse(data: WalletApiResponse): WalletState {
 
 export function simulateWalletRequest<T>(value: T, delay = 700): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), delay));
+}
+
+/** Bearer header for calling the wallet API. Throws if the member's session is missing — every wallet call requires one. */
+export async function walletAuthHeader(): Promise<Record<string, string>> {
+  const {
+    data: { session },
+  } = await createClient().auth.getSession();
+  if (!session) throw new Error("Please sign in again.");
+  return { Authorization: `Bearer ${session.access_token}` };
 }
 
 export const walletCurrency = new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD" });
