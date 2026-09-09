@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { Button } from "./ui";
+import { Button, Field, TextareaField } from "./ui";
 import { completeOnboarding, type OnboardingState } from "@/app/profile/actions";
 
 const OPTIONS = [
@@ -53,6 +53,35 @@ export function OnboardingForm() {
             </span>
           </label>
         ))}
+
+        <div className="space-y-4 border-t border-line pt-4">
+          <Field
+            label="Contact number"
+            id="contact_number"
+            name="contact_number"
+            type="tel"
+            autoComplete="tel"
+            required
+            hint="Shown to the other party once a booking is confirmed."
+          />
+          <Field
+            label="Preferred meetup location"
+            id="preferred_meetup_location"
+            name="preferred_meetup_location"
+            type="text"
+            maxLength={120}
+            required
+            hint="Where you'd usually hand off gear, e.g. an MRT station."
+          />
+          <TextareaField
+            label="Bio"
+            id="bio"
+            name="bio"
+            rows={3}
+            maxLength={500}
+            hint="Optional. A line or two about you."
+          />
+        </div>
 
         {state?.error && (
           <p role="alert" className="border-l-2 border-clay bg-sand px-3 py-2 text-sm text-ink">

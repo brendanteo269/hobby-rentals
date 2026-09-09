@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { Button, Field } from "./ui";
 import type { AuthState } from "@/app/auth/actions";
+import { PASSWORD_REQUIREMENTS_HINT } from "@/lib/password";
 
 type Props = {
   mode: "signup" | "login";
@@ -70,8 +71,21 @@ export function AuthForm({ mode, action }: Props) {
           autoComplete={mode === "signup" ? "new-password" : "current-password"}
           required
           minLength={8}
-          hint={mode === "signup" ? "At least 8 characters." : undefined}
+          hint={mode === "signup" ? PASSWORD_REQUIREMENTS_HINT : undefined}
         />
+
+        {mode === "signup" && (
+          <label className="flex cursor-pointer items-start gap-3 text-sm">
+            <input type="checkbox" name="terms" required className="mt-0.5 size-4 shrink-0 accent-ink" />
+            <span className="body-copy">
+              I agree to the{" "}
+              <Link href="/" className="text-ink underline underline-offset-4">
+                Terms and Conditions
+              </Link>
+              .
+            </span>
+          </label>
+        )}
 
         {state?.error && (
           <p role="alert" className="border-l-2 border-clay bg-sand px-3 py-2 text-sm text-ink">
