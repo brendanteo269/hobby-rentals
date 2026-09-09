@@ -1,10 +1,10 @@
-import Link from "next/link";
 import { requirePortalSession } from "@/lib/admin";
 import { searchUsers, PAGE_SIZE } from "@/lib/users";
 import { ROUTES } from "@/lib/routes";
 import { Container, Panel } from "@/components/ui";
 import { UserSearch } from "@/components/user-search";
 import { UserTable } from "@/components/user-table";
+import { Pagination } from "@/components/pagination";
 
 export const metadata = { title: "User management — HobbyRentals Admin" };
 
@@ -48,48 +48,15 @@ export default async function UsersPage({
         </Panel>
       </div>
 
-      {lastPage > 1 && (
-        <nav className="mt-6 flex items-center justify-between" aria-label="Pagination">
-          <PageLink q={q} page={page - 1} disabled={page <= 1}>
-            ← Previous
-          </PageLink>
-          <span className="text-sm text-ink-soft">
-            Page {page} of {lastPage}
-          </span>
-          <PageLink q={q} page={page + 1} disabled={page >= lastPage}>
-            Next →
-          </PageLink>
-        </nav>
-      )}
+      <Pagination page={page} lastPage={lastPage} hrefForPage={(p) => hrefForUsersPage(q, p)} />
     </Container>
   );
 }
 
-/** A disabled control is rendered as text, so it cannot be tabbed to or followed. */
-function PageLink({
-  q,
-  page,
-  disabled,
-  children,
-}: {
-  q: string;
-  page: number;
-  disabled: boolean;
-  children: React.ReactNode;
-}) {
-  if (disabled) return <span className="text-sm text-stone">{children}</span>;
-
+function hrefForUsersPage(q: string, page: number): string {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   if (page > 1) params.set("page", String(page));
   const search = params.toString();
-
-  return (
-    <Link
-      href={search ? `${ROUTES.users}?${search}` : ROUTES.users}
-      className="text-sm text-ink-soft transition-colors hover:text-ink"
-    >
-      {children}
-    </Link>
-  );
+  return search ? `${ROUTES.users}?${search}` : ROUTES.users;
 }

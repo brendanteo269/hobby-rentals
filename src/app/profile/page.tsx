@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/lib/profile";
+import { formatMonthYear } from "@/lib/format";
 import { Container } from "@/components/ui";
 import {
   ViewTabs,

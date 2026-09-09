@@ -2,9 +2,10 @@ import { createServerClient } from "@supabase/ssr";
 import { supabaseEnv } from "@/lib/env";
 import { NextResponse, type NextRequest } from "next/server";
 
-/** Routes that require an authenticated, email-verified user. */
-// Routes requiring a signed-in member. /onboarding is included so first-run
-// setup cannot be reached anonymously.
+/**
+ * Routes requiring a signed-in member. /onboarding is included so first-run
+ * setup cannot be reached anonymously.
+ */
 const PROTECTED_PREFIXES = ["/profile", "/onboarding"];
 
 /**

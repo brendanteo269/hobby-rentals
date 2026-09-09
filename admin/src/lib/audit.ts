@@ -10,6 +10,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export const AUDIT_ACTIONS = {
   verification_email_resent: "Verification email resent",
   verification_reset: "Verification reset",
+  wallet_credit_applied: "Manual credit applied",
+  wallet_debit_applied: "Manual debit applied",
 } as const;
 
 export type AuditAction = keyof typeof AUDIT_ACTIONS;
@@ -32,6 +34,13 @@ export type AuditEntry = {
   created_at: string;
 };
 
+export const AUDIT_PAGE_SIZE = 10;
+
+export type AuditTrailResult = {
+  entries: AuditEntry[];
+  total: number;
+};
+
 type AuditRow = {
   id: number;
   action: string;
@@ -45,30 +54,34 @@ function labelFor(action: string): string {
   return AUDIT_ACTIONS[action as AuditAction] ?? action;
 }
 
-/** The audit trail for one account, newest first. */
-export async function getUserAuditTrail(userId: string, limit = 20): Promise<AuditEntry[]> {
+/** The audit trail for one account, newest first, paginated at AUDIT_PAGE_SIZE. */
+export async function getUserAuditTrail(userId: string, page = 1): Promise<AuditTrailResult> {
   const supabase = createAdminClient();
+  const offset = (page - 1) * AUDIT_PAGE_SIZE;
 
-  const { data, error } = await supabase
+  const { data, error, count } = await supabase
     .from("admin_audit_log")
-    .select("id, action, actor_label, detail, created_at")
+    .select("id, action, actor_label, detail, created_at", { count: "exact" })
     .eq("target_user_id", userId)
     .order("created_at", { ascending: false })
-    .limit(limit);
+    .range(offset, offset + AUDIT_PAGE_SIZE - 1);
 
   if (error) {
     console.error("Failed to load audit trail:", error.message);
-    return [];
+    return { entries: [], total: 0 };
   }
 
-  return ((data ?? []) as AuditRow[]).map((row) => ({
-    id: row.id,
-    action: row.action as AuditAction,
-    label: labelFor(row.action),
-    actorLabel: row.actor_label,
-    detail: row.detail ?? {},
-    created_at: row.created_at,
-  }));
+  return {
+    entries: ((data ?? []) as AuditRow[]).map((row) => ({
+      id: row.id,
+      action: row.action as AuditAction,
+      label: labelFor(row.action),
+      actorLabel: row.actor_label,
+      detail: row.detail ?? {},
+      created_at: row.created_at,
+    })),
+    total: count ?? 0,
+  };
 }
 
 /**

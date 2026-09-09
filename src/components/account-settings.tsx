@@ -170,6 +170,7 @@ export function AccountSettings({
 }: { displayName: string | null } & ContactDetails) {
   return (
     <div className="space-y-10">
+      <CreditWallet />
       <DisplayNameForm current={displayName} />
       <ContactDetailsForm
         contactNumber={contactNumber}

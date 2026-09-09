@@ -15,6 +15,8 @@ export const ROUTES = {
   // template literal cannot satisfy on its own. The cast is confined to this
   // one line rather than repeated at every link.
   user: (id: string) => `/users/${id}` as Route,
+  wallets: "/wallets",
+  wallet: (id: string) => `/wallets/${id}` as Route,
 } as const;
 
 /** Paths reachable without the portal password. Everything else is guarded. */

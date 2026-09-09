@@ -33,25 +33,48 @@ export function ButtonLink({ variant = "solid", className = "", children, ...pro
   );
 }
 
-const inputBase =
+// Shared by every native form control below, so the visual decision — border,
+// background, padding, focus ring — lives in one place rather than being
+// copied wherever a select or textarea needs to look like an Input.
+const fieldBase =
   "w-full rounded-sm border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-ink";
 
 export function Input({ className = "", ...props }: ComponentProps<"input">) {
-  return <input className={`${inputBase} ${className}`} {...props} />;
+  return <input className={`${fieldBase} ${className}`} {...props} />;
+}
+
+export function Select({ className = "", ...props }: ComponentProps<"select">) {
+  return <select className={`${fieldBase} ${className}`} {...props} />;
+}
+
+export function Textarea({ className = "", ...props }: ComponentProps<"textarea">) {
+  return <textarea className={`${fieldBase} ${className}`} {...props} />;
+}
+
+/** Marks a field's label as required, next to the label text rather than only on the control, so it reads before a screen reader or a glance reaches the input. */
+export function RequiredMark() {
+  return (
+    <span aria-hidden="true" className="text-clay">
+      {" "}
+      *
+    </span>
+  );
 }
 
 export function Field({
   label,
   hint,
   id,
+  required,
   ...props
 }: { label: string; hint?: string } & ComponentProps<"input">) {
   return (
     <div>
       <label htmlFor={id} className="block text-sm font-medium">
         {label}
+        {required && <RequiredMark />}
       </label>
-      <Input id={id} className="mt-2" {...props} />
+      <Input id={id} className="mt-2" required={required} {...props} />
       {hint && <p className="mt-2 text-xs text-ink-soft">{hint}</p>}
     </div>
   );
