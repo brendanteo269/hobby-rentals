@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { Button, Field, TextareaField } from "./ui";
+import { CreditWallet } from "./credit-wallet";
 import {
   updateDisplayName,
   updateContactDetails,
