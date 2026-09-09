@@ -9,6 +9,9 @@ import { createClient } from "@/lib/supabase/server";
 export type Profile = {
   id: string;
   display_name: string | null;
+  contact_number: string | null;
+  preferred_meetup_location: string | null;
+  bio: string | null;
   wants_to_rent: boolean;
   wants_to_own: boolean;
   /** Null until first-run setup is done. See the profile_intent migration. */
@@ -18,7 +21,7 @@ export type Profile = {
 };
 
 const PROFILE_COLUMNS =
-  "id, display_name, wants_to_rent, wants_to_own, onboarded_at, created_at, updated_at";
+  "id, display_name, contact_number, preferred_meetup_location, bio, wants_to_rent, wants_to_own, onboarded_at, created_at, updated_at";
 
 /**
  * Reads the signed-in member's profile.
