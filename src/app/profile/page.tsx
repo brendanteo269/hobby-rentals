@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/lib/profile";
+import { formatMonthYear } from "@/lib/format";
 import { Container } from "@/components/ui";
 import {
   ViewTabs,
@@ -51,19 +52,32 @@ export default async function ProfilePage({
     month: "long",
     year: "numeric",
   });
+  const isVerified = Boolean(user.email_confirmed_at);
 
   return (
     <Container className="py-16">
       <p className="eyebrow">Member since {memberSince}</p>
       <h1 className="display-caps mt-3 text-3xl">{profile.display_name ?? "Your profile"}</h1>
-      <p className="body-copy mt-2">{user.email}</p>
+      <p className="body-copy mt-2">
+        {user.email}
+        <span className={`ml-3 text-xs ${isVerified ? "text-ink-soft" : "text-clay"}`}>
+          {isVerified ? "Verified" : "Pending verification"}
+        </span>
+      </p>
 
       <div className="mt-10">
         <ViewTabs active={active} />
         <div className="mt-8">
           {active === "renter" && <RenterView enabled={profile.wants_to_rent} />}
           {active === "owner" && <OwnerView enabled={profile.wants_to_own} />}
-          {active === "account" && <AccountSettings displayName={profile.display_name} />}
+          {active === "account" && (
+            <AccountSettings
+              displayName={profile.display_name}
+              contactNumber={profile.contact_number}
+              preferredMeetupLocation={profile.preferred_meetup_location}
+              bio={profile.bio}
+            />
+          )}
         </div>
       </div>
     </Container>

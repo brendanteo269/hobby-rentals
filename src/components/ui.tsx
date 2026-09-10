@@ -77,6 +77,25 @@ export function Field({
   );
 }
 
+/** Labelled textarea, styled to match Field. */
+export function TextareaField({
+  label,
+  hint,
+  id,
+  className = "",
+  ...props
+}: { label: string; hint?: string } & ComponentProps<"textarea">) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-sm font-medium">
+        {label}
+      </label>
+      <textarea id={id} className={`${inputBase} mt-2 resize-y ${className}`} {...props} />
+      {hint && <p className="mt-2 text-xs text-ink-soft">{hint}</p>}
+    </div>
+  );
+}
+
 /**
  * Stands in for photography that hasn't been shot yet. The wireframe marks
  * these slots too — swap for next/image once real assets exist.

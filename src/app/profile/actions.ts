@@ -3,11 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { validatePasswordComplexity } from "@/lib/password";
+import { parseContactDetails } from "@/lib/contact-details";
 
 export type OnboardingState = { error?: string } | undefined;
 
 /**
- * Records what the member came here to do, and marks first-run setup complete.
+ * Records what the member came here to do, their contact details, and marks
+ * first-run setup complete.
  *
  * The update goes through the member's own session, so Row Level Security is
  * what confines it to their row — the id is never taken from the form.
@@ -23,6 +26,10 @@ export async function completeOnboarding(
     return { error: "Pick at least one. You can change this later." };
   }
 
+  const contactResult = parseContactDetails(formData);
+  if (!contactResult.ok) return { error: contactResult.error };
+  const { values } = contactResult;
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -34,6 +41,9 @@ export async function completeOnboarding(
     .update({
       wants_to_rent: wantsToRent,
       wants_to_own: wantsToOwn,
+      contact_number: values.contact_number,
+      preferred_meetup_location: values.preferred_meetup_location,
+      bio: values.bio,
       onboarded_at: new Date().toISOString(),
     })
     .eq("id", user.id);
@@ -100,6 +110,36 @@ export async function updateDisplayName(
   return { success: "Display name updated." };
 }
 
+/** Updates the contact number, preferred meetup location and bio collected at onboarding. */
+export async function updateContactDetails(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const contactResult = parseContactDetails(formData);
+  if (!contactResult.ok) return { error: contactResult.error };
+  const { values } = contactResult;
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      contact_number: values.contact_number,
+      preferred_meetup_location: values.preferred_meetup_location,
+      bio: values.bio,
+    })
+    .eq("id", user.id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/profile");
+  return { success: "Contact details updated." };
+}
+
 /**
  * Changes the account password.
  *
@@ -114,7 +154,10 @@ export async function changePassword(_prev: FormState, formData: FormData): Prom
   const confirmPassword = String(formData.get("confirm_password") ?? "");
 
   if (!currentPassword || !newPassword) return { error: "All password fields are required." };
-  if (newPassword.length < 8) return { error: "New password must be at least 8 characters." };
+
+  const passwordError = validatePasswordComplexity(newPassword);
+  if (passwordError) return { error: passwordError };
+
   if (newPassword !== confirmPassword) return { error: "New passwords do not match." };
   if (newPassword === currentPassword) {
     return { error: "The new password is the same as the current one." };
