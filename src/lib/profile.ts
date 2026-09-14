@@ -26,13 +26,23 @@ const PROFILE_COLUMNS =
 /**
  * Reads the signed-in member's profile.
  *
- * Row Level Security scopes this to the caller, so no user id is passed in —
- * an anonymous caller simply gets nothing back. Returns null when the row is
- * missing, which is the expected state only if the signup trigger failed.
+ * Filtered explicitly by the caller's id rather than relying solely on RLS:
+ * an admin's "read every profile" policy means an unfiltered select returns
+ * every row for that account, not just its own. Returns null when the row is
+ * missing (no session, or the signup trigger failed) or when there is none.
  */
 export async function getOwnProfile(): Promise<Profile | null> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("profiles").select(PROFILE_COLUMNS).maybeSingle();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select(PROFILE_COLUMNS)
+    .eq("id", user.id)
+    .maybeSingle();
 
   if (error) {
     console.error("Failed to load profile:", error.message);

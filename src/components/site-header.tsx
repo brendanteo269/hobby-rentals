@@ -5,8 +5,8 @@ import { Container, ButtonLink } from "./ui";
 import { signOut } from "@/app/auth/actions";
 
 const NAV: { label: string; href: Route }[] = [
-  { label: "Marketplace", href: "/" },
-  { label: "Start Renting!", href: "/" },
+  { label: "Marketplace", href: "/browse" },
+  { label: "List your gear", href: "/listings/new" },
   { label: "About", href: "/" },
   { label: "Contact", href: "/" },
 ];
