@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { validatePasswordComplexity } from "@/lib/password";
 
 export type AuthState = { error?: string } | undefined;
 
@@ -18,7 +19,13 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   const { email, password } = readCredentials(formData);
 
   if (!email || !password) return { error: "Email and password are both required." };
-  if (password.length < 8) return { error: "Password must be at least 8 characters." };
+
+  const passwordError = validatePasswordComplexity(password);
+  if (passwordError) return { error: passwordError };
+
+  if (formData.get("terms") !== "on") {
+    return { error: "You must accept the Terms and Conditions to create an account." };
+  }
 
   const origin = (await headers()).get("origin") ?? "http://localhost:3000";
   const supabase = await createClient();
