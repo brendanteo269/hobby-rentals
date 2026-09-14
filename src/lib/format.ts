@@ -1,5 +1,22 @@
 const LOCALE = "en-SG";
 
+/** Built once: constructing an Intl instance per card in a grid is slow. */
+const MONEY = new Intl.NumberFormat(LOCALE, { style: "currency", currency: "SGD" });
+
+/** Amounts cross the API as integer cents, as they do everywhere in this project. */
+export function formatMoney(cents: number): string {
+  return MONEY.format(cents / 100);
+}
+
+/** "5 Sept 2026" — a calendar day, with no time of day implied. */
+export function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(LOCALE, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 /** "September 2026" — a coarse join date, not a precise timestamp. */
 export function formatMonthYear(iso: string): string {
   return new Date(iso).toLocaleDateString(LOCALE, { month: "long", year: "numeric" });

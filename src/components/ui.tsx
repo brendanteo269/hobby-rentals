@@ -55,25 +55,98 @@ export function Input({ className = "", ...props }: ComponentProps<"input">) {
   return <input className={`${inputBase} ${className}`} {...props} />;
 }
 
+export function Select({ className = "", ...props }: ComponentProps<"select">) {
+  return <select className={`${inputBase} ${className}`} {...props} />;
+}
+
+/** Marks a label as required, so it reads before a glance reaches the control. */
+function RequiredMark() {
+  return (
+    <span aria-hidden="true" className="text-clay">
+      {" "}
+      *
+    </span>
+  );
+}
+
+type FieldShell = {
+  label: string;
+  /** Guidance shown under the control, such as an accepted format. */
+  hint?: string;
+  /**
+   * Message for this field, shown in place of the hint. Forms that validate
+   * server-side pass the entry the backend returned for this field; a form
+   * with a single whole-form error still renders that itself.
+   */
+  error?: string;
+};
+
 /**
- * Labelled input for forms. `hint` sits under the field for guidance such as
- * password rules; errors are rendered by the form, not here, because they come
- * from the server action's returned state.
+ * Label, control, and the one line under it.
+ *
+ * Wraps every field type so the error wiring (aria-invalid, aria-describedby,
+ * and the error replacing the hint) is written once instead of three times.
  */
-export function Field({
+function FieldWrapper({
   label,
   hint,
+  error,
   id,
-  ...props
-}: { label: string; hint?: string } & ComponentProps<"input">) {
+  required,
+  children,
+}: FieldShell & { id?: string; required?: boolean; children: ReactNode }) {
+  const messageId = id ? `${id}-message` : undefined;
   return (
     <div>
       <label htmlFor={id} className="block text-sm font-medium">
         {label}
+        {required && <RequiredMark />}
       </label>
-      <Input id={id} className="mt-2" {...props} />
-      {hint && <p className="mt-2 text-xs text-ink-soft">{hint}</p>}
+      {children}
+      {(error ?? hint) && (
+        <p
+          id={messageId}
+          {...(error ? { role: "alert" } : {})}
+          className={`mt-2 text-xs ${error ? "text-clay" : "text-ink-soft"}`}
+        >
+          {error ?? hint}
+        </p>
+      )}
     </div>
+  );
+}
+
+/**
+ * Points the control at its message, but only when one is actually rendered —
+ * an aria-describedby naming an element that does not exist is worse than none.
+ */
+function messageProps(shell: FieldShell & { id?: string }) {
+  const hasMessage = Boolean(shell.error ?? shell.hint);
+  return {
+    "aria-invalid": shell.error ? true : undefined,
+    "aria-describedby": hasMessage && shell.id ? `${shell.id}-message` : undefined,
+  };
+}
+
+export function Field({
+  label,
+  hint,
+  error,
+  id,
+  required,
+  className = "",
+  ...props
+}: FieldShell & ComponentProps<"input">) {
+  return (
+    <FieldWrapper label={label} hint={hint} error={error} id={id} required={required}>
+      <Input
+        id={id}
+        required={required}
+        className={`mt-2 ${className}`}
+        {...messageProps({ label, hint, error, id })}
+        {...props}
+      />
+    </FieldWrapper>
   );
 }
 
@@ -81,18 +154,77 @@ export function Field({
 export function TextareaField({
   label,
   hint,
+  error,
   id,
+  required,
   className = "",
   ...props
-}: { label: string; hint?: string } & ComponentProps<"textarea">) {
+}: FieldShell & ComponentProps<"textarea">) {
   return (
-    <div>
-      <label htmlFor={id} className="block text-sm font-medium">
-        {label}
-      </label>
-      <textarea id={id} className={`${inputBase} mt-2 resize-y ${className}`} {...props} />
-      {hint && <p className="mt-2 text-xs text-ink-soft">{hint}</p>}
+    <FieldWrapper label={label} hint={hint} error={error} id={id} required={required}>
+      <textarea
+        id={id}
+        required={required}
+        className={`${inputBase} mt-2 resize-y ${className}`}
+        {...messageProps({ label, hint, error, id })}
+        {...props}
+      />
+    </FieldWrapper>
+  );
+}
+
+/** Labelled select, styled to match Field. */
+export function SelectField({
+  label,
+  hint,
+  error,
+  id,
+  required,
+  className = "",
+  children,
+  ...props
+}: FieldShell & ComponentProps<"select">) {
+  return (
+    <FieldWrapper label={label} hint={hint} error={error} id={id} required={required}>
+      <Select
+        id={id}
+        required={required}
+        className={`mt-2 ${className}`}
+        {...messageProps({ label, hint, error, id })}
+        {...props}
+      >
+        {children}
+      </Select>
+    </FieldWrapper>
+  );
+}
+
+/** Shown where a list would be, when the list is empty. */
+export function EmptyState({
+  title,
+  body,
+  action,
+}: {
+  title: string;
+  body: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="border border-line bg-white px-6 py-16 text-center">
+      <p className="display-caps text-base">{title}</p>
+      <p className="body-copy mx-auto mt-2 max-w-sm">{body}</p>
+      {action && <div className="mt-6 flex justify-center">{action}</div>}
     </div>
+  );
+}
+
+/** A form's overall outcome, as opposed to a message against one field. */
+export function FormError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p role="alert" className="border-l-2 border-clay bg-sand px-3 py-2 text-sm text-ink">
+      {message}
+    </p>
   );
 }
 

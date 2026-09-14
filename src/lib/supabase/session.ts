@@ -4,9 +4,12 @@ import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * Routes requiring a signed-in member. /onboarding is included so first-run
- * setup cannot be reached anonymously.
+ * setup cannot be reached anonymously. /browse and /listings read from the
+ * FastAPI backend, which rejects an anonymous caller — guarding them here
+ * turns a redirect out of a half-rendered page into a clean trip to the login
+ * screen, with `next` set so the member lands back where they were going.
  */
-const PROTECTED_PREFIXES = ["/profile", "/onboarding"];
+const PROTECTED_PREFIXES = ["/profile", "/onboarding", "/browse", "/listings"];
 
 /**
  * Refreshes the auth session cookie on every request and guards protected
