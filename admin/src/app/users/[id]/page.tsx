@@ -8,6 +8,7 @@ import {
   accountStatus,
   getUserById,
   isEmailVerified,
+  isSuspended,
   roleLabels,
   userLabel,
 } from "@/lib/users";
@@ -37,6 +38,7 @@ export default async function UserDetailPage({
 
   const status = accountStatus(user);
   const verified = isEmailVerified(user);
+  const suspended = isSuspended(user);
   const { entries: auditEntries, total: auditTotal } = await getUserAuditTrail(user.id, auditPage);
   const auditLastPage = Math.max(1, Math.ceil(auditTotal / AUDIT_PAGE_SIZE));
 
@@ -102,7 +104,9 @@ export default async function UserDetailPage({
                 },
                 {
                   term: "Suspended until",
-                  value: formatDateTime(user.banned_until, "Not suspended"),
+                  // banned_until can be a past date once a suspension lapses —
+                  // showing it as-is would contradict the "Active" badge above.
+                  value: formatDateTime(suspended ? user.banned_until : null, "Not suspended"),
                 },
               ]}
             />

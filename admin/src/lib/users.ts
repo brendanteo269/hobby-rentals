@@ -60,10 +60,24 @@ export async function searchUsers(query: string, page = 1): Promise<UserSearchRe
   }
 
   const rows = (data ?? []) as SearchRow[];
+  let total = rows[0]?.total_count ?? 0;
+
+  // total_count rides along on every row, so an empty page has nowhere to
+  // read it from — indistinguishable, otherwise, from a search with zero
+  // matches. That only happens on a page past the end of the result set (a
+  // bookmarked or shared link whose matches have since shrunk), so page 1
+  // always has rows to read the real total from when one exists.
+  if (rows.length === 0 && page > 1) {
+    const { data: firstPage, error: firstPageError } = await supabase.rpc("admin_search_users", {
+      search: query,
+      result_limit: PAGE_SIZE,
+      result_offset: 0,
+    });
+    if (!firstPageError) total = ((firstPage ?? []) as SearchRow[])[0]?.total_count ?? 0;
+  }
 
   return {
-    // total_count rides along on every row; an empty page means no matches.
-    total: rows[0]?.total_count ?? 0,
+    total,
     // Each row carries one column more than AdminUser describes. Narrowing the
     // type is enough — copying every row to delete a number nothing reads
     // would cost more than it tidies.

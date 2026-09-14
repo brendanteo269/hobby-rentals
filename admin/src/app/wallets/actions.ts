@@ -44,6 +44,9 @@ export async function applyWalletAdjustment(
   const direction = String(formData.get("direction") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
   const amountRaw = String(formData.get("amount") ?? "");
+  // Optional: most adjustments don't relate to a booking. The RPC normalizes
+  // blank-vs-absent itself, so an empty string is passed through as-is.
+  const bookingId = String(formData.get("booking_id") ?? "").trim();
 
   if (direction !== "CREDIT" && direction !== "DEBIT") {
     return { error: "Choose whether this is a credit or a debit." };
@@ -63,6 +66,7 @@ export async function applyWalletAdjustment(
     direction,
     amount_cents: amountCents,
     reason,
+    booking_id: bookingId || null,
   });
 
   // admin_apply_wallet_adjustment raises a plain-English message for every

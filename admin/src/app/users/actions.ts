@@ -29,7 +29,8 @@ export async function resendVerificationEmail(
   const userId = String(formData.get("user_id") ?? "");
 
   const user = await getUserById(userId);
-  if (!user?.email) return { error: "That account no longer exists." };
+  if (!user) return { error: "That account no longer exists." };
+  if (!user.email) return { error: "This account has no email address on file." };
 
   if (isEmailVerified(user)) {
     return { error: "This address is already verified. Reset verification to require it again." };
@@ -71,7 +72,8 @@ export async function resetVerification(
   const userId = String(formData.get("user_id") ?? "");
 
   const user = await getUserById(userId);
-  if (!user?.email) return { error: "That account no longer exists." };
+  if (!user) return { error: "That account no longer exists." };
+  if (!user.email) return { error: "This account has no email address on file." };
 
   const wasVerified = isEmailVerified(user);
 

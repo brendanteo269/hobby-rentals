@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Button, Field } from "../ui";
-import { formatWalletAmount, walletAuthHeader, type WalletState } from "@/lib/wallet";
+import { MIN_WITHDRAWAL_CENTS, formatWalletAmount, walletAuthHeader, type WalletState } from "@/lib/wallet";
 import { WalletDialog } from "./wallet-dialog";
 
 type Props = {
@@ -33,6 +33,14 @@ export function WithdrawModal({ apiUrl, availableCents, onClose, onWalletRefresh
       setError("Enter a valid amount.");
       return;
     }
+    if (cents < MIN_WITHDRAWAL_CENTS) {
+      setError(`Minimum withdrawal is ${formatWalletAmount(MIN_WITHDRAWAL_CENTS)}.`);
+      return;
+    }
+    if (cents > availableCents) {
+      setError(`Amount exceeds your available balance of ${formatWalletAmount(availableCents)}.`);
+      return;
+    }
     setLoading(true);
     setError("");
     try {
@@ -44,7 +52,17 @@ export function WithdrawModal({ apiUrl, availableCents, onClose, onWalletRefresh
       });
       const data = (await response.json().catch(() => ({}))) as { detail?: string };
       if (!response.ok) throw new Error(data.detail ?? "Unable to submit withdrawal.");
-      await onWalletRefresh();
+      // The withdrawal has already succeeded server-side at this point (funds
+      // deducted, record created) — a refresh failure here is a stale-balance
+      // problem, not a failed withdrawal, so it must not land in the catch
+      // below. Reporting it as a submit failure would risk a real double
+      // withdrawal: the user would see "failed", reopen the modal, get a
+      // fresh idempotency key, and resubmit.
+      try {
+        await onWalletRefresh();
+      } catch {
+        // Wallet view will catch up next time it loads.
+      }
       onSuccess(`Withdrawal of ${formatWalletAmount(cents)} submitted — funds will be transferred to your linked bank account.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to submit withdrawal.");
@@ -55,7 +73,12 @@ export function WithdrawModal({ apiUrl, availableCents, onClose, onWalletRefresh
 
   return (
     <WalletDialog title="Withdraw funds" onClose={onClose}>
-      <form className="mt-6 space-y-5" onSubmit={submit}>
+      {/* noValidate: min/max below double as a11y/spinner hints, but max is
+          derived from the balance and can end up below min (balance under
+          the withdrawal minimum) — native validation would then silently
+          block submission before our onSubmit ever runs, hiding the clear
+          in-app error this form is supposed to show. */}
+      <form className="mt-6 space-y-5" onSubmit={submit} noValidate>
         <div className="border border-line bg-sand p-4">
           <p className="eyebrow">Withdrawable now</p>
           <p className="mt-1 text-3xl">{formatWalletAmount(availableCents)}</p>
@@ -65,7 +88,7 @@ export function WithdrawModal({ apiUrl, availableCents, onClose, onWalletRefresh
           label="Amount"
           id="withdraw-amount"
           type="number"
-          min="10"
+          min={MIN_WITHDRAWAL_CENTS / 100}
           max={availableCents / 100}
           step="0.01"
           value={amount}
@@ -73,7 +96,7 @@ export function WithdrawModal({ apiUrl, availableCents, onClose, onWalletRefresh
             setAmount(event.target.value);
             setError("");
           }}
-          hint="Minimum withdrawal is $10.00."
+          hint={`Minimum withdrawal is ${formatWalletAmount(MIN_WITHDRAWAL_CENTS)}.`}
         />
         {loading && (
           <p role="status" className="text-sm text-ink-soft">
