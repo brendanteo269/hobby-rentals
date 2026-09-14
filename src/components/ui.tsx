@@ -134,6 +134,7 @@ export function Field({
   error,
   id,
   required,
+  className = "",
   ...props
 }: FieldShell & ComponentProps<"input">) {
   return (
@@ -141,7 +142,7 @@ export function Field({
       <Input
         id={id}
         required={required}
-        className="mt-2"
+        className={`mt-2 ${className}`}
         {...messageProps({ label, hint, error, id })}
         {...props}
       />
@@ -179,6 +180,7 @@ export function SelectField({
   error,
   id,
   required,
+  className = "",
   children,
   ...props
 }: FieldShell & ComponentProps<"select">) {
@@ -187,7 +189,7 @@ export function SelectField({
       <Select
         id={id}
         required={required}
-        className="mt-2"
+        className={`mt-2 ${className}`}
         {...messageProps({ label, hint, error, id })}
         {...props}
       >

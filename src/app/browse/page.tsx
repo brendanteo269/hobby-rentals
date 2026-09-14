@@ -46,7 +46,7 @@ export default async function BrowsePage({
 
       <div className="mt-6">
         {data && data.results.length > 0 ? (
-          <ul className="grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
+          <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {data.results.map((listing) => (
               <ListingCard key={listing.id} listing={listing} />
             ))}

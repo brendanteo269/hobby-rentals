@@ -81,10 +81,17 @@ export async function submitListing(
   if (!isCondition(condition)) fieldErrors.condition = "Choose the item's condition.";
   if (!isLocationArea(locationArea)) fieldErrors.location_area = "Choose a collection area.";
 
+  // PricePerBlockField mounts a box under whichever one name the owner
+  // picked — never both, never neither once they have chosen — so exactly
+  // one of these two is expected to hold a value.
   const pricePerDay = cents(formData, "price_per_day");
+  const pricePerWeek = cents(formData, "price_per_week");
   const deposit = cents(formData, "deposit");
-  if (pricePerDay === null || Number.isNaN(pricePerDay)) {
-    fieldErrors.price_per_day_cents = "Enter a daily rate, e.g. 25.00";
+
+  const noDay = pricePerDay === null || Number.isNaN(pricePerDay);
+  const noWeek = pricePerWeek === null || Number.isNaN(pricePerWeek);
+  if (noDay && noWeek) {
+    fieldErrors.price_per_week_cents = "Choose per day or per week, and enter a rate.";
   }
   if (deposit === null || Number.isNaN(deposit)) {
     fieldErrors.deposit_cents = "Enter a deposit amount, or 0 for none.";
@@ -101,9 +108,9 @@ export async function submitListing(
     category: category as CreateListingRequest["category"],
     condition: condition as CreateListingRequest["condition"],
     location_area: locationArea as CreateListingRequest["location_area"],
-    price_per_day_cents: pricePerDay!,
+    price_per_day_cents: pricePerDay,
+    price_per_week_cents: pricePerWeek,
     deposit_cents: deposit!,
-    price_per_week_cents: cents(formData, "price_per_week"),
     min_rental_days: count(formData, "min_rental_days"),
     max_rental_days: count(formData, "max_rental_days"),
     available_from: text(formData, "available_from"),

@@ -22,11 +22,46 @@ export type ListingCategory =
   | "GAMING_TECH"
   | "EVENTS_PARTY"
   | "COOKING_BAKING"
-  | "GARDENING";
+  | "GARDENING"
+  | "OTHER";
 
 export type ListingCondition = "NEW" | "GOOD" | "FAIR" | "POOR";
 
-export type LocationArea = "NORTH" | "SOUTH" | "EAST" | "WEST" | "CENTRAL";
+// Real collection areas rather than compass regions - specific enough that a
+// renter searching "Tiong Bahru" gets Tiong Bahru, not everything in the
+// southern half of the island.
+export type LocationArea =
+  | "ANG_MO_KIO"
+  | "BEDOK"
+  | "BISHAN"
+  | "BUKIT_BATOK"
+  | "BUKIT_MERAH"
+  | "BUKIT_PANJANG"
+  | "BUKIT_TIMAH"
+  | "CHOA_CHU_KANG"
+  | "CLEMENTI"
+  | "DOWNTOWN_CORE"
+  | "EAST_COAST"
+  | "GEYLANG"
+  | "HOUGANG"
+  | "JURONG_EAST"
+  | "JURONG_WEST"
+  | "KALLANG"
+  | "MARINE_PARADE"
+  | "NOVENA"
+  | "ORCHARD"
+  | "PASIR_RIS"
+  | "PUNGGOL"
+  | "QUEENSTOWN"
+  | "SEMBAWANG"
+  | "SENGKANG"
+  | "SENTOSA"
+  | "SERANGOON"
+  | "TAMPINES"
+  | "TIONG_BAHRU"
+  | "TOA_PAYOH"
+  | "WOODLANDS"
+  | "YISHUN";
 
 export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
 
@@ -47,7 +82,10 @@ export type ListingCard = {
   category: ListingCategory;
   /** Object key, not a URL: image hosting is not wired up yet. */
   primary_photo_key: string | null;
-  price_per_day_cents: number;
+  // A listing carries at least one of the two, never neither - see
+  // CreateListingRequest below - so a card renders whichever it has.
+  price_per_day_cents: number | null;
+  price_per_week_cents: number | null;
   deposit_cents: number;
   location_area: LocationArea;
 };
@@ -70,7 +108,7 @@ export type Listing = {
   brand: string;
   condition: ListingCondition;
   location_area: LocationArea;
-  price_per_day_cents: number;
+  price_per_day_cents: number | null;
   price_per_week_cents: number | null;
   deposit_cents: number;
   min_rental_days: number | null;
@@ -91,9 +129,13 @@ export type CreateListingRequest = {
   category: ListingCategory;
   condition: ListingCondition;
   location_area: LocationArea;
-  /** Non-negative integer cents, validated by FastAPI. */
-  price_per_day_cents: number;
   deposit_cents: number;
+  /**
+   * Price per rental block is a choice, not two mandatory fields: at least
+   * one of these two must be set (FastAPI 422s otherwise), but neither is
+   * required on its own. Non-negative integer cents.
+   */
+  price_per_day_cents?: number | null;
   price_per_week_cents?: number | null;
   min_rental_days?: number | null;
   max_rental_days?: number | null;
@@ -119,6 +161,7 @@ export const CATEGORY_LABELS: Record<ListingCategory, string> = {
   EVENTS_PARTY: "Events & party",
   COOKING_BAKING: "Cooking & baking",
   GARDENING: "Gardening",
+  OTHER: "Other",
 };
 
 export const CONDITION_LABELS: Record<ListingCondition, string> = {
@@ -129,11 +172,37 @@ export const CONDITION_LABELS: Record<ListingCondition, string> = {
 };
 
 export const LOCATION_LABELS: Record<LocationArea, string> = {
-  NORTH: "North",
-  SOUTH: "South",
-  EAST: "East",
-  WEST: "West",
-  CENTRAL: "Central",
+  ANG_MO_KIO: "Ang Mo Kio",
+  BEDOK: "Bedok",
+  BISHAN: "Bishan",
+  BUKIT_BATOK: "Bukit Batok",
+  BUKIT_MERAH: "Bukit Merah",
+  BUKIT_PANJANG: "Bukit Panjang",
+  BUKIT_TIMAH: "Bukit Timah",
+  CHOA_CHU_KANG: "Choa Chu Kang",
+  CLEMENTI: "Clementi",
+  DOWNTOWN_CORE: "Downtown Core",
+  EAST_COAST: "East Coast",
+  GEYLANG: "Geylang",
+  HOUGANG: "Hougang",
+  JURONG_EAST: "Jurong East",
+  JURONG_WEST: "Jurong West",
+  KALLANG: "Kallang",
+  MARINE_PARADE: "Marine Parade",
+  NOVENA: "Novena",
+  ORCHARD: "Orchard",
+  PASIR_RIS: "Pasir Ris",
+  PUNGGOL: "Punggol",
+  QUEENSTOWN: "Queenstown",
+  SEMBAWANG: "Sembawang",
+  SENGKANG: "Sengkang",
+  SENTOSA: "Sentosa",
+  SERANGOON: "Serangoon",
+  TAMPINES: "Tampines",
+  TIONG_BAHRU: "Tiong Bahru",
+  TOA_PAYOH: "Toa Payoh",
+  WOODLANDS: "Woodlands",
+  YISHUN: "Yishun",
 };
 
 export const CATEGORIES = Object.keys(CATEGORY_LABELS) as ListingCategory[];

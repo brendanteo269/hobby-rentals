@@ -1,8 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
+import type { ReactNode } from "react";
 import { Button, Field, FormError, SelectField, TextareaField } from "@/components/ui";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
+import { PricePerBlockField } from "@/components/listings/price-per-block-field";
 import { submitListing, type CreateListingState } from "@/app/listings/actions";
 import {
   CATEGORIES,
@@ -30,26 +32,27 @@ export function CreateListingForm() {
   const errors = state?.fieldErrors ?? {};
 
   return (
-    <form action={formAction} className="space-y-8">
-      <section className="space-y-4">
-        <h2 className="display-caps text-lg">The item</h2>
+    <form action={formAction} className="space-y-6">
+      <FormSection title="The item">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label="Product name"
+            id="name"
+            name="name"
+            maxLength={200}
+            required
+            error={errors.name}
+          />
+          <Field
+            label="Brand"
+            id="brand"
+            name="brand"
+            maxLength={200}
+            required
+            error={errors.brand}
+          />
+        </div>
 
-        <Field
-          label="Product name"
-          id="name"
-          name="name"
-          maxLength={200}
-          required
-          error={errors.name}
-        />
-        <Field
-          label="Brand"
-          id="brand"
-          name="brand"
-          maxLength={200}
-          required
-          error={errors.brand}
-        />
         <TextareaField
           label="Description"
           id="description"
@@ -104,7 +107,6 @@ export function CreateListingForm() {
             name="location_area"
             defaultValue=""
             required
-            hint="Where renters collect."
             error={errors.location_area}
           >
             <option value="" disabled>
@@ -117,56 +119,31 @@ export function CreateListingForm() {
             ))}
           </SelectField>
         </div>
-      </section>
+      </FormSection>
 
-      <section className="space-y-4 border-t border-line pt-8">
-        <h2 className="display-caps text-lg">Price</h2>
+      <FormSection title="Price">
+        {/* Only one of the two is ever submitted, so at most one of these two
+            backend error slots is ever populated - whichever it is applies to
+            the one shared box. */}
+        <PricePerBlockField error={errors.price_per_day_cents ?? errors.price_per_week_cents} />
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field
-            label="Per day"
-            id="price_per_day"
-            name="price_per_day"
-            type="number"
-            min="0"
-            step="0.01"
-            inputMode="decimal"
-            placeholder="25.00"
-            required
-            hint="SGD"
-            error={errors.price_per_day_cents}
-          />
-          <Field
-            label="Per week"
-            id="price_per_week"
-            name="price_per_week"
-            type="number"
-            min="0"
-            step="0.01"
-            inputMode="decimal"
-            placeholder="120.00"
-            hint="Optional."
-            error={errors.price_per_week_cents}
-          />
-          <Field
-            label="Security deposit"
-            id="deposit"
-            name="deposit"
-            type="number"
-            min="0"
-            step="0.01"
-            inputMode="decimal"
-            placeholder="0.00"
-            required
-            hint="Held, not charged. Enter 0 for none."
-            error={errors.deposit_cents}
-          />
-        </div>
-      </section>
+        <Field
+          label="Security deposit"
+          id="deposit"
+          name="deposit"
+          type="number"
+          min="0"
+          step="0.01"
+          inputMode="decimal"
+          placeholder="0.00"
+          required
+          hint="Held, not charged. Enter 0 for none."
+          error={errors.deposit_cents}
+          className="max-w-xs"
+        />
+      </FormSection>
 
-      <section className="space-y-4 border-t border-line pt-8">
-        <h2 className="display-caps text-lg">Availability</h2>
-
+      <FormSection title="Availability">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
             label="Available from"
@@ -212,17 +189,34 @@ export function CreateListingForm() {
         </div>
 
         <BlackoutRulesField error={errors.blackout_dates} />
-      </section>
+      </FormSection>
 
-      <div className="space-y-4 border-t border-line pt-8">
+      <div className="border border-line bg-sand p-6 sm:p-8">
         <FormError message={state?.error} />
         <Button type="submit" disabled={pending} className="w-full sm:w-auto">
           {pending ? "Publishing…" : "Publish listing"}
         </Button>
-        <p className="body-copy">
+        <p className="body-copy mt-4">
           Publishing puts this in the marketplace and in your rental inventory straight away.
         </p>
       </div>
     </form>
+  );
+}
+
+/**
+ * One step of the form as its own surface, matching how a listing card gets
+ * its own bordered white panel against the cream page — the same "distinct
+ * things get distinct boxes" language, applied here to keep a long form
+ * legible as a sequence of steps rather than one continuous scroll.
+ */
+function FormSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="border border-line bg-white">
+      <div className="border-b border-line px-6 py-4 sm:px-8">
+        <h2 className="display-caps text-lg">{title}</h2>
+      </div>
+      <div className="space-y-6 p-6 sm:p-8">{children}</div>
+    </section>
   );
 }
