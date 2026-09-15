@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { WEEKDAY_LABELS } from "@/lib/listings";
 import { formatDate } from "@/lib/format";
 
@@ -56,10 +56,13 @@ function describe(range: BlackoutDateDraft) {
 export function BlackoutRulesField({
   availableFrom,
   availableUntil,
+  weeklyDays,
   error,
 }: {
   availableFrom: string;
   availableUntil: string;
+  /** ISO weekdays (1 = Monday) the weekly schedule above currently offers. */
+  weeklyDays: number[];
   error?: string;
 }) {
   const [selected, setSelected] = useState<string[]>([]);
@@ -67,34 +70,54 @@ export function BlackoutRulesField({
   const [drag, setDrag] = useState<{ anchor: string; over: string; removing: boolean } | null>(null);
   const [paged, setPaged] = useState<{ year: number; month: number } | null>(null);
 
-  // A pointer released outside the grid still ends the drag.
-  useEffect(() => {
-    if (!drag) return;
-    const finish = () => {
+  // A day the weekly schedule never offers is already unavailable; blacking
+  // it out would be a rule with nothing to switch off.
+  const inWindow = useCallback(
+    (day: string) => {
+      if (!availableFrom || day < availableFrom) return false;
+      if (availableUntil && day > availableUntil) return false;
+      const [year, month, date] = day.split("-").map(Number);
+      const weekday = new Date(year, month - 1, date).getDay();
+      return weeklyDays.includes(weekday === 0 ? 7 : weekday);
+    },
+    [availableFrom, availableUntil, weeklyDays],
+  );
+
+  const commit = useCallback(() => {
+    setDrag((pending) => {
+      if (!pending) return null;
       setSelected((current) => {
-        const [from, to] = drag.anchor <= drag.over ? [drag.anchor, drag.over] : [drag.over, drag.anchor];
+        const [from, to] =
+          pending.anchor <= pending.over
+            ? [pending.anchor, pending.over]
+            : [pending.over, pending.anchor];
         const span: string[] = [];
-        for (let day = from; day <= to; day = shiftDay(day, 1)) span.push(day);
-        return drag.removing
+        for (let day = from; day <= to; day = shiftDay(day, 1)) {
+          if (inWindow(day)) span.push(day);
+        }
+        return pending.removing
           ? current.filter((day) => !span.includes(day))
           : [...new Set([...current, ...span])];
       });
-      setDrag(null);
-    };
-    window.addEventListener("pointerup", finish);
-    return () => window.removeEventListener("pointerup", finish);
-  }, [drag]);
+      return null;
+    });
+  }, [inWindow]);
+
+  // The grid's own handler catches the ordinary release; this catches one that
+  // happens off the grid, or before React has finished mounting this listener.
+  useEffect(() => {
+    if (!drag) return;
+    window.addEventListener("pointerup", commit);
+    return () => window.removeEventListener("pointerup", commit);
+  }, [drag, commit]);
 
   // Narrowing the window strands days outside it. They are filtered here
   // rather than deleted, so widening the window again brings back what the
   // owner picked instead of silently having thrown it away.
-  const inWindow = (day: string) =>
-    Boolean(availableFrom) && day >= availableFrom && (!availableUntil || day <= availableUntil);
-
   const live = useMemo(
     () => selected.filter((day) => inWindow(day)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selected, availableFrom, availableUntil],
+    [selected, availableFrom, availableUntil, weeklyDays],
   );
   const ranges = useMemo(() => toRanges(live), [live]);
 
@@ -150,8 +173,8 @@ export function BlackoutRulesField({
     <div>
       <span className="block text-sm font-medium">Blackout dates</span>
       <p className="body-copy mt-2">
-        Optional. Click a day the item cannot be rented, or drag across several. Only days inside
-        your availability window can be picked.
+        Optional. Click a day the item cannot be rented, or drag across several. Only days your
+        weekly schedule already offers, inside your availability window, can be picked.
       </p>
 
       <input type="hidden" name="initial_blackouts" value={JSON.stringify(ranges)} />
@@ -179,7 +202,7 @@ export function BlackoutRulesField({
           </button>
         </div>
 
-        <div className="grid grid-cols-7 gap-1 p-3">
+        <div className="grid grid-cols-7 gap-1 p-3" onPointerUp={commit}>
           {WEEKDAY_LABELS.map((day) => (
             <span key={day} className="pb-1 text-center text-[0.6875rem] text-ink-soft">
               {day.charAt(0)}

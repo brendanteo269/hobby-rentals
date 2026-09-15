@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { WEEKDAY_LABELS } from "@/lib/listings";
 
 /**
@@ -12,16 +11,24 @@ import { WEEKDAY_LABELS } from "@/lib/listings";
  * shown dimmed and inert, which reads as "this is what you would get" rather
  * than as a control that has stopped working.
  */
-export function WeeklyAvailabilityField({ profileAvailableDays }: { profileAvailableDays: number[] }) {
-  const [custom, setCustom] = useState(false);
-  // A custom schedule starts from the owner's current default. This makes
-  // switching modes predictable instead of silently reverting to Mon–Fri.
-  const [days, setDays] = useState<number[]>(profileAvailableDays);
+export function WeeklyAvailabilityField({
+  profileAvailableDays,
+  custom,
+  onCustomChange,
+  days,
+  onDaysChange,
+}: {
+  profileAvailableDays: number[];
+  custom: boolean;
+  onCustomChange: (custom: boolean) => void;
+  days: number[];
+  onDaysChange: (days: number[]) => void;
+}) {
   const shown = custom ? days : profileAvailableDays;
 
   const toggle = (day: number) =>
-    setDays((current) =>
-      current.includes(day) ? current.filter((value) => value !== day) : [...current, day].sort(),
+    onDaysChange(
+      days.includes(day) ? days.filter((value) => value !== day) : [...days, day].sort(),
     );
 
   return (
@@ -42,7 +49,7 @@ export function WeeklyAvailabilityField({ profileAvailableDays }: { profileAvail
             name="availability_mode"
             className="accent-ink"
             checked={!custom}
-            onChange={() => setCustom(false)}
+            onChange={() => onCustomChange(false)}
           />
           Use my profile default
         </label>
@@ -52,7 +59,7 @@ export function WeeklyAvailabilityField({ profileAvailableDays }: { profileAvail
             name="availability_mode"
             className="accent-ink"
             checked={custom}
-            onChange={() => setCustom(true)}
+            onChange={() => onCustomChange(true)}
           />
           Set a custom schedule for this listing
         </label>

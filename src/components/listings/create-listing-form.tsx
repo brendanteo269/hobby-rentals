@@ -40,6 +40,11 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
   const today = todayIso();
   const [availableFrom, setAvailableFrom] = useState("");
   const [availableUntil, setAvailableUntil] = useState("");
+  // A custom schedule starts from the owner's current default. This makes
+  // switching modes predictable instead of silently reverting to Mon-Fri.
+  const [customAvailability, setCustomAvailability] = useState(false);
+  const [customDays, setCustomDays] = useState<number[]>(profileAvailableDays);
+  const weeklyDays = customAvailability ? customDays : profileAvailableDays;
 
   return (
     <form action={formAction} className="space-y-6">
@@ -185,7 +190,13 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
           />
         </div>
 
-        <WeeklyAvailabilityField profileAvailableDays={profileAvailableDays} />
+        <WeeklyAvailabilityField
+          profileAvailableDays={profileAvailableDays}
+          custom={customAvailability}
+          onCustomChange={setCustomAvailability}
+          days={customDays}
+          onDaysChange={setCustomDays}
+        />
 
         <RentalDurationField
           minError={errors.min_rental_days}
@@ -195,6 +206,7 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
         <BlackoutRulesField
           availableFrom={availableFrom}
           availableUntil={availableUntil}
+          weeklyDays={weeklyDays}
           error={errors.blackout_dates}
         />
       </FormSection>
