@@ -1,9 +1,11 @@
 import { Container } from "@/components/ui";
 import { CreateListingForm } from "@/components/listings/create-listing-form";
+import { getProfileAvailability } from "@/lib/api/profile-availability";
 
 export const metadata = { title: "List your gear — HobbyRentals" };
 
-export default function NewListingPage() {
+export default async function NewListingPage() {
+  const { available_days: profileAvailableDays } = await getProfileAvailability();
   return (
     <Container className="py-16">
       <div className="mx-auto max-w-2xl">
@@ -15,7 +17,7 @@ export default function NewListingPage() {
         </p>
 
         <div className="mt-10">
-          <CreateListingForm />
+          <CreateListingForm profileAvailableDays={profileAvailableDays} />
         </div>
       </div>
     </Container>

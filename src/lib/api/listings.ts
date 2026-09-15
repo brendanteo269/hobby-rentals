@@ -73,3 +73,26 @@ export function createListing(data: CreateListingRequest) {
     body: JSON.stringify(data),
   });
 }
+
+export type ListingAvailability = {
+  has_custom_availability: boolean;
+  weekly_schedule: number[];
+  blackouts: { id: string; start_date: string; end_date: string; reason?: string | null }[];
+  confirmed_bookings: { id: string; start_date: string; end_date: string; status: string }[];
+};
+
+export function getListingAvailability(listingId: string) {
+  return backendRequest<ListingAvailability>(`/listings/${encodeURIComponent(listingId)}/availability`);
+}
+
+export function updateListingAvailability(listingId: string, has_custom_availability: boolean, custom_available_days: number[] | null) {
+  return backendRequest(`/listings/${encodeURIComponent(listingId)}/availability`, { method: "PUT", body: JSON.stringify({ has_custom_availability, custom_available_days }) });
+}
+
+export function addListingBlackout(listingId: string, start_date: string, end_date: string, reason?: string) {
+  return backendRequest(`/listings/${encodeURIComponent(listingId)}/blackouts`, { method: "POST", body: JSON.stringify({ start_date, end_date, reason: reason || null }) });
+}
+
+export function deleteListingBlackout(listingId: string, blackoutId: string) {
+  return backendRequest(`/listings/${encodeURIComponent(listingId)}/blackouts/${encodeURIComponent(blackoutId)}`, { method: "DELETE" });
+}
