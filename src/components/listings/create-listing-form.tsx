@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import type { ReactNode } from "react";
 import { Button, Field, FormError, SelectField, TextareaField } from "@/components/ui";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
@@ -32,6 +32,14 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
     undefined,
   );
   const errors = state?.fieldErrors ?? {};
+
+  // The three availability controls constrain one another: nothing may be
+  // listed or blacked out before today, and the window's own end cannot
+  // precede its start. Holding the two dates here is what lets the calendar
+  // below offer only the days the listing is actually open for.
+  const today = todayIso();
+  const [availableFrom, setAvailableFrom] = useState("");
+  const [availableUntil, setAvailableUntil] = useState("");
 
   return (
     <form action={formAction} className="space-y-6">
@@ -152,6 +160,15 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
             id="available_from"
             name="available_from"
             type="date"
+            min={today}
+            value={availableFrom}
+            onChange={(event) => {
+              const next = event.target.value;
+              setAvailableFrom(next);
+              // A window that now ends before it starts is not a state worth
+              // keeping around for the owner to discover at submit time.
+              if (availableUntil && next && availableUntil < next) setAvailableUntil("");
+            }}
             required
             error={errors.available_from}
           />
@@ -160,6 +177,9 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
             id="available_until"
             name="available_until"
             type="date"
+            min={availableFrom || today}
+            value={availableUntil}
+            onChange={(event) => setAvailableUntil(event.target.value)}
             hint="Optional. Leave blank to stay listed indefinitely."
             error={errors.available_until}
           />
@@ -172,7 +192,11 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
           maxError={errors.max_rental_days}
         />
 
-        <BlackoutRulesField error={errors.blackout_dates} />
+        <BlackoutRulesField
+          availableFrom={availableFrom}
+          availableUntil={availableUntil}
+          error={errors.blackout_dates}
+        />
       </FormSection>
 
       <div className="border border-line bg-sand p-6 sm:p-8">
@@ -186,6 +210,12 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
       </div>
     </form>
   );
+}
+
+/** Today as a local YYYY-MM-DD, which is what a date input's `min` expects. */
+function todayIso() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
 /**

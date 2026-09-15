@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { WEEKDAY_LABELS } from "@/lib/listings";
 import { formatDate } from "@/lib/format";
 
@@ -18,12 +18,17 @@ const shiftDay = (value: string, delta: number) => {
   return iso(new Date(year, month - 1, day + delta));
 };
 
+const monthOf = (value: string) => {
+  const [year, month] = value.split("-").map(Number);
+  return { year, month: month - 1 };
+};
+
 /**
  * Collapses the picked days into the ranges the API stores.
  *
- * An owner blocking a fortnight away clicks fourteen days; sending fourteen
- * single-day rules would be a faithful but useless record of the clicking.
- * Consecutive days become one range, which is what the owner meant.
+ * An owner blocking a fortnight away drags across fourteen days; sending
+ * fourteen single-day rules would be a faithful but useless record of the
+ * dragging. Consecutive days become one range, which is what they meant.
  */
 function toRanges(selected: string[]): BlackoutDateDraft[] {
   const ranges: BlackoutDateDraft[] = [];
@@ -41,14 +46,80 @@ function describe(range: BlackoutDateDraft) {
     : `${formatDate(range.start_date)} – ${formatDate(range.end_date)}`;
 }
 
-/** One-off calendar exceptions only. Weekly availability is set separately. */
-export function BlackoutRulesField({ error }: { error?: string }) {
-  const today = useMemo(() => new Date(), []);
-  const todayIso = iso(today);
-  const [month, setMonth] = useState({ year: today.getFullYear(), month: today.getMonth() });
+/**
+ * One-off calendar exceptions, picked inside the listing's own window.
+ *
+ * Only days the listing is actually available can be blacked out: blocking a
+ * date the item was never offered on is not a rule, and letting it be entered
+ * would put a meaningless row in front of the backend to reject.
+ */
+export function BlackoutRulesField({
+  availableFrom,
+  availableUntil,
+  error,
+}: {
+  availableFrom: string;
+  availableUntil: string;
+  error?: string;
+}) {
   const [selected, setSelected] = useState<string[]>([]);
+  // Anchor of an in-progress drag, plus the day the pointer is currently over.
+  const [drag, setDrag] = useState<{ anchor: string; over: string; removing: boolean } | null>(null);
+  const [paged, setPaged] = useState<{ year: number; month: number } | null>(null);
 
-  const ranges = useMemo(() => toRanges(selected), [selected]);
+  // A pointer released outside the grid still ends the drag.
+  useEffect(() => {
+    if (!drag) return;
+    const finish = () => {
+      setSelected((current) => {
+        const [from, to] = drag.anchor <= drag.over ? [drag.anchor, drag.over] : [drag.over, drag.anchor];
+        const span: string[] = [];
+        for (let day = from; day <= to; day = shiftDay(day, 1)) span.push(day);
+        return drag.removing
+          ? current.filter((day) => !span.includes(day))
+          : [...new Set([...current, ...span])];
+      });
+      setDrag(null);
+    };
+    window.addEventListener("pointerup", finish);
+    return () => window.removeEventListener("pointerup", finish);
+  }, [drag]);
+
+  // Narrowing the window strands days outside it. They are filtered here
+  // rather than deleted, so widening the window again brings back what the
+  // owner picked instead of silently having thrown it away.
+  const inWindow = (day: string) =>
+    Boolean(availableFrom) && day >= availableFrom && (!availableUntil || day <= availableUntil);
+
+  const live = useMemo(
+    () => selected.filter((day) => inWindow(day)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selected, availableFrom, availableUntil],
+  );
+  const ranges = useMemo(() => toRanges(live), [live]);
+
+  if (!availableFrom) {
+    return (
+      <div>
+        <span className="block text-sm font-medium">Blackout dates</span>
+        <p className="body-copy mt-2">
+          Choose an available-from date first — blackouts are picked from the days this listing is
+          open for.
+        </p>
+      </div>
+    );
+  }
+
+  // The month on screen is the one paged to, held inside the window rather
+  // than tracked in an effect, so a change to either bound moves it for free.
+  const floor = monthOf(availableFrom);
+  const ceiling = availableUntil ? monthOf(availableUntil) : null;
+  const ordinal = (value: { year: number; month: number }) => value.year * 12 + value.month;
+  const month = (() => {
+    if (!paged || ordinal(paged) < ordinal(floor)) return floor;
+    if (ceiling && ordinal(paged) > ordinal(ceiling)) return ceiling;
+    return paged;
+  })();
 
   // Monday-first, matching how the weekly schedule above is laid out.
   const lead = (new Date(month.year, month.month, 1).getDay() + 6) % 7;
@@ -58,33 +129,41 @@ export function BlackoutRulesField({ error }: { error?: string }) {
     year: "numeric",
   });
 
-  const step = (delta: number) =>
-    setMonth((current) => {
-      const moved = new Date(current.year, current.month + delta, 1);
-      return { year: moved.getFullYear(), month: moved.getMonth() };
-    });
+  const step = (delta: number) => {
+    const moved = new Date(month.year, month.month + delta, 1);
+    setPaged({ year: moved.getFullYear(), month: moved.getMonth() });
+  };
 
-  const toggle = (day: string) =>
-    setSelected((current) =>
-      current.includes(day) ? current.filter((value) => value !== day) : [...current, day],
-    );
+  // Paging past the window would only ever show unselectable days.
+  const firstOfMonth = iso(new Date(month.year, month.month, 1));
+  const lastOfMonth = iso(new Date(month.year, month.month + 1, 0));
+  const canGoBack = firstOfMonth > availableFrom;
+  const canGoForward = !availableUntil || lastOfMonth < availableUntil;
+
+  const inDrag = (day: string) => {
+    if (!drag) return false;
+    const [from, to] = drag.anchor <= drag.over ? [drag.anchor, drag.over] : [drag.over, drag.anchor];
+    return day >= from && day <= to;
+  };
 
   return (
     <div>
       <span className="block text-sm font-medium">Blackout dates</span>
       <p className="body-copy mt-2">
-        Optional. Click any day the item cannot be rented — a holiday, or a maintenance window.
+        Optional. Click a day the item cannot be rented, or drag across several. Only days inside
+        your availability window can be picked.
       </p>
 
       <input type="hidden" name="initial_blackouts" value={JSON.stringify(ranges)} />
 
-      <div className="mt-4 max-w-sm rounded-sm border border-line">
+      <div className="mt-4 max-w-sm rounded-sm border border-line select-none">
         <div className="flex items-center justify-between border-b border-line px-3 py-2">
           <button
             type="button"
             onClick={() => step(-1)}
+            disabled={!canGoBack}
             aria-label="Previous month"
-            className="rounded-sm px-2 py-1 text-sm text-ink-soft transition-colors hover:bg-sand hover:text-ink"
+            className="rounded-sm px-2 py-1 text-sm text-ink-soft transition-colors hover:bg-sand hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
           >
             ‹
           </button>
@@ -92,8 +171,9 @@ export function BlackoutRulesField({ error }: { error?: string }) {
           <button
             type="button"
             onClick={() => step(1)}
+            disabled={!canGoForward}
             aria-label="Next month"
-            className="rounded-sm px-2 py-1 text-sm text-ink-soft transition-colors hover:bg-sand hover:text-ink"
+            className="rounded-sm px-2 py-1 text-sm text-ink-soft transition-colors hover:bg-sand hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
           >
             ›
           </button>
@@ -112,22 +192,33 @@ export function BlackoutRulesField({ error }: { error?: string }) {
 
           {Array.from({ length }, (_, index) => {
             const day = iso(new Date(month.year, month.month, index + 1));
-            const isSelected = selected.includes(day);
-            const isPast = day < todayIso;
+            const selectable = inWindow(day);
+            const dragging = inDrag(day);
+            const isSelected = dragging && drag ? !drag.removing : live.includes(day);
+
             return (
               <button
                 key={day}
                 type="button"
-                disabled={isPast}
+                disabled={!selectable}
                 aria-pressed={isSelected}
-                onClick={() => toggle(day)}
+                onPointerDown={(event) => {
+                  if (!selectable) return;
+                  // Keeps the browser from turning the drag into a text or
+                  // element selection halfway across the grid.
+                  event.preventDefault();
+                  setDrag({ anchor: day, over: day, removing: live.includes(day) });
+                }}
+                onPointerEnter={() => {
+                  if (selectable && drag) setDrag({ ...drag, over: day });
+                }}
                 className={`aspect-square rounded-sm text-sm transition-colors ${
                   isSelected
                     ? "bg-ink text-cream"
-                    : isPast
-                      ? "cursor-default text-ink-soft/40"
-                      : "hover:bg-sand"
-                } ${day === todayIso && !isSelected ? "border border-clay" : ""}`}
+                    : selectable
+                      ? "hover:bg-sand"
+                      : "cursor-default text-ink-soft/30"
+                } ${dragging && !isSelected ? "bg-sand" : ""}`}
               >
                 {index + 1}
               </button>

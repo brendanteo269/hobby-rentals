@@ -22,6 +22,10 @@ const days = (value: number) => `${value} ${value === 1 ? "day" : "days"}`;
 export function RentalDurationField({ minError, maxError }: { minError?: string; maxError?: string }) {
   const [min, setMin] = useState(1);
   const [max, setMax] = useState(7);
+  // An owner with no upper bound is not choosing a very large number of days,
+  // they are declining to choose one. The field is simply omitted, which is
+  // what the API already reads as "no maximum".
+  const [unbounded, setUnbounded] = useState(false);
   const error = minError ?? maxError;
 
   const percent = (value: number) => ((value - FLOOR) / (CEILING - FLOOR)) * 100;
@@ -37,16 +41,36 @@ export function RentalDurationField({ minError, maxError }: { minError?: string;
         <output className="rounded-sm border border-line bg-sand px-2.5 py-1.5 text-sm">
           Min {days(min)}
         </output>
-        <output className="rounded-sm border border-line bg-sand px-2.5 py-1.5 text-sm">
-          Max {days(max)}
-        </output>
+        <div className="flex items-center gap-2">
+          <output className="rounded-sm border border-line bg-sand px-2.5 py-1.5 text-sm">
+            {unbounded ? "No maximum" : `Max ${days(max)}`}
+          </output>
+          <button
+            type="button"
+            aria-pressed={unbounded}
+            onClick={() => {
+              // The minimum may have been dragged past the parked maximum while
+              // there was no upper bound to hold it back.
+              if (unbounded) setMax((current) => Math.max(current, min));
+              setUnbounded(!unbounded);
+            }}
+            className={`rounded-sm border px-2.5 py-1.5 text-sm transition-colors ${
+              unbounded
+                ? "border-ink bg-ink text-cream"
+                : "border-line text-ink-soft hover:border-ink hover:text-ink"
+            }`}
+          >
+            ∞
+            <span className="sr-only"> No maximum rental length</span>
+          </button>
+        </div>
       </div>
 
       <div className="relative mt-4 h-5">
         <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-stone" />
         <div
           className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-ink"
-          style={{ left: `${percent(min)}%`, right: `${100 - percent(max)}%` }}
+          style={{ left: `${percent(min)}%`, right: unbounded ? "0%" : `${100 - percent(max)}%` }}
         />
         <input
           type="range"
@@ -56,7 +80,9 @@ export function RentalDurationField({ minError, maxError }: { minError?: string;
           max={CEILING}
           step={1}
           value={min}
-          onChange={(event) => setMin(Math.min(Number(event.target.value), max))}
+          onChange={(event) =>
+            setMin(unbounded ? Number(event.target.value) : Math.min(Number(event.target.value), max))
+          }
           className={thumb}
           style={{ zIndex: min >= max ? 10 : 20 }}
         />
@@ -69,13 +95,17 @@ export function RentalDurationField({ minError, maxError }: { minError?: string;
           step={1}
           value={max}
           onChange={(event) => setMax(Math.max(Number(event.target.value), min))}
-          className={thumb}
+          disabled={unbounded}
+          className={`${thumb} ${unbounded ? "invisible" : ""}`}
           style={{ zIndex: min >= max ? 20 : 10 }}
         />
       </div>
 
       <p className={`mt-3 text-xs ${error ? "text-clay" : "text-ink-soft"}`} {...(error ? { role: "alert" } : {})}>
-        {error ?? `Renters can book this for ${days(min)} up to ${days(max)}.`}
+        {error ??
+          (unbounded
+            ? `Renters can book this for ${days(min)} or longer, with no upper limit.`
+            : `Renters can book this for ${days(min)} up to ${days(max)}.`)}
       </p>
     </div>
   );
