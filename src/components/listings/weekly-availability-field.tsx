@@ -27,7 +27,10 @@ export function WeeklyAvailabilityField({ profileAvailableDays }: { profileAvail
   return (
     <div>
       <span className="block text-sm font-medium">Weekly rental availability</span>
-      <p className="body-copy mt-2">The days of the week this item can be collected and returned.</p>
+      <p className="body-copy mt-2">
+        The days of the week this item can be collected and returned. Green days are available;
+        outlined days are unavailable.
+      </p>
 
       <input type="hidden" name="has_custom_availability" value={String(custom)} />
       <input type="hidden" name="custom_available_days" value={JSON.stringify(days)} />
@@ -70,11 +73,22 @@ export function WeeklyAvailabilityField({ profileAvailableDays }: { profileAvail
               disabled={!custom}
               aria-pressed={selected}
               onClick={() => toggle(day)}
-              className={`rounded-sm border px-3 py-2 text-sm transition-colors ${
-                selected ? "border-ink bg-sand" : "border-line text-ink-soft"
-              } ${custom ? "hover:border-ink" : "cursor-default"}`}
+              className={`min-w-24 border px-3 py-2 text-sm font-medium transition-colors ${
+                selected
+                  ? "border-emerald-800 bg-emerald-700 text-white"
+                  : "border-line bg-white text-ink-soft"
+              } ${
+                custom
+                  ? selected
+                    ? "hover:bg-emerald-800"
+                    : "hover:border-ink hover:text-ink"
+                  : "cursor-default"
+              }`}
             >
-              {label}
+              <span className="block">{label}</span>
+              <span className="mt-0.5 block text-xs font-normal opacity-90">
+                {selected ? "\u2713 Available" : "Unavailable"}
+              </span>
             </button>
           );
         })}
