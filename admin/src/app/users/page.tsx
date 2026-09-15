@@ -1,3 +1,5 @@
+import type { Route } from "next";
+import { redirect } from "next/navigation";
 import { requirePortalSession } from "@/lib/admin";
 import { searchUsers, PAGE_SIZE } from "@/lib/users";
 import { ROUTES } from "@/lib/routes";
@@ -25,6 +27,11 @@ export default async function UsersPage({
   const { users, total, error } = await searchUsers(q, page);
 
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // A page past the end of the result set (a bookmarked or shared link whose
+  // matches have since shrunk) would otherwise render as a false "no
+  // accounts match this search" — send it back to the real last page instead.
+  if (page > lastPage) redirect(hrefForUsersPage(q, lastPage) as Route);
   const description = error
     ? error
     : total === 0

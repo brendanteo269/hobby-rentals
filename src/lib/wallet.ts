@@ -22,6 +22,9 @@ export type WalletState = {
 
 export const EMPTY_WALLET: WalletState = { availableCents: 0, heldCents: 0, transactions: [] };
 
+// Mirrors the $10.00 floor enforced by create_wallet_withdrawal in the DB.
+export const MIN_WITHDRAWAL_CENTS = 1000;
+
 type WalletApiResponse = {
   available_balance_cents: number;
   held_balance_cents: number;

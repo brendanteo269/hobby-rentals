@@ -1,5 +1,5 @@
 import { Button } from "../ui";
-import { formatWalletAmount, type WalletState } from "@/lib/wallet";
+import { formatWalletAmount, MIN_WITHDRAWAL_CENTS, type WalletState } from "@/lib/wallet";
 
 export function BalanceSummaryCard({
   wallet,
@@ -10,6 +10,7 @@ export function BalanceSummaryCard({
   onOpenTopUp: () => void;
   onOpenWithdraw: () => void;
 }) {
+  const belowMinimum = wallet.availableCents < MIN_WITHDRAWAL_CENTS;
   return (
     <div className="border border-line bg-white p-6 sm:p-8">
       <div className="grid gap-6 sm:grid-cols-3">
@@ -30,11 +31,21 @@ export function BalanceSummaryCard({
           note="Available plus escrow"
         />
       </div>
-      <div className="mt-8 flex flex-wrap gap-3 border-t border-line pt-6">
+      <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-line pt-6">
         <Button onClick={onOpenTopUp}>Top up credits</Button>
-        <Button variant="outline" onClick={onOpenWithdraw}>
+        <Button
+          variant="outline"
+          onClick={onOpenWithdraw}
+          disabled={belowMinimum}
+          title={belowMinimum ? `You need at least ${formatWalletAmount(MIN_WITHDRAWAL_CENTS)} available to withdraw.` : undefined}
+        >
           Withdraw funds
         </Button>
+        {belowMinimum && (
+          <p className="body-copy text-xs text-ink-soft">
+            Minimum withdrawal is {formatWalletAmount(MIN_WITHDRAWAL_CENTS)}.
+          </p>
+        )}
       </div>
     </div>
   );

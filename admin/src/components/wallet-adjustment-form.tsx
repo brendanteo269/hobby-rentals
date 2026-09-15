@@ -57,6 +57,15 @@ export function WalletAdjustmentForm({ walletId }: { walletId: string }) {
           placeholder="0.00"
         />
 
+        <Field
+          label="Related booking"
+          id="booking_id"
+          name="booking_id"
+          type="text"
+          placeholder="Booking ID, if this relates to one"
+          hint="Optional. Shows up alongside this adjustment in the transaction history below."
+        />
+
         <div>
           <label htmlFor="reason" className="block text-sm font-medium">
             Justification
