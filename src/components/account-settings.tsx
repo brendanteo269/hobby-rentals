@@ -1,8 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
-import { Button, Field, TextareaField } from "./ui";
-import { CreditWallet } from "./credit-wallet";
+import { useActionState, useEffect, useState } from "react";
+import { Button, Field, SelectField, TextareaField } from "./ui";
+import { useToast } from "./toast";
 import {
   updateDisplayName,
   updateContactDetails,
@@ -10,21 +10,33 @@ import {
   type FormState,
 } from "@/app/profile/actions";
 import { PASSWORD_REQUIREMENTS_HINT } from "@/lib/password";
+import { LOCATION_AREAS, LOCATION_LABELS } from "@/lib/listings";
 
-/** Renders the outcome of a settings form, success or failure. */
-function FormMessage({ state }: { state: FormState }) {
-  if (!state?.error && !state?.success) return null;
-  const isError = Boolean(state.error);
-  return (
-    <p
-      role={isError ? "alert" : "status"}
-      className={`border-l-2 px-3 py-2 text-sm ${
-        isError ? "border-clay bg-sand text-ink" : "border-ink bg-sand text-ink"
-      }`}
-    >
-      {state.error ?? state.success}
-    </p>
-  );
+/** Toasts a form action's outcome instead of an inline banner, once per submission. */
+function useFormToast(state: FormState) {
+  const { show } = useToast();
+  useEffect(() => {
+    if (state?.error) show(state.error, "error");
+    else if (state?.success) show(state.success, "success");
+    // Only re-fires when useActionState hands back a new result.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
+}
+
+/**
+ * Exits edit mode the moment a submission succeeds.
+ *
+ * This only mirrors the action's own result, so it's adjusted during render
+ * (comparing against the previous result) rather than in a `useEffect` —
+ * the pattern React's docs recommend for state that derives from a value
+ * that just changed, instead of a genuine side effect.
+ */
+function useExitEditingOnSuccess(state: FormState, setEditing: (editing: boolean) => void) {
+  const [prevState, setPrevState] = useState(state);
+  if (state !== prevState) {
+    setPrevState(state);
+    if (state?.success) setEditing(false);
+  }
 }
 
 function DisplayNameForm({ current }: { current: string | null }) {
@@ -32,10 +44,15 @@ function DisplayNameForm({ current }: { current: string | null }) {
     updateDisplayName,
     undefined,
   );
+  useFormToast(state);
+
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(current ?? "");
+  useExitEditingOnSuccess(state, setEditing);
 
   return (
     <section>
-      <h2 className="display-caps text-xl">Display name</h2>
+      <h2 className="heading text-xl">Display name</h2>
       <p className="body-copy mt-2">Shown to people you rent with.</p>
 
       <form action={formAction} className="mt-5 max-w-sm space-y-4">
@@ -44,15 +61,30 @@ function DisplayNameForm({ current }: { current: string | null }) {
           id="display_name"
           name="display_name"
           type="text"
-          defaultValue={current ?? ""}
+          value={value}
+          onChange={(event) => setValue(event.target.value)}
+          disabled={!editing}
           autoComplete="name"
           maxLength={60}
           required
         />
-        <FormMessage state={state} />
-        <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : "Save name"}
-        </Button>
+        {editing ? (
+          <Button key="save" type="submit" disabled={pending}>
+            {pending ? "Saving…" : "Save name"}
+          </Button>
+        ) : (
+          <Button
+            key="edit"
+            type="button"
+            variant="outline"
+            onClick={(event) => {
+              event.preventDefault();
+              setEditing(true);
+            }}
+          >
+            Edit name
+          </Button>
+        )}
       </form>
     </section>
   );
@@ -69,10 +101,15 @@ function ContactDetailsForm({ contactNumber, preferredMeetupLocation, bio }: Con
     updateContactDetails,
     undefined,
   );
+  useFormToast(state);
+
+  const [editing, setEditing] = useState(false);
+  const [values, setValues] = useState<ContactDetails>({ contactNumber, preferredMeetupLocation, bio });
+  useExitEditingOnSuccess(state, setEditing);
 
   return (
     <section className="border-t border-line pt-10">
-      <h2 className="display-caps text-xl">Contact details</h2>
+      <h2 className="heading text-xl">Contact details</h2>
       <p className="body-copy mt-2">Shared with a counterparty once a booking is confirmed.</p>
 
       <form action={formAction} className="mt-5 max-w-sm space-y-4">
@@ -81,32 +118,61 @@ function ContactDetailsForm({ contactNumber, preferredMeetupLocation, bio }: Con
           id="contact_number"
           name="contact_number"
           type="tel"
-          defaultValue={contactNumber ?? ""}
+          value={values.contactNumber ?? ""}
+          onChange={(event) => setValues((current) => ({ ...current, contactNumber: event.target.value }))}
+          disabled={!editing}
           autoComplete="tel"
           required
         />
-        <Field
+        <SelectField
           label="Preferred meetup location"
           id="preferred_meetup_location"
           name="preferred_meetup_location"
-          type="text"
-          defaultValue={preferredMeetupLocation ?? ""}
-          maxLength={120}
+          value={values.preferredMeetupLocation ?? ""}
+          onChange={(event) =>
+            setValues((current) => ({ ...current, preferredMeetupLocation: event.target.value }))
+          }
+          disabled={!editing}
+          className="truncate"
           required
-        />
+        >
+          <option value="" disabled>
+            Choose one
+          </option>
+          {LOCATION_AREAS.map((value) => (
+            <option key={value} value={value}>
+              {LOCATION_LABELS[value]}
+            </option>
+          ))}
+        </SelectField>
         <TextareaField
           label="Bio"
           id="bio"
           name="bio"
-          defaultValue={bio ?? ""}
+          value={values.bio ?? ""}
+          onChange={(event) => setValues((current) => ({ ...current, bio: event.target.value }))}
+          disabled={!editing}
           rows={3}
           maxLength={500}
           hint="Optional. A line or two about you."
         />
-        <FormMessage state={state} />
-        <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : "Save contact details"}
-        </Button>
+        {editing ? (
+          <Button key="save" type="submit" disabled={pending}>
+            {pending ? "Saving…" : "Save contact details"}
+          </Button>
+        ) : (
+          <Button
+            key="edit"
+            type="button"
+            variant="outline"
+            onClick={(event) => {
+              event.preventDefault();
+              setEditing(true);
+            }}
+          >
+            Edit contact details
+          </Button>
+        )}
       </form>
     </section>
   );
@@ -117,10 +183,11 @@ function PasswordForm() {
     changePassword,
     undefined,
   );
+  useFormToast(state);
 
   return (
     <section className="border-t border-line pt-10">
-      <h2 className="display-caps text-xl">Password</h2>
+      <h2 className="heading text-xl">Password</h2>
       <p className="body-copy mt-2">
         Your current password is required, so a stolen session cannot lock you out.
       </p>
@@ -153,7 +220,6 @@ function PasswordForm() {
           minLength={8}
           required
         />
-        <FormMessage state={state} />
         <Button type="submit" disabled={pending}>
           {pending ? "Changing…" : "Change password"}
         </Button>
@@ -171,7 +237,6 @@ export function AccountSettings({
 }: { displayName: string | null } & ContactDetails) {
   return (
     <div className="space-y-10">
-      <CreditWallet />
       <DisplayNameForm current={displayName} />
       <ContactDetailsForm
         contactNumber={contactNumber}

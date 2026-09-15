@@ -14,7 +14,7 @@ import {
 } from "@/lib/browse-params";
 import type { BrowseListingsResponse } from "@/lib/listings";
 
-export const metadata = { title: "Browse gear — HobbyRentals" };
+export const metadata = { title: "Browse products — HobbyRentals" };
 
 export default async function BrowsePage({
   searchParams,
@@ -30,7 +30,7 @@ export default async function BrowsePage({
   return (
     <Container className="py-16">
       <p className="eyebrow">Marketplace</p>
-      <h1 className="display-caps mt-3 text-3xl">Browse gear</h1>
+      <h1 className="heading mt-3 text-3xl">Browse products</h1>
 
       <div className="mt-8">
         <ListingFilters filters={filters} />

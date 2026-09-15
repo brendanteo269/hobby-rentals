@@ -1,44 +1,90 @@
-import { Container, Button, Input, ImageSlot } from "@/components/ui";
+import { Container, Button, Input, ImageSlot, Badge } from "@/components/ui";
+import { ShieldCheck, BadgeCheck, Handshake, Camera } from "lucide-react";
+import { HERO_IMAGE } from "@/lib/mock-images";
 
-/** Opening section: full-bleed image with the search card laid over it. */
+const TRUST_LINE = [
+  { icon: ShieldCheck, label: "Escrow-protected" },
+  { icon: BadgeCheck, label: "Verified Passports" },
+  { icon: Handshake, label: "Guided handover" },
+];
+
+/** Opening section: search card on the left, a showcase image on the right. */
 export function Hero() {
   return (
-    <section className="relative">
-      <ImageSlot
-        label="Hobby gear laid out on a wooden table"
-        align="end"
-        className="h-[420px] w-full"
-      />
-      <Container className="pointer-events-none absolute inset-0 flex items-center">
-        <div className="pointer-events-auto max-w-md bg-cream p-8 sm:p-10">
-          <p className="eyebrow">Singapore · Peer to peer</p>
-          <h1 className="display-caps mt-4 text-3xl leading-tight sm:text-4xl">
-            Rent the gear you want
-          </h1>
-          <p className="body-copy mt-4">
-            Earn from the gear you don&apos;t use. Singapore&apos;s trusted marketplace for
-            high-value hobby equipment — cameras, kayaks, keyboards, kilns.
-          </p>
+    <Container className="grid gap-10 pt-14 lg:grid-cols-2 lg:items-center lg:pt-20">
+      <div>
+        <p className="eyebrow">Peer-to-peer gear rentals · Singapore</p>
+        <h1 className="heading mt-4 text-3xl leading-tight sm:text-4xl">
+          Rent the gear you need. Make money on what you own.
+        </h1>
+        <p className="body-copy mt-4 max-w-md">
+          A secure, community-backed rental platform for photography, outdoor gear, and creator
+          kits across Singapore.
+        </p>
 
-          <form className="mt-6 flex gap-2">
-            <label htmlFor="search" className="sr-only">
-              Search for gear
-            </label>
-            <Input
-              id="search"
-              name="q"
-              placeholder='Try "drone" or "espresso machine"'
-              className="min-w-0 flex-1"
-            />
-            <Button type="submit">Search</Button>
-          </form>
+        <form className="mt-8 rounded-2xl border border-line bg-white p-3 sm:flex sm:items-stretch sm:gap-2 sm:p-2">
+          <label htmlFor="search" className="sr-only">
+            Search for gear
+          </label>
+          <Input
+            id="search"
+            name="q"
+            pill
+            placeholder='Sony A7III, tent, drone…'
+            className="border-transparent sm:flex-1"
+          />
+          <label htmlFor="area" className="sr-only">
+            Pickup location
+          </label>
+          <Input
+            id="area"
+            name="area"
+            pill
+            placeholder="Choose pickup location"
+            className="mt-2 border-transparent sm:mt-0 sm:flex-1"
+          />
+          <label htmlFor="dates" className="sr-only">
+            Rental dates
+          </label>
+          <Input
+            id="dates"
+            name="dates"
+            pill
+            placeholder="Add your dates"
+            className="mt-2 border-transparent sm:mt-0 sm:flex-1"
+          />
+          <Button type="submit" className="mt-2 w-full sm:mt-0 sm:w-auto">
+            Search
+          </Button>
+        </form>
 
-          <div className="mt-5 flex flex-wrap gap-x-8 gap-y-1 text-xs text-ink-soft">
-            <span>4,200 listings island-wide</span>
-            <span>Damage cover on every rental</span>
-          </div>
+        <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
+          {TRUST_LINE.map(({ icon: Icon, label }) => (
+            <span key={label} className="flex items-center gap-1.5 text-xs text-ink-soft">
+              <Icon className="size-4 text-ink" aria-hidden="true" />
+              {label}
+            </span>
+          ))}
         </div>
-      </Container>
-    </section>
+      </div>
+
+      <div className="relative">
+        <ImageSlot
+          label="Hobby gear laid out on a wooden table"
+          src={HERO_IMAGE}
+          align="end"
+          className="aspect-4/5 w-full rounded-3xl lg:aspect-square"
+        />
+        <Badge variant="dark" className="absolute left-4 top-4">
+          Product Passport Verified
+        </Badge>
+        <div className="absolute bottom-4 left-4 right-4 flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 shadow-sm sm:right-auto">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-muted text-ink">
+            <Camera className="size-4" aria-hidden="true" />
+          </span>
+          <p className="text-xs font-medium">Sony Cinema Kit · Tampines · 5.0</p>
+        </div>
+      </div>
+    </Container>
   );
 }

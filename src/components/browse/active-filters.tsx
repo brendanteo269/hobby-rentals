@@ -89,10 +89,10 @@ function FilterChip({ label, href }: { label: string; href: string }) {
   return (
     <Link
       href={href as Route}
-      className="group inline-flex items-center gap-1.5 rounded-full bg-blush px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-ink transition-colors hover:bg-stone"
+      className="group inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-accent-dark transition-colors hover:bg-accent-soft/70"
     >
       {label}
-      <span aria-hidden="true" className="text-ink-soft group-hover:text-ink">
+      <span aria-hidden="true" className="text-accent-dark/70 group-hover:text-accent-dark">
         ×
       </span>
       <span className="sr-only">Remove this filter</span>

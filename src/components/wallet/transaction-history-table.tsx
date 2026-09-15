@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { filterTransactions, formatWalletAmount, type TransactionFilter, type TransactionType, type WalletTransaction } from "@/lib/wallet";
 import { formatDateTime } from "@/lib/format";
+import { Pagination } from "@/components/pagination";
+import { Chip } from "@/components/ui";
+
+const PAGE_SIZE = 10;
 
 const labels: Record<TransactionFilter, string> = {
   all: "All",
@@ -47,39 +51,44 @@ function TransactionDescription({ description }: { description: string }) {
 
 export function TransactionHistoryTable({ transactions }: { transactions: WalletTransaction[] }) {
   const [filter, setFilter] = useState<TransactionFilter>("all");
-  const rows = filterTransactions(transactions, filter);
+  const [page, setPage] = useState(1);
+  const allRows = filterTransactions(transactions, filter);
+  const lastPage = Math.max(1, Math.ceil(allRows.length / PAGE_SIZE));
+  const safePage = Math.min(page, lastPage);
+  const rows = allRows.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  function selectFilter(key: TransactionFilter) {
+    setFilter(key);
+    setPage(1);
+  }
 
   return (
     <section>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">Your activity</p>
-          <h2 className="display-caps mt-2 text-xl">Transaction history</h2>
+          <h2 className="heading mt-2 text-xl">Transaction history</h2>
         </div>
         <div className="flex flex-wrap gap-2" role="group" aria-label="Transaction filters">
           {(Object.keys(labels) as TransactionFilter[]).map((key) => (
-            <button
-              key={key}
-              onClick={() => setFilter(key)}
-              className={`rounded-sm border px-3 py-2 text-xs ${filter === key ? "border-ink bg-ink text-cream" : "border-line bg-white text-ink-soft"}`}
-            >
+            <Chip key={key} size="sm" selected={filter === key} onClick={() => selectFilter(key)}>
               {labels[key]}
-            </button>
+            </Chip>
           ))}
         </div>
       </div>
       {rows.length === 0 ? (
-        <div className="mt-4 border border-line bg-white px-6 py-12 text-center">
+        <div className="mt-4 rounded-2xl border border-line bg-white px-6 py-12 text-center">
           <p className="text-3xl" aria-hidden="true">
             ◎
           </p>
-          <p className="display-caps mt-3 text-lg">Nothing here yet</p>
+          <p className="heading mt-3 text-lg">Nothing here yet</p>
           <p className="body-copy mt-2">Transactions matching this filter will appear here.</p>
         </div>
       ) : (
-        <div className="mt-4 overflow-x-auto border border-line bg-white">
+        <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-white">
           <table className="w-full min-w-[680px] text-left text-sm">
-            <thead className="border-b border-line bg-sand text-xs uppercase tracking-wider text-ink-soft">
+            <thead className="border-b border-line bg-surface-muted text-xs uppercase tracking-wider text-ink-soft">
               <tr>
                 {["Type", "Description", "Date", "Amount", "Status"].map((head) => (
                   <th key={head} className="px-4 py-3 font-medium">
@@ -92,7 +101,7 @@ export function TransactionHistoryTable({ transactions }: { transactions: Wallet
               {rows.map((tx) => (
                 <tr key={tx.id} className="border-b border-line last:border-0">
                   <td className="px-4 py-4">
-                    <span className="rounded-sm bg-sand px-2 py-1 text-[10px] font-medium tracking-wider">
+                    <span className="rounded-full bg-surface-muted px-2 py-1 text-[10px] font-medium tracking-wider">
                       {typeLabels[tx.type]}
                     </span>
                   </td>
@@ -101,7 +110,7 @@ export function TransactionHistoryTable({ transactions }: { transactions: Wallet
                   </td>
                   <td className="whitespace-nowrap px-4 py-4 text-ink-soft">{formatDateTime(tx.date)}</td>
                   <td
-                    className={`whitespace-nowrap px-4 py-4 font-medium ${tx.amountCents >= 0 ? "text-ink" : "text-clay"}`}
+                    className={`whitespace-nowrap px-4 py-4 font-medium ${tx.amountCents >= 0 ? "text-ink" : "text-accent-dark"}`}
                   >
                     {tx.amountCents >= 0 ? "+" : "−"}
                     {formatWalletAmount(Math.abs(tx.amountCents))}
@@ -113,6 +122,7 @@ export function TransactionHistoryTable({ transactions }: { transactions: Wallet
           </table>
         </div>
       )}
+      <Pagination page={safePage} lastPage={lastPage} onPageChange={setPage} />
     </section>
   );
 }

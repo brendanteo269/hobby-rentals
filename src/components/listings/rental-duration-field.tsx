@@ -1,14 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import { Chip } from "@/components/ui";
 
 const FLOOR = 1;
 const CEILING = 30;
 
 const thumb =
   "pointer-events-none absolute inset-x-0 top-1/2 h-5 w-full -translate-y-1/2 appearance-none bg-transparent focus-visible:outline-none " +
-  "[&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-ink [&::-webkit-slider-thumb]:bg-cream [&::-webkit-slider-thumb]:active:cursor-grabbing " +
-  "[&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-ink [&::-moz-range-thumb]:bg-cream";
+  "[&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:cursor-grab [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-ink [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:active:cursor-grabbing " +
+  "[&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:cursor-grab [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border [&::-moz-range-thumb]:border-ink [&::-moz-range-thumb]:bg-white";
 
 const days = (value: number) => `${value} ${value === 1 ? "day" : "days"}`;
 
@@ -38,36 +39,30 @@ export function RentalDurationField({ minError, maxError }: { minError?: string;
       </p>
 
       <div className="mt-5 flex items-center justify-between gap-3">
-        <output className="rounded-sm border border-line bg-sand px-2.5 py-1.5 text-sm">
+        <output className="rounded-full border border-line bg-surface-muted px-3 py-1.5 text-sm">
           Min {days(min)}
         </output>
         <div className="flex items-center gap-2">
-          <output className="rounded-sm border border-line bg-sand px-2.5 py-1.5 text-sm">
+          <output className="rounded-full border border-line bg-surface-muted px-3 py-1.5 text-sm">
             {unbounded ? "No maximum" : `Max ${days(max)}`}
           </output>
-          <button
-            type="button"
-            aria-pressed={unbounded}
+          <Chip
+            selected={unbounded}
             onClick={() => {
               // The minimum may have been dragged past the parked maximum while
               // there was no upper bound to hold it back.
               if (unbounded) setMax((current) => Math.max(current, min));
               setUnbounded(!unbounded);
             }}
-            className={`rounded-sm border px-2.5 py-1.5 text-sm transition-colors ${
-              unbounded
-                ? "border-ink bg-ink text-cream"
-                : "border-line text-ink-soft hover:border-ink hover:text-ink"
-            }`}
           >
             ∞
             <span className="sr-only"> No maximum rental length</span>
-          </button>
+          </Chip>
         </div>
       </div>
 
       <div className="relative mt-4 h-5">
-        <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-stone" />
+        <div className="absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-line" />
         <div
           className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-ink"
           style={{ left: `${percent(min)}%`, right: unbounded ? "0%" : `${100 - percent(max)}%` }}
@@ -101,7 +96,7 @@ export function RentalDurationField({ minError, maxError }: { minError?: string;
         />
       </div>
 
-      <p className={`mt-3 text-xs ${error ? "text-clay" : "text-ink-soft"}`} {...(error ? { role: "alert" } : {})}>
+      <p className={`mt-3 text-xs ${error ? "text-accent-dark" : "text-ink-soft"}`} {...(error ? { role: "alert" } : {})}>
         {error ??
           (unbounded
             ? `Renters can book this for ${days(min)} or longer, with no upper limit.`

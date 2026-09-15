@@ -1,10 +1,11 @@
-import { ImageSlot } from "@/components/ui";
+import { Badge, ImageSlot } from "@/components/ui";
 import { formatMoney } from "@/lib/format";
 import {
   CATEGORY_LABELS,
   LOCATION_LABELS,
   type ListingCard as ListingCardData,
 } from "@/lib/listings";
+import { CATEGORY_IMAGES } from "@/lib/mock-images";
 
 /**
  * One real listing in the browse grid.
@@ -13,26 +14,26 @@ import {
  * placeholder copy: that card's fields (a formatted price string, a marketing
  * line) are written by hand, while these come from the API as cents and enum
  * tokens. Merging them would mean one component pretending to two contracts.
+ * Unlike that placeholder card, this one carries no rating or "Product
+ * Passport" ribbon — real listings have no such field yet.
  */
 export function ListingCard({ listing }: { listing: ListingCardData }) {
   return (
-    <li className="group border border-line bg-white transition-colors hover:border-ink-soft">
+    <li className="group overflow-hidden rounded-2xl border border-line bg-white transition-colors hover:border-ink-soft">
       <div className="relative overflow-hidden">
-        {/* Photo hosting is not wired up yet, so the key stands in for the image. */}
+        {/* Photo hosting is not wired up yet, so a category mock photo
+            stands in until a real one exists for this listing. */}
         <ImageSlot
           label={listing.primary_photo_key ?? "No photo yet"}
+          src={CATEGORY_IMAGES[listing.category]}
           className="aspect-square w-full transition-transform duration-300 ease-out group-hover:scale-105"
         />
-        <span className="absolute left-3 top-3 rounded-full bg-cream/95 px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-ink">
-          {LOCATION_LABELS[listing.location_area]}
-        </span>
+        <Badge className="absolute left-3 top-3">{LOCATION_LABELS[listing.location_area]}</Badge>
       </div>
 
       <div className="p-4">
         <p className="eyebrow">{CATEGORY_LABELS[listing.category]}</p>
-        <h3 className="mt-1.5 text-sm font-semibold uppercase leading-snug tracking-wide">
-          {listing.name}
-        </h3>
+        <h3 className="heading mt-1.5 text-sm leading-snug">{listing.name}</h3>
 
         <div className="mt-3 flex items-baseline gap-2 border-t border-line pt-3">
           <RateLine listing={listing} />

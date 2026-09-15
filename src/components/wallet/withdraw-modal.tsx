@@ -1,9 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Button, Field } from "../ui";
+import { Button, Field, Modal } from "../ui";
 import { MIN_WITHDRAWAL_CENTS, formatWalletAmount, walletAuthHeader, type WalletState } from "@/lib/wallet";
-import { WalletDialog } from "./wallet-dialog";
 
 type Props = {
   apiUrl: string;
@@ -72,14 +71,14 @@ export function WithdrawModal({ apiUrl, availableCents, onClose, onWalletRefresh
   }
 
   return (
-    <WalletDialog title="Withdraw funds" onClose={onClose}>
+    <Modal title="Withdraw funds" onClose={onClose}>
       {/* noValidate: min/max below double as a11y/spinner hints, but max is
           derived from the balance and can end up below min (balance under
           the withdrawal minimum) — native validation would then silently
           block submission before our onSubmit ever runs, hiding the clear
           in-app error this form is supposed to show. */}
       <form className="mt-6 space-y-5" onSubmit={submit} noValidate>
-        <div className="border border-line bg-sand p-4">
+        <div className="rounded-2xl border border-line bg-surface-muted p-4">
           <p className="eyebrow">Withdrawable now</p>
           <p className="mt-1 text-3xl">{formatWalletAmount(availableCents)}</p>
           <p className="body-copy mt-2">Funds held in escrow stay locked until the related booking is released.</p>
@@ -104,7 +103,7 @@ export function WithdrawModal({ apiUrl, availableCents, onClose, onWalletRefresh
           </p>
         )}
         {error && (
-          <p role="alert" className="text-sm text-clay">
+          <p role="alert" className="text-sm text-accent-dark">
             {error}
           </p>
         )}
@@ -117,6 +116,6 @@ export function WithdrawModal({ apiUrl, availableCents, onClose, onWalletRefresh
           </Button>
         </div>
       </form>
-    </WalletDialog>
+    </Modal>
   );
 }

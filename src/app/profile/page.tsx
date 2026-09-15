@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
+import { MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/lib/profile";
 import { getProfileAvailability } from "@/lib/api/profile-availability";
-import { Container } from "@/components/ui";
+import { Badge, Container } from "@/components/ui";
+import { isLocationArea, LOCATION_LABELS } from "@/lib/listings";
 import {
   ViewTabs,
   RenterView,
@@ -10,6 +12,7 @@ import {
   type ProfileView,
 } from "@/components/profile-views";
 import { AccountSettings } from "@/components/account-settings";
+import { CreditWallet } from "@/components/credit-wallet";
 
 export const metadata = { title: "Your profile — HobbyRentals" };
 
@@ -17,7 +20,7 @@ export const metadata = { title: "Your profile — HobbyRentals" };
  * The view lives in the URL rather than client state, so it survives a reload
  * and can be linked to. Members who only own default to the owning side.
  */
-const VIEWS: ProfileView[] = ["renter", "owner", "account"];
+const VIEWS: ProfileView[] = ["renter", "owner", "wallet", "account"];
 
 function isView(value: string | undefined): value is ProfileView {
   return VIEWS.includes(value as ProfileView);
@@ -58,19 +61,31 @@ export default async function ProfilePage({
   return (
     <Container className="py-16">
       <p className="eyebrow">Member since {memberSince}</p>
-      <h1 className="display-caps mt-3 text-3xl">{profile.display_name ?? "Your profile"}</h1>
-      <p className="body-copy mt-2">
+      <h1 className="heading mt-3 text-3xl">{profile.display_name ?? "Your profile"}</h1>
+      <p className="body-copy mt-2 flex items-center gap-3">
         {user.email}
-        <span className={`ml-3 text-xs ${isVerified ? "text-ink-soft" : "text-clay"}`}>
+        <Badge variant={isVerified ? "dark" : "accent"}>
           {isVerified ? "Verified" : "Pending verification"}
-        </span>
+        </Badge>
       </p>
+
+      {profile.preferred_meetup_location && (
+        <p className="mt-2 flex items-center gap-1.5 text-sm text-ink-soft">
+          <MapPin className="size-4" aria-hidden="true" />
+          {isLocationArea(profile.preferred_meetup_location)
+            ? LOCATION_LABELS[profile.preferred_meetup_location]
+            : profile.preferred_meetup_location}
+        </p>
+      )}
+
+      {profile.bio && <p className="body-copy mt-2 max-w-xl">{profile.bio}</p>}
 
       <div className="mt-10">
         <ViewTabs active={active} />
         <div className="mt-8">
           {active === "renter" && <RenterView enabled={profile.wants_to_rent} />}
           {active === "owner" && <OwnerView enabled={profile.wants_to_own} availableDays={availability.available_days} />}
+          {active === "wallet" && <CreditWallet />}
           {active === "account" && (
             <AccountSettings
               displayName={profile.display_name}
