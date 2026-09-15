@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { Button, Field, FormError, SelectField, TextareaField } from "@/components/ui";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
 import { WeeklyAvailabilityField } from "@/components/listings/weekly-availability-field";
+import { RentalDurationField } from "@/components/listings/rental-duration-field";
 import { PricePerBlockField } from "@/components/listings/price-per-block-field";
 import { submitListing, type CreateListingState } from "@/app/listings/actions";
 import {
@@ -164,33 +165,14 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Minimum rental days"
-            id="min_rental_days"
-            name="min_rental_days"
-            type="number"
-            min="1"
-            step="1"
-            inputMode="numeric"
-            hint="Optional."
-            error={errors.min_rental_days}
-          />
-          <Field
-            label="Maximum rental days"
-            id="max_rental_days"
-            name="max_rental_days"
-            type="number"
-            min="1"
-            step="1"
-            inputMode="numeric"
-            hint="Optional."
-            error={errors.max_rental_days}
-          />
-        </div>
+        <WeeklyAvailabilityField profileAvailableDays={profileAvailableDays} />
+
+        <RentalDurationField
+          minError={errors.min_rental_days}
+          maxError={errors.max_rental_days}
+        />
 
         <BlackoutRulesField error={errors.blackout_dates} />
-        <WeeklyAvailabilityField profileAvailableDays={profileAvailableDays} />
       </FormSection>
 
       <div className="border border-line bg-sand p-6 sm:p-8">
