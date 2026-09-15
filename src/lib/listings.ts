@@ -121,6 +121,16 @@ export type Listing = {
   updated_at: string;
 };
 
+export const ALLOWED_PHOTO_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+
+export const MAX_LISTING_PHOTOS = 8;
+
+/** What POST /listings/photos/presign returns for one photo. */
+export type PresignPhotoResponse = {
+  upload_url: string;
+  photo_key: string;
+};
+
 export type CreateListingRequest = {
   name: string;
   description: string;
@@ -144,12 +154,10 @@ export type CreateListingRequest = {
   has_custom_availability?: boolean;
   custom_available_days?: number[] | null;
   initial_blackouts?: BlackoutDate[];
-  photo_keys?: string[];
+  /** At least one is required (FastAPI 422s on an empty list). */
+  photo_keys: string[];
 };
 
-// Display vocabulary --------------------------------------------------------
-// The backend stores machine tokens; these are what a member reads. Kept in
-// one place so a filter chip, a select option and a card all say the same word.
 
 export const CATEGORY_LABELS: Record<ListingCategory, string> = {
   PHOTOGRAPHY_VIDEOGRAPHY: "Photography & video",

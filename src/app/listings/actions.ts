@@ -60,6 +60,23 @@ function initialBlackouts(formData: FormData): BlackoutDate[] {
 }
 
 /**
+ * Parses the photo keys PhotoUploadField serialised into a hidden field —
+ * each one already uploaded to S3 by the time the form is submitted. Same
+ * "malformed means tampered, so drop it" handling as blackoutRules: FastAPI
+ * re-checks every key belongs to this owner regardless of what arrives here.
+ */
+function photoKeys(formData: FormData): string[] {
+  const raw = text(formData, "photo_keys");
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Creates a listing and sends the owner to the marketplace to see it.
  *
  * Validation is left to FastAPI rather than repeated here: it already returns
@@ -75,11 +92,16 @@ export async function submitListing(
   const category = text(formData, "category");
   const condition = text(formData, "condition");
   const locationArea = text(formData, "location_area");
+  const photos = photoKeys(formData);
 
   const fieldErrors: Record<string, string> = {};
   if (!isCategory(category)) fieldErrors.category = "Choose a category.";
   if (!isCondition(condition)) fieldErrors.condition = "Choose the item's condition.";
   if (!isLocationArea(locationArea)) fieldErrors.location_area = "Choose a collection area.";
+  // PhotoUploadField already uploads each photo as it's picked, so by submit
+  // time this is just a count check — not worth a round trip to FastAPI when
+  // the answer is already sitting in the hidden field.
+  if (photos.length === 0) fieldErrors.photo_keys = "Add at least one photo.";
 
   // PricePerBlockField mounts a box under whichever one name the owner
   // picked — never both, never neither once they have chosen — so exactly
@@ -118,6 +140,7 @@ export async function submitListing(
     has_custom_availability: text(formData, "has_custom_availability") === "true",
     custom_available_days: (() => { try { return JSON.parse(text(formData, "custom_available_days")) as number[]; } catch { return []; } })(),
     initial_blackouts: initialBlackouts(formData),
+    photo_keys: photos,
   };
 
   try {
