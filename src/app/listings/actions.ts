@@ -6,7 +6,7 @@ import {
   isCategory,
   isCondition,
   isLocationArea,
-  type BlackoutRule,
+  type BlackoutDate,
   type CreateListingRequest,
 } from "@/lib/listings";
 
@@ -48,12 +48,12 @@ function count(formData: FormData, name: string): number | null {
  * in, so it is dropped: FastAPI validates the rules it does receive, and an
  * unreadable blob has no field of its own to complain against.
  */
-function blackoutRules(formData: FormData): BlackoutRule[] {
-  const raw = text(formData, "blackout_dates");
+function initialBlackouts(formData: FormData): BlackoutDate[] {
+  const raw = text(formData, "initial_blackouts");
   if (!raw) return [];
   try {
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as BlackoutRule[]) : [];
+    return Array.isArray(parsed) ? (parsed as BlackoutDate[]) : [];
   } catch {
     return [];
   }
@@ -115,7 +115,9 @@ export async function submitListing(
     max_rental_days: count(formData, "max_rental_days"),
     available_from: text(formData, "available_from"),
     available_until: text(formData, "available_until") || null,
-    blackout_dates: blackoutRules(formData),
+    has_custom_availability: text(formData, "has_custom_availability") === "true",
+    custom_available_days: (() => { try { return JSON.parse(text(formData, "custom_available_days")) as number[]; } catch { return []; } })(),
+    initial_blackouts: initialBlackouts(formData),
   };
 
   try {

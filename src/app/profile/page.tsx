@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/lib/profile";
-import { formatMonthYear } from "@/lib/format";
+import { getProfileAvailability } from "@/lib/api/profile-availability";
 import { Container } from "@/components/ui";
 import {
   ViewTabs,
@@ -53,6 +53,7 @@ export default async function ProfilePage({
     year: "numeric",
   });
   const isVerified = Boolean(user.email_confirmed_at);
+  const availability = await getProfileAvailability();
 
   return (
     <Container className="py-16">
@@ -69,7 +70,7 @@ export default async function ProfilePage({
         <ViewTabs active={active} />
         <div className="mt-8">
           {active === "renter" && <RenterView enabled={profile.wants_to_rent} />}
-          {active === "owner" && <OwnerView enabled={profile.wants_to_own} />}
+          {active === "owner" && <OwnerView enabled={profile.wants_to_own} availableDays={availability.available_days} />}
           {active === "account" && (
             <AccountSettings
               displayName={profile.display_name}

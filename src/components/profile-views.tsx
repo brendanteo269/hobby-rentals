@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Button, ButtonLink } from "./ui";
 import { enableRenting, enableOwning } from "@/app/profile/actions";
+import { saveProfileAvailability } from "@/app/profile/actions";
+import { ProfileAvailabilityCard } from "@/components/profile-availability-card";
 
 export type ProfileView = "renter" | "owner" | "account";
 
@@ -98,13 +100,14 @@ export function RenterView({ enabled }: { enabled: boolean }) {
   );
 }
 
-export function OwnerView({ enabled }: { enabled: boolean }) {
+export function OwnerView({ enabled, availableDays = [1, 2, 3, 4, 5, 6, 7] }: { enabled: boolean; availableDays?: number[] }) {
   if (!enabled) return <NotEnabled side="owner" />;
-  return (
+  return <div className="space-y-6">
+    <ProfileAvailabilityCard availableDays={availableDays} action={saveProfileAvailability} />
     <EmptyState
       title="No listings yet"
       body="Gear you list will appear here, along with requests from people wanting to book it."
       action={<ButtonLink href="/">List your gear</ButtonLink>}
     />
-  );
+  </div>;
 }

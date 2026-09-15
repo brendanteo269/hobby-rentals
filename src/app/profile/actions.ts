@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { updateProfileAvailability } from "@/lib/api/profile-availability";
 import { createClient } from "@/lib/supabase/server";
 import { validatePasswordComplexity } from "@/lib/password";
 import { parseContactDetails } from "@/lib/contact-details";
@@ -64,6 +65,20 @@ export async function enableRenting() {
 
 export async function enableOwning() {
   await enableSide("wants_to_own");
+}
+
+export async function saveProfileAvailability(
+  _previous: { error?: string; saved?: boolean } | undefined,
+  formData: FormData,
+): Promise<{ error?: string; saved?: boolean }> {
+  try {
+    const days = JSON.parse(String(formData.get("available_days") ?? "[]"));
+    if (!Array.isArray(days) || days.length === 0) return { error: "Choose at least one day." };
+    await updateProfileAvailability(days);
+    return { saved: true };
+  } catch {
+    return { error: "We could not save your availability. Please try again." };
+  }
 }
 
 async function enableSide(column: "wants_to_rent" | "wants_to_own") {

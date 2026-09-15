@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import type { ReactNode } from "react";
 import { Button, Field, FormError, SelectField, TextareaField } from "@/components/ui";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
+import { WeeklyAvailabilityField } from "@/components/listings/weekly-availability-field";
 import { PricePerBlockField } from "@/components/listings/price-per-block-field";
 import { submitListing, type CreateListingState } from "@/app/listings/actions";
 import {
@@ -24,7 +25,7 @@ import {
  * `min` attributes are kept as a first pass, so the common mistakes are caught
  * without a round trip, but nothing here is trusted to have caught them.
  */
-export function CreateListingForm() {
+export function CreateListingForm({ profileAvailableDays }: { profileAvailableDays: number[] }) {
   const [state, formAction, pending] = useActionState<CreateListingState, FormData>(
     submitListing,
     undefined,
@@ -189,6 +190,7 @@ export function CreateListingForm() {
         </div>
 
         <BlackoutRulesField error={errors.blackout_dates} />
+        <WeeklyAvailabilityField profileAvailableDays={profileAvailableDays} />
       </FormSection>
 
       <div className="border border-line bg-sand p-6 sm:p-8">
