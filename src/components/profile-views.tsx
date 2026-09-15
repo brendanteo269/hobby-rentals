@@ -4,7 +4,7 @@ import { enableRenting, enableOwning } from "@/app/profile/actions";
 import { saveProfileAvailability } from "@/app/profile/actions";
 import { ProfileAvailabilityCard } from "@/components/profile-availability-card";
 import { RateLine } from "@/components/browse/listing-card";
-import { CATEGORY_LABELS, type Listing } from "@/lib/listings";
+import { CATEGORY_LABELS, LISTING_STATUS_LABELS, type Listing } from "@/lib/listings";
 import { profilePath, type ProfileView } from "@/lib/routes";
 import { CATEGORY_IMAGES } from "@/lib/mock-images";
 
@@ -86,12 +86,6 @@ export function RenterView({ enabled }: { enabled: boolean }) {
   );
 }
 
-const STATUS_LABELS: Record<Listing["status"], string> = {
-  DRAFT: "Draft",
-  ACTIVE: "Active",
-  ARCHIVED: "Archived",
-};
-
 /**
  * An owner's own listing, styled like the browse grid's ListingCard — same
  * photo/badge/price shell — with a status badge added, since that only
@@ -107,7 +101,7 @@ function OwnerListingCard({ listing }: { listing: Listing }) {
           className="aspect-square w-full"
         />
         <Badge variant={listing.status === "ACTIVE" ? "dark" : "neutral"} className="absolute left-3 top-3">
-          {STATUS_LABELS[listing.status]}
+          {LISTING_STATUS_LABELS[listing.status]}
         </Badge>
       </div>
 

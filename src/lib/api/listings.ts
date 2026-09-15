@@ -84,6 +84,25 @@ export function getMyListings() {
   return backendRequest<Listing[]>("/listings/mine");
 }
 
+/** S1-12 Scenario 1: pulls a listing out of the marketplace, restorable. */
+export function archiveListing(listingId: string) {
+  return backendRequest<Listing>(`/listings/${encodeURIComponent(listingId)}/archive`, { method: "POST" });
+}
+
+/** S1-12 Scenario 1: republishes an archived listing. */
+export function restoreListing(listingId: string) {
+  return backendRequest<Listing>(`/listings/${encodeURIComponent(listingId)}/restore`, { method: "POST" });
+}
+
+/**
+ * S1-12 Scenarios 2 & 3: "Remove Listing". Returns REMOVED immediately if
+ * there was nothing upcoming, or PENDING_REMOVAL with scheduled_removal_at
+ * set if a confirmed booking is still ahead of it.
+ */
+export function removeListing(listingId: string) {
+  return backendRequest<Listing>(`/listings/${encodeURIComponent(listingId)}/remove`, { method: "POST" });
+}
+
 export type ListingAvailability = {
   has_custom_availability: boolean;
   weekly_schedule: number[];

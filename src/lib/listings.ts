@@ -63,7 +63,7 @@ export type LocationArea =
   | "WOODLANDS"
   | "YISHUN";
 
-export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
+export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "PENDING_REMOVAL" | "REMOVED";
 
 /**
  * Recurring unavailability on a listing. One-off ranges live here too, so an
@@ -117,6 +117,8 @@ export type Listing = {
   custom_available_days: number[] | null;
   photo_keys: string[];
   status: ListingStatus;
+  /** Set only while status is PENDING_REMOVAL - see S1-12. */
+  scheduled_removal_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -212,6 +214,14 @@ export const LOCATION_LABELS: Record<LocationArea, string> = {
   TOA_PAYOH: "Toa Payoh",
   WOODLANDS: "Woodlands",
   YISHUN: "Yishun",
+};
+
+export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
+  DRAFT: "Draft",
+  ACTIVE: "Published",
+  ARCHIVED: "Archived",
+  PENDING_REMOVAL: "Removal scheduled",
+  REMOVED: "Removed",
 };
 
 export const CATEGORIES = Object.keys(CATEGORY_LABELS) as ListingCategory[];
