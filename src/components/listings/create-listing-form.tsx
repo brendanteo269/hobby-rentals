@@ -1,9 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import type { ReactNode } from "react";
 import { Button, Field, FormError, SelectField, TextareaField } from "@/components/ui";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
+import { WeeklyAvailabilityField } from "@/components/listings/weekly-availability-field";
+import { RentalDurationField } from "@/components/listings/rental-duration-field";
 import { PricePerBlockField } from "@/components/listings/price-per-block-field";
 import { submitListing, type CreateListingState } from "@/app/listings/actions";
 import {
@@ -24,12 +26,25 @@ import {
  * `min` attributes are kept as a first pass, so the common mistakes are caught
  * without a round trip, but nothing here is trusted to have caught them.
  */
-export function CreateListingForm() {
+export function CreateListingForm({ profileAvailableDays }: { profileAvailableDays: number[] }) {
   const [state, formAction, pending] = useActionState<CreateListingState, FormData>(
     submitListing,
     undefined,
   );
   const errors = state?.fieldErrors ?? {};
+
+  // The three availability controls constrain one another: nothing may be
+  // listed or blacked out before today, and the window's own end cannot
+  // precede its start. Holding the two dates here is what lets the calendar
+  // below offer only the days the listing is actually open for.
+  const today = todayIso();
+  const [availableFrom, setAvailableFrom] = useState("");
+  const [availableUntil, setAvailableUntil] = useState("");
+  // A custom schedule starts from the owner's current default. This makes
+  // switching modes predictable instead of silently reverting to Mon-Fri.
+  const [customAvailability, setCustomAvailability] = useState(false);
+  const [customDays, setCustomDays] = useState<number[]>(profileAvailableDays);
+  const weeklyDays = customAvailability ? customDays : profileAvailableDays;
 
   return (
     <form action={formAction} className="space-y-6">
@@ -150,6 +165,15 @@ export function CreateListingForm() {
             id="available_from"
             name="available_from"
             type="date"
+            min={today}
+            value={availableFrom}
+            onChange={(event) => {
+              const next = event.target.value;
+              setAvailableFrom(next);
+              // A window that now ends before it starts is not a state worth
+              // keeping around for the owner to discover at submit time.
+              if (availableUntil && next && availableUntil < next) setAvailableUntil("");
+            }}
             required
             error={errors.available_from}
           />
@@ -158,37 +182,33 @@ export function CreateListingForm() {
             id="available_until"
             name="available_until"
             type="date"
+            min={availableFrom || today}
+            value={availableUntil}
+            onChange={(event) => setAvailableUntil(event.target.value)}
             hint="Optional. Leave blank to stay listed indefinitely."
             error={errors.available_until}
           />
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Minimum rental days"
-            id="min_rental_days"
-            name="min_rental_days"
-            type="number"
-            min="1"
-            step="1"
-            inputMode="numeric"
-            hint="Optional."
-            error={errors.min_rental_days}
-          />
-          <Field
-            label="Maximum rental days"
-            id="max_rental_days"
-            name="max_rental_days"
-            type="number"
-            min="1"
-            step="1"
-            inputMode="numeric"
-            hint="Optional."
-            error={errors.max_rental_days}
-          />
-        </div>
+        <WeeklyAvailabilityField
+          profileAvailableDays={profileAvailableDays}
+          custom={customAvailability}
+          onCustomChange={setCustomAvailability}
+          days={customDays}
+          onDaysChange={setCustomDays}
+        />
 
-        <BlackoutRulesField error={errors.blackout_dates} />
+        <RentalDurationField
+          minError={errors.min_rental_days}
+          maxError={errors.max_rental_days}
+        />
+
+        <BlackoutRulesField
+          availableFrom={availableFrom}
+          availableUntil={availableUntil}
+          weeklyDays={weeklyDays}
+          error={errors.blackout_dates}
+        />
       </FormSection>
 
       <div className="border border-line bg-sand p-6 sm:p-8">
@@ -202,6 +222,12 @@ export function CreateListingForm() {
       </div>
     </form>
   );
+}
+
+/** Today as a local YYYY-MM-DD, which is what a date input's `min` expects. */
+function todayIso() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
 /**

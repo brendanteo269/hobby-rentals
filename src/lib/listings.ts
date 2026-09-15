@@ -70,10 +70,7 @@ export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED";
  * owner blocking a single trip and an owner blocking every Sunday use the same
  * field. Weekdays are 0 = Monday … 6 = Sunday, matching the backend.
  */
-export type BlackoutRule =
-  | { type: "DATE_RANGE"; start: string; end: string }
-  | { type: "WEEKLY"; weekdays: number[] }
-  | { type: "ANNUAL"; start_month_day: string; end_month_day: string };
+export type BlackoutDate = { id?: string; start_date: string; end_date: string; reason?: string | null };
 
 /** One card in the browse grid. Deliberately slimmer than `Listing`. */
 export type ListingCard = {
@@ -115,7 +112,9 @@ export type Listing = {
   max_rental_days: number | null;
   available_from: string;
   available_until: string | null;
-  blackout_dates: BlackoutRule[];
+  blackout_dates: unknown[];
+  has_custom_availability: boolean;
+  custom_available_days: number[] | null;
   photo_keys: string[];
   status: ListingStatus;
   created_at: string;
@@ -142,7 +141,9 @@ export type CreateListingRequest = {
   /** ISO date (YYYY-MM-DD). Omitting available_until means indefinitely. */
   available_from: string;
   available_until?: string | null;
-  blackout_dates?: BlackoutRule[];
+  has_custom_availability?: boolean;
+  custom_available_days?: number[] | null;
+  initial_blackouts?: BlackoutDate[];
   photo_keys?: string[];
 };
 
