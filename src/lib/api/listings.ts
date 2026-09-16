@@ -99,6 +99,23 @@ export function getListing(listingId: string) {
   return backendRequest<Listing>(`/listings/${encodeURIComponent(listingId)}`);
 }
 
+export type ListingHistory = {
+  bookings: import("@/lib/bookings").Booking[];
+  lifecycle_events: {
+    id: string;
+    listing_id: string;
+    action: string;
+    from_status: string;
+    to_status: string;
+    scheduled_removal_at: string | null;
+    created_at: string;
+  }[];
+};
+
+export function getListingHistory(listingId: string) {
+  return backendRequest<ListingHistory>(`/listings/${encodeURIComponent(listingId)}/history`);
+}
+
 /** S1-12 Scenario 1: pulls a listing out of the marketplace, restorable. */
 export function archiveListing(listingId: string) {
   return backendRequest<Listing>(`/listings/${encodeURIComponent(listingId)}/archive`, { method: "POST" });
