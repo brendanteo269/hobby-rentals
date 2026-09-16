@@ -6,12 +6,13 @@ import { getProfileAvailability } from "@/lib/api/profile-availability";
 import { getMyListings } from "@/lib/api/listings";
 import { Badge, Container } from "@/components/ui";
 import { isLocationArea, LOCATION_LABELS } from "@/lib/listings";
+import { ViewTabs, RenterView, OwnerView } from "@/components/profile-views";
 import {
-  ViewTabs,
-  RenterView,
-  OwnerView,
+  defaultProfileView,
+  isProfileView,
   type ProfileView,
-} from "@/components/profile-views";
+} from "@/lib/routes";
+import type { Roles } from "@/lib/contact-details";
 import { AccountSettings } from "@/components/account-settings";
 import { CreditWallet } from "@/components/credit-wallet";
 
@@ -19,17 +20,11 @@ export const metadata = { title: "Your profile — HobbyRentals" };
 
 /**
  * The view lives in the URL rather than client state, so it survives a reload
- * and can be linked to. Members who only own default to the owning side.
+ * and can be linked to. An absent or unrecognised value falls back to the same
+ * rule onboarding uses to choose where to send a member, so the two agree.
  */
-const VIEWS: ProfileView[] = ["renter", "owner", "wallet", "account"];
-
-function isView(value: string | undefined): value is ProfileView {
-  return VIEWS.includes(value as ProfileView);
-}
-
-function resolveView(requested: string | undefined, wantsToOwn: boolean, wantsToRent: boolean) {
-  if (isView(requested)) return requested;
-  return wantsToOwn && !wantsToRent ? "owner" : "renter";
+function resolveView(requested: string | undefined, roles: Roles): ProfileView {
+  return isProfileView(requested) ? requested : defaultProfileView(roles);
 }
 
 export default async function ProfilePage({
@@ -47,10 +42,17 @@ export default async function ProfilePage({
   if (!user) redirect("/login");
 
   const profile = await getOwnProfile();
+  // Defence in depth: the middleware gate already turns an un-onboarded member
+  // away from this page (S1-02 AC5). This is what stops a future change there
+  // from silently rendering a half-configured profile.
   if (!profile?.onboarded_at) redirect("/onboarding");
 
   const { view } = await searchParams;
-  const active: ProfileView = resolveView(view, profile.wants_to_own, profile.wants_to_rent);
+  const roles: Roles = {
+    wantsToRent: profile.wants_to_rent,
+    wantsToOwn: profile.wants_to_own,
+  };
+  const active: ProfileView = resolveView(view, roles);
 
   const memberSince = new Date(profile.created_at).toLocaleDateString("en-SG", {
     month: "long",
@@ -99,7 +101,9 @@ export default async function ProfilePage({
               displayName={profile.display_name}
               contactNumber={profile.contact_number}
               preferredMeetupLocation={profile.preferred_meetup_location}
+              defaultPickupLocation={profile.default_pickup_location}
               bio={profile.bio}
+              roles={roles}
             />
           )}
         </div>

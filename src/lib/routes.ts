@@ -46,3 +46,43 @@ export type AuthErrorCode = "link-invalid" | "link-missing";
 export function authErrorPath(code: AuthErrorCode): `/auth-error?reason=${AuthErrorCode}` {
   return `/auth-error?reason=${code}`;
 }
+
+/**
+ * The panels of the profile page, which are also the legal values of its
+ * `?view=` parameter — hence living here rather than beside the tab markup.
+ *
+ * "renter" and "owner" are the two portal dashboards S1-02 sends a member to
+ * once onboarding is done.
+ */
+export type ProfileView = "renter" | "owner" | "wallet" | "account";
+
+const PROFILE_VIEWS: readonly ProfileView[] = ["renter", "owner", "wallet", "account"];
+
+export function isProfileView(value: string | undefined): value is ProfileView {
+  return PROFILE_VIEWS.includes(value as ProfileView);
+}
+
+/**
+ * Which side of the marketplace to show a member by default.
+ *
+ * Someone who only owns lands on owning; everyone else — renters, and members
+ * who do both — lands on renting. Used both to resolve an absent `?view=` and
+ * to choose where onboarding sends them, so the two cannot disagree.
+ */
+export function defaultProfileView({
+  wantsToRent,
+  wantsToOwn,
+}: {
+  wantsToRent: boolean;
+  wantsToOwn: boolean;
+}): ProfileView {
+  return wantsToOwn && !wantsToRent ? "owner" : "renter";
+}
+
+/** The profile page, optionally opened on a particular panel. */
+export function profilePath(view?: ProfileView): "/profile" | `/profile?view=${ProfileView}` {
+  return view ? `/profile?view=${view}` : "/profile";
+}
+
+/** First-run setup. */
+export const ONBOARDING_PATH = "/onboarding";

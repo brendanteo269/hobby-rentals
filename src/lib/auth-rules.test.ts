@@ -12,8 +12,15 @@ import { describe, expect, it } from "vitest";
 import { validateEmail } from "@/lib/email";
 import { validatePasswordComplexity } from "@/lib/password";
 import { loginNotice } from "@/lib/session-policy";
-import { authErrorPath, checkEmailPath, loginPath } from "@/lib/routes";
-import { requiresVerifiedEmail, returnsToLogin } from "@/lib/verified-routes";
+import {
+  authErrorPath,
+  checkEmailPath,
+  defaultProfileView,
+  isProfileView,
+  loginPath,
+  profilePath,
+} from "@/lib/routes";
+import { requiresOnboarding, requiresVerifiedEmail, returnsToLogin } from "@/lib/route-policy";
 
 describe("validateEmail", () => {
   it.each(["a@b.co", "first.last@example.com", "user+tag@sub.domain.org"])(
@@ -142,5 +149,57 @@ describe("returnsToLogin", () => {
     // S1-17 depends on this: recovery must keep the session it just
     // established to reach the set-a-new-password screen.
     expect(returnsToLogin("recovery")).toBe(false);
+  });
+});
+
+describe("requiresOnboarding", () => {
+  it.each(["/profile", "/browse", "/listings", "/listings/new", "/listings/abc/availability"])(
+    "gates %s",
+    (path) => {
+      expect(requiresOnboarding(path)).toBe(true);
+    },
+  );
+
+  it("never gates /onboarding itself", () => {
+    // The redirect target. Gating it would bounce a member between the gate
+    // and the form forever, with no way to complete either.
+    expect(requiresOnboarding("/onboarding")).toBe(false);
+  });
+
+  it.each(["/", "/login", "/signup", "/check-email", "/auth-error"])(
+    "leaves %s open",
+    (path) => {
+      expect(requiresOnboarding(path)).toBe(false);
+    },
+  );
+});
+
+describe("defaultProfileView", () => {
+  it("sends an owner-only member to the owning side", () => {
+    expect(defaultProfileView({ wantsToRent: false, wantsToOwn: true })).toBe("owner");
+  });
+
+  it("sends renters, and members who do both, to the renting side", () => {
+    expect(defaultProfileView({ wantsToRent: true, wantsToOwn: false })).toBe("renter");
+    expect(defaultProfileView({ wantsToRent: true, wantsToOwn: true })).toBe("renter");
+  });
+});
+
+describe("profilePath", () => {
+  it("builds a path per panel, and a bare one with no view", () => {
+    expect(profilePath()).toBe("/profile");
+    expect(profilePath("owner")).toBe("/profile?view=owner");
+  });
+
+  it("round-trips through isProfileView", () => {
+    // The writer and the reader must agree on the spelling; this is the only
+    // place that checks they do.
+    const view = new URL(profilePath("wallet"), "http://x").searchParams.get("view");
+    expect(isProfileView(view ?? undefined)).toBe(true);
+  });
+
+  it("rejects a view that is not a panel", () => {
+    expect(isProfileView("admin")).toBe(false);
+    expect(isProfileView(undefined)).toBe(false);
   });
 });

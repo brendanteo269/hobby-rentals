@@ -2,7 +2,7 @@ import { type EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { authErrorPath, loginPath, type AuthErrorCode } from "@/lib/routes";
-import { returnsToLogin } from "@/lib/verified-routes";
+import { returnsToLogin } from "@/lib/route-policy";
 
 /**
  * Landing point for the link in the verification email.

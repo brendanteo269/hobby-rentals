@@ -1,13 +1,14 @@
 /**
- * Which routes require a confirmed email address, and which confirmation links
- * end at the login screen (S1-01).
+ * Which routes are gated on what, and which confirmation links end at the
+ * login screen.
  *
- * Separate from the middleware that applies it and the route handler that acts
- * on it, because both are policy rather than mechanism — and because a pure
- * module can be tested without standing up a Supabase client or a request.
+ * Separate from the middleware that applies these and the route handler that
+ * acts on them, because they are policy rather than mechanism — and because a
+ * pure module can be tested without standing up a Supabase client or a request.
  */
 
 import type { EmailOtpType } from "@supabase/supabase-js";
+import { ONBOARDING_PATH } from "@/lib/routes";
 
 /**
  * Routes a member may not reach until their email address is confirmed.
@@ -56,4 +57,30 @@ const SIGN_OUT_AFTER: ReadonlySet<string> = new Set<EmailOtpType>(["signup", "em
  */
 export function returnsToLogin(type: EmailOtpType | null): boolean {
   return type === null || SIGN_OUT_AFTER.has(type);
+}
+
+/**
+ * Routes requiring a signed-in member.
+ *
+ * /onboarding is included so first-run setup cannot be reached anonymously.
+ * /browse and /listings read from the FastAPI backend, which rejects an
+ * anonymous caller — guarding them here turns a redirect out of a
+ * half-rendered page into a clean trip to the login screen.
+ */
+export const PROTECTED_PREFIXES = ["/profile", "/onboarding", "/browse", "/listings"];
+
+export function requiresSignIn(pathname: string): boolean {
+  return PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
+
+/**
+ * Whether `pathname` may only be reached once first-run setup is done.
+ *
+ * S1-02 AC5: onboarding cannot be bypassed. Everything behind the sign-in wall
+ * qualifies *except* onboarding itself — gating that would leave the redirect
+ * with nowhere to land, and the member looping between the two forever.
+ */
+export function requiresOnboarding(pathname: string): boolean {
+  if (pathname.startsWith(ONBOARDING_PATH)) return false;
+  return requiresSignIn(pathname);
 }

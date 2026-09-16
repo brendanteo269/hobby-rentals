@@ -5,9 +5,16 @@ import { redirect } from "next/navigation";
 import { updateProfileAvailability } from "@/lib/api/profile-availability";
 import { createClient } from "@/lib/supabase/server";
 import { validatePasswordComplexity } from "@/lib/password";
-import { parseContactDetails } from "@/lib/contact-details";
+import { parseContactDetails, validateDisplayName } from "@/lib/contact-details";
+import { defaultProfileView, profilePath } from "@/lib/routes";
+import type { FieldErrors } from "@/lib/api/client";
 
-export type OnboardingState = { error?: string } | undefined;
+export type OnboardingState =
+  | { error?: string; fieldErrors?: FieldErrors }
+  | undefined;
+
+/** Shown alongside the per-field messages, so the summary is written once. */
+const CORRECT_FIELDS = "Please correct the highlighted fields.";
 
 /**
  * Records what the member came here to do, their contact details, and marks
@@ -15,6 +22,10 @@ export type OnboardingState = { error?: string } | undefined;
  *
  * The update goes through the member's own session, so Row Level Security is
  * what confines it to their row — the id is never taken from the form.
+ *
+ * Completing this is also what gives the member a wallet: the
+ * profiles_create_wallet_on_onboarding trigger fires on the onboarded_at
+ * transition below. Nothing here has to ask for one.
  */
 export async function completeOnboarding(
   _prev: OnboardingState,
@@ -27,8 +38,22 @@ export async function completeOnboarding(
     return { error: "Pick at least one. You can change this later." };
   }
 
-  const contactResult = parseContactDetails(formData);
-  if (!contactResult.ok) return { error: contactResult.error };
+  const displayName = String(formData.get("display_name") ?? "").trim();
+  const contactResult = parseContactDetails(formData, { wantsToRent, wantsToOwn });
+
+  // Both are reported together, so a member missing a name *and* a location is
+  // told about both at once rather than one per submission.
+  const displayNameError = validateDisplayName(displayName);
+
+  if (!contactResult.ok) {
+    const fieldErrors: FieldErrors = { ...contactResult.fieldErrors };
+    if (displayNameError) fieldErrors.display_name = displayNameError;
+    return { error: CORRECT_FIELDS, fieldErrors };
+  }
+  if (displayNameError) {
+    return { error: CORRECT_FIELDS, fieldErrors: { display_name: displayNameError } };
+  }
+
   const { values } = contactResult;
 
   const supabase = await createClient();
@@ -37,22 +62,32 @@ export async function completeOnboarding(
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("profiles")
     .update({
+      display_name: displayName,
       wants_to_rent: wantsToRent,
       wants_to_own: wantsToOwn,
       contact_number: values.contact_number,
       preferred_meetup_location: values.preferred_meetup_location,
+      default_pickup_location: values.default_pickup_location,
       bio: values.bio,
       onboarded_at: new Date().toISOString(),
     })
-    .eq("id", user.id);
+    .eq("id", user.id)
+    // Selecting back is what proves a row was actually written. An update
+    // matching nothing reports no error, so without this a member whose
+    // profiles row is missing would be sent here by the middleware gate,
+    // "succeed", and be sent straight back — a loop with no way out.
+    .select("id");
 
   if (error) return { error: error.message };
+  if (!data || data.length === 0) {
+    return { error: "We could not find your profile to update. Please log in again." };
+  }
 
   revalidatePath("/profile");
-  redirect("/profile");
+  redirect(profilePath(defaultProfileView({ wantsToRent, wantsToOwn })));
 }
 
 /**
@@ -96,7 +131,9 @@ async function enableSide(column: "wants_to_rent" | "wants_to_own") {
   revalidatePath("/profile");
 }
 
-export type FormState = { error?: string; success?: string } | undefined;
+export type FormState =
+  | { error?: string; success?: string; fieldErrors?: FieldErrors }
+  | undefined;
 
 /** Renames the member. RLS confines the write to their own row. */
 export async function updateDisplayName(
@@ -105,8 +142,8 @@ export async function updateDisplayName(
 ): Promise<FormState> {
   const displayName = String(formData.get("display_name") ?? "").trim();
 
-  if (!displayName) return { error: "Display name cannot be empty." };
-  if (displayName.length > 60) return { error: "Display name must be 60 characters or fewer." };
+  const displayNameError = validateDisplayName(displayName);
+  if (displayNameError) return { error: displayNameError };
 
   const supabase = await createClient();
   const {
@@ -125,13 +162,21 @@ export async function updateDisplayName(
   return { success: "Display name updated." };
 }
 
-/** Updates the contact number, preferred meetup location and bio collected at onboarding. */
+/** Updates the contact number, locations and bio collected at onboarding. */
 export async function updateContactDetails(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  const contactResult = parseContactDetails(formData);
-  if (!contactResult.ok) return { error: contactResult.error };
+  // The roles ride along in the form, because which location is required
+  // depends on them and the action has no other way to know.
+  const roles = {
+    wantsToRent: formData.get("wants_to_rent") === "on",
+    wantsToOwn: formData.get("wants_to_own") === "on",
+  };
+  const contactResult = parseContactDetails(formData, roles);
+  if (!contactResult.ok) {
+    return { error: CORRECT_FIELDS, fieldErrors: contactResult.fieldErrors };
+  }
   const { values } = contactResult;
 
   const supabase = await createClient();
@@ -145,6 +190,7 @@ export async function updateContactDetails(
     .update({
       contact_number: values.contact_number,
       preferred_meetup_location: values.preferred_meetup_location,
+      default_pickup_location: values.default_pickup_location,
       bio: values.bio,
     })
     .eq("id", user.id);

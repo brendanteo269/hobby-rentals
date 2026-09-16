@@ -11,6 +11,7 @@ import {
 } from "@/app/profile/actions";
 import { PASSWORD_REQUIREMENTS_HINT } from "@/lib/password";
 import { LOCATION_AREAS, LOCATION_LABELS } from "@/lib/listings";
+import type { Roles } from "@/lib/contact-details";
 
 /** Toasts a form action's outcome instead of an inline banner, once per submission. */
 function useFormToast(state: FormState) {
@@ -93,10 +94,57 @@ function DisplayNameForm({ current }: { current: string | null }) {
 type ContactDetails = {
   contactNumber: string | null;
   preferredMeetupLocation: string | null;
+  defaultPickupLocation: string | null;
   bio: string | null;
 };
 
-function ContactDetailsForm({ contactNumber, preferredMeetupLocation, bio }: ContactDetails) {
+/** The location picker, identical but for its wording and which role needs it. */
+function LocationSelect({
+  id,
+  label,
+  value,
+  onChange,
+  disabled,
+  error,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  disabled: boolean;
+  error?: string;
+}) {
+  return (
+    <SelectField
+      label={label}
+      id={id}
+      name={id}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+      disabled={disabled}
+      className="truncate"
+      required
+      error={error}
+    >
+      <option value="" disabled>
+        Choose one
+      </option>
+      {LOCATION_AREAS.map((area) => (
+        <option key={area} value={area}>
+          {LOCATION_LABELS[area]}
+        </option>
+      ))}
+    </SelectField>
+  );
+}
+
+function ContactDetailsForm({
+  contactNumber,
+  preferredMeetupLocation,
+  defaultPickupLocation,
+  bio,
+  roles,
+}: ContactDetails & { roles: Roles }) {
   const [state, formAction, pending] = useActionState<FormState, FormData>(
     updateContactDetails,
     undefined,
@@ -104,8 +152,14 @@ function ContactDetailsForm({ contactNumber, preferredMeetupLocation, bio }: Con
   useFormToast(state);
 
   const [editing, setEditing] = useState(false);
-  const [values, setValues] = useState<ContactDetails>({ contactNumber, preferredMeetupLocation, bio });
+  const [values, setValues] = useState<ContactDetails>({
+    contactNumber,
+    preferredMeetupLocation,
+    defaultPickupLocation,
+    bio,
+  });
   useExitEditingOnSuccess(state, setEditing);
+  const errors = state?.fieldErrors ?? {};
 
   return (
     <section className="border-t border-line pt-10">
@@ -123,28 +177,40 @@ function ContactDetailsForm({ contactNumber, preferredMeetupLocation, bio }: Con
           disabled={!editing}
           autoComplete="tel"
           required
+          error={errors.contact_number}
         />
-        <SelectField
-          label="Preferred meetup location"
-          id="preferred_meetup_location"
-          name="preferred_meetup_location"
-          value={values.preferredMeetupLocation ?? ""}
-          onChange={(event) =>
-            setValues((current) => ({ ...current, preferredMeetupLocation: event.target.value }))
-          }
-          disabled={!editing}
-          className="truncate"
-          required
-        >
-          <option value="" disabled>
-            Choose one
-          </option>
-          {LOCATION_AREAS.map((value) => (
-            <option key={value} value={value}>
-              {LOCATION_LABELS[value]}
-            </option>
-          ))}
-        </SelectField>
+        {/* The action needs to know which locations are required, and a
+            disabled input submits nothing — so the roles ride along as hidden
+            fields rather than being re-derived server-side. */}
+        <input type="hidden" name="wants_to_rent" value={roles.wantsToRent ? "on" : ""} />
+        <input type="hidden" name="wants_to_own" value={roles.wantsToOwn ? "on" : ""} />
+
+        {roles.wantsToRent && (
+          <LocationSelect
+            id="preferred_meetup_location"
+            label="Preferred meetup location"
+            value={values.preferredMeetupLocation ?? ""}
+            onChange={(value) =>
+              setValues((current) => ({ ...current, preferredMeetupLocation: value }))
+            }
+            disabled={!editing}
+            error={errors.preferred_meetup_location}
+          />
+        )}
+
+        {roles.wantsToOwn && (
+          <LocationSelect
+            id="default_pickup_location"
+            label="Default pickup location"
+            value={values.defaultPickupLocation ?? ""}
+            onChange={(value) =>
+              setValues((current) => ({ ...current, defaultPickupLocation: value }))
+            }
+            disabled={!editing}
+            error={errors.default_pickup_location}
+          />
+        )}
+
         <TextareaField
           label="Bio"
           id="bio"
@@ -155,6 +221,7 @@ function ContactDetailsForm({ contactNumber, preferredMeetupLocation, bio }: Con
           rows={3}
           maxLength={500}
           hint="Optional. A line or two about you."
+          error={errors.bio}
         />
         {editing ? (
           <Button key="save" type="submit" disabled={pending}>
@@ -231,18 +298,13 @@ function PasswordForm() {
 /** Account settings: the things a member changes about themselves. */
 export function AccountSettings({
   displayName,
-  contactNumber,
-  preferredMeetupLocation,
-  bio,
-}: { displayName: string | null } & ContactDetails) {
+  roles,
+  ...contact
+}: { displayName: string | null; roles: Roles } & ContactDetails) {
   return (
     <div className="space-y-10">
       <DisplayNameForm current={displayName} />
-      <ContactDetailsForm
-        contactNumber={contactNumber}
-        preferredMeetupLocation={preferredMeetupLocation}
-        bio={bio}
-      />
+      <ContactDetailsForm {...contact} roles={roles} />
       <PasswordForm />
     </div>
   );
