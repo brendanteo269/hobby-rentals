@@ -9,10 +9,11 @@ const nextConfig: NextConfig = {
       // Mock listing/hero photos, used as a stand-in for listings with no
       // uploaded photos of their own (see lib/mock-images.ts).
       { protocol: "https", hostname: "images.unsplash.com" },
-      // Real listing photos, served from the S3 bucket's virtual-hosted-style
-      // URL (see storage_service.photo_url in the API repo, which builds
-      // exactly this hostname shape: <bucket>.s3.<region>.amazonaws.com).
-      { protocol: "https", hostname: "*.s3.*.amazonaws.com" },
+      // Real listing photos: storage_service.photo_url (API repo) hands back
+      // a time-limited presigned GET URL, since the bucket has no public/CDN
+      // read path - path-style, so the bucket sits in the pathname rather
+      // than as a hostname subdomain
+      { protocol: "https", hostname: "s3.*.amazonaws.com" },
     ],
   },
 };
