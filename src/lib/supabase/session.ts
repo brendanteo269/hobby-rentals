@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { supabaseEnv } from "@/lib/env";
-import { ACTIVITY_COOKIE, idleTimeoutMs } from "@/lib/session-policy";
+import { ACTIVITY_COOKIE, idleTimeoutMs, type LoginNoticeReason } from "@/lib/session-policy";
+import { checkEmailPath, loginPath } from "@/lib/routes";
+import { requiresVerifiedEmail } from "@/lib/verified-routes";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
@@ -38,11 +40,9 @@ function withCookiesFrom(source: NextResponse, target: NextResponse) {
 
 function loginRedirect(
   request: NextRequest,
-  { reason, next }: { reason?: string; next?: string } = {},
+  { reason, next }: { reason?: LoginNoticeReason; next?: string } = {},
 ) {
-  const loginUrl = request.nextUrl.clone();
-  loginUrl.search = "";
-  loginUrl.pathname = "/login";
+  const loginUrl = new URL(loginPath(), request.url);
   if (reason) loginUrl.searchParams.set("reason", reason);
   if (next) loginUrl.searchParams.set("next", next);
   return NextResponse.redirect(loginUrl);
@@ -140,6 +140,16 @@ export async function updateSession(request: NextRequest) {
     secure: process.env.NODE_ENV === "production",
     path: "/",
   });
+
+  // Checked after the session is refreshed, not before: a member who confirms
+  // their address in another tab should be let through on their next request
+  // without having to log in again.
+  if (!user.email_confirmed_at && requiresVerifiedEmail(pathname)) {
+    return withCookiesFrom(
+      response,
+      NextResponse.redirect(new URL(checkEmailPath(user.email), request.url)),
+    );
+  }
 
   return response;
 }

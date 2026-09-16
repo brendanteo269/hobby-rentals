@@ -20,6 +20,43 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Auth and local Supabase
+
+Registration requires email confirmation. That is configured as code in
+`supabase/config.toml` (`[auth.email] enable_confirmations = true`) and applied
+by `supabase start`; with it off, `signUp()` returns a live session
+immediately, no mail is sent, and the signup flow cannot be exercised at all.
+**A deployed project is configured from the Supabase dashboard, not from that
+file — the settings there have to be mirrored, or production behaves
+differently from local.**
+
+```bash
+supabase start          # applies supabase/migrations and the auth config
+```
+
+Confirmation mail is captured locally by Mailpit at <http://127.0.0.1:54324>;
+nothing is delivered. A deployed project needs real SMTP configured, or no one
+can complete registration.
+
+Login is rate limited per account — five failed attempts inside fifteen
+minutes locks the address for fifteen minutes. The policy lives in the
+`login_attempts` migration so the numbers cannot drift from the counter that
+enforces them; `src/lib/login-attempts.ts` only translates it for the form.
+This sits on top of Supabase's own per-IP limit, which does not stop credential
+stuffing spread across many addresses.
+
+## Checks
+
+```bash
+npm run lint
+npm test          # unit tests for the validation rules and route policy
+npm run typecheck
+```
+
+`npm run typecheck` currently reports pre-existing `typedRoutes` errors for
+`/browse` and `/listings/new`; the generated route types predate those routes
+and are refreshed by `next build`.
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:

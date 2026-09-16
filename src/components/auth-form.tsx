@@ -2,15 +2,19 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { Button, Field, FormError } from "./ui";
+import { Button, Field, FormError, FormNotice, type NoticeTone } from "./ui";
 import type { AuthState } from "@/app/auth/actions";
 import { PASSWORD_REQUIREMENTS_HINT } from "@/lib/password";
 
 type Props = {
   mode: "signup" | "login";
   action: (state: AuthState, formData: FormData) => Promise<AuthState>;
-  /** Why the member is here — "your session expired", and the like. */
-  notice?: string;
+  /**
+   * Why the member is here — "your session expired", "your email is
+   * confirmed". Built by loginNotice, which allowlists the `?reason=` values
+   * that resolve to copy.
+   */
+  notice?: { message: string; tone: NoticeTone };
 };
 
 const COPY = {
@@ -46,7 +50,7 @@ export function AuthForm({ mode, action, notice }: Props) {
 
       {notice && (
         <div className="mt-6">
-          <FormError message={notice} />
+          <FormNotice message={notice.message} tone={notice.tone} />
         </div>
       )}
 

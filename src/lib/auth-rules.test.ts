@@ -1,0 +1,146 @@
+/**
+ * The validation rules and allowlists that stand between a stranger and an
+ * account (S1-01).
+ *
+ * These are pure functions with no I/O, which is exactly why they are worth
+ * pinning: each one is a single boolean decision that is invisible when it
+ * goes wrong. A loosened password rule or a notice allowlist that stops
+ * allowlisting does not throw, it just quietly stops protecting anything.
+ */
+
+import { describe, expect, it } from "vitest";
+import { validateEmail } from "@/lib/email";
+import { validatePasswordComplexity } from "@/lib/password";
+import { loginNotice } from "@/lib/session-policy";
+import { authErrorPath, checkEmailPath, loginPath } from "@/lib/routes";
+import { requiresVerifiedEmail, returnsToLogin } from "@/lib/verified-routes";
+
+describe("validateEmail", () => {
+  it.each(["a@b.co", "first.last@example.com", "user+tag@sub.domain.org"])(
+    "accepts %s",
+    (email) => {
+      expect(validateEmail(email)).toBeNull();
+    },
+  );
+
+  it.each([
+    ["", "empty"],
+    ["not-an-email", "no @"],
+    ["no-domain@", "no domain"],
+    ["@no-local.com", "no local part"],
+    ["spaces in@example.com", "whitespace"],
+    ["no-tld@example", "no dot in the domain"],
+    ["two@@example.com", "two @ signs"],
+  ])("rejects %s (%s)", (email) => {
+    expect(validateEmail(email)).not.toBeNull();
+  });
+
+  it("rejects an address longer than any mail server accepts", () => {
+    expect(validateEmail(`${"a".repeat(250)}@example.com`)).not.toBeNull();
+  });
+});
+
+describe("validatePasswordComplexity", () => {
+  it("accepts a password meeting every rule", () => {
+    expect(validatePasswordComplexity("Passw0rdy")).toBeNull();
+  });
+
+  it.each([
+    ["Pass1", "shorter than 8"],
+    ["password1", "no uppercase"],
+    ["PASSWORD1", "no lowercase"],
+    ["PasswordOnly", "no digit"],
+  ])("rejects %s (%s)", (password) => {
+    expect(validatePasswordComplexity(password)).not.toBeNull();
+  });
+
+  it("names the rule that was broken, so the member can act on it", () => {
+    expect(validatePasswordComplexity("password1")).toMatch(/uppercase/i);
+    expect(validatePasswordComplexity("PasswordOnly")).toMatch(/number/i);
+  });
+});
+
+describe("loginNotice", () => {
+  it("resolves the reasons the app actually sets", () => {
+    expect(loginNotice("expired")?.tone).toBe("error");
+    expect(loginNotice("signed-out")?.tone).toBe("error");
+    expect(loginNotice("verified")?.tone).toBe("success");
+  });
+
+  it("ignores anything not on the allowlist", () => {
+    // The whole point: ?reason= is attacker-controlled, so a crafted link must
+    // not be able to place its own text above the password field.
+    expect(loginNotice("Your account was suspended, call 555-0100")).toBeUndefined();
+    expect(loginNotice(undefined)).toBeUndefined();
+  });
+
+  it("does not resolve inherited Object properties", () => {
+    // `reason in NOTICES` walks the prototype chain, so these must not slip by.
+    expect(loginNotice("constructor")).toBeUndefined();
+    expect(loginNotice("toString")).toBeUndefined();
+  });
+});
+
+describe("route builders", () => {
+  it("builds a login path with and without a reason", () => {
+    expect(loginPath()).toBe("/login");
+    expect(loginPath("verified")).toBe("/login?reason=verified");
+  });
+
+  it("round-trips a reason through loginNotice", () => {
+    // Guards the pairing itself: the writer and the reader must agree on the
+    // spelling, and this is the only place that checks they do.
+    expect(loginNotice(new URL(loginPath("expired"), "http://x").searchParams.get("reason")!))
+      .toBeDefined();
+  });
+
+  it("escapes the email in a check-email path", () => {
+    expect(checkEmailPath("a+b@example.com")).toBe("/check-email?email=a%2Bb%40example.com");
+    expect(checkEmailPath(undefined)).toBe("/check-email");
+  });
+
+  it("builds an auth error path from a code", () => {
+    expect(authErrorPath("link-invalid")).toBe("/auth-error?reason=link-invalid");
+  });
+});
+
+describe("requiresVerifiedEmail", () => {
+  it.each(["/listings/new", "/listings/abc-123/availability"])(
+    "gates the lending action %s",
+    (path) => {
+      expect(requiresVerifiedEmail(path)).toBe(true);
+    },
+  );
+
+  it.each([
+    ["/browse", "browsing is not an action"],
+    ["/listings", "the index is a read"],
+    ["/listings/abc-123", "a listing detail page is a read"],
+    ["/profile", "the member's own profile"],
+    ["/onboarding", "first-run setup must stay reachable"],
+    ["/", "the marketing home page"],
+  ])("leaves %s open (%s)", (path) => {
+    expect(requiresVerifiedEmail(path)).toBe(false);
+  });
+
+  it("does not gate a path that merely mentions an action elsewhere", () => {
+    expect(requiresVerifiedEmail("/browse?q=/listings/new")).toBe(false);
+  });
+});
+
+describe("returnsToLogin", () => {
+  it("sends signup and email-change confirmations to the login screen", () => {
+    expect(returnsToLogin("signup")).toBe(true);
+    expect(returnsToLogin("email")).toBe(true);
+  });
+
+  it("treats a typeless code link as a signup", () => {
+    expect(returnsToLogin(null)).toBe(true);
+  });
+
+  it("leaves password recovery alone", () => {
+    // S1-17 depends on this: recovery must keep the session it just
+    // established to reach the set-a-new-password screen.
+    expect(returnsToLogin("recovery")).toBe(false);
+  });
+});

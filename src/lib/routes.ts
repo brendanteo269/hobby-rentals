@@ -1,0 +1,48 @@
+/**
+ * Auth route paths that more than one module needs to build.
+ *
+ * These carry query parameters the receiving page parses, so the path and the
+ * parameter name are one decision, not two: `/login?reason=` is only useful if
+ * the writer and `loginNotice` agree on the spelling. Building them here means
+ * a typo is a type error rather than a notice that silently fails to render.
+ *
+ * Paths used in exactly one place stay inline — this is not a registry of every
+ * route in the app.
+ *
+ * Each builder declares a template-literal return type rather than `string`.
+ * `typedRoutes` checks hrefs against the generated route tree, and a widened
+ * `string` fails that check at every call site — the literal type is what lets
+ * these compose with redirect() and <Link>.
+ */
+
+import type { LoginNoticeReason } from "@/lib/session-policy";
+
+/** The login screen, optionally explaining why the member has landed there. */
+export function loginPath(
+  reason?: LoginNoticeReason,
+): "/login" | `/login?reason=${LoginNoticeReason}` {
+  return reason ? `/login?reason=${reason}` : "/login";
+}
+
+/**
+ * The "we have sent you a link" screen. The address is echoed back so the page
+ * can show which inbox to check.
+ */
+export function checkEmailPath(
+  email: string | undefined,
+): "/check-email" | `/check-email?email=${string}` {
+  return email ? `/check-email?email=${encodeURIComponent(email)}` : "/check-email";
+}
+
+/**
+ * Why a confirmation link did not work.
+ *
+ * A closed set rather than the underlying error text, so nothing the member is
+ * shown originates in the URL. See the `failure` helper in auth/confirm.
+ */
+export type AuthErrorCode = "link-invalid" | "link-missing";
+
+/** The screen shown when a confirmation link could not be used. */
+export function authErrorPath(code: AuthErrorCode): `/auth-error?reason=${AuthErrorCode}` {
+  return `/auth-error?reason=${code}`;
+}

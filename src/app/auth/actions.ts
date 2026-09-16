@@ -6,8 +6,25 @@ import { cookies, headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { ACTIVITY_COOKIE } from "@/lib/session-policy";
 import { validatePasswordComplexity } from "@/lib/password";
+import { validateEmail } from "@/lib/email";
+import { checkEmailPath, loginPath } from "@/lib/routes";
+import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/login-attempts";
 
 export type AuthState = { error?: string } | undefined;
+
+/** Supabase's error code for a signup against a confirmed existing account. */
+const DUPLICATE_EMAIL_CODE = "user_already_exists";
+
+/**
+ * Our wording for that case, rather than Supabase's "User already registered" —
+ * it has to tell the member what to do next, not just what went wrong.
+ *
+ * Deliberately does not mention resetting a password: there is no reset flow
+ * yet (S1-17), and pointing at a door that is not there is worse than saying
+ * less. Add it here when that story lands.
+ */
+const DUPLICATE_EMAIL_MESSAGE =
+  "An account already exists for that email address. Log in instead.";
 
 function readCredentials(formData: FormData) {
   return {
@@ -20,6 +37,9 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   const { email, password } = readCredentials(formData);
 
   if (!email || !password) return { error: "Email and password are both required." };
+
+  const emailError = validateEmail(email);
+  if (emailError) return { error: emailError };
 
   const passwordError = validatePasswordComplexity(password);
   if (passwordError) return { error: passwordError };
@@ -35,30 +55,72 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   // trigger copies it into public.profiles when the row is created.
   const displayName = String(formData.get("display_name") ?? "").trim();
 
-  const { error } = await supabase.auth.signUp({
+  const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      emailRedirectTo: `${origin}/auth/confirm?next=/profile`,
+      emailRedirectTo: `${origin}/auth/confirm`,
       data: displayName ? { display_name: displayName } : undefined,
     },
   });
 
-  if (error) return { error: error.message };
+  // S1-01 AC3: an address that already has an account must be rejected with an
+  // error rather than a neutral message. That is a deliberate trade — telling a
+  // stranger which addresses are registered is an account-enumeration oracle,
+  // which is why Supabase obscures it by default. Do not quietly restore the
+  // neutral behaviour without changing the AC first.
+  //
+  // Two different signals, because Supabase treats the two kinds of duplicate
+  // differently (verified against gotrue v2.186):
+  //
+  //  - An address with a *confirmed* account returns a 422 error carrying the
+  //    code below.
+  //  - An address whose account exists but was never confirmed returns
+  //    success, resends the confirmation mail, and — on some versions and
+  //    configurations, though not this one — reports the duplicate by handing
+  //    back a user with an empty `identities` array.
+  if (error) {
+    if (error.code === DUPLICATE_EMAIL_CODE) return { error: DUPLICATE_EMAIL_MESSAGE };
+    return { error: error.message };
+  }
 
-  // Supabase returns success whether or not the address is already registered,
-  // so the copy on the next screen must stay neutral about that.
-  redirect(`/check-email?email=${encodeURIComponent(email)}`);
+  if (data.user && data.user.identities?.length === 0) {
+    return { error: DUPLICATE_EMAIL_MESSAGE };
+  }
+
+  // An unconfirmed duplicate lands here, having had its confirmation link
+  // resent. No second account is created and the next screen tells the truth,
+  // so this is left as Supabase does it: the alternative is timing-based
+  // guesswork about whether the row predates this request.
+  redirect(checkEmailPath(email));
 }
 
+/**
+ * Signs a member in, subject to the per-account attempt limit.
+ *
+ * The lockout is checked *before* the credentials are sent to Supabase, which
+ * is what makes it a rate limit rather than a report: once an account is
+ * locked, guesses stop costing anything to reject. A correct password is
+ * refused too while the lock stands — an attacker who has just found the right
+ * one must still wait out the window, which is most of the point.
+ */
 export async function logIn(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const { email, password } = readCredentials(formData);
   if (!email || !password) return { error: "Email and password are both required." };
 
   const supabase = await createClient();
+
+  const lockout = await lockoutMessage(supabase, email);
+  if (lockout) return { error: lockout };
+
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
-  if (error) return { error: error.message };
+  if (error) {
+    await recordFailedLogin(supabase, email);
+    return { error: error.message };
+  }
+
+  await clearLoginAttempts(supabase);
 
   revalidatePath("/", "layout");
   redirect("/profile");
@@ -81,5 +143,5 @@ export async function signOut() {
 
   // Drops any cached render still holding the signed-in header.
   revalidatePath("/", "layout");
-  redirect("/login?reason=signed-out");
+  redirect(loginPath("signed-out"));
 }

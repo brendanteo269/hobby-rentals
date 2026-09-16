@@ -292,14 +292,36 @@ export function EmptyState({
   );
 }
 
-/** A form's overall outcome, as opposed to a message against one field. */
-export function FormError({ message }: { message?: string }) {
+export type NoticeTone = "error" | "success";
+
+const noticeTones: Record<NoticeTone, string> = {
+  error: "border-accent bg-accent-soft",
+  success: "border-success bg-success-soft",
+};
+
+/**
+ * A standing message about the page as a whole — "your session expired", "your
+ * email is confirmed".
+ *
+ * The role differs by tone on purpose. `alert` interrupts a screen reader
+ * immediately, which is right for a failure and wrong for a confirmation the
+ * member is simply arriving at; `status` is announced without cutting in.
+ */
+export function FormNotice({ message, tone = "error" }: { message?: string; tone?: NoticeTone }) {
   if (!message) return null;
   return (
-    <p role="alert" className="rounded-lg border-l-2 border-accent bg-accent-soft px-3 py-2 text-sm text-ink">
+    <p
+      role={tone === "error" ? "alert" : "status"}
+      className={`rounded-lg border-l-2 px-3 py-2 text-sm text-ink ${noticeTones[tone]}`}
+    >
       {message}
     </p>
   );
+}
+
+/** A form's overall outcome, as opposed to a message against one field. */
+export function FormError({ message }: { message?: string }) {
+  return <FormNotice message={message} tone="error" />;
 }
 
 /**
