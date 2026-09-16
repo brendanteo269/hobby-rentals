@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Container, Button, Field } from "@/components/ui";
+import { Container, Button, ButtonLink, Field } from "@/components/ui";
 import { getListingAvailability } from "@/lib/api/listings";
 import { addBlackout, removeBlackout, saveListingAvailability } from "./actions";
 import { WEEKDAY_LABELS } from "@/lib/listings";
@@ -15,8 +15,15 @@ export default async function ListingAvailabilityPage({ params }: { params: Prom
 
   return (
     <Container className="py-16">
-      <p className="eyebrow">Listing settings</p>
-      <h1 className="heading mt-3 text-3xl">Availability</h1>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="eyebrow">Listing settings</p>
+          <h1 className="heading mt-3 text-3xl">Manage listing availability</h1>
+        </div>
+        <ButtonLink href={`/listings/${id}/edit`} variant="outline" className="px-4 py-2 text-xs">
+          ← Back to listing
+        </ButtonLink>
+      </div>
 
       <section className="mt-8 card p-6">
         <h2 className="heading text-lg">Weekly handover schedule</h2>
