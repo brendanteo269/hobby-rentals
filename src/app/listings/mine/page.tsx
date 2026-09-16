@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { Badge, Container, ButtonLink, EmptyState } from "@/components/ui";
 import { ListingLifecycleActions } from "@/components/listings/listing-lifecycle-actions";
-import { getMyListings } from "@/lib/api/listings";
+import { getListingHistory, getMyListings, type ListingHistory } from "@/lib/api/listings";
+import { getOwnerBookings } from "@/lib/api/bookings";
 import { formatMoney } from "@/lib/format";
 import { LISTING_STATUS_LABELS, LOCATION_LABELS, type Listing } from "@/lib/listings";
+import { OwnerBookingList } from "@/components/bookings/owner-booking-list";
+import type { Booking } from "@/lib/bookings";
 
 export const metadata = { title: "My listings — HobbyRentals" };
 
@@ -14,7 +17,17 @@ export const metadata = { title: "My listings — HobbyRentals" };
  * listings needs to see drafts, archived items and pending removals too.
  */
 export default async function MyListingsPage() {
-  const listings = await getMyListings();
+  const [listings, bookings] = await Promise.all([getMyListings(), getOwnerBookings()]);
+  // History is supplementary: an audit-service/network hiccup must not make
+  // an owner lose access to their inventory and booking controls.
+  const histories = await Promise.all(listings.map(async (listing) => {
+    try {
+      return [listing.id, await getListingHistory(listing.id)] as const;
+    } catch {
+      return [listing.id, undefined] as const;
+    }
+  }));
+  const historyByListing = new Map(histories);
 
   return (
     <Container className="py-16">
@@ -38,7 +51,7 @@ export default async function MyListingsPage() {
         ) : (
           <ul className="space-y-4">
             {listings.map((listing) => (
-              <ListingRow key={listing.id} listing={listing} />
+              <ListingRow key={listing.id} listing={listing} bookings={bookings.filter((booking) => booking.listing_id === listing.id)} history={historyByListing.get(listing.id)} />
             ))}
           </ul>
         )}
@@ -61,7 +74,7 @@ const STATUS_BADGE_VARIANT: Record<Listing["status"], "neutral" | "accent" | "da
   REMOVED: "neutral",
 };
 
-function ListingRow({ listing }: { listing: Listing }) {
+function ListingRow({ listing, bookings, history }: { listing: Listing; bookings: Booking[]; history?: ListingHistory }) {
   return (
     <li className="border border-line bg-white p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -82,6 +95,17 @@ function ListingRow({ listing }: { listing: Listing }) {
       </div>
 
       {listing.status !== "REMOVED" && <ListingLifecycleActions listing={listing} />}
+      <OwnerBookingList bookings={bookings} />
+      {history && history.lifecycle_events.length > 0 && (
+        <details className="mt-4 border-t border-line pt-3 text-xs">
+          <summary className="cursor-pointer font-medium uppercase tracking-wide">Listing history</summary>
+          <ul className="mt-2 space-y-1 text-ink-soft">
+            {history.lifecycle_events.map((event) => (
+              <li key={event.id}>{event.action.toLowerCase()} · {event.from_status} → {event.to_status}</li>
+            ))}
+          </ul>
+        </details>
+      )}
     </li>
   );
 }

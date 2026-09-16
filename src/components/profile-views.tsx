@@ -7,6 +7,9 @@ import { ProfileAvailabilityCard } from "@/components/profile-availability-card"
 import { RateLine } from "@/components/browse/listing-card";
 import { CATEGORY_LABELS, LISTING_STATUS_LABELS, type Listing } from "@/lib/listings";
 import { profilePath, type ProfileView } from "@/lib/routes";
+import type { Booking } from "@/lib/bookings";
+import { BOOKING_STATUS_LABELS } from "@/lib/bookings";
+import { formatDate } from "@/lib/format";
 
 export type { ProfileView } from "@/lib/routes";
 
@@ -75,8 +78,32 @@ function NotEnabled({ side }: { side: "renter" | "owner" }) {
   );
 }
 
-export function RenterView({ enabled }: { enabled: boolean }) {
+export function RenterView({ enabled, bookings = [] }: { enabled: boolean; bookings?: Booking[] }) {
   if (!enabled) return <NotEnabled side="renter" />;
+  if (bookings.length > 0) {
+    return (
+      <div>
+        <div className="flex items-baseline justify-between gap-4">
+          <div>
+            <p className="eyebrow">Your rentals</p>
+            <h2 className="heading mt-2 text-2xl">Bookings</h2>
+          </div>
+          <ButtonLink href="/browse" variant="outline" className="px-4 py-2 text-xs">Browse more</ButtonLink>
+        </div>
+        <ul className="mt-6 space-y-3">
+          {bookings.map((booking) => (
+            <li key={booking.id} className="flex flex-wrap items-center justify-between gap-3 border border-line bg-white p-4">
+              <div>
+                <Link href={`/listings/${booking.listing_id}`} className="font-medium hover:underline">View listing</Link>
+                <p className="mt-1 text-sm text-ink-soft">{formatDate(booking.start_date)} – {formatDate(booking.end_date)}</p>
+              </div>
+              <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
   return (
     <EmptyState
       title="No bookings yet"
