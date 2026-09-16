@@ -9,8 +9,27 @@ import { parseContactDetails, validateDisplayName } from "@/lib/contact-details"
 import { defaultProfileView, profilePath } from "@/lib/routes";
 import type { FieldErrors } from "@/lib/api/client";
 
+/**
+ * What the member typed, handed back so a rejected submission can be
+ * redisplayed.
+ *
+ * React 19 resets a form once its action returns, so without this every
+ * validation failure would clear the whole form — including the role ticks
+ * that decide which location field is even shown. Being made to retype six
+ * fields because one was wrong is how people give up on a signup.
+ */
+export type OnboardingValues = {
+  display_name: string;
+  contact_number: string;
+  preferred_meetup_location: string;
+  default_pickup_location: string;
+  bio: string;
+  wants_to_rent: boolean;
+  wants_to_own: boolean;
+};
+
 export type OnboardingState =
-  | { error?: string; fieldErrors?: FieldErrors }
+  | { error?: string; fieldErrors?: FieldErrors; values?: OnboardingValues }
   | undefined;
 
 /** Shown alongside the per-field messages, so the summary is written once. */
@@ -33,12 +52,23 @@ export async function completeOnboarding(
 ): Promise<OnboardingState> {
   const wantsToRent = formData.get("wants_to_rent") === "on";
   const wantsToOwn = formData.get("wants_to_own") === "on";
+  const displayName = String(formData.get("display_name") ?? "").trim();
+
+  // Echoed back on every rejection so the form can redisplay itself.
+  const values: OnboardingValues = {
+    display_name: displayName,
+    contact_number: String(formData.get("contact_number") ?? ""),
+    preferred_meetup_location: String(formData.get("preferred_meetup_location") ?? ""),
+    default_pickup_location: String(formData.get("default_pickup_location") ?? ""),
+    bio: String(formData.get("bio") ?? ""),
+    wants_to_rent: wantsToRent,
+    wants_to_own: wantsToOwn,
+  };
 
   if (!wantsToRent && !wantsToOwn) {
-    return { error: "Pick at least one. You can change this later." };
+    return { error: "Pick at least one. You can change this later.", values };
   }
 
-  const displayName = String(formData.get("display_name") ?? "").trim();
   const contactResult = parseContactDetails(formData, { wantsToRent, wantsToOwn });
 
   // Both are reported together, so a member missing a name *and* a location is
@@ -48,13 +78,17 @@ export async function completeOnboarding(
   if (!contactResult.ok) {
     const fieldErrors: FieldErrors = { ...contactResult.fieldErrors };
     if (displayNameError) fieldErrors.display_name = displayNameError;
-    return { error: CORRECT_FIELDS, fieldErrors };
+    return { error: CORRECT_FIELDS, fieldErrors, values };
   }
   if (displayNameError) {
-    return { error: CORRECT_FIELDS, fieldErrors: { display_name: displayNameError } };
+    return {
+      error: CORRECT_FIELDS,
+      fieldErrors: { display_name: displayNameError },
+      values,
+    };
   }
 
-  const { values } = contactResult;
+  const parsed = contactResult.values;
 
   const supabase = await createClient();
   const {
@@ -68,10 +102,10 @@ export async function completeOnboarding(
       display_name: displayName,
       wants_to_rent: wantsToRent,
       wants_to_own: wantsToOwn,
-      contact_number: values.contact_number,
-      preferred_meetup_location: values.preferred_meetup_location,
-      default_pickup_location: values.default_pickup_location,
-      bio: values.bio,
+      contact_number: parsed.contact_number,
+      preferred_meetup_location: parsed.preferred_meetup_location,
+      default_pickup_location: parsed.default_pickup_location,
+      bio: parsed.bio,
       onboarded_at: new Date().toISOString(),
     })
     .eq("id", user.id)
@@ -81,9 +115,12 @@ export async function completeOnboarding(
     // "succeed", and be sent straight back — a loop with no way out.
     .select("id");
 
-  if (error) return { error: error.message };
+  if (error) return { error: error.message, values };
   if (!data || data.length === 0) {
-    return { error: "We could not find your profile to update. Please log in again." };
+    return {
+      error: "We could not find your profile to update. Please log in again.",
+      values,
+    };
   }
 
   revalidatePath("/profile");

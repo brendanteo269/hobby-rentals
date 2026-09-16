@@ -2,7 +2,11 @@
 
 import { useActionState, useState } from "react";
 import { Button, Field, FormError, SelectField, TextareaField } from "./ui";
-import { completeOnboarding, type OnboardingState } from "@/app/profile/actions";
+import {
+  completeOnboarding,
+  type OnboardingState,
+  type OnboardingValues,
+} from "@/app/profile/actions";
 import { LOCATION_AREAS, LOCATION_LABELS } from "@/lib/listings";
 
 const OPTIONS = [
@@ -18,24 +22,41 @@ const OPTIONS = [
   },
 ] as const;
 
+function emptyValues(displayName?: string | null): OnboardingValues {
+  return {
+    display_name: displayName ?? "",
+    contact_number: "",
+    preferred_meetup_location: "",
+    default_pickup_location: "",
+    bio: "",
+    wants_to_rent: false,
+    wants_to_own: false,
+  };
+}
+
 /** The location picker, which differs only in wording between the two roles. */
 function LocationField({
   id,
   label,
   hint,
   error,
+  value,
+  onChange,
 }: {
   id: string;
   label: string;
   hint: string;
   error?: string;
+  value: string;
+  onChange: (value: string) => void;
 }) {
   return (
     <SelectField
       label={label}
       id={id}
       name={id}
-      defaultValue=""
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
       required
       className="truncate"
       hint={hint}
@@ -44,9 +65,9 @@ function LocationField({
       <option value="" disabled>
         Choose one
       </option>
-      {LOCATION_AREAS.map((value) => (
-        <option key={value} value={value}>
-          {LOCATION_LABELS[value]}
+      {LOCATION_AREAS.map((area) => (
+        <option key={area} value={area}>
+          {LOCATION_LABELS[area]}
         </option>
       ))}
     </SelectField>
@@ -61,15 +82,36 @@ function LocationField({
  * questions differ by role and are revealed as each is picked: asking a renter
  * where they hand gear over is a question they cannot answer, and showing both
  * to everyone makes the form look twice as long as it is.
+ *
+ * Every control is deliberately *controlled*. React 19 resets a form once its
+ * action returns, which for uncontrolled inputs wipes everything the member
+ * typed on each validation failure — one mistyped digit costing them the whole
+ * form. Holding the values here, and re-seeding them from what the action
+ * echoed back, is what survives that reset.
  */
 export function OnboardingForm({ defaultDisplayName }: { defaultDisplayName?: string | null }) {
   const [state, formAction, pending] = useActionState<OnboardingState, FormData>(
     completeOnboarding,
     undefined,
   );
-  const errors = state?.fieldErrors ?? {};
 
-  const [roles, setRoles] = useState({ wants_to_rent: false, wants_to_own: false });
+  const [values, setValues] = useState<OnboardingValues>(() => emptyValues(defaultDisplayName));
+
+  // Re-seed from the rejected submission the moment a new result arrives.
+  // Adjusted during render rather than in an effect, which is the pattern
+  // React documents for state derived from a value that just changed — and is
+  // what account-settings already does for its editing flag.
+  const [lastState, setLastState] = useState(state);
+  const [attempt, setAttempt] = useState(0);
+  if (state !== lastState) {
+    setLastState(state);
+    if (state?.values) setValues(state.values);
+    setAttempt((n) => n + 1);
+  }
+
+  const errors = state?.fieldErrors ?? {};
+  const set = <K extends keyof OnboardingValues>(key: K, value: OnboardingValues[K]) =>
+    setValues((current) => ({ ...current, [key]: value }));
 
   return (
     <div className="w-full max-w-lg">
@@ -80,7 +122,14 @@ export function OnboardingForm({ defaultDisplayName }: { defaultDisplayName?: st
         you like.
       </p>
 
-      <form action={formAction} className="mt-8 space-y-4">
+      {/*
+        Keyed on the attempt so each result mounts a fresh <form> node. React's
+        post-action reset blanks the DOM of the form it submitted, and it does
+        so after the render that would have restored the values — React skips
+        writing a value it believes is unchanged. A new node is not the one the
+        reset holds a reference to, so the restored values survive.
+      */}
+      <form key={attempt} action={formAction} className="mt-8 space-y-4">
         {OPTIONS.map((option) => (
           <label
             key={option.name}
@@ -89,10 +138,8 @@ export function OnboardingForm({ defaultDisplayName }: { defaultDisplayName?: st
             <input
               type="checkbox"
               name={option.name}
-              checked={roles[option.name]}
-              onChange={(event) =>
-                setRoles((current) => ({ ...current, [option.name]: event.target.checked }))
-              }
+              checked={values[option.name]}
+              onChange={(event) => set(option.name, event.target.checked)}
               className="mt-1 size-4 shrink-0 accent-ink"
             />
             <span>
@@ -109,7 +156,8 @@ export function OnboardingForm({ defaultDisplayName }: { defaultDisplayName?: st
             name="display_name"
             type="text"
             autoComplete="name"
-            defaultValue={defaultDisplayName ?? ""}
+            value={values.display_name}
+            onChange={(event) => set("display_name", event.target.value)}
             required
             maxLength={60}
             hint="Shown to people you rent with."
@@ -121,24 +169,30 @@ export function OnboardingForm({ defaultDisplayName }: { defaultDisplayName?: st
             name="contact_number"
             type="tel"
             autoComplete="tel"
+            value={values.contact_number}
+            onChange={(event) => set("contact_number", event.target.value)}
             required
             hint="Shown to the other party once a booking is confirmed."
             error={errors.contact_number}
           />
 
-          {roles.wants_to_rent && (
+          {values.wants_to_rent && (
             <LocationField
               id="preferred_meetup_location"
               label="Preferred meetup location"
+              value={values.preferred_meetup_location}
+              onChange={(value) => set("preferred_meetup_location", value)}
               hint="Where you'd usually collect gear you have rented."
               error={errors.preferred_meetup_location}
             />
           )}
 
-          {roles.wants_to_own && (
+          {values.wants_to_own && (
             <LocationField
               id="default_pickup_location"
               label="Default pickup location"
+              value={values.default_pickup_location}
+              onChange={(value) => set("default_pickup_location", value)}
               hint="Where renters would usually collect your gear."
               error={errors.default_pickup_location}
             />
@@ -148,6 +202,8 @@ export function OnboardingForm({ defaultDisplayName }: { defaultDisplayName?: st
             label="Bio"
             id="bio"
             name="bio"
+            value={values.bio}
+            onChange={(event) => set("bio", event.target.value)}
             rows={3}
             maxLength={500}
             hint="Optional. A line or two about you."
