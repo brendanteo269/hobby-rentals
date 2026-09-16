@@ -10,7 +10,25 @@ import { validateEmail } from "@/lib/email";
 import { checkEmailPath, loginPath } from "@/lib/routes";
 import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/login-attempts";
 
-export type AuthState = { error?: string } | undefined;
+/**
+ * What the member typed, echoed back so a rejected submission can redisplay
+ * itself rather than being wiped by React 19's post-action form reset.
+ *
+ * The password is deliberately absent. Everything here crosses the wire twice
+ * and sits in the rendered payload, which is not somewhere a password should
+ * be put to save one field of retyping.
+ */
+export type AuthValues = { email: string; display_name: string; terms: boolean };
+
+export type AuthState = { error?: string; values?: AuthValues } | undefined;
+
+function readValues(formData: FormData): AuthValues {
+  return {
+    email: String(formData.get("email") ?? ""),
+    display_name: String(formData.get("display_name") ?? ""),
+    terms: formData.get("terms") === "on",
+  };
+}
 
 /** Supabase's error code for a signup against a confirmed existing account. */
 const DUPLICATE_EMAIL_CODE = "user_already_exists";
@@ -26,6 +44,19 @@ const DUPLICATE_EMAIL_CODE = "user_already_exists";
 const DUPLICATE_EMAIL_MESSAGE =
   "An account already exists for that email address. Log in instead.";
 
+/** Supabase's error code for signing in to an account that is not yet verified. */
+const UNCONFIRMED_EMAIL_CODE = "email_not_confirmed";
+
+/**
+ * Says what to do about it, unlike Supabase's bare "Email not confirmed".
+ *
+ * Signing up again with the same address resends the link — see signUp — which
+ * is the route out of this if the first mail never arrived.
+ */
+const UNCONFIRMED_EMAIL_MESSAGE =
+  "Confirm your email address before logging in. Check your inbox for the link we sent, " +
+  "or sign up again with this address to have a new one sent.";
+
 function readCredentials(formData: FormData) {
   return {
     email: String(formData.get("email") ?? "").trim(),
@@ -35,17 +66,20 @@ function readCredentials(formData: FormData) {
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const { email, password } = readCredentials(formData);
+  const values = readValues(formData);
 
-  if (!email || !password) return { error: "Email and password are both required." };
+  if (!email || !password) {
+    return { error: "Email and password are both required.", values };
+  }
 
   const emailError = validateEmail(email);
-  if (emailError) return { error: emailError };
+  if (emailError) return { error: emailError, values };
 
   const passwordError = validatePasswordComplexity(password);
-  if (passwordError) return { error: passwordError };
+  if (passwordError) return { error: passwordError, values };
 
-  if (formData.get("terms") !== "on") {
-    return { error: "You must accept the Terms and Conditions to create an account." };
+  if (!values.terms) {
+    return { error: "You must accept the Terms and Conditions to create an account.", values };
   }
 
   const origin = (await headers()).get("origin") ?? "http://localhost:3000";
@@ -80,12 +114,12 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   //    configurations, though not this one — reports the duplicate by handing
   //    back a user with an empty `identities` array.
   if (error) {
-    if (error.code === DUPLICATE_EMAIL_CODE) return { error: DUPLICATE_EMAIL_MESSAGE };
-    return { error: error.message };
+    if (error.code === DUPLICATE_EMAIL_CODE) return { error: DUPLICATE_EMAIL_MESSAGE, values };
+    return { error: error.message, values };
   }
 
   if (data.user && data.user.identities?.length === 0) {
-    return { error: DUPLICATE_EMAIL_MESSAGE };
+    return { error: DUPLICATE_EMAIL_MESSAGE, values };
   }
 
   // An unconfirmed duplicate lands here, having had its confirmation link
@@ -106,18 +140,30 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
  */
 export async function logIn(_prev: AuthState, formData: FormData): Promise<AuthState> {
   const { email, password } = readCredentials(formData);
-  if (!email || !password) return { error: "Email and password are both required." };
+  const values = readValues(formData);
+  if (!email || !password) {
+    return { error: "Email and password are both required.", values };
+  }
 
   const supabase = await createClient();
 
   const lockout = await lockoutMessage(supabase, email);
-  if (lockout) return { error: lockout };
+  if (lockout) return { error: lockout, values };
 
   const { error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
+    // An unconfirmed address is not a failed credential, and counting it as one
+    // locks a new member out of an account whose password they had right all
+    // along — five attempts while waiting for an email, and the rate limiter
+    // tells them they have guessed too many times. Verified against gotrue:
+    // this is what a correct password for an unverified account returns.
+    if (error.code === UNCONFIRMED_EMAIL_CODE) {
+      return { error: UNCONFIRMED_EMAIL_MESSAGE, values };
+    }
+
     await recordFailedLogin(supabase, email);
-    return { error: error.message };
+    return { error: error.message, values };
   }
 
   await clearLoginAttempts(supabase);

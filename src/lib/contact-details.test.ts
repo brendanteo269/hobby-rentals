@@ -8,7 +8,12 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { parseContactDetails, validateDisplayName, type Roles } from "@/lib/contact-details";
+import {
+  inheritedLocation,
+  parseContactDetails,
+  validateDisplayName,
+  type Roles,
+} from "@/lib/contact-details";
 
 const RENTER: Roles = { wantsToRent: true, wantsToOwn: false };
 const OWNER: Roles = { wantsToRent: false, wantsToOwn: true };
@@ -154,5 +159,45 @@ describe("parseContactDetails — reporting", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.values.bio).toBeNull();
+  });
+});
+
+describe("inheritedLocation", () => {
+  it("gives a new owner their meetup location as a pickup default", () => {
+    // Without this, clicking "start owning" produces an owner with nowhere to
+    // hand gear over — the member onboarding refuses to create.
+    expect(
+      inheritedLocation("wants_to_own", {
+        preferred_meetup_location: "BUKIT_TIMAH",
+        default_pickup_location: null,
+      }),
+    ).toEqual({ column: "default_pickup_location", value: "BUKIT_TIMAH" });
+  });
+
+  it("gives a new renter their pickup location as a meetup default", () => {
+    expect(
+      inheritedLocation("wants_to_rent", {
+        preferred_meetup_location: null,
+        default_pickup_location: "EAST_COAST",
+      }),
+    ).toEqual({ column: "preferred_meetup_location", value: "EAST_COAST" });
+  });
+
+  it("never overwrites an answer the member already gave", () => {
+    expect(
+      inheritedLocation("wants_to_own", {
+        preferred_meetup_location: "BUKIT_TIMAH",
+        default_pickup_location: "SENTOSA",
+      }),
+    ).toBeNull();
+  });
+
+  it("does nothing when there is no answer to borrow", () => {
+    expect(
+      inheritedLocation("wants_to_own", {
+        preferred_meetup_location: null,
+        default_pickup_location: null,
+      }),
+    ).toBeNull();
   });
 });

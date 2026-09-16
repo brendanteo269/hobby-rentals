@@ -5,7 +5,11 @@ import { redirect } from "next/navigation";
 import { updateProfileAvailability } from "@/lib/api/profile-availability";
 import { createClient } from "@/lib/supabase/server";
 import { validatePasswordComplexity } from "@/lib/password";
-import { parseContactDetails, validateDisplayName } from "@/lib/contact-details";
+import {
+  inheritedLocation,
+  parseContactDetails,
+  validateDisplayName,
+} from "@/lib/contact-details";
 import { defaultProfileView, profilePath } from "@/lib/routes";
 import type { FieldErrors } from "@/lib/api/client";
 
@@ -153,6 +157,18 @@ export async function saveProfileAvailability(
   }
 }
 
+/**
+ * Turns on a side of the marketplace, giving it the location it requires.
+ *
+ * Onboarding will not let a renter through without a meetup location, nor an
+ * owner without a pickup location, so flipping the boolean alone would produce
+ * exactly the member those rules exist to prevent — an owner with nowhere to
+ * hand gear over. The other side's answer is a sound default here: the two are
+ * the same place for most people, and it is editable on the Account tab, which
+ * is a better starting point than empty.
+ *
+ * An existing answer is never overwritten.
+ */
 async function enableSide(column: "wants_to_rent" | "wants_to_own") {
   const supabase = await createClient();
   const {
@@ -160,10 +176,17 @@ async function enableSide(column: "wants_to_rent" | "wants_to_own") {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  await supabase
+  const { data: locations } = await supabase
     .from("profiles")
-    .update({ [column]: true })
-    .eq("id", user.id);
+    .select("preferred_meetup_location, default_pickup_location")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  const update: Record<string, boolean | string> = { [column]: true };
+  const inherited = locations && inheritedLocation(column, locations);
+  if (inherited) update[inherited.column] = inherited.value;
+
+  await supabase.from("profiles").update(update).eq("id", user.id);
 
   revalidatePath("/profile");
 }

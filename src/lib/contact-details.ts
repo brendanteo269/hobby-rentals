@@ -28,6 +28,40 @@ export type ContactDetailsResult =
 /** Which sides of the marketplace the member is on, which fields are required. */
 export type Roles = { wantsToRent: boolean; wantsToOwn: boolean };
 
+/** The two location columns, as stored. */
+type Locations = {
+  preferred_meetup_location: string | null;
+  default_pickup_location: string | null;
+};
+
+/**
+ * The location to fill in when a member switches on a side they skipped.
+ *
+ * Onboarding will not accept a renter without a meetup location, nor an owner
+ * without a pickup location. Turning a role on from the profile page has to
+ * honour the same rule, or it produces exactly the member those checks exist
+ * to prevent — an owner with nowhere to hand gear over.
+ *
+ * The other side's answer is the default: for most people the two are the same
+ * place, and it is editable on the Account tab, which beats starting empty.
+ * Returns null when there is nothing to do — either the column is already
+ * answered, or there is no answer to borrow.
+ */
+export function inheritedLocation(
+  side: "wants_to_rent" | "wants_to_own",
+  locations: Locations,
+): { column: keyof Locations; value: string } | null {
+  const column: keyof Locations =
+    side === "wants_to_own" ? "default_pickup_location" : "preferred_meetup_location";
+  const source: keyof Locations =
+    side === "wants_to_own" ? "preferred_meetup_location" : "default_pickup_location";
+
+  if (locations[column]) return null;
+
+  const value = locations[source];
+  return value ? { column, value } : null;
+}
+
 /**
  * The display name rule, shared by onboarding and the Account tab so the two
  * cannot disagree about what counts as a name.

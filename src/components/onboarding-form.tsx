@@ -8,6 +8,7 @@ import {
   type OnboardingValues,
 } from "@/app/profile/actions";
 import { LOCATION_AREAS, LOCATION_LABELS } from "@/lib/listings";
+import { useSubmissionAttempt } from "./use-submission-attempt";
 
 const OPTIONS = [
   {
@@ -83,11 +84,9 @@ function LocationField({
  * where they hand gear over is a question they cannot answer, and showing both
  * to everyone makes the form look twice as long as it is.
  *
- * Every control is deliberately *controlled*. React 19 resets a form once its
- * action returns, which for uncontrolled inputs wipes everything the member
- * typed on each validation failure — one mistyped digit costing them the whole
- * form. Holding the values here, and re-seeding them from what the action
- * echoed back, is what survives that reset.
+ * Every control is deliberately *controlled*, and the form is keyed on the
+ * submission attempt, so a rejected submission does not wipe what the member
+ * typed — see useSubmissionAttempt for why both halves are needed.
  */
 export function OnboardingForm({ defaultDisplayName }: { defaultDisplayName?: string | null }) {
   const [state, formAction, pending] = useActionState<OnboardingState, FormData>(
@@ -98,16 +97,9 @@ export function OnboardingForm({ defaultDisplayName }: { defaultDisplayName?: st
   const [values, setValues] = useState<OnboardingValues>(() => emptyValues(defaultDisplayName));
 
   // Re-seed from the rejected submission the moment a new result arrives.
-  // Adjusted during render rather than in an effect, which is the pattern
-  // React documents for state derived from a value that just changed — and is
-  // what account-settings already does for its editing flag.
-  const [lastState, setLastState] = useState(state);
-  const [attempt, setAttempt] = useState(0);
-  if (state !== lastState) {
-    setLastState(state);
-    if (state?.values) setValues(state.values);
-    setAttempt((n) => n + 1);
-  }
+  const attempt = useSubmissionAttempt(state, (next) => {
+    if (next?.values) setValues(next.values);
+  });
 
   const errors = state?.fieldErrors ?? {};
   const set = <K extends keyof OnboardingValues>(key: K, value: OnboardingValues[K]) =>
@@ -122,13 +114,7 @@ export function OnboardingForm({ defaultDisplayName }: { defaultDisplayName?: st
         you like.
       </p>
 
-      {/*
-        Keyed on the attempt so each result mounts a fresh <form> node. React's
-        post-action reset blanks the DOM of the form it submitted, and it does
-        so after the render that would have restored the values — React skips
-        writing a value it believes is unchanged. A new node is not the one the
-        reset holds a reference to, so the restored values survive.
-      */}
+      {/* key: see useSubmissionAttempt. */}
       <form key={attempt} action={formAction} className="mt-8 space-y-4">
         {OPTIONS.map((option) => (
           <label

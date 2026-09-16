@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
 import { Button, Field, FormError, FormNotice, type NoticeTone } from "./ui";
-import type { AuthState } from "@/app/auth/actions";
+import type { AuthState, AuthValues } from "@/app/auth/actions";
 import { PASSWORD_REQUIREMENTS_HINT } from "@/lib/password";
+import { useSubmissionAttempt } from "./use-submission-attempt";
 
 type Props = {
   mode: "signup" | "login";
@@ -38,9 +39,22 @@ const COPY = {
   },
 } as const;
 
+const EMPTY: AuthValues = { email: "", display_name: "", terms: false };
+
 export function AuthForm({ mode, action, notice }: Props) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const copy = COPY[mode];
+
+  // A rejected submission must not cost the member their address and, on
+  // signup, their name and their acceptance of the terms — see
+  // useSubmissionAttempt. The password is not preserved, deliberately: it is
+  // the one field worth retyping rather than sending back through the server.
+  const [values, setValues] = useState<AuthValues>(EMPTY);
+  const attempt = useSubmissionAttempt(state, (next) => {
+    if (next?.values) setValues(next.values);
+  });
+  const set = <K extends keyof AuthValues>(key: K, value: AuthValues[K]) =>
+    setValues((current) => ({ ...current, [key]: value }));
 
   return (
     <div className="w-full max-w-md">
@@ -54,7 +68,8 @@ export function AuthForm({ mode, action, notice }: Props) {
         </div>
       )}
 
-      <form action={formAction} className="mt-8 space-y-5">
+      {/* key: see useSubmissionAttempt. */}
+      <form key={attempt} action={formAction} className="mt-8 space-y-5">
         {mode === "signup" && (
           <Field
             label="Display name"
@@ -62,6 +77,8 @@ export function AuthForm({ mode, action, notice }: Props) {
             name="display_name"
             type="text"
             autoComplete="name"
+            value={values.display_name}
+            onChange={(event) => set("display_name", event.target.value)}
             hint="Optional. Shown to people you rent with."
           />
         )}
@@ -72,6 +89,8 @@ export function AuthForm({ mode, action, notice }: Props) {
           name="email"
           type="email"
           autoComplete="email"
+          value={values.email}
+          onChange={(event) => set("email", event.target.value)}
           required
         />
 
@@ -88,7 +107,14 @@ export function AuthForm({ mode, action, notice }: Props) {
 
         {mode === "signup" && (
           <label className="flex cursor-pointer items-start gap-3 text-sm">
-            <input type="checkbox" name="terms" required className="mt-0.5 size-4 shrink-0 accent-ink" />
+            <input
+              type="checkbox"
+              name="terms"
+              checked={values.terms}
+              onChange={(event) => set("terms", event.target.checked)}
+              required
+              className="mt-0.5 size-4 shrink-0 accent-ink"
+            />
             <span className="body-copy">
               I agree to the{" "}
               <Link href="/" className="text-ink underline underline-offset-4">
