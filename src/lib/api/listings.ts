@@ -156,6 +156,13 @@ export type ListingAvailability = {
   confirmed_bookings: { id: string; start_date: string; end_date: string; status: string }[];
 };
 
+export type BookingAvailability = { available_dates: string[] };
+
+/** Dates a renter can currently select, including the listing's schedule and reserved dates. */
+export function getBookingAvailability(listingId: string) {
+  return backendRequest<BookingAvailability>(`/listings/${encodeURIComponent(listingId)}/booking-availability`);
+}
+
 export function getListingAvailability(listingId: string) {
   return backendRequest<ListingAvailability>(`/listings/${encodeURIComponent(listingId)}/availability`);
 }

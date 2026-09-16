@@ -1,8 +1,9 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useCallback, useState } from "react";
 import { Button, Chip } from "@/components/ui";
 import { WEEKDAY_LABELS } from "@/lib/listings";
+import { useToast } from "@/components/toast";
 
 type State = { error?: string; saved?: boolean } | undefined;
 
@@ -14,7 +15,26 @@ export function ProfileAvailabilityCard({
   action: (state: State, formData: FormData) => Promise<State>;
 }) {
   const [days, setDays] = useState(availableDays);
-  const [state, formAction, pending] = useActionState(action, undefined);
+  const { show, dismiss } = useToast();
+  const saveAvailability = useCallback(
+    async (previousState: State, formData: FormData): Promise<State> => {
+      const loadingToast = show("Saving availability…", "loading");
+      try {
+        const result = await action(previousState, formData);
+        if (result?.error) show(result.error, "error");
+        else if (result?.saved) show("Availability saved.", "success");
+        return result;
+      } catch {
+        const result = { error: "We could not save your availability. Please try again." };
+        show(result.error, "error");
+        return result;
+      } finally {
+        dismiss(loadingToast);
+      }
+    },
+    [action, dismiss, show],
+  );
+  const [, formAction, pending] = useActionState(saveAvailability, undefined);
   const toggle = (day: number) =>
     setDays((current) => (current.includes(day) ? current.filter((value) => value !== day) : [...current, day].sort()));
 
@@ -41,8 +61,6 @@ export function ProfileAvailabilityCard({
             );
           })}
         </div>
-        {state?.error && <p role="alert" className="mt-3 text-sm text-accent-dark">{state.error}</p>}
-        {state?.saved && <p className="mt-3 text-sm text-ink-soft">Saved.</p>}
         <Button className="mt-5" type="submit" disabled={pending || days.length === 0}>
           {pending ? "Saving…" : "Save availability"}
         </Button>
