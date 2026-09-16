@@ -25,6 +25,9 @@ export async function SiteHeader() {
         <div className="flex items-center gap-4">
           {user ? (
             <>
+              <Link href="/listings/mine" className="hidden text-sm text-ink-soft hover:text-ink sm:block">
+                My listings
+              </Link>
               <ButtonLink href="/listings/new" className="hidden sm:flex">
                 + New listing
               </ButtonLink>
