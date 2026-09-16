@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { Container } from "@/components/ui";
 import { ListingGallery } from "@/components/listings/listing-gallery";
 import { RateLine } from "@/components/browse/listing-card";
-import { getListing } from "@/lib/api/listings";
+import { getBookingAvailability, getListing } from "@/lib/api/listings";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney } from "@/lib/format";
 import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS } from "@/lib/listings";
@@ -17,6 +17,10 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     notFound();
   }
   const { data: { user } } = await (await createClient()).auth.getUser();
+  const bookingAvailability =
+    listing.status === "ACTIVE" && user && user.id !== listing.owner_id
+      ? await getBookingAvailability(listing.id)
+      : null;
 
   return (
     <Container className="py-16">
@@ -56,7 +60,12 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           </dl>
 
           {listing.status === "ACTIVE" && user && user.id !== listing.owner_id && (
-            <BookingRequestForm listingId={listing.id} />
+            <BookingRequestForm
+              listingId={listing.id}
+              availableDates={bookingAvailability?.available_dates ?? []}
+              minRentalDays={listing.min_rental_days}
+              maxRentalDays={listing.max_rental_days}
+            />
           )}
           {listing.status === "PENDING_REMOVAL" && user && user.id !== listing.owner_id && (
             <p className="mt-8 border-t border-line pt-6 text-sm text-ink-soft">
