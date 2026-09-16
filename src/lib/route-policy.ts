@@ -7,7 +7,6 @@
  * pure module can be tested without standing up a Supabase client or a request.
  */
 
-import type { EmailOtpType } from "@supabase/supabase-js";
 import { ONBOARDING_PATH } from "@/lib/routes";
 
 /**
@@ -35,28 +34,6 @@ export function requiresVerifiedEmail(pathname: string): boolean {
     pathname.startsWith("/listings/") &&
     VERIFIED_ONLY_LISTING_ACTIONS.some((action) => pathname.endsWith(action))
   );
-}
-
-/**
- * Confirmation types after which the member is signed out and sent to login.
- *
- * S1-01 AC2 asks for exactly that, and verifying an address is not the same
- * event as choosing to sign in — the link may well be opened on a different
- * device from the one that will be used.
- */
-const SIGN_OUT_AFTER: ReadonlySet<string> = new Set<EmailOtpType>(["signup", "email"]);
-
-/**
- * Whether a confirmation of this type should end at the login screen.
- *
- * A `code` link carries no `type`, and the only code links this app sends are
- * signup confirmations, so an absent type is treated as one.
- *
- * Password recovery is deliberately excluded: that flow has to keep the
- * session it just established in order to reach the set-a-new-password screen.
- */
-export function returnsToLogin(type: EmailOtpType | null): boolean {
-  return type === null || SIGN_OUT_AFTER.has(type);
 }
 
 /**

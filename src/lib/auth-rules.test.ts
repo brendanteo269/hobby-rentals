@@ -10,7 +10,11 @@
 
 import { describe, expect, it } from "vitest";
 import { validateEmail } from "@/lib/email";
-import { validatePasswordChange, validatePasswordComplexity } from "@/lib/password";
+import {
+  validateNewPassword,
+  validatePasswordChange,
+  validatePasswordComplexity,
+} from "@/lib/password";
 import { loginNotice } from "@/lib/session-policy";
 import {
   authErrorPath,
@@ -20,7 +24,7 @@ import {
   loginPath,
   profilePath,
 } from "@/lib/routes";
-import { requiresOnboarding, requiresVerifiedEmail, returnsToLogin } from "@/lib/route-policy";
+import { requiresOnboarding, requiresVerifiedEmail } from "@/lib/route-policy";
 
 describe("validateEmail", () => {
   it.each(["a@b.co", "first.last@example.com", "user+tag@sub.domain.org"])(
@@ -135,23 +139,6 @@ describe("requiresVerifiedEmail", () => {
   });
 });
 
-describe("returnsToLogin", () => {
-  it("sends signup and email-change confirmations to the login screen", () => {
-    expect(returnsToLogin("signup")).toBe(true);
-    expect(returnsToLogin("email")).toBe(true);
-  });
-
-  it("treats a typeless code link as a signup", () => {
-    expect(returnsToLogin(null)).toBe(true);
-  });
-
-  it("leaves password recovery alone", () => {
-    // S1-17 depends on this: recovery must keep the session it just
-    // established to reach the set-a-new-password screen.
-    expect(returnsToLogin("recovery")).toBe(false);
-  });
-});
-
 describe("requiresOnboarding", () => {
   it.each(["/profile", "/browse", "/listings", "/listings/new", "/listings/abc/availability"])(
     "gates %s",
@@ -245,5 +232,54 @@ describe("validatePasswordChange", () => {
     // uppercase letters in a box with nothing in it.
     const errors = validatePasswordChange("OldPass1", "", "");
     expect(errors.new_password).toMatch(/enter a new password/i);
+  });
+});
+
+describe("validateNewPassword", () => {
+  const VALID = "Passw0rdy";
+
+  it("accepts a well-formed pair", () => {
+    expect(validateNewPassword(VALID, VALID)).toEqual({});
+  });
+
+  it("puts each rule under the box it belongs to", () => {
+    expect(validateNewPassword("short", "short")).toHaveProperty("new_password");
+    expect(validateNewPassword(VALID, "Different1")).toHaveProperty("confirm_password");
+  });
+
+  it("reports both empty boxes at once", () => {
+    expect(Object.keys(validateNewPassword("", "")).sort()).toEqual([
+      "confirm_password",
+      "new_password",
+    ]);
+  });
+
+  it("has no opinion about a current password", () => {
+    // The reset flow has none to offer, which is why this is separate from
+    // validatePasswordChange rather than a parameter of it.
+    expect(validateNewPassword(VALID, VALID)).not.toHaveProperty("current_password");
+  });
+});
+
+describe("password reset routing", () => {
+  it("does not gate the reset page on onboarding", () => {
+    // A member who never finished first-run setup must still be able to
+    // recover their account. Gating this would send them to fill in a form
+    // they cannot reach, instead of letting them back in — a dead end with no
+    // error message to explain itself.
+    expect(requiresOnboarding("/reset-password")).toBe(false);
+  });
+
+  it("does not gate the request page or its confirmation either", () => {
+    expect(requiresOnboarding("/forgot-password")).toBe(false);
+    expect(requiresOnboarding("/reset-requested")).toBe(false);
+  });
+
+  it("announces a completed reset on the login screen", () => {
+    expect(loginNotice("password-reset")?.tone).toBe("success");
+  });
+
+  it("builds the reset-specific error path", () => {
+    expect(authErrorPath("reset-link-invalid")).toBe("/auth-error?reason=reset-link-invalid");
   });
 });

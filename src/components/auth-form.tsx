@@ -6,6 +6,7 @@ import { Button, Field, FormError, FormNotice, type NoticeTone } from "./ui";
 import type { AuthState, AuthValues } from "@/app/auth/actions";
 import { PASSWORD_REQUIREMENTS_HINT } from "@/lib/password";
 import { useSubmissionAttempt } from "./use-submission-attempt";
+import { FORGOT_PASSWORD_PATH } from "@/lib/routes";
 
 type Props = {
   mode: "signup" | "login";
@@ -123,6 +124,17 @@ export function AuthForm({ mode, action, notice }: Props) {
               .
             </span>
           </label>
+        )}
+
+        {mode === "login" && (
+          <p className="text-sm">
+            <Link
+              href={FORGOT_PASSWORD_PATH}
+              className="text-ink-soft underline underline-offset-4 hover:text-ink"
+            >
+              Forgot your password?
+            </Link>
+          </p>
         )}
 
         <FormError message={state?.error} />

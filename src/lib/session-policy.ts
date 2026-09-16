@@ -40,7 +40,7 @@ export function idleTimeoutMs(): number {
  * arrives after confirming their email address, which is the one success case
  * among them.
  */
-export type LoginNoticeReason = "expired" | "signed-out" | "verified";
+export type LoginNoticeReason = "expired" | "signed-out" | "verified" | "password-reset";
 
 type Notice = { message: string; tone: "error" | "success" };
 
@@ -52,6 +52,10 @@ const NOTICES: Record<LoginNoticeReason, Notice> = {
   "signed-out": { message: "You have been logged out.", tone: "error" },
   verified: {
     message: "Your email address is confirmed. Log in to finish setting up your account.",
+    tone: "success",
+  },
+  "password-reset": {
+    message: "Your password has been changed. Log in with your new password.",
     tone: "success",
   },
 };

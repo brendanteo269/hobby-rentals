@@ -5,9 +5,11 @@ import { redirect } from "next/navigation";
 import { cookies, headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { ACTIVITY_COOKIE } from "@/lib/session-policy";
-import { validatePasswordComplexity } from "@/lib/password";
+import { validatePasswordComplexity, validateNewPassword } from "@/lib/password";
 import { validateEmail } from "@/lib/email";
-import { checkEmailPath, loginPath } from "@/lib/routes";
+import { RESET_REQUESTED_PATH, checkEmailPath, loginPath } from "@/lib/routes";
+import { clearRecoveryMark, hasRecoveryMark } from "@/lib/recovery";
+import type { FieldErrors } from "@/lib/api/client";
 import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/login-attempts";
 
 /**
@@ -36,13 +38,9 @@ const DUPLICATE_EMAIL_CODE = "user_already_exists";
 /**
  * Our wording for that case, rather than Supabase's "User already registered" —
  * it has to tell the member what to do next, not just what went wrong.
- *
- * Deliberately does not mention resetting a password: there is no reset flow
- * yet (S1-17), and pointing at a door that is not there is worse than saying
- * less. Add it here when that story lands.
  */
 const DUPLICATE_EMAIL_MESSAGE =
-  "An account already exists for that email address. Log in instead.";
+  "An account already exists for that email address. Log in instead, or reset your password.";
 
 /** Supabase's error code for signing in to an account that is not yet verified. */
 const UNCONFIRMED_EMAIL_CODE = "email_not_confirmed";
@@ -190,4 +188,98 @@ export async function signOut() {
   // Drops any cached render still holding the signed-in header.
   revalidatePath("/", "layout");
   redirect(loginPath("signed-out"));
+}
+
+/* Password reset (S1-17) ------------------------------------------------- */
+
+export type ResetRequestState = { error?: string; email?: string } | undefined;
+
+/**
+ * Sends a reset link, and says the same thing either way.
+ *
+ * S1-17 AC2: the reply must not reveal whether an address has an account, so
+ * every outcome lands on the same neutral screen. Supabase answers identically
+ * for a registered and an unregistered address, so there is nothing to hide
+ * here beyond not adding a disclosure of our own.
+ *
+ * Worth being honest in writing: this does *not* make the system
+ * enumeration-safe. S1-01 AC3 requires signup to reject an address that
+ * already has an account, which leaks exactly what this conceals. The
+ * protection here is real but the pair still leaks, and closing it means
+ * revisiting that acceptance criterion rather than this function.
+ */
+export async function requestPasswordReset(
+  _prev: ResetRequestState,
+  formData: FormData,
+): Promise<ResetRequestState> {
+  const email = String(formData.get("email") ?? "").trim();
+
+  if (!email) return { error: "Enter your email address.", email };
+
+  // A malformed address is a format error, not a disclosure — it says nothing
+  // about who does or does not have an account.
+  const emailError = validateEmail(email);
+  if (emailError) return { error: emailError, email };
+
+  const origin = (await headers()).get("origin") ?? "http://localhost:3000";
+  const supabase = await createClient();
+
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    // Its own callback route, not /auth/confirm — see that file for why the
+    // route rather than a query parameter is what says a link is a reset.
+    redirectTo: `${origin}/auth/recover`,
+  });
+
+  // Only the send rate limit can realistically land here, and saying so is not
+  // a disclosure either. Anything else is logged rather than shown, so a
+  // failure cannot become the signal AC2 exists to remove.
+  if (error) {
+    console.error("Password reset request failed:", error.message);
+  }
+
+  redirect(RESET_REQUESTED_PATH);
+}
+
+export type ResetPasswordState =
+  | { error?: string; fieldErrors?: FieldErrors }
+  | undefined;
+
+/**
+ * Sets a new password for whoever followed a reset link.
+ *
+ * The recovery mark is re-checked here and not only on the page: the page
+ * guard decides what to render, this decides what to write, and a form can be
+ * submitted without the page that drew it.
+ */
+export async function resetPassword(
+  _prev: ResetPasswordState,
+  formData: FormData,
+): Promise<ResetPasswordState> {
+  if (!(await hasRecoveryMark())) {
+    return { error: "That reset link has expired. Request a new one." };
+  }
+
+  const newPassword = String(formData.get("new_password") ?? "");
+  const confirmPassword = String(formData.get("confirm_password") ?? "");
+
+  const fieldErrors = validateNewPassword(newPassword, confirmPassword);
+  if (Object.keys(fieldErrors).length > 0) {
+    return { error: "Please correct the highlighted fields.", fieldErrors };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) return { error: error.message };
+
+  // S1-17 AC3: every existing session goes. Global scope is the point — a
+  // member resetting their password may well be doing it because someone else
+  // has one, and leaving that session alive would defeat the exercise. The
+  // recovery token itself was already spent by verifyOtp, and Supabase keeps
+  // only one per account, so there is no second token left to revoke.
+  await supabase.auth.signOut({ scope: "global" });
+
+  await clearRecoveryMark();
+  (await cookies()).delete(ACTIVITY_COOKIE);
+
+  redirect(loginPath("password-reset"));
 }

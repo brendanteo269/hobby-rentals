@@ -40,7 +40,7 @@ export function checkEmailPath(
  * A closed set rather than the underlying error text, so nothing the member is
  * shown originates in the URL. See the `failure` helper in auth/confirm.
  */
-export type AuthErrorCode = "link-invalid" | "link-missing";
+export type AuthErrorCode = "link-invalid" | "link-missing" | "reset-link-invalid";
 
 /** The screen shown when a confirmation link could not be used. */
 export function authErrorPath(code: AuthErrorCode): `/auth-error?reason=${AuthErrorCode}` {
@@ -86,3 +86,19 @@ export function profilePath(view?: ProfileView): "/profile" | `/profile?view=${P
 
 /** First-run setup. */
 export const ONBOARDING_PATH = "/onboarding";
+
+/** Where a member asks for a reset link. */
+export const FORGOT_PASSWORD_PATH = "/forgot-password";
+
+/** The neutral "if that address has an account" confirmation. */
+export const RESET_REQUESTED_PATH = "/reset-requested";
+
+/**
+ * Where a reset link lands, once /auth/confirm has verified it.
+ *
+ * Deliberately absent from PROTECTED_PREFIXES: putting it behind the sign-in
+ * wall would also put it behind the onboarding gate, and a member who never
+ * finished first-run setup would be sent to fill in a form instead of being
+ * allowed to recover their account. The page guards itself instead.
+ */
+export const RESET_PASSWORD_PATH = "/reset-password";

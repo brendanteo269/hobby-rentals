@@ -15,7 +15,21 @@
 project_id = "hobby-rentals"
 
 [auth]
-site_url = "http://127.0.0.1:3000"
+# Must match the origin the app is actually served from, because Supabase only
+# honours an emailRedirectTo/redirectTo that this allow-list covers and
+# silently falls back to site_url otherwise. "localhost" and "127.0.0.1" are
+# different origins to that matcher, so a mismatch here does not fail loudly —
+# it delivers every confirmation and reset link to the home page instead of to
+# /auth/confirm, and the flow simply never starts.
+site_url = "http://localhost:3000"
+
+# Both spellings of the dev origin, so a link works whichever one the member
+# happens to be on. A deployed project needs its real origin added here in the
+# dashboard, or its mail has the same problem.
+additional_redirect_urls = [
+  "http://localhost:3000/**",
+  "http://127.0.0.1:3000/**",
+]
 
 # Must not undercut the application's own rule in src/lib/password.ts, which
 # requires 8 characters with an upper, a lower and a digit. A lower floor here
