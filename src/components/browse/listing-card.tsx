@@ -1,11 +1,11 @@
-import { Badge, ImageSlot } from "@/components/ui";
+import Link from "next/link";
 import { formatMoney } from "@/lib/format";
 import {
   CATEGORY_LABELS,
   LOCATION_LABELS,
   type ListingCard as ListingCardData,
 } from "@/lib/listings";
-import { CATEGORY_IMAGES } from "@/lib/mock-images";
+import { ListingCardCarousel } from "./listing-card-carousel";
 
 /**
  * One real listing in the browse grid.
@@ -16,22 +16,23 @@ import { CATEGORY_IMAGES } from "@/lib/mock-images";
  * tokens. Merging them would mean one component pretending to two contracts.
  * Unlike that placeholder card, this one carries no rating or "Product
  * Passport" ribbon — real listings have no such field yet.
+ *
+ * Two separate <Link>s to the same listing (one on the photo via
+ * ListingCardCarousel, one on the info below) rather than one link wrapping
+ * everything - the carousel's prev/next/dot buttons can't be nested inside
+ * an <a>, so the photo needs its own link rather than sharing the outer one.
  */
 export function ListingCard({ listing }: { listing: ListingCardData }) {
   return (
     <li className="group overflow-hidden card transition-colors hover:border-ink-soft">
-      <div className="relative overflow-hidden">
-        {/* Photo hosting is not wired up yet, so a category mock photo
-            stands in until a real one exists for this listing. */}
-        <ImageSlot
-          label={listing.primary_photo_key ?? "No photo yet"}
-          src={CATEGORY_IMAGES[listing.category]}
-          className="aspect-square w-full transition-transform duration-300 ease-out group-hover:scale-105"
-        />
-        <Badge className="absolute left-3 top-3">{LOCATION_LABELS[listing.location_area]}</Badge>
-      </div>
+      <ListingCardCarousel
+        photoUrls={listing.photo_urls}
+        listingId={listing.id}
+        name={listing.name}
+        locationLabel={LOCATION_LABELS[listing.location_area]}
+      />
 
-      <div className="p-4">
+      <Link href={`/listings/${listing.id}`} className="block p-4">
         <p className="eyebrow">{CATEGORY_LABELS[listing.category]}</p>
         <h3 className="heading mt-1.5 text-sm leading-snug">{listing.name}</h3>
 
@@ -39,7 +40,7 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
           <RateLine listing={listing} />
         </div>
         <p className="body-copy mt-1">{formatMoney(listing.deposit_cents)} deposit</p>
-      </div>
+      </Link>
     </li>
   );
 }

@@ -5,17 +5,18 @@ import type { ChangeEvent, ReactNode } from "react";
 import { Button, Field, FormError, SelectField, TextareaField } from "@/components/ui";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
 import { WeeklyAvailabilityField } from "@/components/listings/weekly-availability-field";
+import { PickupLocationField } from "@/components/listings/pickup-location-field";
 import { RentalDurationField } from "@/components/listings/rental-duration-field";
 import { PhotoUploadField } from "@/components/listings/photo-upload-field";
 import { PricePerBlockField } from "@/components/listings/price-per-block-field";
 import { submitListing, type CreateListingState } from "@/app/listings/actions";
+import { dollarsToCents, formatMoney } from "@/lib/format";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
   CONDITIONS,
   CONDITION_LABELS,
-  LOCATION_AREAS,
-  LOCATION_LABELS,
+  type LocationArea,
 } from "@/lib/listings";
 
 /**
@@ -23,10 +24,11 @@ import {
  * failed submission was found to wipe them). React resets a form's
  * *uncontrolled* fields once a form action finishes, success or failure —
  * the fix is to drive each of these from state instead. available_from/
- * available_until, min/max rental days, and photos each have their own
- * dedicated state already (below, or inside PricePerBlockField,
- * RentalDurationField, WeeklyAvailabilityField, BlackoutRulesField,
- * PhotoUploadField) and so don't belong here too.
+ * available_until, min/max rental days, photos, and the collection area each
+ * have their own dedicated state already (below, or inside
+ * PricePerBlockField, RentalDurationField, WeeklyAvailabilityField,
+ * BlackoutRulesField, PhotoUploadField, PickupLocationField) and so don't
+ * belong here too.
  */
 type FieldValues = {
   name: string;
@@ -34,7 +36,6 @@ type FieldValues = {
   description: string;
   category: string;
   condition: string;
-  location_area: string;
   deposit: string;
 };
 
@@ -44,7 +45,6 @@ const EMPTY_FIELDS: FieldValues = {
   description: "",
   category: "",
   condition: "",
-  location_area: "",
   deposit: "",
 };
 
@@ -57,7 +57,16 @@ const EMPTY_FIELDS: FieldValues = {
  * `min` attributes are kept as a first pass, so the common mistakes are caught
  * without a round trip, but nothing here is trusted to have caught them.
  */
-export function CreateListingForm({ profileAvailableDays }: { profileAvailableDays: number[] }) {
+export function CreateListingForm({
+  profileAvailableDays,
+  profileDefaultLocation,
+  depositCapBps,
+}: {
+  profileAvailableDays: number[];
+  profileDefaultLocation: LocationArea | null;
+  /** Basis points (10000 = 100%) a deposit may not exceed of the weekly-equivalent rate - drives the live recommendation under the deposit field. */
+  depositCapBps: number;
+}) {
   const [state, formAction, pending] = useActionState<CreateListingState, FormData>(
     submitListing,
     undefined,
@@ -77,11 +86,24 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
   const [customDays, setCustomDays] = useState<number[]>(profileAvailableDays);
   const weeklyDays = customAvailability ? customDays : profileAvailableDays;
 
+  // Same "starts from the current default" reasoning as customDays above: a
+  // custom pickup location should not open on a blank box.
+  const [customLocation, setCustomLocation] = useState(false);
+  const [pickupLocation, setPickupLocation] = useState(profileDefaultLocation ?? "");
+
   const [fields, setFields] = useState<FieldValues>(EMPTY_FIELDS);
   const updateField =
     <K extends keyof FieldValues>(key: K) =>
     (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
       setFields((current) => ({ ...current, [key]: event.target.value }));
+
+  // Mirrors PricePerBlockField's own internal state via its onRateChange
+  // callback, purely so the deposit field below can show a live cap
+  // recommendation - the price itself is still submitted by that field's own
+  // named input, not from this copy.
+  const [priceBlock, setPriceBlock] = useState<"DAY" | "WEEK" | null>(null);
+  const [priceRate, setPriceRate] = useState("");
+  const depositHint = depositCapHint(depositCapBps, priceBlock, priceRate);
 
   return (
     <form action={formAction} className="space-y-6">
@@ -122,7 +144,7 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
           onChange={updateField("description")}
         />
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <SelectField
             label="Category"
             id="category"
@@ -160,26 +182,16 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
               </option>
             ))}
           </SelectField>
-
-          <SelectField
-            label="Collection area"
-            id="location_area"
-            name="location_area"
-            required
-            error={errors.location_area}
-            value={fields.location_area}
-            onChange={updateField("location_area")}
-          >
-            <option value="" disabled>
-              Choose one
-            </option>
-            {LOCATION_AREAS.map((value) => (
-              <option key={value} value={value}>
-                {LOCATION_LABELS[value]}
-              </option>
-            ))}
-          </SelectField>
         </div>
+
+        <PickupLocationField
+          profileDefault={profileDefaultLocation}
+          custom={customLocation}
+          onCustomChange={setCustomLocation}
+          value={pickupLocation}
+          onValueChange={setPickupLocation}
+          error={errors.location_area}
+        />
       </FormSection>
 
       <FormSection title="Photos">
@@ -190,7 +202,13 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
         {/* Only one of the two is ever submitted, so at most one of these two
             backend error slots is ever populated - whichever it is applies to
             the one shared box. */}
-        <PricePerBlockField error={errors.price_per_day_cents ?? errors.price_per_week_cents} />
+        <PricePerBlockField
+          error={errors.price_per_day_cents ?? errors.price_per_week_cents}
+          onRateChange={(block, rate) => {
+            setPriceBlock(block);
+            setPriceRate(rate);
+          }}
+        />
 
         <Field
           label="Security deposit"
@@ -202,7 +220,7 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
           inputMode="decimal"
           placeholder="0.00"
           required
-          hint="Held, not charged. Enter 0 for none."
+          hint={depositHint}
           error={errors.deposit_cents}
           className="max-w-xs"
           value={fields.deposit}
@@ -280,6 +298,26 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
 function todayIso() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * The deposit field's hint text: the static explanation always, plus a live
+ * "recommended up to $X" once a rate is entered.
+ *
+ * Mirrors CreateListingRequest._deposit_within_cap's formula exactly (a
+ * week rate used directly, or a day rate x7) so the number shown here is
+ * never a value the backend would then reject - a proactive echo of that
+ * rule, not a second one that could drift from it.
+ */
+function depositCapHint(depositCapBps: number, block: "DAY" | "WEEK" | null, rate: string): string {
+  const base = "Held, not charged. Enter 0 for none.";
+  const rateCents = dollarsToCents(rate);
+  if (block === null || rateCents === null || Number.isNaN(rateCents) || rateCents <= 0) {
+    return base;
+  }
+  const weeklyEquivalentCents = block === "WEEK" ? rateCents : rateCents * 7;
+  const capCents = Math.floor((weeklyEquivalentCents * depositCapBps) / 10_000);
+  return `${base} Recommended: up to ${formatMoney(capCents)} (${depositCapBps / 100}% of the weekly rate).`;
 }
 
 /**

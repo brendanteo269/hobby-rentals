@@ -1,21 +1,60 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Button } from "@/components/ui";
+import { Crop } from "lucide-react";
+import { Button, RequiredMark } from "@/components/ui";
 import {
   ALLOWED_PHOTO_CONTENT_TYPES,
   MAX_LISTING_PHOTOS,
   type PresignPhotoResponse,
 } from "@/lib/listings";
+import { CENTERED_CROP, cropBitmapToFile, cropToSquare, type CropTransform } from "@/lib/image-crop";
+import { PhotoCropModal } from "./photo-crop-modal";
 
 type Photo = {
   key: string;
   /** Local object URL for the thumbnail — never sent anywhere, revoked on removal/unmount. */
   previewUrl: string;
   fileName: string;
+  /** Untouched original, kept so "Edit crop" can re-crop from the full photo rather than re-cropping an already-cropped square. */
+  originalFile: File;
+  /** The crop last applied, so reopening the editor starts where the owner left it instead of resetting to center. */
+  crop: CropTransform;
 };
 
 type UploadingSlot = { id: string; fileName: string };
+
+/**
+ * Presigns and PUTs one file to S3, returning the resulting photo_key.
+ * Shared by the initial upload and the re-crop-then-reupload path so the
+ * presign protocol and its error handling live in exactly one place.
+ */
+async function putPhotoToS3(file: File): Promise<string> {
+  const presignRes = await fetch("/api/listings/photos/presign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content_type: file.type }),
+  });
+  if (!presignRes.ok) {
+    const body: unknown = await presignRes.json().catch(() => null);
+    const message =
+      body !== null && typeof body === "object" && "error" in body
+        ? String((body as { error: unknown }).error)
+        : "Could not prepare the upload.";
+    throw new Error(message);
+  }
+  const { upload_url, photo_key } = (await presignRes.json()) as PresignPhotoResponse;
+
+  const putRes = await fetch(upload_url, {
+    method: "PUT",
+    headers: { "Content-Type": file.type },
+    body: file,
+  });
+  if (!putRes.ok) {
+    throw new Error(`${file.name} failed to upload. Try again.`);
+  }
+  return photo_key;
+}
 
 /**
  * Photo picker for the create-listing form.
@@ -32,6 +71,11 @@ export function PhotoUploadField({ error }: { error?: string }) {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [uploading, setUploading] = useState<UploadingSlot[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  // The photo currently open in the manual crop editor, if any.
+  const [editing, setEditing] = useState<Photo | null>(null);
+  // Key of the photo currently being re-cropped and re-uploaded, so its tile
+  // can show the same "in progress" treatment a fresh upload gets.
+  const [recroppingKey, setRecroppingKey] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const remainingSlots = MAX_LISTING_PHOTOS - photos.length - uploading.length;
@@ -62,38 +106,52 @@ export function PhotoUploadField({ error }: { error?: string }) {
     setUploading((current) => [...current, slot]);
 
     try {
-      const presignRes = await fetch("/api/listings/photos/presign", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content_type: file.type }),
-      });
-      if (!presignRes.ok) {
-        const body: unknown = await presignRes.json().catch(() => null);
-        const message =
-          body !== null && typeof body === "object" && "error" in body
-            ? String((body as { error: unknown }).error)
-            : "Could not prepare the upload.";
-        throw new Error(message);
-      }
-      const { upload_url, photo_key } = (await presignRes.json()) as PresignPhotoResponse;
-
-      const putRes = await fetch(upload_url, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!putRes.ok) {
-        throw new Error(`${file.name} failed to upload. Try again.`);
-      }
+      const squared = await cropToSquare(file);
+      const photo_key = await putPhotoToS3(squared);
 
       setPhotos((current) => [
         ...current,
-        { key: photo_key, previewUrl: URL.createObjectURL(file), fileName: file.name },
+        {
+          key: photo_key,
+          previewUrl: URL.createObjectURL(squared),
+          fileName: file.name,
+          originalFile: file,
+          crop: CENTERED_CROP,
+        },
       ]);
     } catch (caught) {
       setUploadError(caught instanceof Error ? caught.message : `${file.name} failed to upload.`);
     } finally {
       setUploading((current) => current.filter((item) => item.id !== slot.id));
+    }
+  }
+
+  /** Re-crops `editing`'s original file with a manually-chosen transform and re-uploads it, replacing that photo's key in place. */
+  async function handleRecrop(crop: CropTransform) {
+    const target = editing;
+    if (!target) return;
+    setEditing(null);
+    setRecroppingKey(target.key);
+
+    try {
+      const bitmap = await createImageBitmap(target.originalFile, { imageOrientation: "from-image" });
+      const cropped = await cropBitmapToFile(bitmap, crop, target.originalFile.type, target.originalFile.name);
+      bitmap.close();
+      if (!cropped) throw new Error(`${target.fileName} could not be re-cropped. Try again.`);
+
+      const photo_key = await putPhotoToS3(cropped);
+
+      setPhotos((current) =>
+        current.map((photo) => {
+          if (photo.key !== target.key) return photo;
+          URL.revokeObjectURL(photo.previewUrl);
+          return { ...photo, key: photo_key, previewUrl: URL.createObjectURL(cropped), crop };
+        }),
+      );
+    } catch (caught) {
+      setUploadError(caught instanceof Error ? caught.message : `${target.fileName} failed to upload.`);
+    } finally {
+      setRecroppingKey(null);
     }
   }
 
@@ -108,7 +166,8 @@ export function PhotoUploadField({ error }: { error?: string }) {
   return (
     <fieldset className="border border-line bg-white p-5">
       <legend className="px-2 text-sm font-medium">
-        Photos<span aria-hidden="true" className="text-clay"> *</span>
+        Photos
+        <RequiredMark />
       </legend>
       <p className="body-copy">
         At least one is required. Up to {MAX_LISTING_PHOTOS}, JPEG/PNG/WebP.
@@ -118,29 +177,57 @@ export function PhotoUploadField({ error }: { error?: string }) {
 
       {(photos.length > 0 || uploading.length > 0) && (
         <ul className="mt-4 grid grid-cols-3 gap-3 sm:grid-cols-4">
-          {photos.map((photo) => (
-            <li key={photo.key} className="group relative aspect-square overflow-hidden border border-line">
-              {/* eslint-disable-next-line @next/next/no-img-element -- local blob: URL, not an optimizable remote image */}
-              <img src={photo.previewUrl} alt="" className="h-full w-full object-cover" />
-              <button
-                type="button"
-                onClick={() => removePhoto(photo.key)}
-                aria-label={`Remove ${photo.fileName}`}
-                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-ink/80 text-xs text-cream opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+          {photos.map((photo) =>
+            photo.key === recroppingKey ? (
+              <li
+                key={photo.key}
+                className="flex aspect-square items-center justify-center border border-dashed border-line bg-surface-muted text-xs text-ink-soft"
               >
-                ×
-              </button>
-            </li>
-          ))}
+                Saving…
+              </li>
+            ) : (
+              <li key={photo.key} className="group relative aspect-square overflow-hidden border border-line">
+                {/* eslint-disable-next-line @next/next/no-img-element -- local blob: URL, not an optimizable remote image */}
+                <img src={photo.previewUrl} alt="" className="h-full w-full object-cover" />
+                <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+                  <button
+                    type="button"
+                    onClick={() => setEditing(photo)}
+                    aria-label={`Edit crop for ${photo.fileName}`}
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-ink/80 text-white"
+                  >
+                    <Crop className="size-3.5" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removePhoto(photo.key)}
+                    aria-label={`Remove ${photo.fileName}`}
+                    className="flex h-6 w-6 items-center justify-center rounded-full bg-ink/80 text-xs text-white"
+                  >
+                    ×
+                  </button>
+                </div>
+              </li>
+            ),
+          )}
           {uploading.map((slot) => (
             <li
               key={slot.id}
-              className="flex aspect-square items-center justify-center border border-dashed border-line bg-sand text-xs text-ink-soft"
+              className="flex aspect-square items-center justify-center border border-dashed border-line bg-surface-muted text-xs text-ink-soft"
             >
               Uploading…
             </li>
           ))}
         </ul>
+      )}
+
+      {editing && (
+        <PhotoCropModal
+          file={editing.originalFile}
+          initialCrop={editing.crop}
+          onCancel={() => setEditing(null)}
+          onSave={(crop) => void handleRecrop(crop)}
+        />
       )}
 
       <div className="mt-4 border-t border-line pt-4">
@@ -165,12 +252,12 @@ export function PhotoUploadField({ error }: { error?: string }) {
       </div>
 
       {uploadError && (
-        <p role="alert" className="mt-3 text-xs text-clay">
+        <p role="alert" className="mt-3 text-xs text-accent-dark">
           {uploadError}
         </p>
       )}
       {error && (
-        <p role="alert" className="mt-3 text-xs text-clay">
+        <p role="alert" className="mt-3 text-xs text-accent-dark">
           {error}
         </p>
       )}

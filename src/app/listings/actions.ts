@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createListing, ListingApiError } from "@/lib/api/listings";
+import { dollarsToCents } from "@/lib/format";
 import {
   isCategory,
   isCondition,
@@ -26,15 +27,12 @@ function text(formData: FormData, name: string): string {
 /**
  * Reads a money field as integer cents.
  *
- * The form collects dollars, because that is what an owner is pricing in, but
- * the API speaks cents everywhere. Rounding rather than truncating keeps
- * "10.005" from quietly becoming $10.00. Returns null for a blank optional
- * field; a malformed one becomes NaN and is caught by the checks below.
+ * Returns null for a blank optional field; a malformed one becomes NaN and
+ * is caught by the checks below. See dollarsToCents for the dollars->cents
+ * rounding this shares with the client-side deposit-cap hint.
  */
 function cents(formData: FormData, name: string): number | null {
-  const raw = text(formData, name);
-  if (!raw) return null;
-  return Math.round(Number(raw) * 100);
+  return dollarsToCents(text(formData, name));
 }
 
 function count(formData: FormData, name: string): number | null {

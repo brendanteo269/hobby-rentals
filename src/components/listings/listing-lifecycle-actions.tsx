@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button } from "@/components/ui";
+import { TriangleAlert } from "lucide-react";
+import { Button, Modal } from "@/components/ui";
 import { formatDate } from "@/lib/format";
 import type { Listing } from "@/lib/listings";
 import { archiveMyListing, removeMyListing, restoreMyListing, type ListingActionResult } from "@/app/listings/mine/actions";
@@ -50,11 +51,23 @@ export function ListingLifecycleActions({ listing }: { listing: Listing }) {
       setConfirmingRemoval(false);
     });
 
+  function openRemoveConfirm() {
+    // A stale error from a previous archive/restore attempt shouldn't
+    // resurface inside a dialog about a different action.
+    setError(null);
+    setConfirmingRemoval(true);
+  }
+
+  function closeRemoveConfirm() {
+    if (isPending) return; // mid-request: the dialog is the only place the outcome will land
+    setConfirmingRemoval(false);
+  }
+
   return (
     <div className="mt-3 space-y-2">
       {message && <p className="text-xs text-ink-soft">{message}</p>}
-      {error && (
-        <p role="alert" className="border-l-2 border-clay bg-sand px-3 py-2 text-xs text-ink">
+      {error && !confirmingRemoval && (
+        <p role="alert" className="rounded-lg border-l-2 border-accent bg-accent-soft px-3 py-2 text-xs text-ink">
           {error}
         </p>
       )}
@@ -78,23 +91,47 @@ export function ListingLifecycleActions({ listing }: { listing: Listing }) {
           </Button>
         )}
 
-        {(current.status === "ACTIVE" || current.status === "DRAFT" || current.status === "ARCHIVED") &&
-          (confirmingRemoval ? (
-            <span className="flex items-center gap-2 text-xs">
-              Remove this listing?
-              <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={handleRemove}>
-                {isPending ? "Removing…" : "Confirm"}
-              </Button>
-              <button type="button" className="text-ink-soft underline" onClick={() => setConfirmingRemoval(false)} disabled={isPending}>
-                Cancel
-              </button>
-            </span>
-          ) : (
-            <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => setConfirmingRemoval(true)}>
-              Remove Listing
-            </Button>
-          ))}
+        {(current.status === "ACTIVE" || current.status === "DRAFT" || current.status === "ARCHIVED") && (
+          <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={openRemoveConfirm}>
+            Remove listing
+          </Button>
+        )}
       </div>
+
+      {confirmingRemoval && (
+        <Modal title="Remove listing?" onClose={closeRemoveConfirm}>
+          <div className="mt-5 flex gap-3">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
+              <TriangleAlert className="size-5" aria-hidden="true" />
+            </span>
+            <div className="space-y-2 pt-1.5">
+              <p className="text-sm font-medium text-ink">
+                Remove &ldquo;{current.name}&rdquo; from the marketplace?
+              </p>
+              <p className="body-copy">
+                It&apos;s hidden from new search results immediately. If a confirmed booking is still
+                in progress, removal completes once that booking ends — otherwise it&apos;s removed
+                right away. You&apos;d need to create a new listing to offer it again.
+              </p>
+            </div>
+          </div>
+
+          {error && (
+            <p role="alert" className="mt-4 rounded-lg border-l-2 border-accent bg-accent-soft px-3 py-2 text-sm text-ink">
+              {error}
+            </p>
+          )}
+
+          <div className="mt-6 flex justify-end gap-3">
+            <Button type="button" variant="outline" disabled={isPending} onClick={closeRemoveConfirm}>
+              Cancel
+            </Button>
+            <Button type="button" disabled={isPending} onClick={handleRemove}>
+              {isPending ? "Removing…" : "Remove listing"}
+            </Button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
