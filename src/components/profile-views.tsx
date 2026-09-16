@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge, Button, ButtonLink, EmptyState, ImageSlot } from "./ui";
-import { enableRenting, enableOwning } from "@/app/profile/actions";
+import { enableRenting } from "@/app/profile/actions";
+import { EnableOwningForm } from "@/components/enable-owning-form";
 import { saveProfileAvailability } from "@/app/profile/actions";
 import { ProfileAvailabilityCard } from "@/components/profile-availability-card";
 import { RateLine } from "@/components/browse/listing-card";
@@ -43,32 +44,32 @@ export function ViewTabs({ active }: { active: ProfileView }) {
 }
 
 /**
- * Shown when the member has not opted into this side yet. Turning it on is a
- * single click, so an early "rent only" choice never becomes a dead end.
+ * Shown when the member has not opted into this side yet, so an early
+ * "rent only" choice never becomes a dead end.
+ *
+ * The two sides are not symmetrical. Renting is a single click — where a
+ * booking is collected is agreed per booking, so there is nothing to ask.
+ * Owning carries the pickup-location question onboarding would have asked,
+ * which is why that side has a form of its own rather than a bare button.
  */
 function NotEnabled({ side }: { side: "renter" | "owner" }) {
-  const copy =
-    side === "renter"
-      ? {
-          title: "Renting is not switched on",
-          body: "Turn it on to book listings from people nearby. Nothing is charged until an owner accepts.",
-          label: "Start renting",
-          action: enableRenting,
-        }
-      : {
-          title: "Owning is not switched on",
-          body: "Turn it on to create listings for the gear you already have and earn from it between uses.",
-          label: "Start listing",
-          action: enableOwning,
-        };
+  if (side === "owner") {
+    return (
+      <EmptyState
+        title="Owning is not switched on"
+        body="Turn it on to create listings for the gear you already have and earn from it between uses."
+        action={<EnableOwningForm />}
+      />
+    );
+  }
 
   return (
     <EmptyState
-      title={copy.title}
-      body={copy.body}
+      title="Renting is not switched on"
+      body="Turn it on to book listings from people nearby. Nothing is charged until an owner accepts."
       action={
-        <form action={copy.action}>
-          <Button type="submit">{copy.label}</Button>
+        <form action={enableRenting}>
+          <Button type="submit">Start renting</Button>
         </form>
       }
     />

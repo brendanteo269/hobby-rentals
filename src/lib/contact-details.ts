@@ -28,6 +28,18 @@ export type ContactDetailsResult =
 export type Roles = { wantsToRent: boolean; wantsToOwn: boolean };
 
 /**
+ * The pickup-location rule, shared by every path that can make someone an
+ * owner — onboarding, the Account tab, and "Start listing" on the profile's
+ * Owning tab. A path that skipped it would produce an owner with nowhere to
+ * hand gear over.
+ */
+export function validatePickupLocation(location: string): string | null {
+  if (!location) return "Choose where you would usually hand gear over.";
+  if (location.length > MAX_LOCATION) return `Must be ${MAX_LOCATION} characters or fewer.`;
+  return null;
+}
+
+/**
  * The display name rule, shared by onboarding and the Account tab so the two
  * cannot disagree about what counts as a name.
  */
@@ -67,15 +79,12 @@ export function parseContactDetails(
     fieldErrors.contact_number = "Enter a valid contact number (digits, spaces, + and - only).";
   }
 
-  // Required only of an owner. Asking a renter where they hand gear over is a
-  // question they cannot answer.
-  if (wantsToOwn && !pickupLocation) {
-    fieldErrors.default_pickup_location = "Choose where you would usually hand gear over.";
-  }
+  // Checked only for an owner. Asking a renter where they hand gear over is a
+  // question they cannot answer, and nothing they submit under that name is
+  // written back to their row.
+  const pickupError = wantsToOwn ? validatePickupLocation(pickupLocation) : null;
+  if (pickupError) fieldErrors.default_pickup_location = pickupError;
 
-  if (pickupLocation.length > MAX_LOCATION) {
-    fieldErrors.default_pickup_location = `Must be ${MAX_LOCATION} characters or fewer.`;
-  }
   if (bio.length > MAX_BIO) {
     fieldErrors.bio = `Bio must be ${MAX_BIO} characters or fewer.`;
   }

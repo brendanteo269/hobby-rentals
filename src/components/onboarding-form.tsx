@@ -7,7 +7,7 @@ import {
   type OnboardingState,
   type OnboardingValues,
 } from "@/app/profile/actions";
-import { LOCATION_AREAS, LOCATION_LABELS } from "@/lib/listings";
+import { LocationOptions } from "./location-options";
 import { useSubmissionAttempt } from "./use-submission-attempt";
 
 const OPTIONS = [
@@ -133,14 +133,7 @@ export function OnboardingForm({ defaultDisplayName }: { defaultDisplayName?: st
               hint="Where renters would usually collect your gear."
               error={errors.default_pickup_location}
             >
-              <option value="" disabled>
-                Choose one
-              </option>
-              {LOCATION_AREAS.map((area) => (
-                <option key={area} value={area}>
-                  {LOCATION_LABELS[area]}
-                </option>
-              ))}
+              <LocationOptions />
             </SelectField>
           )}
 

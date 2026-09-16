@@ -12,6 +12,7 @@ import { describe, expect, it } from "vitest";
 import {
   parseContactDetails,
   validateDisplayName,
+  validatePickupLocation,
   type Roles,
 } from "@/lib/contact-details";
 
@@ -39,6 +40,21 @@ describe("validateDisplayName", () => {
   it("rejects a name over 60 characters", () => {
     expect(validateDisplayName("a".repeat(61))).not.toBeNull();
     expect(validateDisplayName("a".repeat(60))).toBeNull();
+  });
+});
+
+describe("validatePickupLocation", () => {
+  it("accepts an area", () => {
+    expect(validatePickupLocation("EAST_COAST")).toBeNull();
+  });
+
+  it("rejects an unanswered location", () => {
+    expect(validatePickupLocation("")).not.toBeNull();
+  });
+
+  it("rejects a location over 120 characters", () => {
+    expect(validatePickupLocation("a".repeat(121))).not.toBeNull();
+    expect(validatePickupLocation("a".repeat(120))).toBeNull();
   });
 });
 

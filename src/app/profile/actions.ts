@@ -5,7 +5,11 @@ import { redirect } from "next/navigation";
 import { updateProfileAvailability } from "@/lib/api/profile-availability";
 import { createClient } from "@/lib/supabase/server";
 import { validatePasswordChange } from "@/lib/password";
-import { parseContactDetails, validateDisplayName } from "@/lib/contact-details";
+import {
+  parseContactDetails,
+  validateDisplayName,
+  validatePickupLocation,
+} from "@/lib/contact-details";
 import { defaultProfileView, profilePath } from "@/lib/routes";
 import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/login-attempts";
 import type { FieldErrors } from "@/lib/api/client";
@@ -126,15 +130,33 @@ export async function completeOnboarding(
 }
 
 /**
- * Opts the member into the side of the marketplace they skipped at signup, so
- * choosing "rent only" on day one is not a dead end.
+ * Opts the member into renting, so choosing "list my gear" on day one is not a
+ * dead end. Nothing to ask: where a booking is collected is agreed per
+ * booking.
  */
 export async function enableRenting() {
   await enableSide("wants_to_rent");
 }
 
-export async function enableOwning() {
-  await enableSide("wants_to_own");
+/**
+ * Opts the member into owning, which unlike renting has a question attached.
+ *
+ * Onboarding will not create an owner without a pickup location, and this is
+ * the only other way to become one, so it applies the same rule rather than
+ * flipping the boolean and leaving the column null — see EnableOwningForm.
+ */
+export async function enableOwning(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const location = String(formData.get("default_pickup_location") ?? "").trim();
+
+  const locationError = validatePickupLocation(location);
+  if (locationError) {
+    return { error: CORRECT_FIELDS, fieldErrors: { default_pickup_location: locationError } };
+  }
+
+  return enableSide("wants_to_own", location);
 }
 
 export async function saveProfileAvailability(
@@ -152,24 +174,27 @@ export async function saveProfileAvailability(
 }
 
 /**
- * Turns on a side of the marketplace.
- *
- * Deliberately no pickup location: a member switching owning on here has never
- * been asked for one, and there is no longer a renter-side answer to borrow.
- * They are left with a null column that the Account tab asks for — the tab's
- * select is required for an owner and starts empty — rather than being handed
- * a guessed handover point that reads as something they chose.
+ * Turns on a side of the marketplace, with the pickup location the owning side
+ * requires. Callers validate it; this writes it.
  */
-async function enableSide(column: "wants_to_rent" | "wants_to_own") {
+async function enableSide(
+  column: "wants_to_rent" | "wants_to_own",
+  pickupLocation?: string,
+): Promise<FormState> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  await supabase.from("profiles").update({ [column]: true }).eq("id", user.id);
+  const update: Record<string, boolean | string> = { [column]: true };
+  if (pickupLocation) update.default_pickup_location = pickupLocation;
+
+  const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
+  if (error) return { error: error.message };
 
   revalidatePath("/profile");
+  return undefined;
 }
 
 export type FormState =

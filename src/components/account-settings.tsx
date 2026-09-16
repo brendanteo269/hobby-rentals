@@ -10,7 +10,7 @@ import {
   type FormState,
 } from "@/app/profile/actions";
 import { PASSWORD_REQUIREMENTS_HINT } from "@/lib/password";
-import { LOCATION_AREAS, LOCATION_LABELS } from "@/lib/listings";
+import { LocationOptions } from "./location-options";
 import type { Roles } from "@/lib/contact-details";
 import { useEditableSection } from "./use-editable-section";
 import { useSubmissionAttempt } from "./use-submission-attempt";
@@ -244,14 +244,7 @@ function ContactDetailsForm({
             required
             error={errors.default_pickup_location}
           >
-            <option value="" disabled>
-              Choose one
-            </option>
-            {LOCATION_AREAS.map((area) => (
-              <option key={area} value={area}>
-                {LOCATION_LABELS[area]}
-              </option>
-            ))}
+            <LocationOptions />
           </SelectField>
         )}
 
