@@ -47,6 +47,15 @@ body {
   color: var(--color-ink-soft);
 }
 
+/* The white bordered surface every card/panel sits on. Was three separate
+   utilities repeated across 15 files — one class instead, so the shape,
+   border and background stay a single decision. */
+@utility card {
+  border-radius: 1rem;
+  border: 1px solid var(--color-line);
+  background-color: #fff;
+}
+
 @keyframes toast-in {
   from {
     opacity: 0;

@@ -12,11 +12,9 @@ export function CreditWallet() {
   const [wallet, setWallet] = useState<WalletState>(EMPTY_WALLET);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState<"topup" | "withdraw" | null>(null);
+  // Gates the "balances unavailable" fallback content below — persistent,
+  // unlike a toast, since the section stays in this state until reloaded.
   const [apiError, setApiError] = useState("");
-  // A transient confirmation, shown after a top-up or withdrawal finishes —
-  // the modal closes immediately on success, so without this the balance
-  // just changes silently with nothing marking that the action completed.
-  const [statusMessage, setStatusMessage] = useState("");
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
   const { show, dismiss } = useToast();
 
@@ -51,36 +49,18 @@ export function CreditWallet() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Auto-dismisses like a toast, rather than needing a close button — a
-  // confirmation that lingers forever reads as a stuck notification.
-  useEffect(() => {
-    if (!statusMessage) return;
-    const timer = window.setTimeout(() => setStatusMessage(""), 6000);
-    return () => window.clearTimeout(timer);
-  }, [statusMessage]);
-
   const openTopUp = () => {
     setApiError("");
     setModal("topup");
   };
   const closeModal = () => setModal(null);
   const finishWithSuccess = (message: string) => {
-    setStatusMessage(message);
+    show(message, "success");
     closeModal();
   };
 
   return (
     <section className="space-y-8" aria-label="Credit wallet">
-      {apiError && (
-        <p role="alert" className="rounded-lg border-l-2 border-accent bg-accent-soft px-3 py-2 text-sm">
-          {apiError}
-        </p>
-      )}
-      {statusMessage && (
-        <p role="status" className="rounded-lg border-l-2 border-ink bg-surface-muted px-3 py-2 text-sm">
-          {statusMessage}
-        </p>
-      )}
       {loading ? null : apiError ? (
         <p>Wallet balances are unavailable.</p>
       ) : (

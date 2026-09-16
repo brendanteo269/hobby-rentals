@@ -14,7 +14,7 @@ import {
 } from "@/lib/browse-params";
 import type { BrowseListingsResponse } from "@/lib/listings";
 
-export const metadata = { title: "Browse products — HobbyRentals" };
+export const metadata = { title: "Browse listings — HobbyRentals" };
 
 export default async function BrowsePage({
   searchParams,
@@ -30,7 +30,7 @@ export default async function BrowsePage({
   return (
     <Container className="py-16">
       <p className="eyebrow">Marketplace</p>
-      <h1 className="heading mt-3 text-3xl">Browse products</h1>
+      <h1 className="heading mt-3 text-3xl">Browse listings</h1>
 
       <div className="mt-8">
         <ListingFilters filters={filters} />
@@ -127,9 +127,9 @@ function NoResults({ filters, error }: { filters: BrowseFilters; error: string |
 
   return (
     <EmptyState
-      title="No gear listed yet"
+      title="No listings yet"
       body="Nothing is available to rent right now. Be the first to list something."
-      action={<ButtonLink href="/listings/new">List your gear</ButtonLink>}
+      action={<ButtonLink href="/listings/new">Create a listing</ButtonLink>}
     />
   );
 }

@@ -24,7 +24,7 @@ export function BrowseByHobby() {
             <li key={cat.name}>
               <Link
                 href="/browse"
-                className="group flex flex-col items-center gap-3 rounded-2xl border border-line bg-white px-4 py-8 text-center transition-colors hover:border-ink"
+                className="group flex flex-col items-center gap-3 card px-4 py-8 text-center transition-colors hover:border-ink"
               >
                 <span className="flex size-12 items-center justify-center rounded-full bg-surface-muted text-ink transition-colors group-hover:bg-accent-soft group-hover:text-accent-dark">
                   <Icon className="size-6" aria-hidden="true" />

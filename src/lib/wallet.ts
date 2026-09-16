@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export type TransactionType = "TOPUP" | "ESCROW_HOLD" | "ESCROW_RELEASE" | "WITHDRAWAL" | "REFUND" | "ADMIN_CREDIT" | "ADMIN_DEBIT";
 export type TransactionStatus = "COMPLETED" | "PENDING" | "REFUNDED";
-export type TransactionFilter = "all" | "topups" | "escrow" | "releases" | "withdrawals" | "adjustments";
+export type TransactionFilter = "all" | "topups" | "escrow" | "releases" | "refunds" | "withdrawals" | "adjustments";
 
 export type WalletTransaction = {
   id: string;
@@ -60,6 +60,7 @@ export function filterTransactions(transactions: WalletTransaction[], filter: Tr
   if (filter === "topups") return transactions.filter((tx) => tx.type === "TOPUP");
   if (filter === "escrow") return transactions.filter((tx) => tx.type === "ESCROW_HOLD");
   if (filter === "releases") return transactions.filter((tx) => tx.type === "ESCROW_RELEASE");
+  if (filter === "refunds") return transactions.filter((tx) => tx.type === "REFUND");
   if (filter === "adjustments") {
     return transactions.filter((tx) => tx.type === "ADMIN_CREDIT" || tx.type === "ADMIN_DEBIT");
   }

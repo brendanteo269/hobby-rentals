@@ -12,7 +12,8 @@ const labels: Record<TransactionFilter, string> = {
   all: "All",
   topups: "Top-ups",
   escrow: "Escrow holds",
-  releases: "Releases",
+  releases: "Earnings",
+  refunds: "Refunds",
   withdrawals: "Withdrawals",
   adjustments: "Adjustments",
 };
@@ -78,7 +79,7 @@ export function TransactionHistoryTable({ transactions }: { transactions: Wallet
         </div>
       </div>
       {rows.length === 0 ? (
-        <div className="mt-4 rounded-2xl border border-line bg-white px-6 py-12 text-center">
+        <div className="mt-4 card px-6 py-12 text-center">
           <p className="text-3xl" aria-hidden="true">
             ◎
           </p>
@@ -86,7 +87,7 @@ export function TransactionHistoryTable({ transactions }: { transactions: Wallet
           <p className="body-copy mt-2">Transactions matching this filter will appear here.</p>
         </div>
       ) : (
-        <div className="mt-4 overflow-x-auto rounded-2xl border border-line bg-white">
+        <div className="mt-4 overflow-x-auto card">
           <table className="w-full min-w-[680px] text-left text-sm">
             <thead className="border-b border-line bg-surface-muted text-xs uppercase tracking-wider text-ink-soft">
               <tr>

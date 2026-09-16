@@ -43,22 +43,24 @@ export function PricePerBlockField({ error }: { error?: string }) {
           the request shape (price_per_day_cents / price_per_week_cents),
           so the server action needs no extra field to read the choice from. */}
       {block && (
-        <Field
-          label={block === "DAY" ? "Daily rate" : "Weekly rate"}
-          id="price_rate"
-          name={block === "DAY" ? "price_per_day" : "price_per_week"}
-          type="number"
-          min="0"
-          step="0.01"
-          inputMode="decimal"
-          placeholder={block === "DAY" ? "25.00" : "120.00"}
-          value={rate}
-          onChange={(event) => setRate(event.target.value)}
-          required
-          hint="SGD"
-          error={error}
-          className="mt-4 max-w-xs"
-        />
+        <div className="mt-4">
+          <Field
+            label={block === "DAY" ? "Daily rate" : "Weekly rate"}
+            id="price_rate"
+            name={block === "DAY" ? "price_per_day" : "price_per_week"}
+            type="number"
+            min="0"
+            step="0.01"
+            inputMode="decimal"
+            placeholder={block === "DAY" ? "25.00" : "120.00"}
+            value={rate}
+            onChange={(event) => setRate(event.target.value)}
+            required
+            hint="SGD"
+            error={error}
+            className="max-w-xs"
+          />
+        </div>
       )}
 
       {!block && error && (

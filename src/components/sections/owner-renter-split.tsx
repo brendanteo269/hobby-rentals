@@ -28,11 +28,11 @@ export function OwnerRenterSplit() {
           </div>
 
           <ButtonLink href="/listings/new" className="mt-6">
-            List gear with auto-pricing →
+            Create a listing with auto-pricing →
           </ButtonLink>
         </div>
 
-        <div className="rounded-2xl border border-line bg-white p-8 sm:p-10">
+        <div className="card p-8 sm:p-10">
           <p className="eyebrow">For renters</p>
           <h2 className="heading mt-3 text-2xl">Adventure without ownership</h2>
           <p className="body-copy mt-3">

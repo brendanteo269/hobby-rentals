@@ -3,6 +3,7 @@ import { MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/lib/profile";
 import { getProfileAvailability } from "@/lib/api/profile-availability";
+import { getMyListings } from "@/lib/api/listings";
 import { Badge, Container } from "@/components/ui";
 import { isLocationArea, LOCATION_LABELS } from "@/lib/listings";
 import {
@@ -57,6 +58,7 @@ export default async function ProfilePage({
   });
   const isVerified = Boolean(user.email_confirmed_at);
   const availability = await getProfileAvailability();
+  const myListings = await getMyListings();
 
   return (
     <Container className="py-16">
@@ -84,7 +86,13 @@ export default async function ProfilePage({
         <ViewTabs active={active} />
         <div className="mt-8">
           {active === "renter" && <RenterView enabled={profile.wants_to_rent} />}
-          {active === "owner" && <OwnerView enabled={profile.wants_to_own} availableDays={availability.available_days} />}
+          {active === "owner" && (
+            <OwnerView
+              enabled={profile.wants_to_own}
+              availableDays={availability.available_days}
+              listings={myListings}
+            />
+          )}
           {active === "wallet" && <CreditWallet />}
           {active === "account" && (
             <AccountSettings

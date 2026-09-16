@@ -74,6 +74,15 @@ export function createListing(data: CreateListingRequest) {
   });
 }
 
+/**
+ * The signed-in owner's full rental inventory — every status, newest first.
+ * Unlike browseListings, this includes drafts and archived listings, since
+ * it is the owner managing their own gear rather than a renter searching.
+ */
+export function getMyListings() {
+  return backendRequest<Listing[]>("/listings/mine");
+}
+
 export type ListingAvailability = {
   has_custom_availability: boolean;
   weekly_schedule: number[];

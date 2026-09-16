@@ -1,4 +1,4 @@
-import { Container, Button, Input, ImageSlot, Badge } from "@/components/ui";
+import { Container, Button, Input, ImageSlot } from "@/components/ui";
 import { ShieldCheck, BadgeCheck, Handshake, Camera } from "lucide-react";
 import { HERO_IMAGE } from "@/lib/mock-images";
 
@@ -22,15 +22,15 @@ export function Hero() {
           kits across Singapore.
         </p>
 
-        <form className="mt-8 rounded-2xl border border-line bg-white p-3 sm:flex sm:items-stretch sm:gap-2 sm:p-2">
+        <form className="mt-8 card p-3 sm:flex sm:items-stretch sm:gap-2 sm:p-2">
           <label htmlFor="search" className="sr-only">
-            Search for gear
+            Search for listings
           </label>
           <Input
             id="search"
             name="q"
             pill
-            placeholder='Sony A7III, tent, drone…'
+            placeholder="Search listings"
             className="border-transparent sm:flex-1"
           />
           <label htmlFor="area" className="sr-only">
@@ -40,7 +40,7 @@ export function Hero() {
             id="area"
             name="area"
             pill
-            placeholder="Choose pickup location"
+            placeholder="Pickup location"
             className="mt-2 border-transparent sm:mt-0 sm:flex-1"
           />
           <label htmlFor="dates" className="sr-only">
@@ -75,9 +75,6 @@ export function Hero() {
           align="end"
           className="aspect-4/5 w-full rounded-3xl lg:aspect-square"
         />
-        <Badge variant="dark" className="absolute left-4 top-4">
-          Product Passport Verified
-        </Badge>
         <div className="absolute bottom-4 left-4 right-4 flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 shadow-sm sm:right-auto">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-muted text-ink">
             <Camera className="size-4" aria-hidden="true" />

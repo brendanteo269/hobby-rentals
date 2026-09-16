@@ -1,9 +1,8 @@
 import { Hero } from "@/components/sections/hero";
 import { BrowseByHobby } from "@/components/sections/browse-by-hobby";
 import { TrustFeatures } from "@/components/sections/trust-features";
-import { GearNearYou } from "@/components/sections/gear-near-you";
+import { PopularListings } from "@/components/sections/popular-listings";
 import { OwnerRenterSplit } from "@/components/sections/owner-renter-split";
-import { NewsletterSignup } from "@/components/sections/newsletter-signup";
 
 export default function Home() {
   return (
@@ -11,9 +10,8 @@ export default function Home() {
       <Hero />
       <BrowseByHobby />
       <TrustFeatures />
-      <GearNearYou />
+      <PopularListings />
       <OwnerRenterSplit />
-      <NewsletterSignup />
     </>
   );
 }

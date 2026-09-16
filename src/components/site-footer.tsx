@@ -18,7 +18,6 @@ export function SiteFooter() {
             <p className="mt-4 max-w-xs text-sm text-white/70">
               Extending product utilisation through trusted peer-to-peer hobby gear rentals.
             </p>
-            <p className="mt-4 text-xs text-white/50">Stripe Escrow · PayNow</p>
             <ButtonLink href="/signup" variant="outlineOnDark" className="mt-6">
               Get started
             </ButtonLink>
