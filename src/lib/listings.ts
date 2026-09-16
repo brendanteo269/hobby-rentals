@@ -166,6 +166,42 @@ export type CreateListingRequest = {
   photo_keys: string[];
 };
 
+/**
+ * A partial update for PATCH /listings/{id}. Every field is optional and an
+ * omitted one is left alone, so a caller sends only what actually changed.
+ * The weekly schedule and blackouts are deliberately absent: those have
+ * their own endpoints, mirrored by the /listings/[id]/availability page.
+ */
+export type UpdateListingRequest = Partial<
+  Pick<
+    CreateListingRequest,
+    | "name"
+    | "description"
+    | "brand"
+    | "category"
+    | "condition"
+    | "location_area"
+    | "deposit_cents"
+    | "price_per_day_cents"
+    | "price_per_week_cents"
+    | "min_rental_days"
+    | "max_rental_days"
+    | "available_from"
+    | "available_until"
+    | "photo_keys"
+  >
+>;
+
+export type UpdateListingResponse = {
+  listing: Listing;
+  /**
+   * Confirmed or in-progress rentals on this listing at the time of the edit.
+   * They keep the terms they were booked at; the count is what tells the
+   * form whether that is worth saying to the owner (S1-10 Scenario 4).
+   */
+  active_booking_count: number;
+};
+
 
 export const CATEGORY_LABELS: Record<ListingCategory, string> = {
   PHOTOGRAPHY_VIDEOGRAPHY: "Photography & video",

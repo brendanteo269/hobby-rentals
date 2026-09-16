@@ -13,14 +13,30 @@ import { PhotoCropModal } from "./photo-crop-modal";
 
 type Photo = {
   key: string;
-  /** Local object URL for the thumbnail — never sent anywhere, revoked on removal/unmount. */
+  /**
+   * What the thumbnail shows: a local blob: URL for a photo picked in this
+   * session (revoked on removal), or the stored photo's own URL when editing.
+   */
   previewUrl: string;
   fileName: string;
-  /** Untouched original, kept so "Edit crop" can re-crop from the full photo rather than re-cropping an already-cropped square. */
-  originalFile: File;
+  /**
+   * Untouched original, kept so "Edit crop" can re-crop from the full photo
+   * rather than re-cropping an already-cropped square. Null for a photo that
+   * was already on the listing: the browser never had its file, so it can be
+   * removed but not re-cropped.
+   */
+  originalFile: File | null;
   /** The crop last applied, so reopening the editor starts where the owner left it instead of resetting to center. */
   crop: CropTransform;
 };
+
+/** A photo already on the listing being edited, as the API returns it. */
+export type StoredPhoto = { key: string; url: string };
+
+/** Only blob: URLs are ours to free; a stored photo's URL belongs to S3. */
+function releasePreview(url: string) {
+  if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+}
 
 type UploadingSlot = { id: string; fileName: string };
 
@@ -57,7 +73,7 @@ async function putPhotoToS3(file: File): Promise<string> {
 }
 
 /**
- * Photo picker for the create-listing form.
+ * Photo picker for the listing form, create and edit alike.
  *
  * Each file is uploaded to S3 the moment it's picked, not on form submit:
  * the field asks the backend for a presigned URL (via the same-origin
@@ -66,9 +82,28 @@ async function putPhotoToS3(file: File): Promise<string> {
  * from the browser. What the surrounding form actually submits is just the
  * resulting photo_keys, serialised into one hidden field — the same pattern
  * BlackoutRulesField uses for its list.
+ *
+ * When editing, the listing's existing photos are seeded in from
+ * initialPhotos. Removing one only drops its key from the submitted list;
+ * the object stays in S3, since a booking or passport record may still point
+ * at it.
  */
-export function PhotoUploadField({ error }: { error?: string }) {
-  const [photos, setPhotos] = useState<Photo[]>([]);
+export function PhotoUploadField({
+  error,
+  initialPhotos = [],
+}: {
+  error?: string;
+  initialPhotos?: StoredPhoto[];
+}) {
+  const [photos, setPhotos] = useState<Photo[]>(() =>
+    initialPhotos.map((photo) => ({
+      key: photo.key,
+      previewUrl: photo.url,
+      fileName: photo.key.slice(photo.key.lastIndexOf("/") + 1),
+      originalFile: null,
+      crop: CENTERED_CROP,
+    })),
+  );
   const [uploading, setUploading] = useState<UploadingSlot[]>([]);
   const [uploadError, setUploadError] = useState<string | null>(null);
   // The photo currently open in the manual crop editor, if any.
@@ -129,13 +164,17 @@ export function PhotoUploadField({ error }: { error?: string }) {
   /** Re-crops `editing`'s original file with a manually-chosen transform and re-uploads it, replacing that photo's key in place. */
   async function handleRecrop(crop: CropTransform) {
     const target = editing;
-    if (!target) return;
+    // The crop button is only rendered for photos that have a file, so a
+    // null here is unreachable through the UI - this is the type's guarantee,
+    // not a user-facing state.
+    if (!target?.originalFile) return;
+    const original = target.originalFile;
     setEditing(null);
     setRecroppingKey(target.key);
 
     try {
-      const bitmap = await createImageBitmap(target.originalFile, { imageOrientation: "from-image" });
-      const cropped = await cropBitmapToFile(bitmap, crop, target.originalFile.type, target.originalFile.name);
+      const bitmap = await createImageBitmap(original, { imageOrientation: "from-image" });
+      const cropped = await cropBitmapToFile(bitmap, crop, original.type, original.name);
       bitmap.close();
       if (!cropped) throw new Error(`${target.fileName} could not be re-cropped. Try again.`);
 
@@ -144,7 +183,7 @@ export function PhotoUploadField({ error }: { error?: string }) {
       setPhotos((current) =>
         current.map((photo) => {
           if (photo.key !== target.key) return photo;
-          URL.revokeObjectURL(photo.previewUrl);
+          releasePreview(photo.previewUrl);
           return { ...photo, key: photo_key, previewUrl: URL.createObjectURL(cropped), crop };
         }),
       );
@@ -158,7 +197,7 @@ export function PhotoUploadField({ error }: { error?: string }) {
   function removePhoto(key: string) {
     setPhotos((current) => {
       const target = current.find((photo) => photo.key === key);
-      if (target) URL.revokeObjectURL(target.previewUrl);
+      if (target) releasePreview(target.previewUrl);
       return current.filter((photo) => photo.key !== key);
     });
   }
@@ -187,17 +226,19 @@ export function PhotoUploadField({ error }: { error?: string }) {
               </li>
             ) : (
               <li key={photo.key} className="group relative aspect-square overflow-hidden border border-line">
-                {/* eslint-disable-next-line @next/next/no-img-element -- local blob: URL, not an optimizable remote image */}
+                {/* eslint-disable-next-line @next/next/no-img-element -- a local blob: URL or a short-lived presigned S3 URL; neither is an optimizable remote image */}
                 <img src={photo.previewUrl} alt="" className="h-full w-full object-cover" />
                 <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                  <button
-                    type="button"
-                    onClick={() => setEditing(photo)}
-                    aria-label={`Edit crop for ${photo.fileName}`}
-                    className="flex h-6 w-6 items-center justify-center rounded-full bg-ink/80 text-white"
-                  >
-                    <Crop className="size-3.5" aria-hidden="true" />
-                  </button>
+                  {photo.originalFile && (
+                    <button
+                      type="button"
+                      onClick={() => setEditing(photo)}
+                      aria-label={`Edit crop for ${photo.fileName}`}
+                      className="flex h-6 w-6 items-center justify-center rounded-full bg-ink/80 text-white"
+                    >
+                      <Crop className="size-3.5" aria-hidden="true" />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => removePhoto(photo.key)}
@@ -221,7 +262,7 @@ export function PhotoUploadField({ error }: { error?: string }) {
         </ul>
       )}
 
-      {editing && (
+      {editing?.originalFile && (
         <PhotoCropModal
           file={editing.originalFile}
           initialCrop={editing.crop}

@@ -17,6 +17,8 @@ import type {
   ListingCondition,
   LocationArea,
   PresignPhotoResponse,
+  UpdateListingRequest,
+  UpdateListingResponse,
 } from "@/lib/listings";
 
 export { BackendApiError as ListingApiError } from "@/lib/api/client";
@@ -97,6 +99,18 @@ export function getMyListings() {
 /** A single listing, any status - the API 404s if this caller can't see it (not ACTIVE and not theirs). */
 export function getListing(listingId: string) {
   return backendRequest<Listing>(`/listings/${encodeURIComponent(listingId)}`);
+}
+
+/**
+ * Edits the caller's own listing. Send only the fields that changed -
+ * an unchanged available_from that has already passed would otherwise be
+ * re-sent and rejected, since the API cannot tell "same value" from "new value".
+ */
+export function updateListing(listingId: string, changes: UpdateListingRequest) {
+  return backendRequest<UpdateListingResponse>(`/listings/${encodeURIComponent(listingId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(changes),
+  });
 }
 
 /** S1-12 Scenario 1: pulls a listing out of the marketplace, restorable. */

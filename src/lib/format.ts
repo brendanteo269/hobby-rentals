@@ -22,6 +22,15 @@ export function dollarsToCents(raw: string): number | null {
   return Math.round(Number(trimmed) * 100);
 }
 
+/**
+ * The inverse of dollarsToCents, for pre-filling a money input from a stored
+ * value: "10.00", not "$10.00" (that is formatMoney's job) and not "10"
+ * (which a step="0.01" input would show but an owner would not have typed).
+ */
+export function centsToDollars(cents: number): string {
+  return (cents / 100).toFixed(2);
+}
+
 /** "5 Sept 2026" — a calendar day, with no time of day implied. */
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(LOCALE, {
