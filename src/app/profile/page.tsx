@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/lib/profile";
 import { getProfileAvailability } from "@/lib/api/profile-availability";
 import { getMyListings } from "@/lib/api/listings";
+import { getMyBookings } from "@/lib/api/bookings";
 import { Badge, Container } from "@/components/ui";
 import { isLocationArea, LOCATION_LABELS } from "@/lib/listings";
 import { ViewTabs, RenterView, OwnerView } from "@/components/profile-views";
@@ -60,7 +61,7 @@ export default async function ProfilePage({
   });
   const isVerified = Boolean(user.email_confirmed_at);
   const availability = await getProfileAvailability();
-  const myListings = await getMyListings();
+  const [myListings, myBookings] = await Promise.all([getMyListings(), getMyBookings()]);
 
   return (
     <Container className="py-16">
@@ -90,7 +91,7 @@ export default async function ProfilePage({
       <div className="mt-10">
         <ViewTabs active={active} />
         <div className="mt-8">
-          {active === "renter" && <RenterView enabled={profile.wants_to_rent} />}
+          {active === "renter" && <RenterView enabled={profile.wants_to_rent} bookings={myBookings} />}
           {active === "owner" && (
             <OwnerView
               enabled={profile.wants_to_own}
