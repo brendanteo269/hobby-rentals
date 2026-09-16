@@ -1,15 +1,15 @@
 /**
  * The onboarding and profile validation rules (S1-02).
  *
- * The role-conditional part is the interesting bit: which location a member
- * must give depends on which sides of the marketplace they are on, and getting
- * that wrong either blocks a valid signup or lets an owner through with no
- * pickup point. Neither failure throws, so only a test catches it.
+ * The role-conditional part is the interesting bit: an owner must say where
+ * they hand gear over, and a renter must not be asked for anything of the
+ * kind. Getting that wrong either blocks a valid signup or lets an owner
+ * through with no pickup point. Neither failure throws, so only a test catches
+ * it.
  */
 
 import { describe, expect, it } from "vitest";
 import {
-  inheritedLocation,
   parseContactDetails,
   validateDisplayName,
   type Roles,
@@ -42,67 +42,48 @@ describe("validateDisplayName", () => {
   });
 });
 
-describe("parseContactDetails — role-conditional locations", () => {
-  it("requires a meetup location from a renter, and no pickup location", () => {
+describe("parseContactDetails — the owner's pickup location", () => {
+  it("asks a renter for no location at all", () => {
     const result = parseContactDetails(form({}), RENTER);
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.fieldErrors.preferred_meetup_location).toBeDefined();
-    expect(result.fieldErrors.default_pickup_location).toBeUndefined();
-  });
-
-  it("requires a pickup location from an owner, and no meetup location", () => {
-    const result = parseContactDetails(form({}), OWNER);
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.fieldErrors.default_pickup_location).toBeDefined();
-    expect(result.fieldErrors.preferred_meetup_location).toBeUndefined();
-  });
-
-  it("requires both from a member who does both", () => {
-    const result = parseContactDetails(form({}), BOTH);
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(Object.keys(result.fieldErrors).sort()).toEqual([
-      "default_pickup_location",
-      "preferred_meetup_location",
-    ]);
-  });
-
-  it("accepts a renter who gives only a meetup location", () => {
-    const result = parseContactDetails(
-      form({ preferred_meetup_location: "BUKIT_TIMAH" }),
-      RENTER,
-    );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.values.preferred_meetup_location).toBe("BUKIT_TIMAH");
     // Not "": a role the member does not hold reads as null, like every other
     // unanswered column on profiles.
     expect(result.values.default_pickup_location).toBeNull();
   });
 
-  it("keeps the two locations apart for a member who does both", () => {
-    const result = parseContactDetails(
-      form({
-        preferred_meetup_location: "BUKIT_TIMAH",
-        default_pickup_location: "EAST_COAST",
-      }),
-      BOTH,
-    );
+  it("requires a pickup location from an owner", () => {
+    const result = parseContactDetails(form({}), OWNER);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.fieldErrors.default_pickup_location).toBeDefined();
+  });
+
+  it("requires one from a member who does both", () => {
+    const result = parseContactDetails(form({}), BOTH);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(Object.keys(result.fieldErrors)).toEqual(["default_pickup_location"]);
+  });
+
+  it("keeps an owner's answer", () => {
+    const result = parseContactDetails(form({ default_pickup_location: "EAST_COAST" }), BOTH);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.values.preferred_meetup_location).toBe("BUKIT_TIMAH");
     expect(result.values.default_pickup_location).toBe("EAST_COAST");
+  });
+
+  it("ignores a pickup location submitted by someone who does not own", () => {
+    // The field is not rendered for a renter, so anything arriving under that
+    // name came from a hand-built request rather than the form.
+    const result = parseContactDetails(form({ default_pickup_location: "EAST_COAST" }), RENTER);
+    expect(result.ok).toBe(true);
   });
 });
 
 describe("parseContactDetails — contact number", () => {
   it.each(["9123 4567", "+65 9123 4567", "(65) 9123-4567"])("accepts %s", (number) => {
-    const result = parseContactDetails(
-      form({ contact_number: number, preferred_meetup_location: "BUKIT_TIMAH" }),
-      RENTER,
-    );
+    const result = parseContactDetails(form({ contact_number: number }), RENTER);
     expect(result.ok).toBe(true);
   });
 
@@ -112,10 +93,7 @@ describe("parseContactDetails — contact number", () => {
     ["12345", "too short"],
     ["1".repeat(21), "too long"],
   ])("rejects %s (%s)", (number) => {
-    const result = parseContactDetails(
-      form({ contact_number: number, preferred_meetup_location: "BUKIT_TIMAH" }),
-      RENTER,
-    );
+    const result = parseContactDetails(form({ contact_number: number }), RENTER);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.fieldErrors.contact_number).toBeDefined();
@@ -136,7 +114,6 @@ describe("parseContactDetails — reporting", () => {
       "bio",
       "contact_number",
       "default_pickup_location",
-      "preferred_meetup_location",
     ]);
   });
 
@@ -147,57 +124,14 @@ describe("parseContactDetails — reporting", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     for (const key of Object.keys(result.fieldErrors)) {
-      expect(key).toMatch(/^(contact_number|preferred_meetup_location|default_pickup_location|bio)$/);
+      expect(key).toMatch(/^(contact_number|default_pickup_location|bio)$/);
     }
   });
 
   it("treats an optional bio as absent rather than empty", () => {
-    const result = parseContactDetails(
-      form({ bio: "   ", preferred_meetup_location: "BUKIT_TIMAH" }),
-      RENTER,
-    );
+    const result = parseContactDetails(form({ bio: "   " }), RENTER);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.values.bio).toBeNull();
-  });
-});
-
-describe("inheritedLocation", () => {
-  it("gives a new owner their meetup location as a pickup default", () => {
-    // Without this, clicking "start owning" produces an owner with nowhere to
-    // hand gear over — the member onboarding refuses to create.
-    expect(
-      inheritedLocation("wants_to_own", {
-        preferred_meetup_location: "BUKIT_TIMAH",
-        default_pickup_location: null,
-      }),
-    ).toEqual({ column: "default_pickup_location", value: "BUKIT_TIMAH" });
-  });
-
-  it("gives a new renter their pickup location as a meetup default", () => {
-    expect(
-      inheritedLocation("wants_to_rent", {
-        preferred_meetup_location: null,
-        default_pickup_location: "EAST_COAST",
-      }),
-    ).toEqual({ column: "preferred_meetup_location", value: "EAST_COAST" });
-  });
-
-  it("never overwrites an answer the member already gave", () => {
-    expect(
-      inheritedLocation("wants_to_own", {
-        preferred_meetup_location: "BUKIT_TIMAH",
-        default_pickup_location: "SENTOSA",
-      }),
-    ).toBeNull();
-  });
-
-  it("does nothing when there is no answer to borrow", () => {
-    expect(
-      inheritedLocation("wants_to_own", {
-        preferred_meetup_location: null,
-        default_pickup_location: null,
-      }),
-    ).toBeNull();
   });
 });

@@ -182,61 +182,18 @@ function DisplayNameForm({ current }: { current: string | null }) {
 
 type ContactDetails = {
   contactNumber: string | null;
-  preferredMeetupLocation: string | null;
   defaultPickupLocation: string | null;
   bio: string | null;
 };
 
 type ContactValues = {
   contact_number: string;
-  preferred_meetup_location: string;
   default_pickup_location: string;
   bio: string;
 };
 
-/** The location picker, identical but for its wording and which role needs it. */
-function LocationSelect({
-  id,
-  label,
-  value,
-  onChange,
-  disabled,
-  error,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  disabled: boolean;
-  error?: string;
-}) {
-  return (
-    <SelectField
-      label={label}
-      id={id}
-      name={id}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      disabled={disabled}
-      className="truncate"
-      required
-      error={error}
-    >
-      <option value="" disabled>
-        Choose one
-      </option>
-      {LOCATION_AREAS.map((area) => (
-        <option key={area} value={area}>
-          {LOCATION_LABELS[area]}
-        </option>
-      ))}
-    </SelectField>
-  );
-}
-
 function ContactDetailsForm({
   contactNumber,
-  preferredMeetupLocation,
   defaultPickupLocation,
   bio,
   roles,
@@ -249,7 +206,6 @@ function ContactDetailsForm({
 
   const saved: ContactValues = {
     contact_number: contactNumber ?? "",
-    preferred_meetup_location: preferredMeetupLocation ?? "",
     default_pickup_location: defaultPickupLocation ?? "",
     bio: bio ?? "",
   };
@@ -276,26 +232,27 @@ function ContactDetailsForm({
           error={errors.contact_number}
         />
 
-        {roles.wantsToRent && (
-          <LocationSelect
-            id="preferred_meetup_location"
-            label="Preferred meetup location"
-            value={values.preferred_meetup_location}
-            onChange={(value) => setValue("preferred_meetup_location", value)}
-            disabled={!editing}
-            error={errors.preferred_meetup_location}
-          />
-        )}
-
         {roles.wantsToOwn && (
-          <LocationSelect
-            id="default_pickup_location"
+          <SelectField
             label="Default pickup location"
+            id="default_pickup_location"
+            name="default_pickup_location"
             value={values.default_pickup_location}
-            onChange={(value) => setValue("default_pickup_location", value)}
+            onChange={(event) => setValue("default_pickup_location", event.target.value)}
             disabled={!editing}
+            className="truncate"
+            required
             error={errors.default_pickup_location}
-          />
+          >
+            <option value="" disabled>
+              Choose one
+            </option>
+            {LOCATION_AREAS.map((area) => (
+              <option key={area} value={area}>
+                {LOCATION_LABELS[area]}
+              </option>
+            ))}
+          </SelectField>
         )}
 
         <TextareaField

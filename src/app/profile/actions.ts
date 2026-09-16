@@ -5,11 +5,7 @@ import { redirect } from "next/navigation";
 import { updateProfileAvailability } from "@/lib/api/profile-availability";
 import { createClient } from "@/lib/supabase/server";
 import { validatePasswordChange } from "@/lib/password";
-import {
-  inheritedLocation,
-  parseContactDetails,
-  validateDisplayName,
-} from "@/lib/contact-details";
+import { parseContactDetails, validateDisplayName } from "@/lib/contact-details";
 import { defaultProfileView, profilePath } from "@/lib/routes";
 import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/login-attempts";
 import type { FieldErrors } from "@/lib/api/client";
@@ -20,13 +16,12 @@ import type { FieldErrors } from "@/lib/api/client";
  *
  * React 19 resets a form once its action returns, so without this every
  * validation failure would clear the whole form — including the role ticks
- * that decide which location field is even shown. Being made to retype six
- * fields because one was wrong is how people give up on a signup.
+ * that decide whether the pickup location is even shown. Being made to retype
+ * every field because one was wrong is how people give up on a signup.
  */
 export type OnboardingValues = {
   display_name: string;
   contact_number: string;
-  preferred_meetup_location: string;
   default_pickup_location: string;
   bio: string;
   wants_to_rent: boolean;
@@ -63,7 +58,6 @@ export async function completeOnboarding(
   const values: OnboardingValues = {
     display_name: displayName,
     contact_number: String(formData.get("contact_number") ?? ""),
-    preferred_meetup_location: String(formData.get("preferred_meetup_location") ?? ""),
     default_pickup_location: String(formData.get("default_pickup_location") ?? ""),
     bio: String(formData.get("bio") ?? ""),
     wants_to_rent: wantsToRent,
@@ -108,7 +102,6 @@ export async function completeOnboarding(
       wants_to_rent: wantsToRent,
       wants_to_own: wantsToOwn,
       contact_number: parsed.contact_number,
-      preferred_meetup_location: parsed.preferred_meetup_location,
       default_pickup_location: parsed.default_pickup_location,
       bio: parsed.bio,
       onboarded_at: new Date().toISOString(),
@@ -159,16 +152,13 @@ export async function saveProfileAvailability(
 }
 
 /**
- * Turns on a side of the marketplace, giving it the location it requires.
+ * Turns on a side of the marketplace.
  *
- * Onboarding will not let a renter through without a meetup location, nor an
- * owner without a pickup location, so flipping the boolean alone would produce
- * exactly the member those rules exist to prevent — an owner with nowhere to
- * hand gear over. The other side's answer is a sound default here: the two are
- * the same place for most people, and it is editable on the Account tab, which
- * is a better starting point than empty.
- *
- * An existing answer is never overwritten.
+ * Deliberately no pickup location: a member switching owning on here has never
+ * been asked for one, and there is no longer a renter-side answer to borrow.
+ * They are left with a null column that the Account tab asks for — the tab's
+ * select is required for an owner and starts empty — rather than being handed
+ * a guessed handover point that reads as something they chose.
  */
 async function enableSide(column: "wants_to_rent" | "wants_to_own") {
   const supabase = await createClient();
@@ -177,17 +167,7 @@ async function enableSide(column: "wants_to_rent" | "wants_to_own") {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: locations } = await supabase
-    .from("profiles")
-    .select("preferred_meetup_location, default_pickup_location")
-    .eq("id", user.id)
-    .maybeSingle();
-
-  const update: Record<string, boolean | string> = { [column]: true };
-  const inherited = locations && inheritedLocation(column, locations);
-  if (inherited) update[inherited.column] = inherited.value;
-
-  await supabase.from("profiles").update(update).eq("id", user.id);
+  await supabase.from("profiles").update({ [column]: true }).eq("id", user.id);
 
   revalidatePath("/profile");
 }
@@ -225,7 +205,7 @@ export async function updateDisplayName(
   return { success: "Display name updated." };
 }
 
-/** Updates the contact number, locations and bio collected at onboarding. */
+/** Updates the contact number, pickup location and bio collected at onboarding. */
 export async function updateContactDetails(
   _prev: FormState,
   formData: FormData,
@@ -236,10 +216,10 @@ export async function updateContactDetails(
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Read from the row, never from the form. Which location is *required*
-  // depends on the roles held, so a submitted "wants_to_own=" would waive the
-  // pickup-location rule while the stored role stayed true — producing the
-  // owner with nowhere to hand gear over that the rule exists to prevent.
+  // Read from the row, never from the form. Whether the pickup location is
+  // *required* depends on the roles held, so a submitted "wants_to_own=" would
+  // waive the rule while the stored role stayed true — producing the owner with
+  // nowhere to hand gear over that the rule exists to prevent.
   const { data: profile } = await supabase
     .from("profiles")
     .select("wants_to_rent, wants_to_own")
@@ -258,15 +238,14 @@ export async function updateContactDetails(
   }
   const { values } = contactResult;
 
-  // Only the columns this member's roles actually own. A disabled or unrendered
+  // The pickup location only when the member owns. A disabled or unrendered
   // select submits nothing, which parses as null — writing that unconditionally
-  // would silently wipe the other side's location every time an owner edited
-  // their bio, and take with it the value inheritedLocation later borrows.
+  // would wipe a stored location the moment a member who has since stopped
+  // owning edited their bio.
   const update: Record<string, string | null> = {
     contact_number: values.contact_number,
     bio: values.bio,
   };
-  if (roles.wantsToRent) update.preferred_meetup_location = values.preferred_meetup_location;
   if (roles.wantsToOwn) update.default_pickup_location = values.default_pickup_location;
 
   const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
