@@ -68,7 +68,7 @@ export function Select({ className = "", pill = false, ...props }: ComponentProp
 }
 
 /** Marks a label as required, so it reads before a glance reaches the control. */
-function RequiredMark() {
+export function RequiredMark() {
   return (
     <span aria-hidden="true" className="text-accent">
       {" "}
@@ -357,9 +357,9 @@ export function Modal({ title, children, onClose }: { title: string; children: R
 
 /**
  * A listing/hero photo, or — until one exists — a labelled placeholder box.
- * `src` is optional on purpose: real listings have no photo pipeline yet
- * (see `ListingCard.primary_photo_key` in `lib/listings.ts`), so callers
- * pass a mock photo where they have one and fall back to the label
+ * `src` is optional on purpose: a listing with no uploaded photos has none
+ * to show (see `ListingCard.primary_photo_url` in `lib/listings.ts`), so
+ * callers pass a photo URL where they have one and fall back to the label
  * otherwise, without the two cases needing separate components.
  */
 export function ImageSlot({

@@ -84,6 +84,11 @@ export function getMyListings() {
   return backendRequest<Listing[]>("/listings/mine");
 }
 
+/** A single listing, any status - the API 404s if this caller can't see it (not ACTIVE and not theirs). */
+export function getListing(listingId: string) {
+  return backendRequest<Listing>(`/listings/${encodeURIComponent(listingId)}`);
+}
+
 /** S1-12 Scenario 1: pulls a listing out of the marketplace, restorable. */
 export function archiveListing(listingId: string) {
   return backendRequest<Listing>(`/listings/${encodeURIComponent(listingId)}/archive`, { method: "POST" });

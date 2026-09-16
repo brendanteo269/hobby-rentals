@@ -5,6 +5,7 @@ import type { ChangeEvent, ReactNode } from "react";
 import { Button, Field, FormError, SelectField, TextareaField } from "@/components/ui";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
 import { WeeklyAvailabilityField } from "@/components/listings/weekly-availability-field";
+import { PickupLocationField } from "@/components/listings/pickup-location-field";
 import { RentalDurationField } from "@/components/listings/rental-duration-field";
 import { PhotoUploadField } from "@/components/listings/photo-upload-field";
 import { PricePerBlockField } from "@/components/listings/price-per-block-field";
@@ -14,8 +15,7 @@ import {
   CATEGORY_LABELS,
   CONDITIONS,
   CONDITION_LABELS,
-  LOCATION_AREAS,
-  LOCATION_LABELS,
+  type LocationArea,
 } from "@/lib/listings";
 
 /**
@@ -23,10 +23,11 @@ import {
  * failed submission was found to wipe them). React resets a form's
  * *uncontrolled* fields once a form action finishes, success or failure —
  * the fix is to drive each of these from state instead. available_from/
- * available_until, min/max rental days, and photos each have their own
- * dedicated state already (below, or inside PricePerBlockField,
- * RentalDurationField, WeeklyAvailabilityField, BlackoutRulesField,
- * PhotoUploadField) and so don't belong here too.
+ * available_until, min/max rental days, photos, and the collection area each
+ * have their own dedicated state already (below, or inside
+ * PricePerBlockField, RentalDurationField, WeeklyAvailabilityField,
+ * BlackoutRulesField, PhotoUploadField, PickupLocationField) and so don't
+ * belong here too.
  */
 type FieldValues = {
   name: string;
@@ -34,7 +35,6 @@ type FieldValues = {
   description: string;
   category: string;
   condition: string;
-  location_area: string;
   deposit: string;
 };
 
@@ -44,7 +44,6 @@ const EMPTY_FIELDS: FieldValues = {
   description: "",
   category: "",
   condition: "",
-  location_area: "",
   deposit: "",
 };
 
@@ -57,7 +56,13 @@ const EMPTY_FIELDS: FieldValues = {
  * `min` attributes are kept as a first pass, so the common mistakes are caught
  * without a round trip, but nothing here is trusted to have caught them.
  */
-export function CreateListingForm({ profileAvailableDays }: { profileAvailableDays: number[] }) {
+export function CreateListingForm({
+  profileAvailableDays,
+  profileDefaultLocation,
+}: {
+  profileAvailableDays: number[];
+  profileDefaultLocation: LocationArea | null;
+}) {
   const [state, formAction, pending] = useActionState<CreateListingState, FormData>(
     submitListing,
     undefined,
@@ -76,6 +81,11 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
   const [customAvailability, setCustomAvailability] = useState(false);
   const [customDays, setCustomDays] = useState<number[]>(profileAvailableDays);
   const weeklyDays = customAvailability ? customDays : profileAvailableDays;
+
+  // Same "starts from the current default" reasoning as customDays above: a
+  // custom pickup location should not open on a blank box.
+  const [customLocation, setCustomLocation] = useState(false);
+  const [pickupLocation, setPickupLocation] = useState(profileDefaultLocation ?? "");
 
   const [fields, setFields] = useState<FieldValues>(EMPTY_FIELDS);
   const updateField =
@@ -122,7 +132,7 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
           onChange={updateField("description")}
         />
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <SelectField
             label="Category"
             id="category"
@@ -160,26 +170,16 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
               </option>
             ))}
           </SelectField>
-
-          <SelectField
-            label="Collection area"
-            id="location_area"
-            name="location_area"
-            required
-            error={errors.location_area}
-            value={fields.location_area}
-            onChange={updateField("location_area")}
-          >
-            <option value="" disabled>
-              Choose one
-            </option>
-            {LOCATION_AREAS.map((value) => (
-              <option key={value} value={value}>
-                {LOCATION_LABELS[value]}
-              </option>
-            ))}
-          </SelectField>
         </div>
+
+        <PickupLocationField
+          profileDefault={profileDefaultLocation}
+          custom={customLocation}
+          onCustomChange={setCustomLocation}
+          value={pickupLocation}
+          onValueChange={setPickupLocation}
+          error={errors.location_area}
+        />
       </FormSection>
 
       <FormSection title="Photos">

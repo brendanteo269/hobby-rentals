@@ -6,7 +6,6 @@ import { ProfileAvailabilityCard } from "@/components/profile-availability-card"
 import { RateLine } from "@/components/browse/listing-card";
 import { CATEGORY_LABELS, LISTING_STATUS_LABELS, type Listing } from "@/lib/listings";
 import { profilePath, type ProfileView } from "@/lib/routes";
-import { CATEGORY_IMAGES } from "@/lib/mock-images";
 
 export type { ProfileView } from "@/lib/routes";
 
@@ -95,9 +94,12 @@ function OwnerListingCard({ listing }: { listing: Listing }) {
   return (
     <li className="overflow-hidden card">
       <div className="relative overflow-hidden">
+        {/* Every real listing has at least one uploaded photo (see
+            CreateListingRequest's photo_keys validator), so photo_urls[0]
+            is always set here - no stock-photo fallback needed. */}
         <ImageSlot
           label={listing.photo_keys[0] ?? "No photo yet"}
-          src={CATEGORY_IMAGES[listing.category]}
+          src={listing.photo_urls[0]}
           className="aspect-square w-full"
         />
         <Badge variant={listing.status === "ACTIVE" ? "dark" : "neutral"} className="absolute left-3 top-3">

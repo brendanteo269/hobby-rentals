@@ -1,4 +1,5 @@
-import { Container, ButtonLink, EmptyState } from "@/components/ui";
+import Link from "next/link";
+import { Badge, Container, ButtonLink, EmptyState } from "@/components/ui";
 import { ListingLifecycleActions } from "@/components/listings/listing-lifecycle-actions";
 import { getMyListings } from "@/lib/api/listings";
 import { formatMoney } from "@/lib/format";
@@ -46,12 +47,18 @@ export default async function MyListingsPage() {
   );
 }
 
-const STATUS_BADGE_STYLES: Record<Listing["status"], string> = {
-  DRAFT: "bg-stone text-ink-soft",
-  ACTIVE: "bg-sand text-ink",
-  ARCHIVED: "bg-stone text-ink-soft",
-  PENDING_REMOVAL: "bg-clay/15 text-ink",
-  REMOVED: "bg-stone text-ink-soft",
+/**
+ * Same status -> emphasis mapping OwnerListingCard uses (profile-views.tsx):
+ * ACTIVE is the one status that should visually stand out, PENDING_REMOVAL
+ * gets the accent used for anything that needs the owner's attention, and
+ * every other status is a plain neutral pill.
+ */
+const STATUS_BADGE_VARIANT: Record<Listing["status"], "neutral" | "accent" | "dark"> = {
+  DRAFT: "neutral",
+  ACTIVE: "dark",
+  ARCHIVED: "neutral",
+  PENDING_REMOVAL: "accent",
+  REMOVED: "neutral",
 };
 
 function ListingRow({ listing }: { listing: Listing }) {
@@ -60,18 +67,18 @@ function ListingRow({ listing }: { listing: Listing }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="eyebrow">{LOCATION_LABELS[listing.location_area]}</p>
-          <h2 className="mt-1 text-base font-semibold uppercase tracking-wide">{listing.name}</h2>
+          <h2 className="mt-1 text-base font-semibold uppercase tracking-wide">
+            <Link href={`/listings/${listing.id}`} className="hover:underline">
+              {listing.name}
+            </Link>
+          </h2>
           <p className="body-copy mt-1">
             {listing.price_per_day_cents !== null && `${formatMoney(listing.price_per_day_cents)} / day`}
             {listing.price_per_day_cents !== null && listing.price_per_week_cents !== null && " · "}
             {listing.price_per_week_cents !== null && `${formatMoney(listing.price_per_week_cents)} / week`}
           </p>
         </div>
-        <span
-          className={`rounded-full px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide ${STATUS_BADGE_STYLES[listing.status]}`}
-        >
-          {LISTING_STATUS_LABELS[listing.status]}
-        </span>
+        <Badge variant={STATUS_BADGE_VARIANT[listing.status]}>{LISTING_STATUS_LABELS[listing.status]}</Badge>
       </div>
 
       {listing.status !== "REMOVED" && <ListingLifecycleActions listing={listing} />}

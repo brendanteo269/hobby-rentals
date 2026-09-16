@@ -1,11 +1,24 @@
 import { Container } from "@/components/ui";
 import { CreateListingForm } from "@/components/listings/create-listing-form";
 import { getProfileAvailability } from "@/lib/api/profile-availability";
+import { getOwnProfile } from "@/lib/profile";
+import { isLocationArea, type LocationArea } from "@/lib/listings";
 
 export const metadata = { title: "Create a listing — HobbyRentals" };
 
 export default async function NewListingPage() {
-  const { available_days: profileAvailableDays } = await getProfileAvailability();
+  const [{ available_days: profileAvailableDays }, profile] = await Promise.all([
+    getProfileAvailability(),
+    getOwnProfile(),
+  ]);
+  // The stored value is a plain text column, so a guard rather than a cast:
+  // a future free-text migration on profiles should not start pre-filling
+  // listings with strings the LocationArea select cannot represent.
+  const profileDefaultLocation: LocationArea | null =
+    profile?.default_pickup_location && isLocationArea(profile.default_pickup_location)
+      ? profile.default_pickup_location
+      : null;
+
   return (
     <Container className="py-16">
       <div className="mx-auto max-w-2xl">
@@ -17,7 +30,10 @@ export default async function NewListingPage() {
         </p>
 
         <div className="mt-10">
-          <CreateListingForm profileAvailableDays={profileAvailableDays} />
+          <CreateListingForm
+            profileAvailableDays={profileAvailableDays}
+            profileDefaultLocation={profileDefaultLocation}
+          />
         </div>
       </div>
     </Container>

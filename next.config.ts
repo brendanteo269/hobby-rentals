@@ -5,8 +5,15 @@ const nextConfig: NextConfig = {
   // in a link fails the build instead of shipping a dead link.
   typedRoutes: true,
   images: {
-    // Mock listing/hero photos until real photo hosting is wired up.
-    remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
+    remotePatterns: [
+      // Mock listing/hero photos, used as a stand-in for listings with no
+      // uploaded photos of their own (see lib/mock-images.ts).
+      { protocol: "https", hostname: "images.unsplash.com" },
+      // Real listing photos, served from the S3 bucket's virtual-hosted-style
+      // URL (see storage_service.photo_url in the API repo, which builds
+      // exactly this hostname shape: <bucket>.s3.<region>.amazonaws.com).
+      { protocol: "https", hostname: "*.s3.*.amazonaws.com" },
+    ],
   },
 };
 

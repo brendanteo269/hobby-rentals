@@ -77,8 +77,12 @@ export type ListingCard = {
   id: string;
   name: string;
   category: ListingCategory;
-  /** Object key, not a URL: image hosting is not wired up yet. */
+  /** Raw object key - kept for reference; render primary_photo_url instead. */
   primary_photo_key: string | null;
+  /** Public URL for the first photo, or null when the listing has none yet. */
+  primary_photo_url: string | null;
+  /** Every photo, for the card's carousel - not just the primary one. */
+  photo_urls: string[];
   // A listing carries at least one of the two, never neither - see
   // CreateListingRequest below - so a card renders whichever it has.
   price_per_day_cents: number | null;
@@ -116,6 +120,8 @@ export type Listing = {
   has_custom_availability: boolean;
   custom_available_days: number[] | null;
   photo_keys: string[];
+  /** Public URLs, one per entry in photo_keys, in the same order. */
+  photo_urls: string[];
   status: ListingStatus;
   /** Set only while status is PENDING_REMOVAL - see S1-12. */
   scheduled_removal_at: string | null;
