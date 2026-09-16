@@ -47,9 +47,21 @@ export function Button({ variant = "accent", className = "", children, ...props 
   );
 }
 
-export function ButtonLink({ variant = "accent", className = "", children, ...props }: ButtonProps & ComponentProps<typeof Link>) {
+/**
+ * Generic over the route the same way Link is. `ComponentProps<typeof Link>`
+ * on its own collapses Link's route parameter to `unknown`, which typed
+ * routes then reject for any dynamic href - so a plain wrapper could link to
+ * `/listings/new` but never to `/listings/${id}/edit`.
+ */
+export function ButtonLink<T extends string>({
+  variant = "accent",
+  className = "",
+  children,
+  href,
+  ...props
+}: ButtonProps & Omit<ComponentProps<typeof Link>, "href"> & { href: Route<T> }) {
   return (
-    <Link className={`${buttonBase} ${buttonVariants[variant]} ${className}`} {...props}>
+    <Link href={href} className={`${buttonBase} ${buttonVariants[variant]} ${className}`} {...props}>
       {children}
     </Link>
   );

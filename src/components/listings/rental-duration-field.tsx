@@ -20,13 +20,26 @@ const days = (value: number) => `${value} ${value === 1 ? "day" : "days"}`;
  * and reading them off one track makes an impossible pair hard to enter in the
  * first place, which is the failure the two separate boxes invited.
  */
-export function RentalDurationField({ minError, maxError }: { minError?: string; maxError?: string }) {
-  const [min, setMin] = useState(1);
-  const [max, setMax] = useState(7);
+export function RentalDurationField({
+  minError,
+  maxError,
+  initialMin = 1,
+  initialMax = 7,
+}: {
+  minError?: string;
+  maxError?: string;
+  /** The stored bounds when editing. A null initialMax is the stored "no maximum". */
+  initialMin?: number;
+  initialMax?: number | null;
+}) {
+  const [min, setMin] = useState(initialMin);
+  // When there is no stored maximum the handle still needs somewhere to sit
+  // if the owner later turns the bound back on; 7 is the create default.
+  const [max, setMax] = useState(initialMax ?? 7);
   // An owner with no upper bound is not choosing a very large number of days,
   // they are declining to choose one. The field is simply omitted, which is
   // what the API already reads as "no maximum".
-  const [unbounded, setUnbounded] = useState(false);
+  const [unbounded, setUnbounded] = useState(initialMax === null);
   const error = minError ?? maxError;
 
   const percent = (value: number) => ((value - FLOOR) / (CEILING - FLOOR)) * 100;

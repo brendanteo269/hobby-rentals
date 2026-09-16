@@ -1,7 +1,8 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createListing, ListingApiError } from "@/lib/api/listings";
+import { createListing, getListing, ListingApiError, updateListing as patchListing } from "@/lib/api/listings";
 import { dollarsToCents } from "@/lib/format";
 import {
   isCategory,
@@ -9,14 +10,22 @@ import {
   isLocationArea,
   type BlackoutDate,
   type CreateListingRequest,
+  type Listing,
+  type UpdateListingRequest,
 } from "@/lib/listings";
 
-export type CreateListingState =
+/** Shared by the create and edit forms, which render the same fields. */
+export type ListingFormState =
   | {
       /** The form's overall outcome, shown above the submit button. */
       error?: string;
       /** Keyed by field name, shown under the field it names. */
       fieldErrors?: Record<string, string>;
+      /** Set once an edit has been saved - create redirects instead. */
+      success?: {
+        /** See UpdateListingResponse.active_booking_count. */
+        activeBookingCount: number;
+      };
     }
   | undefined;
 
@@ -41,41 +50,36 @@ function count(formData: FormData, name: string): number | null {
 }
 
 /**
- * Parses the blackout rules the client component serialised into a hidden
- * field. Malformed JSON means the field was tampered with rather than filled
- * in, so it is dropped: FastAPI validates the rules it does receive, and an
+ * Parses a JSON list a client component serialised into a hidden field.
+ * Malformed JSON means the field was tampered with rather than filled in, so
+ * it is dropped: FastAPI validates the items it does receive, and an
  * unreadable blob has no field of its own to complain against.
  */
-function initialBlackouts(formData: FormData): BlackoutDate[] {
-  const raw = text(formData, "initial_blackouts");
+function hiddenList<T>(formData: FormData, name: string, keep: (item: unknown) => item is T): T[] {
+  const raw = text(formData, name);
   if (!raw) return [];
   try {
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as BlackoutDate[]) : [];
+    return Array.isArray(parsed) ? parsed.filter(keep) : [];
   } catch {
     return [];
   }
 }
 
+const isString = (value: unknown): value is string => typeof value === "string";
+const isNumber = (value: unknown): value is number => typeof value === "number";
+const isBlackout = (value: unknown): value is BlackoutDate => typeof value === "object" && value !== null;
+
 /**
- * Parses the photo keys PhotoUploadField serialised into a hidden field —
- * each one already uploaded to S3 by the time the form is submitted. Same
- * "malformed means tampered, so drop it" handling as blackoutRules: FastAPI
- * re-checks every key belongs to this owner regardless of what arrives here.
+ * The fields both forms share, every one present. available_from is the
+ * exception: the edit form disables it once the window has opened, and a
+ * disabled input is not submitted at all.
  */
-function photoKeys(formData: FormData): string[] {
-  const raw = text(formData, "photo_keys");
-  if (!raw) return [];
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === "string") : [];
-  } catch {
-    return [];
-  }
-}
+type ListingFields = Omit<Required<UpdateListingRequest>, "available_from"> &
+  Pick<UpdateListingRequest, "available_from">;
 
 /**
- * Creates a listing and sends the owner to the marketplace to see it.
+ * Everything the create and edit forms have in common, read off the form.
  *
  * Validation is left to FastAPI rather than repeated here: it already returns
  * a message per field, and a second set of rules in this file would be one
@@ -83,14 +87,13 @@ function photoKeys(formData: FormData): string[] {
  * build a well-typed request — the enums, which the API would reject with a
  * message written for a developer, not an owner.
  */
-export async function submitListing(
-  _prev: CreateListingState,
+function parseListingFields(
   formData: FormData,
-): Promise<CreateListingState> {
+): { fieldErrors: Record<string, string> } | { fieldErrors?: undefined; fields: ListingFields } {
   const category = text(formData, "category");
   const condition = text(formData, "condition");
   const locationArea = text(formData, "location_area");
-  const photos = photoKeys(formData);
+  const photos = hiddenList(formData, "photo_keys", isString);
 
   const fieldErrors: Record<string, string> = {};
   if (!isCategory(category)) fieldErrors.category = "Choose a category.";
@@ -117,28 +120,49 @@ export async function submitListing(
     fieldErrors.deposit_cents = "Enter a deposit amount, or 0 for none.";
   }
 
-  if (Object.keys(fieldErrors).length > 0) {
-    return { error: "Please correct the highlighted fields.", fieldErrors };
+  if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
+
+  return {
+    fields: {
+      name: text(formData, "name"),
+      description: text(formData, "description"),
+      brand: text(formData, "brand"),
+      category: category as CreateListingRequest["category"],
+      condition: condition as CreateListingRequest["condition"],
+      location_area: locationArea as CreateListingRequest["location_area"],
+      price_per_day_cents: pricePerDay,
+      price_per_week_cents: pricePerWeek,
+      deposit_cents: deposit!,
+      min_rental_days: count(formData, "min_rental_days"),
+      max_rental_days: count(formData, "max_rental_days"),
+      // Blank when the edit form disabled the input because the window has
+      // already opened; the edit path reads that as "unchanged" rather than
+      // as a new value.
+      ...(text(formData, "available_from") ? { available_from: text(formData, "available_from") } : {}),
+      available_until: text(formData, "available_until") || null,
+      photo_keys: photos,
+    },
+  };
+}
+
+/** Creates a listing and sends the owner to the marketplace to see it. */
+export async function submitListing(
+  _prev: ListingFormState,
+  formData: FormData,
+): Promise<ListingFormState> {
+  const parsed = parseListingFields(formData);
+  if (parsed.fieldErrors) {
+    return { error: "Please correct the highlighted fields.", fieldErrors: parsed.fieldErrors };
   }
 
   const request: CreateListingRequest = {
-    name: text(formData, "name"),
-    description: text(formData, "description"),
-    brand: text(formData, "brand"),
-    category: category as CreateListingRequest["category"],
-    condition: condition as CreateListingRequest["condition"],
-    location_area: locationArea as CreateListingRequest["location_area"],
-    price_per_day_cents: pricePerDay,
-    price_per_week_cents: pricePerWeek,
-    deposit_cents: deposit!,
-    min_rental_days: count(formData, "min_rental_days"),
-    max_rental_days: count(formData, "max_rental_days"),
-    available_from: text(formData, "available_from"),
-    available_until: text(formData, "available_until") || null,
+    ...parsed.fields,
+    // Required on create. The form's own `required` makes a blank one rare;
+    // when it does arrive, FastAPI names the field, which this does not.
+    available_from: parsed.fields.available_from ?? "",
     has_custom_availability: text(formData, "has_custom_availability") === "true",
-    custom_available_days: (() => { try { return JSON.parse(text(formData, "custom_available_days")) as number[]; } catch { return []; } })(),
-    initial_blackouts: initialBlackouts(formData),
-    photo_keys: photos,
+    custom_available_days: hiddenList(formData, "custom_available_days", isNumber),
+    initial_blackouts: hiddenList(formData, "initial_blackouts", isBlackout),
   };
 
   try {
@@ -153,4 +177,65 @@ export async function submitListing(
   // Outside the try: redirect signals by throwing, and catching it here would
   // report a successful creation as a failure.
   redirect("/browse");
+}
+
+/**
+ * Which submitted fields actually differ from the stored listing.
+ *
+ * The API is a partial update, and sending everything would defeat that in
+ * one concrete way: an available_from that has already passed is rejected
+ * whenever it appears in the body, even unchanged, because the API cannot
+ * tell "same value" from "new value". Diffing here is what keeps a price
+ * edit on an already-open listing from failing on a field the owner never
+ * touched.
+ */
+function changedFields(candidate: UpdateListingRequest, current: Listing): UpdateListingRequest {
+  const changes: UpdateListingRequest = {};
+  for (const key of Object.keys(candidate) as (keyof UpdateListingRequest)[]) {
+    const next = candidate[key];
+    const prev = current[key];
+    const same =
+      Array.isArray(next) && Array.isArray(prev)
+        ? JSON.stringify(next) === JSON.stringify(prev)
+        : next === prev;
+    if (!same) Object.assign(changes, { [key]: next });
+  }
+  return changes;
+}
+
+/**
+ * S1-10: saves an edit to the caller's own listing. Bound to a listing id by
+ * the edit page, so the form itself never carries the id where a request
+ * body could swap it.
+ *
+ * Stays on the page rather than redirecting: Scenario 4 wants the owner told
+ * that existing bookings keep their terms, and that is a modal on this form,
+ * not a message to smuggle through a query string.
+ */
+export async function updateListing(
+  listingId: string,
+  _prev: ListingFormState,
+  formData: FormData,
+): Promise<ListingFormState> {
+  const parsed = parseListingFields(formData);
+  if (parsed.fieldErrors) {
+    return { error: "Please correct the highlighted fields.", fieldErrors: parsed.fieldErrors };
+  }
+
+  try {
+    // Re-read rather than trusting hidden "original value" fields: the diff
+    // must be against what is stored, and this also 404s early for a listing
+    // that is not the caller's.
+    const current = await getListing(listingId);
+    const { active_booking_count } = await patchListing(listingId, changedFields(parsed.fields, current));
+
+    revalidatePath("/listings/mine");
+    revalidatePath(`/listings/${listingId}`);
+    return { success: { activeBookingCount: active_booking_count } };
+  } catch (caught) {
+    if (caught instanceof ListingApiError) {
+      return { error: caught.message, fieldErrors: caught.fieldErrors };
+    }
+    throw caught;
+  }
 }

@@ -1,22 +1,12 @@
 import { Container } from "@/components/ui";
-import { CreateListingForm } from "@/components/listings/create-listing-form";
-import { getProfileAvailability } from "@/lib/api/profile-availability";
-import { getListingLimits } from "@/lib/api/listings";
-import { getOwnProfile } from "@/lib/profile";
-import { isLocationArea, type LocationArea } from "@/lib/listings";
+import { ListingForm } from "@/components/listings/listing-form";
+import { submitListing } from "@/app/listings/actions";
+import { getListingFormContext } from "@/app/listings/form-context";
 
 export const metadata = { title: "Create a listing — HobbyRentals" };
 
 export default async function NewListingPage() {
-  const [{ available_days: profileAvailableDays }, profile, { deposit_cap_bps: depositCapBps }] =
-    await Promise.all([getProfileAvailability(), getOwnProfile(), getListingLimits()]);
-  // The stored value is a plain text column, so a guard rather than a cast:
-  // a future free-text migration on profiles should not start pre-filling
-  // listings with strings the LocationArea select cannot represent.
-  const profileDefaultLocation: LocationArea | null =
-    profile?.default_pickup_location && isLocationArea(profile.default_pickup_location)
-      ? profile.default_pickup_location
-      : null;
+  const context = await getListingFormContext();
 
   return (
     <Container className="py-16">
@@ -29,11 +19,7 @@ export default async function NewListingPage() {
         </p>
 
         <div className="mt-10">
-          <CreateListingForm
-            profileAvailableDays={profileAvailableDays}
-            profileDefaultLocation={profileDefaultLocation}
-            depositCapBps={depositCapBps}
-          />
+          <ListingForm action={submitListing} {...context} />
         </div>
       </div>
     </Container>

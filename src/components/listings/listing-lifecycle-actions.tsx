@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { TriangleAlert } from "lucide-react";
-import { Button, Modal } from "@/components/ui";
+import { Button, ButtonLink, Modal } from "@/components/ui";
 import { formatDate } from "@/lib/format";
 import type { Listing } from "@/lib/listings";
 import { archiveMyListing, removeMyListing, restoreMyListing, type ListingActionResult } from "@/app/listings/mine/actions";
@@ -92,9 +92,14 @@ export function ListingLifecycleActions({ listing }: { listing: Listing }) {
         )}
 
         {(current.status === "ACTIVE" || current.status === "DRAFT" || current.status === "ARCHIVED") && (
-          <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={openRemoveConfirm}>
-            Remove listing
-          </Button>
+          <>
+            <ButtonLink variant="outline" href={`/listings/${current.id}/edit`} className="px-3 py-1.5 text-xs">
+              Edit listing
+            </ButtonLink>
+            <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={openRemoveConfirm}>
+              Remove listing
+            </Button>
+          </>
         )}
       </div>
 
