@@ -10,10 +10,9 @@ const nextConfig: NextConfig = {
       // uploaded photos of their own (see lib/mock-images.ts).
       { protocol: "https", hostname: "images.unsplash.com" },
       // Real listing photos: storage_service.photo_url (API repo) hands back
-      // a time-limited presigned GET URL, since the bucket has no public/CDN
-      // read path - path-style, so the bucket sits in the pathname rather
-      // than as a hostname subdomain
-      { protocol: "https", hostname: "s3.*.amazonaws.com" },
+      // the bucket's public URL - virtual-hosted-style, so the bucket name
+      // is a subdomain of the hostname rather than sitting in the pathname.
+      { protocol: "https", hostname: "*.s3.*.amazonaws.com" },
     ],
   },
 };
