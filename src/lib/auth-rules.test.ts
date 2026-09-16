@@ -24,7 +24,11 @@ import {
   loginPath,
   profilePath,
 } from "@/lib/routes";
-import { requiresOnboarding, requiresVerifiedEmail } from "@/lib/route-policy";
+import {
+  requiresOnboarding,
+  requiresVerifiedEmail,
+  resolveLinkType,
+} from "@/lib/route-policy";
 
 describe("validateEmail", () => {
   it.each(["a@b.co", "first.last@example.com", "user+tag@sub.domain.org"])(
@@ -281,5 +285,33 @@ describe("password reset routing", () => {
 
   it("builds the reset-specific error path", () => {
     expect(authErrorPath("reset-link-invalid")).toBe("/auth-error?reason=reset-link-invalid");
+  });
+});
+
+describe("resolveLinkType", () => {
+  it("accepts a type the route serves", () => {
+    expect(resolveLinkType("recovery", ["recovery"])).toBe("recovery");
+    expect(resolveLinkType("email", ["signup", "email"])).toBe("email");
+  });
+
+  it("refuses a type the route does not serve", () => {
+    // The exploit this closes: a signup confirmation token opened at
+    // /auth/recover granted a session *and* the recovery mark, which is the
+    // right to set a password without knowing the old one.
+    expect(resolveLinkType("signup", ["recovery"])).toBeNull();
+    expect(resolveLinkType("magiclink", ["recovery"])).toBeNull();
+    expect(resolveLinkType("invite", ["signup", "email"])).toBeNull();
+    expect(resolveLinkType("recovery", ["signup", "email"])).toBeNull();
+  });
+
+  it("refuses anything it does not recognise", () => {
+    expect(resolveLinkType("../../admin", ["recovery"])).toBeNull();
+    expect(resolveLinkType("", ["recovery"])).toBeNull();
+  });
+
+  it("fills in an absent type only when there is no choice to make", () => {
+    expect(resolveLinkType(null, ["recovery"])).toBe("recovery");
+    // Two candidates and nothing to choose between them: refuse rather than guess.
+    expect(resolveLinkType(null, ["signup", "email"])).toBeNull();
   });
 });

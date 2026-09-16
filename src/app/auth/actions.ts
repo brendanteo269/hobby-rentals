@@ -8,7 +8,7 @@ import { ACTIVITY_COOKIE } from "@/lib/session-policy";
 import { validatePasswordComplexity, validateNewPassword } from "@/lib/password";
 import { validateEmail } from "@/lib/email";
 import { RESET_REQUESTED_PATH, checkEmailPath, loginPath } from "@/lib/routes";
-import { clearRecoveryMark, hasRecoveryMark } from "@/lib/recovery";
+import { clearRecoveryMark, hasRecoveryMarkFor } from "@/lib/recovery";
 import type { FieldErrors } from "@/lib/api/client";
 import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/login-attempts";
 
@@ -165,6 +165,9 @@ export async function logIn(_prev: AuthState, formData: FormData): Promise<AuthS
   }
 
   await clearLoginAttempts(supabase);
+  // An abandoned reset must not leave a mark behind that outlives the session
+  // it was issued for — on a shared machine the next person inherits it.
+  await clearRecoveryMark();
 
   revalidatePath("/", "layout");
   redirect("/profile");
@@ -184,6 +187,7 @@ export async function signOut() {
   await supabase.auth.signOut({ scope: "global" });
 
   (await cookies()).delete(ACTIVITY_COOKIE);
+  await clearRecoveryMark();
 
   // Drops any cached render still holding the signed-in header.
   revalidatePath("/", "layout");
@@ -240,6 +244,10 @@ export async function requestPasswordReset(
   redirect(RESET_REQUESTED_PATH);
 }
 
+/** Shown when the mark is missing, gone, or belongs to a different account. */
+const EXPIRED_RESET_MESSAGE =
+  "That reset link is no longer valid. Request a new one to set your password.";
+
 export type ResetPasswordState =
   | { error?: string; fieldErrors?: FieldErrors }
   | undefined;
@@ -255,10 +263,6 @@ export async function resetPassword(
   _prev: ResetPasswordState,
   formData: FormData,
 ): Promise<ResetPasswordState> {
-  if (!(await hasRecoveryMark())) {
-    return { error: "That reset link has expired. Request a new one." };
-  }
-
   const newPassword = String(formData.get("new_password") ?? "");
   const confirmPassword = String(formData.get("confirm_password") ?? "");
 
@@ -268,6 +272,17 @@ export async function resetPassword(
   }
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Both halves, together: a session, and a mark issued for *that* account.
+  // Checking them separately would let a mark from one account authorise a
+  // password change on another — see recovery.ts.
+  if (!user || !(await hasRecoveryMarkFor(user.id))) {
+    return { error: EXPIRED_RESET_MESSAGE };
+  }
+
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) return { error: error.message };
 

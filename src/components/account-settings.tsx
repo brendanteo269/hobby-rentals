@@ -263,12 +263,6 @@ function ContactDetailsForm({
 
       {/* key: see useSubmissionAttempt. */}
       <form key={attempt} action={formAction} className="mt-5 max-w-sm space-y-4">
-        {/* The action needs to know which locations are required, and a
-            disabled input submits nothing — so the roles ride along as hidden
-            fields rather than being re-derived server-side. */}
-        <input type="hidden" name="wants_to_rent" value={roles.wantsToRent ? "on" : ""} />
-        <input type="hidden" name="wants_to_own" value={roles.wantsToOwn ? "on" : ""} />
-
         <Field
           label="Contact number"
           id="contact_number"

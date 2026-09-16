@@ -1,3 +1,4 @@
+import type { EmailOtpType } from "@supabase/supabase-js";
 /**
  * Which routes are gated on what, and which confirmation links end at the
  * login screen.
@@ -60,4 +61,27 @@ export function requiresSignIn(pathname: string): boolean {
 export function requiresOnboarding(pathname: string): boolean {
   if (pathname.startsWith(ONBOARDING_PATH)) return false;
   return requiresSignIn(pathname);
+}
+
+/**
+ * Which OTP type a callback route should act on, or null to refuse.
+ *
+ * The security-critical half of the email-link handling, pulled out so it can
+ * be tested without a Supabase client. A callback route grants privileges on
+ * the far side — the recovery route ends in the right to set a password
+ * without knowing the old one — so a link must not be able to talk its way
+ * into a route by naming a type that route does not serve. Treating the URL's
+ * `type` as a hint, and falling back to the route's own when it disagreed, let
+ * a signup token opened at the recovery route claim exactly that.
+ *
+ * An absent type resolves to the route's own only when the route serves
+ * exactly one, so there is never a guess between two possibilities.
+ */
+export function resolveLinkType(
+  claimed: string | null,
+  allowed: readonly EmailOtpType[],
+): EmailOtpType | null {
+  const type = claimed ?? (allowed.length === 1 ? allowed[0] : null);
+  if (!type) return null;
+  return allowed.includes(type as EmailOtpType) ? (type as EmailOtpType) : null;
 }

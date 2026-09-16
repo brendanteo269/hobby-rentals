@@ -1,10 +1,12 @@
 "use client";
 
 import { useActionState, useState } from "react";
+import Link from "next/link";
 import { Button, Field, FormError } from "./ui";
 import { resetPassword, type ResetPasswordState } from "@/app/auth/actions";
 import { PASSWORD_REQUIREMENTS_HINT } from "@/lib/password";
 import { useSubmissionAttempt } from "./use-submission-attempt";
+import { FORGOT_PASSWORD_PATH } from "@/lib/routes";
 
 /**
  * Sets the new password.
@@ -54,9 +56,24 @@ export function ResetPasswordForm() {
         error={errors.confirm_password}
       />
 
-      {/* Only when it is not already under a field — an expired mark has no
-          field of its own. */}
-      {Object.keys(errors).length === 0 && <FormError message={state?.error} />}
+      {/* Only when it is not already under a field — a lapsed mark has no
+          field of its own. It also has no way forward from this page, so the
+          message comes with one: the guard that catches the same condition on
+          GET redirects to a screen that offers a new link, and being caught on
+          POST instead should not leave the member stranded. */}
+      {Object.keys(errors).length === 0 && state?.error && (
+        <div className="space-y-2">
+          <FormError message={state.error} />
+          <p className="text-sm">
+            <Link
+              href={FORGOT_PASSWORD_PATH}
+              className="text-ink underline underline-offset-4"
+            >
+              Request a new reset link
+            </Link>
+          </p>
+        </div>
+      )}
 
       <Button type="submit" disabled={pending} className="w-full">
         {pending ? "Saving…" : "Set new password"}

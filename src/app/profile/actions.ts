@@ -11,6 +11,7 @@ import {
   validateDisplayName,
 } from "@/lib/contact-details";
 import { defaultProfileView, profilePath } from "@/lib/routes";
+import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/login-attempts";
 import type { FieldErrors } from "@/lib/api/client";
 
 /**
@@ -229,33 +230,46 @@ export async function updateContactDetails(
   _prev: FormState,
   formData: FormData,
 ): Promise<FormState> {
-  // The roles ride along in the form, because which location is required
-  // depends on them and the action has no other way to know.
-  const roles = {
-    wantsToRent: formData.get("wants_to_rent") === "on",
-    wantsToOwn: formData.get("wants_to_own") === "on",
-  };
-  const contactResult = parseContactDetails(formData, roles);
-  if (!contactResult.ok) {
-    return { error: CORRECT_FIELDS, fieldErrors: contactResult.fieldErrors };
-  }
-  const { values } = contactResult;
-
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { error } = await supabase
+  // Read from the row, never from the form. Which location is *required*
+  // depends on the roles held, so a submitted "wants_to_own=" would waive the
+  // pickup-location rule while the stored role stayed true — producing the
+  // owner with nowhere to hand gear over that the rule exists to prevent.
+  const { data: profile } = await supabase
     .from("profiles")
-    .update({
-      contact_number: values.contact_number,
-      preferred_meetup_location: values.preferred_meetup_location,
-      default_pickup_location: values.default_pickup_location,
-      bio: values.bio,
-    })
-    .eq("id", user.id);
+    .select("wants_to_rent, wants_to_own")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (!profile) {
+    return { error: "We could not find your profile. Please log in again." };
+  }
+
+  const roles = { wantsToRent: profile.wants_to_rent, wantsToOwn: profile.wants_to_own };
+
+  const contactResult = parseContactDetails(formData, roles);
+  if (!contactResult.ok) {
+    return { error: CORRECT_FIELDS, fieldErrors: contactResult.fieldErrors };
+  }
+  const { values } = contactResult;
+
+  // Only the columns this member's roles actually own. A disabled or unrendered
+  // select submits nothing, which parses as null — writing that unconditionally
+  // would silently wipe the other side's location every time an owner edited
+  // their bio, and take with it the value inheritedLocation later borrows.
+  const update: Record<string, string | null> = {
+    contact_number: values.contact_number,
+    bio: values.bio,
+  };
+  if (roles.wantsToRent) update.preferred_meetup_location = values.preferred_meetup_location;
+  if (roles.wantsToOwn) update.default_pickup_location = values.default_pickup_location;
+
+  const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
 
   if (error) return { error: error.message };
 
@@ -285,16 +299,29 @@ export async function changePassword(_prev: FormState, formData: FormData): Prom
   } = await supabase.auth.getUser();
   if (!user?.email) redirect("/login");
 
+  // The limiter has to cover this path too. It is the *other* place a password
+  // is checked, and it is reachable with nothing but a session — exactly the
+  // attacker this function's re-authentication exists to stop. Guarding only
+  // the login form would leave an unlimited guessing oracle behind it, with no
+  // lockout to warn the owner either.
+  const lockout = await lockoutMessage(supabase, user.email);
+  if (lockout) {
+    return { error: CORRECT_FIELDS, fieldErrors: { current_password: lockout } };
+  }
+
   const { error: reauthError } = await supabase.auth.signInWithPassword({
     email: user.email,
     password: currentPassword,
   });
   if (reauthError) {
+    await recordFailedLogin(supabase, user.email);
     return {
       error: CORRECT_FIELDS,
       fieldErrors: { current_password: "Current password is incorrect." },
     };
   }
+
+  await clearLoginAttempts(supabase);
 
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) return { error: error.message };

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { hasRecoveryMark } from "@/lib/recovery";
+import { hasRecoveryMarkFor } from "@/lib/recovery";
 import { authErrorPath } from "@/lib/routes";
 import { ResetPasswordForm } from "@/components/reset-password-form";
 
@@ -22,9 +22,9 @@ export default async function ResetPasswordPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // One message for both failures, and it is the honest one: whichever is
-  // missing, the link is what should have supplied it.
-  if (!user || !(await hasRecoveryMark())) {
+  // Both halves together: a session, and a mark issued for *that* account. A
+  // mark from a different account must not open this page — see recovery.ts.
+  if (!user || !(await hasRecoveryMarkFor(user.id))) {
     redirect(authErrorPath("reset-link-invalid"));
   }
 

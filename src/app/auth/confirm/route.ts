@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const supabase = await createClient();
 
-  const result = await exchangeEmailLink(supabase, searchParams, "signup");
+  const result = await exchangeEmailLink(supabase, searchParams, ["signup", "email"]);
 
   if (!result.ok) {
     // Logged rather than reflected: an earlier version echoed this through the

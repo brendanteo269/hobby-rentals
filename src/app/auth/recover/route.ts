@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const supabase = await createClient();
 
-  const result = await exchangeEmailLink(supabase, searchParams, "recovery");
+  const result = await exchangeEmailLink(supabase, searchParams, ["recovery"]);
 
   if (!result.ok) {
     // S1-17 AC4: a dead reset link needs the offer of a new one, not the
@@ -29,7 +29,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(authErrorPath("reset-link-invalid"), request.url));
   }
 
-  await markRecoverySession();
+  // Bound to the account the link was for. Without that the mark says only
+  // "this browser opened a reset link", which stays true after signing in as
+  // somebody else.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    console.error("Password reset link verified but left no session");
+    return NextResponse.redirect(new URL(authErrorPath("reset-link-invalid"), request.url));
+  }
+
+  await markRecoverySession(user.id);
 
   return NextResponse.redirect(new URL(RESET_PASSWORD_PATH, request.url));
 }
