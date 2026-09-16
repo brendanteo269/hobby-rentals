@@ -1,16 +1,10 @@
 import { createServerClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseEnv } from "@/lib/env";
-import { ACTIVITY_COOKIE, idleTimeoutMs } from "@/lib/session-policy";
+import { ACTIVITY_COOKIE, idleTimeoutMs, type LoginNoticeReason } from "@/lib/session-policy";
+import { ONBOARDING_PATH, checkEmailPath, loginPath } from "@/lib/routes";
+import { requiresOnboarding, requiresSignIn, requiresVerifiedEmail } from "@/lib/route-policy";
 import { NextResponse, type NextRequest } from "next/server";
-
-/**
- * Routes requiring a signed-in member. /onboarding is included so first-run
- * setup cannot be reached anonymously. /browse and /listings read from the
- * FastAPI backend, which rejects an anonymous caller — guarding them here
- * turns a redirect out of a half-rendered page into a clean trip to the login
- * screen, with `next` set so the member lands back where they were going.
- */
-const PROTECTED_PREFIXES = ["/profile", "/onboarding", "/browse", "/listings"];
 
 /**
  * Clears every cookie holding auth state.
@@ -38,14 +32,43 @@ function withCookiesFrom(source: NextResponse, target: NextResponse) {
 
 function loginRedirect(
   request: NextRequest,
-  { reason, next }: { reason?: string; next?: string } = {},
+  { reason, next }: { reason?: LoginNoticeReason; next?: string } = {},
 ) {
-  const loginUrl = request.nextUrl.clone();
-  loginUrl.search = "";
-  loginUrl.pathname = "/login";
+  const loginUrl = new URL(loginPath(), request.url);
   if (reason) loginUrl.searchParams.set("reason", reason);
   if (next) loginUrl.searchParams.set("next", next);
   return NextResponse.redirect(loginUrl);
+}
+
+/**
+ * Whether first-run setup is still outstanding.
+ *
+ * Read through the member's own session, so Row Level Security confines it to
+ * their row — the same reasoning as getOwnProfile. This costs a query, which is
+ * why the caller only asks on gated paths; the marketing pages never pay it.
+ *
+ * Fails *open*. Being unable to read the profile is not evidence that
+ * onboarding is outstanding, and treating it that way would turn a database
+ * blip into every signed-in member being herded onto the onboarding form.
+ */
+async function needsOnboarding(
+  supabase: SupabaseClient,
+  userId: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("onboarded_at")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Onboarding check failed:", error.message);
+    return false;
+  }
+
+  // A missing row is a member whose signup trigger did not fire. Sending them
+  // to onboarding is right: the form is where that gets put back together.
+  return !data?.onboarded_at;
 }
 
 /**
@@ -87,7 +110,7 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
+  const isProtected = requiresSignIn(pathname);
 
   if (!user) {
     // Nothing to keep alive, and a stale last-seen value must not survive to
@@ -140,6 +163,26 @@ export async function updateSession(request: NextRequest) {
     secure: process.env.NODE_ENV === "production",
     path: "/",
   });
+
+  // Checked after the session is refreshed, not before: a member who confirms
+  // their address in another tab should be let through on their next request
+  // without having to log in again.
+  if (!user.email_confirmed_at && requiresVerifiedEmail(pathname)) {
+    return withCookiesFrom(
+      response,
+      NextResponse.redirect(new URL(checkEmailPath(user.email), request.url)),
+    );
+  }
+
+  // S1-02 AC5. Checked after verification, because a member who has not
+  // confirmed their address should be told to do that rather than sent to fill
+  // in a form they cannot use the result of yet.
+  if (requiresOnboarding(pathname) && (await needsOnboarding(supabase, user.id))) {
+    return withCookiesFrom(
+      response,
+      NextResponse.redirect(new URL(ONBOARDING_PATH, request.url)),
+    );
+  }
 
   return response;
 }

@@ -5,9 +5,10 @@ import { saveProfileAvailability } from "@/app/profile/actions";
 import { ProfileAvailabilityCard } from "@/components/profile-availability-card";
 import { RateLine } from "@/components/browse/listing-card";
 import { CATEGORY_LABELS, type Listing } from "@/lib/listings";
+import { profilePath, type ProfileView } from "@/lib/routes";
 import { CATEGORY_IMAGES } from "@/lib/mock-images";
 
-export type ProfileView = "renter" | "owner" | "wallet" | "account";
+export type { ProfileView } from "@/lib/routes";
 
 const TABS: { view: ProfileView; label: string }[] = [
   { view: "renter", label: "Renting" },
@@ -25,7 +26,7 @@ export function ViewTabs({ active }: { active: ProfileView }) {
         return (
           <Link
             key={tab.view}
-            href={`/profile?view=${tab.view}`}
+            href={profilePath(tab.view)}
             aria-current={isActive ? "page" : undefined}
             className={`-mb-px border-b-2 px-1 pb-3 text-sm transition-colors ${
               isActive

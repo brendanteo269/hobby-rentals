@@ -1,0 +1,61 @@
+# Supabase configuration for the storefront app.
+#
+# Deliberately partial: the CLI merges this over its own defaults, so only the
+# settings this app actually depends on are stated here. Everything absent is
+# the stock default and is not something the app relies on — which is the point,
+# since a full generated config buries the three lines that matter among three
+# hundred that do not.
+#
+# The migrations in ./migrations define this project's schema, so its auth
+# behaviour belongs next to them rather than in the API repo. A deployed project
+# is configured from the Supabase dashboard, not from this file; the settings
+# below must be mirrored there or signup behaves differently in production than
+# it does locally.
+
+project_id = "hobby-rentals"
+
+[auth]
+# Must match the origin the app is actually served from, because Supabase only
+# honours an emailRedirectTo/redirectTo that this allow-list covers and
+# silently falls back to site_url otherwise. "localhost" and "127.0.0.1" are
+# different origins to that matcher, so a mismatch here does not fail loudly —
+# it delivers every confirmation and reset link to the home page instead of to
+# /auth/confirm, and the flow simply never starts.
+site_url = "http://localhost:3000"
+
+# Both spellings of the dev origin, so a link works whichever one the member
+# happens to be on. A deployed project needs its real origin added here in the
+# dashboard, or its mail has the same problem.
+additional_redirect_urls = [
+  "http://localhost:3000/**",
+  "http://127.0.0.1:3000/**",
+]
+
+# Must not undercut the application's own rule in src/lib/password.ts, which
+# requires 8 characters with an upper, a lower and a digit. A lower floor here
+# would let a password the UI rejects be set through any other path to the API.
+minimum_password_length = 8
+
+[auth.email]
+# S1-01 AC1: registration creates an *inactive* account and the user must click
+# a link before they can sign in. With this off, signUp() returns a live session
+# immediately, no mail is sent, and neither AC1 nor AC2 can be satisfied.
+enable_confirmations = true
+
+[auth.rate_limit]
+# The default of 2 per hour makes the signup flow untestable — three attempts
+# during development and confirmation mail stops arriving with no visible error.
+# Still low enough to bound abuse of the send endpoint.
+email_sent = 30
+
+# Per-IP, and the platform's only brute-force control. It does not stop
+# credential stuffing spread across many IPs against a single account; that is
+# handled per-account by public.login_attempts (see the login_attempts
+# migration) and enforced in the logIn server action.
+sign_in_sign_ups = 30
+
+# Local mail is captured by Inbucket at http://127.0.0.1:54324 — nothing is
+# actually delivered. A deployed project needs real SMTP configured in the
+# dashboard, or confirmation mail silently never arrives and no one can
+# complete registration.
+# [auth.email.smtp]

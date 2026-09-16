@@ -10,7 +10,10 @@ export type Profile = {
   id: string;
   display_name: string | null;
   contact_number: string | null;
+  /** Where they collect as a renter. Null when they do not rent. */
   preferred_meetup_location: string | null;
+  /** Where they hand gear over as an owner. Null when they do not own. */
+  default_pickup_location: string | null;
   bio: string | null;
   wants_to_rent: boolean;
   wants_to_own: boolean;
@@ -21,7 +24,7 @@ export type Profile = {
 };
 
 const PROFILE_COLUMNS =
-  "id, display_name, contact_number, preferred_meetup_location, bio, wants_to_rent, wants_to_own, onboarded_at, created_at, updated_at";
+  "id, display_name, contact_number, preferred_meetup_location, default_pickup_location, bio, wants_to_rent, wants_to_own, onboarded_at, created_at, updated_at";
 
 /**
  * Reads the signed-in member's profile.

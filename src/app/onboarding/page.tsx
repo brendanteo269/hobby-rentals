@@ -13,7 +13,9 @@ export default async function OnboardingPage() {
 
   return (
     <div className="flex flex-1 items-center justify-center px-6 py-20">
-      <OnboardingForm />
+      {/* Prefilled when a name was given at signup, where it is optional — it
+          is required here, and nobody should have to type it twice. */}
+      <OnboardingForm defaultDisplayName={profile?.display_name} />
     </div>
   );
 }
