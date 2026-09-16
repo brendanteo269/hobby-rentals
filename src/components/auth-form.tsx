@@ -9,6 +9,8 @@ import { PASSWORD_REQUIREMENTS_HINT } from "@/lib/password";
 type Props = {
   mode: "signup" | "login";
   action: (state: AuthState, formData: FormData) => Promise<AuthState>;
+  /** Why the member is here — "your session expired", and the like. */
+  notice?: string;
 };
 
 const COPY = {
@@ -32,7 +34,7 @@ const COPY = {
   },
 } as const;
 
-export function AuthForm({ mode, action }: Props) {
+export function AuthForm({ mode, action, notice }: Props) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const copy = COPY[mode];
 
@@ -41,6 +43,12 @@ export function AuthForm({ mode, action }: Props) {
       <p className="eyebrow">{copy.eyebrow}</p>
       <h1 className="heading mt-3 text-3xl">{copy.title}</h1>
       <p className="body-copy mt-3">{copy.blurb}</p>
+
+      {notice && (
+        <div className="mt-6">
+          <FormError message={notice} />
+        </div>
+      )}
 
       <form action={formAction} className="mt-8 space-y-5">
         {mode === "signup" && (
