@@ -122,6 +122,12 @@ export async function backendRequest<T>(
     redirect: "error",
   });
 
+  // The backend verifies this token independently, so it is the first to
+  // notice one that expired mid-page. Treating that as a dead session here
+  // means an authenticated *action* lands on the login screen with an
+  // explanation, rather than surfacing a raw 401 to the member.
+  if (res.status === 401) redirect("/login?reason=expired");
+
   const body: unknown = await res.json().catch(() => null);
 
   if (!res.ok) {

@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { ACTIVITY_COOKIE } from "@/lib/session-policy";
 import { validatePasswordComplexity } from "@/lib/password";
 
 export type AuthState = { error?: string } | undefined;
@@ -63,9 +64,22 @@ export async function logIn(_prev: AuthState, formData: FormData): Promise<AuthS
   redirect("/profile");
 }
 
+/**
+ * Ends the session on the member's command.
+ *
+ * The default "global" scope is deliberate: logging out revokes every refresh
+ * token issued to this account, so a token copied off this machine is dead
+ * too. The access token already in hand stays technically valid until its own
+ * short expiry — it cannot be recalled — but it can no longer be renewed, and
+ * the cookies carrying it are gone.
+ */
 export async function signOut() {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: "global" });
+
+  (await cookies()).delete(ACTIVITY_COOKIE);
+
+  // Drops any cached render still holding the signed-in header.
   revalidatePath("/", "layout");
-  redirect("/");
+  redirect("/login?reason=signed-out");
 }
