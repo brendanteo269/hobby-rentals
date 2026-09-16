@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from "vitest";
 import { validateEmail } from "@/lib/email";
-import { validatePasswordComplexity } from "@/lib/password";
+import { validatePasswordChange, validatePasswordComplexity } from "@/lib/password";
 import { loginNotice } from "@/lib/session-policy";
 import {
   authErrorPath,
@@ -201,5 +201,49 @@ describe("profilePath", () => {
   it("rejects a view that is not a panel", () => {
     expect(isProfileView("admin")).toBe(false);
     expect(isProfileView(undefined)).toBe(false);
+  });
+});
+
+describe("validatePasswordChange", () => {
+  const VALID = "Passw0rdy";
+
+  it("accepts a well-formed change", () => {
+    expect(validatePasswordChange("OldPass1", VALID, VALID)).toEqual({});
+  });
+
+  it("puts each rule under the box it belongs to", () => {
+    // Which field a message appears beneath is the whole point of S1-03 AC3:
+    // "passwords do not match" under the current-password box reads as an
+    // accusation rather than an instruction.
+    expect(validatePasswordChange("", VALID, VALID)).toHaveProperty("current_password");
+    expect(validatePasswordChange("OldPass1", "short", "short")).toHaveProperty("new_password");
+    expect(validatePasswordChange("OldPass1", VALID, "Different1")).toHaveProperty(
+      "confirm_password",
+    );
+  });
+
+  it("flags a new password identical to the current one", () => {
+    expect(validatePasswordChange(VALID, VALID, VALID).new_password).toMatch(/same/i);
+  });
+
+  it("prefers the complexity message over the same-as-current one", () => {
+    // Both are true for "abc" if the current password is also "abc"; the
+    // actionable one is the rule that was broken.
+    expect(validatePasswordChange("abc", "abc", "abc").new_password).toMatch(/8 characters/);
+  });
+
+  it("reports every empty box at once", () => {
+    expect(Object.keys(validatePasswordChange("", "", "")).sort()).toEqual([
+      "confirm_password",
+      "current_password",
+      "new_password",
+    ]);
+  });
+
+  it("does not pile complexity errors onto an empty new password", () => {
+    // An empty form should say "fill these in", not also lecture about
+    // uppercase letters in a box with nothing in it.
+    const errors = validatePasswordChange("OldPass1", "", "");
+    expect(errors.new_password).toMatch(/enter a new password/i);
   });
 });

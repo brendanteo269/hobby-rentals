@@ -98,6 +98,8 @@ export default async function ProfilePage({
           {active === "wallet" && <CreditWallet />}
           {active === "account" && (
             <AccountSettings
+              email={user.email ?? ""}
+              emailVerified={isVerified}
               displayName={profile.display_name}
               contactNumber={profile.contact_number}
               preferredMeetupLocation={profile.preferred_meetup_location}

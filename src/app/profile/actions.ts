@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { updateProfileAvailability } from "@/lib/api/profile-availability";
 import { createClient } from "@/lib/supabase/server";
-import { validatePasswordComplexity } from "@/lib/password";
+import { validatePasswordChange } from "@/lib/password";
 import {
   inheritedLocation,
   parseContactDetails,
@@ -203,7 +203,9 @@ export async function updateDisplayName(
   const displayName = String(formData.get("display_name") ?? "").trim();
 
   const displayNameError = validateDisplayName(displayName);
-  if (displayNameError) return { error: displayNameError };
+  if (displayNameError) {
+    return { error: CORRECT_FIELDS, fieldErrors: { display_name: displayNameError } };
+  }
 
   const supabase = await createClient();
   const {
@@ -274,15 +276,8 @@ export async function changePassword(_prev: FormState, formData: FormData): Prom
   const newPassword = String(formData.get("new_password") ?? "");
   const confirmPassword = String(formData.get("confirm_password") ?? "");
 
-  if (!currentPassword || !newPassword) return { error: "All password fields are required." };
-
-  const passwordError = validatePasswordComplexity(newPassword);
-  if (passwordError) return { error: passwordError };
-
-  if (newPassword !== confirmPassword) return { error: "New passwords do not match." };
-  if (newPassword === currentPassword) {
-    return { error: "The new password is the same as the current one." };
-  }
+  const fieldErrors = validatePasswordChange(currentPassword, newPassword, confirmPassword);
+  if (Object.keys(fieldErrors).length > 0) return { error: CORRECT_FIELDS, fieldErrors };
 
   const supabase = await createClient();
   const {
@@ -294,7 +289,12 @@ export async function changePassword(_prev: FormState, formData: FormData): Prom
     email: user.email,
     password: currentPassword,
   });
-  if (reauthError) return { error: "Current password is incorrect." };
+  if (reauthError) {
+    return {
+      error: CORRECT_FIELDS,
+      fieldErrors: { current_password: "Current password is incorrect." },
+    };
+  }
 
   const { error } = await supabase.auth.updateUser({ password: newPassword });
   if (error) return { error: error.message };
