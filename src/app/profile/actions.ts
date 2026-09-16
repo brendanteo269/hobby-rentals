@@ -6,9 +6,9 @@ import { updateProfileAvailability } from "@/lib/api/profile-availability";
 import { createClient } from "@/lib/supabase/server";
 import { validatePasswordChange } from "@/lib/password";
 import {
-  inheritedLocation,
   parseContactDetails,
   validateDisplayName,
+  validatePickupLocation,
 } from "@/lib/contact-details";
 import { defaultProfileView, profilePath } from "@/lib/routes";
 import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/login-attempts";
@@ -20,13 +20,12 @@ import type { FieldErrors } from "@/lib/api/client";
  *
  * React 19 resets a form once its action returns, so without this every
  * validation failure would clear the whole form — including the role ticks
- * that decide which location field is even shown. Being made to retype six
- * fields because one was wrong is how people give up on a signup.
+ * that decide whether the pickup location is even shown. Being made to retype
+ * every field because one was wrong is how people give up on a signup.
  */
 export type OnboardingValues = {
   display_name: string;
   contact_number: string;
-  preferred_meetup_location: string;
   default_pickup_location: string;
   bio: string;
   wants_to_rent: boolean;
@@ -63,7 +62,6 @@ export async function completeOnboarding(
   const values: OnboardingValues = {
     display_name: displayName,
     contact_number: String(formData.get("contact_number") ?? ""),
-    preferred_meetup_location: String(formData.get("preferred_meetup_location") ?? ""),
     default_pickup_location: String(formData.get("default_pickup_location") ?? ""),
     bio: String(formData.get("bio") ?? ""),
     wants_to_rent: wantsToRent,
@@ -108,7 +106,6 @@ export async function completeOnboarding(
       wants_to_rent: wantsToRent,
       wants_to_own: wantsToOwn,
       contact_number: parsed.contact_number,
-      preferred_meetup_location: parsed.preferred_meetup_location,
       default_pickup_location: parsed.default_pickup_location,
       bio: parsed.bio,
       onboarded_at: new Date().toISOString(),
@@ -133,15 +130,33 @@ export async function completeOnboarding(
 }
 
 /**
- * Opts the member into the side of the marketplace they skipped at signup, so
- * choosing "rent only" on day one is not a dead end.
+ * Opts the member into renting, so choosing "list my gear" on day one is not a
+ * dead end. Nothing to ask: where a booking is collected is agreed per
+ * booking.
  */
 export async function enableRenting() {
   await enableSide("wants_to_rent");
 }
 
-export async function enableOwning() {
-  await enableSide("wants_to_own");
+/**
+ * Opts the member into owning, which unlike renting has a question attached.
+ *
+ * Onboarding will not create an owner without a pickup location, and this is
+ * the only other way to become one, so it applies the same rule rather than
+ * flipping the boolean and leaving the column null — see EnableOwningForm.
+ */
+export async function enableOwning(
+  _prev: FormState,
+  formData: FormData,
+): Promise<FormState> {
+  const location = String(formData.get("default_pickup_location") ?? "").trim();
+
+  const locationError = validatePickupLocation(location);
+  if (locationError) {
+    return { error: CORRECT_FIELDS, fieldErrors: { default_pickup_location: locationError } };
+  }
+
+  return enableSide("wants_to_own", location);
 }
 
 export async function saveProfileAvailability(
@@ -159,37 +174,27 @@ export async function saveProfileAvailability(
 }
 
 /**
- * Turns on a side of the marketplace, giving it the location it requires.
- *
- * Onboarding will not let a renter through without a meetup location, nor an
- * owner without a pickup location, so flipping the boolean alone would produce
- * exactly the member those rules exist to prevent — an owner with nowhere to
- * hand gear over. The other side's answer is a sound default here: the two are
- * the same place for most people, and it is editable on the Account tab, which
- * is a better starting point than empty.
- *
- * An existing answer is never overwritten.
+ * Turns on a side of the marketplace, with the pickup location the owning side
+ * requires. Callers validate it; this writes it.
  */
-async function enableSide(column: "wants_to_rent" | "wants_to_own") {
+async function enableSide(
+  column: "wants_to_rent" | "wants_to_own",
+  pickupLocation?: string,
+): Promise<FormState> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data: locations } = await supabase
-    .from("profiles")
-    .select("preferred_meetup_location, default_pickup_location")
-    .eq("id", user.id)
-    .maybeSingle();
-
   const update: Record<string, boolean | string> = { [column]: true };
-  const inherited = locations && inheritedLocation(column, locations);
-  if (inherited) update[inherited.column] = inherited.value;
+  if (pickupLocation) update.default_pickup_location = pickupLocation;
 
-  await supabase.from("profiles").update(update).eq("id", user.id);
+  const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
+  if (error) return { error: error.message };
 
   revalidatePath("/profile");
+  return undefined;
 }
 
 export type FormState =
@@ -225,7 +230,7 @@ export async function updateDisplayName(
   return { success: "Display name updated." };
 }
 
-/** Updates the contact number, locations and bio collected at onboarding. */
+/** Updates the contact number, pickup location and bio collected at onboarding. */
 export async function updateContactDetails(
   _prev: FormState,
   formData: FormData,
@@ -236,10 +241,10 @@ export async function updateContactDetails(
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // Read from the row, never from the form. Which location is *required*
-  // depends on the roles held, so a submitted "wants_to_own=" would waive the
-  // pickup-location rule while the stored role stayed true — producing the
-  // owner with nowhere to hand gear over that the rule exists to prevent.
+  // Read from the row, never from the form. Whether the pickup location is
+  // *required* depends on the roles held, so a submitted "wants_to_own=" would
+  // waive the rule while the stored role stayed true — producing the owner with
+  // nowhere to hand gear over that the rule exists to prevent.
   const { data: profile } = await supabase
     .from("profiles")
     .select("wants_to_rent, wants_to_own")
@@ -258,15 +263,14 @@ export async function updateContactDetails(
   }
   const { values } = contactResult;
 
-  // Only the columns this member's roles actually own. A disabled or unrendered
+  // The pickup location only when the member owns. A disabled or unrendered
   // select submits nothing, which parses as null — writing that unconditionally
-  // would silently wipe the other side's location every time an owner edited
-  // their bio, and take with it the value inheritedLocation later borrows.
+  // would wipe a stored location the moment a member who has since stopped
+  // owning edited their bio.
   const update: Record<string, string | null> = {
     contact_number: values.contact_number,
     bio: values.bio,
   };
-  if (roles.wantsToRent) update.preferred_meetup_location = values.preferred_meetup_location;
   if (roles.wantsToOwn) update.default_pickup_location = values.default_pickup_location;
 
   const { error } = await supabase.from("profiles").update(update).eq("id", user.id);

@@ -73,12 +73,15 @@ export default async function ProfilePage({
         </Badge>
       </p>
 
-      {profile.preferred_meetup_location && (
+      {/* The one location a member has left: where they hand their gear over.
+          Absent for anyone who only rents, which is most of this page's
+          visitors on day one. */}
+      {profile.default_pickup_location && (
         <p className="mt-2 flex items-center gap-1.5 text-sm text-ink-soft">
           <MapPin className="size-4" aria-hidden="true" />
-          {isLocationArea(profile.preferred_meetup_location)
-            ? LOCATION_LABELS[profile.preferred_meetup_location]
-            : profile.preferred_meetup_location}
+          {isLocationArea(profile.default_pickup_location)
+            ? LOCATION_LABELS[profile.default_pickup_location]
+            : profile.default_pickup_location}
         </p>
       )}
 
@@ -102,7 +105,6 @@ export default async function ProfilePage({
               emailVerified={isVerified}
               displayName={profile.display_name}
               contactNumber={profile.contact_number}
-              preferredMeetupLocation={profile.preferred_meetup_location}
               defaultPickupLocation={profile.default_pickup_location}
               bio={profile.bio}
               roles={roles}

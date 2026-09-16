@@ -7,7 +7,7 @@ import {
   type OnboardingState,
   type OnboardingValues,
 } from "@/app/profile/actions";
-import { LOCATION_AREAS, LOCATION_LABELS } from "@/lib/listings";
+import { LocationOptions } from "./location-options";
 import { useSubmissionAttempt } from "./use-submission-attempt";
 
 const OPTIONS = [
@@ -27,7 +27,6 @@ function emptyValues(displayName?: string | null): OnboardingValues {
   return {
     display_name: displayName ?? "",
     contact_number: "",
-    preferred_meetup_location: "",
     default_pickup_location: "",
     bio: "",
     wants_to_rent: false,
@@ -35,54 +34,14 @@ function emptyValues(displayName?: string | null): OnboardingValues {
   };
 }
 
-/** The location picker, which differs only in wording between the two roles. */
-function LocationField({
-  id,
-  label,
-  hint,
-  error,
-  value,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  hint: string;
-  error?: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <SelectField
-      label={label}
-      id={id}
-      name={id}
-      value={value}
-      onChange={(event) => onChange(event.target.value)}
-      required
-      className="truncate"
-      hint={hint}
-      error={error}
-    >
-      <option value="" disabled>
-        Choose one
-      </option>
-      {LOCATION_AREAS.map((area) => (
-        <option key={area} value={area}>
-          {LOCATION_LABELS[area]}
-        </option>
-      ))}
-    </SelectField>
-  );
-}
-
 /**
  * First-run setup.
  *
  * Both roles can be selected — most people arrive wanting one side and
- * discover the other, so neither is framed as the default. The location
- * questions differ by role and are revealed as each is picked: asking a renter
- * where they hand gear over is a question they cannot answer, and showing both
- * to everyone makes the form look twice as long as it is.
+ * discover the other, so neither is framed as the default. Only owners are
+ * asked for a location, revealed when that box is ticked: asking a renter
+ * where they hand gear over is a question they cannot answer, and where they
+ * collect is settled per booking rather than once, up front.
  *
  * Every control is deliberately *controlled*, and the form is keyed on the
  * submission attempt, so a rejected submission does not wipe what the member
@@ -162,26 +121,20 @@ export function OnboardingForm({ defaultDisplayName }: { defaultDisplayName?: st
             error={errors.contact_number}
           />
 
-          {values.wants_to_rent && (
-            <LocationField
-              id="preferred_meetup_location"
-              label="Preferred meetup location"
-              value={values.preferred_meetup_location}
-              onChange={(value) => set("preferred_meetup_location", value)}
-              hint="Where you'd usually collect gear you have rented."
-              error={errors.preferred_meetup_location}
-            />
-          )}
-
           {values.wants_to_own && (
-            <LocationField
-              id="default_pickup_location"
+            <SelectField
               label="Default pickup location"
+              id="default_pickup_location"
+              name="default_pickup_location"
               value={values.default_pickup_location}
-              onChange={(value) => set("default_pickup_location", value)}
+              onChange={(event) => set("default_pickup_location", event.target.value)}
+              required
+              className="truncate"
               hint="Where renters would usually collect your gear."
               error={errors.default_pickup_location}
-            />
+            >
+              <LocationOptions />
+            </SelectField>
           )}
 
           <TextareaField

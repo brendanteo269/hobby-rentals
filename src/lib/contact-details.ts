@@ -9,14 +9,13 @@ const MAX_BIO = 500;
 /**
  * What a member tells us about themselves, at onboarding and afterwards.
  *
- * The two locations are both optional at this layer because which of them is
- * *required* depends on the roles held — see `parseContactDetails`. A renter
- * has no pickup location to give, and an owner who never rents has no meetup
- * location.
+ * The pickup location is optional at this layer because whether it is
+ * *required* depends on the roles held — see `parseContactDetails`. A member
+ * who only rents never hands gear over, so they have none to give; a renter is
+ * not asked where they collect, because collection is agreed per booking.
  */
 export type ContactDetails = {
   contact_number: string;
-  preferred_meetup_location: string | null;
   default_pickup_location: string | null;
   bio: string | null;
 };
@@ -28,38 +27,16 @@ export type ContactDetailsResult =
 /** Which sides of the marketplace the member is on, which fields are required. */
 export type Roles = { wantsToRent: boolean; wantsToOwn: boolean };
 
-/** The two location columns, as stored. */
-type Locations = {
-  preferred_meetup_location: string | null;
-  default_pickup_location: string | null;
-};
-
 /**
- * The location to fill in when a member switches on a side they skipped.
- *
- * Onboarding will not accept a renter without a meetup location, nor an owner
- * without a pickup location. Turning a role on from the profile page has to
- * honour the same rule, or it produces exactly the member those checks exist
- * to prevent — an owner with nowhere to hand gear over.
- *
- * The other side's answer is the default: for most people the two are the same
- * place, and it is editable on the Account tab, which beats starting empty.
- * Returns null when there is nothing to do — either the column is already
- * answered, or there is no answer to borrow.
+ * The pickup-location rule, shared by every path that can make someone an
+ * owner — onboarding, the Account tab, and "Start listing" on the profile's
+ * Owning tab. A path that skipped it would produce an owner with nowhere to
+ * hand gear over.
  */
-export function inheritedLocation(
-  side: "wants_to_rent" | "wants_to_own",
-  locations: Locations,
-): { column: keyof Locations; value: string } | null {
-  const column: keyof Locations =
-    side === "wants_to_own" ? "default_pickup_location" : "preferred_meetup_location";
-  const source: keyof Locations =
-    side === "wants_to_own" ? "preferred_meetup_location" : "default_pickup_location";
-
-  if (locations[column]) return null;
-
-  const value = locations[source];
-  return value ? { column, value } : null;
+export function validatePickupLocation(location: string): string | null {
+  if (!location) return "Choose where you would usually hand gear over.";
+  if (location.length > MAX_LOCATION) return `Must be ${MAX_LOCATION} characters or fewer.`;
+  return null;
 }
 
 /**
@@ -79,16 +56,20 @@ export function validateDisplayName(displayName: string): string | null {
  * profile's Account tab, so the two forms cannot drift apart on what counts
  * as a valid contact number or location.
  *
+ * Takes the whole `Roles` pair although only the owning side gates a field:
+ * callers already hold one, and passing it keeps the contract "the rules
+ * depend on the roles" rather than "the rules depend on one boolean", which is
+ * what would have to be unpicked if a renter-side rule ever returns.
+ *
  * Every field is checked before returning, rather than stopping at the first
  * failure: the form renders a message against each control, and fixing one
  * error only to be shown the next is the behaviour that makes people give up.
  */
 export function parseContactDetails(
   formData: FormData,
-  { wantsToRent, wantsToOwn }: Roles,
+  { wantsToOwn }: Roles,
 ): ContactDetailsResult {
   const contactNumber = String(formData.get("contact_number") ?? "").trim();
-  const meetupLocation = String(formData.get("preferred_meetup_location") ?? "").trim();
   const pickupLocation = String(formData.get("default_pickup_location") ?? "").trim();
   const bio = String(formData.get("bio") ?? "").trim();
 
@@ -98,21 +79,12 @@ export function parseContactDetails(
     fieldErrors.contact_number = "Enter a valid contact number (digits, spaces, + and - only).";
   }
 
-  // Required only for the side the member is actually on. Asking a renter
-  // where they hand gear over is a question they cannot answer.
-  if (wantsToRent && !meetupLocation) {
-    fieldErrors.preferred_meetup_location = "Choose where you would usually collect gear.";
-  }
-  if (wantsToOwn && !pickupLocation) {
-    fieldErrors.default_pickup_location = "Choose where you would usually hand gear over.";
-  }
+  // Checked only for an owner. Asking a renter where they hand gear over is a
+  // question they cannot answer, and nothing they submit under that name is
+  // written back to their row.
+  const pickupError = wantsToOwn ? validatePickupLocation(pickupLocation) : null;
+  if (pickupError) fieldErrors.default_pickup_location = pickupError;
 
-  if (meetupLocation.length > MAX_LOCATION) {
-    fieldErrors.preferred_meetup_location = `Must be ${MAX_LOCATION} characters or fewer.`;
-  }
-  if (pickupLocation.length > MAX_LOCATION) {
-    fieldErrors.default_pickup_location = `Must be ${MAX_LOCATION} characters or fewer.`;
-  }
   if (bio.length > MAX_BIO) {
     fieldErrors.bio = `Bio must be ${MAX_BIO} characters or fewer.`;
   }
@@ -126,7 +98,6 @@ export function parseContactDetails(
       // Stored as null rather than "" for a role not held, so "not applicable"
       // and "not answered yet" read the same way as every other nullable
       // column on profiles.
-      preferred_meetup_location: meetupLocation || null,
       default_pickup_location: pickupLocation || null,
       bio: bio || null,
     },
