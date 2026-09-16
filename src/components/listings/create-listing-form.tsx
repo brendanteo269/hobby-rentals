@@ -1,11 +1,12 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import type { ReactNode } from "react";
+import type { ChangeEvent, ReactNode } from "react";
 import { Button, Field, FormError, SelectField, TextareaField } from "@/components/ui";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
 import { WeeklyAvailabilityField } from "@/components/listings/weekly-availability-field";
 import { RentalDurationField } from "@/components/listings/rental-duration-field";
+import { PhotoUploadField } from "@/components/listings/photo-upload-field";
 import { PricePerBlockField } from "@/components/listings/price-per-block-field";
 import { submitListing, type CreateListingState } from "@/app/listings/actions";
 import {
@@ -16,6 +17,36 @@ import {
   LOCATION_AREAS,
   LOCATION_LABELS,
 } from "@/lib/listings";
+
+/**
+ * Everything read via plain `name`/`defaultValue` (as these all were until a
+ * failed submission was found to wipe them). React resets a form's
+ * *uncontrolled* fields once a form action finishes, success or failure —
+ * the fix is to drive each of these from state instead. available_from/
+ * available_until, min/max rental days, and photos each have their own
+ * dedicated state already (below, or inside PricePerBlockField,
+ * RentalDurationField, WeeklyAvailabilityField, BlackoutRulesField,
+ * PhotoUploadField) and so don't belong here too.
+ */
+type FieldValues = {
+  name: string;
+  brand: string;
+  description: string;
+  category: string;
+  condition: string;
+  location_area: string;
+  deposit: string;
+};
+
+const EMPTY_FIELDS: FieldValues = {
+  name: "",
+  brand: "",
+  description: "",
+  category: "",
+  condition: "",
+  location_area: "",
+  deposit: "",
+};
 
 /**
  * The owner's create-listing form.
@@ -46,6 +77,12 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
   const [customDays, setCustomDays] = useState<number[]>(profileAvailableDays);
   const weeklyDays = customAvailability ? customDays : profileAvailableDays;
 
+  const [fields, setFields] = useState<FieldValues>(EMPTY_FIELDS);
+  const updateField =
+    <K extends keyof FieldValues>(key: K) =>
+    (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+      setFields((current) => ({ ...current, [key]: event.target.value }));
+
   return (
     <form action={formAction} className="space-y-6">
       <FormSection title="The item">
@@ -57,6 +94,8 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
             maxLength={200}
             required
             error={errors.name}
+            value={fields.name}
+            onChange={updateField("name")}
           />
           <Field
             label="Brand"
@@ -65,6 +104,8 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
             maxLength={200}
             required
             error={errors.brand}
+            value={fields.brand}
+            onChange={updateField("brand")}
           />
         </div>
 
@@ -77,6 +118,8 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
           required
           hint="What is included, and anything a renter should know before collecting."
           error={errors.description}
+          value={fields.description}
+          onChange={updateField("description")}
         />
 
         <div className="grid gap-4 sm:grid-cols-3">
@@ -84,9 +127,10 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
             label="Category"
             id="category"
             name="category"
-            defaultValue=""
             required
             error={errors.category}
+            value={fields.category}
+            onChange={updateField("category")}
           >
             <option value="" disabled>
               Choose one
@@ -102,9 +146,10 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
             label="Condition"
             id="condition"
             name="condition"
-            defaultValue=""
             required
             error={errors.condition}
+            value={fields.condition}
+            onChange={updateField("condition")}
           >
             <option value="" disabled>
               Choose one
@@ -120,9 +165,10 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
             label="Collection area"
             id="location_area"
             name="location_area"
-            defaultValue=""
             required
             error={errors.location_area}
+            value={fields.location_area}
+            onChange={updateField("location_area")}
           >
             <option value="" disabled>
               Choose one
@@ -134,6 +180,10 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
             ))}
           </SelectField>
         </div>
+      </FormSection>
+
+      <FormSection title="Photos">
+        <PhotoUploadField error={errors.photo_keys} />
       </FormSection>
 
       <FormSection title="Price">
@@ -155,6 +205,8 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
           hint="Held, not charged. Enter 0 for none."
           error={errors.deposit_cents}
           className="max-w-xs"
+          value={fields.deposit}
+          onChange={updateField("deposit")}
         />
       </FormSection>
 

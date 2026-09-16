@@ -16,6 +16,7 @@ import type {
   ListingCategory,
   ListingCondition,
   LocationArea,
+  PresignPhotoResponse,
 } from "@/lib/listings";
 
 export { BackendApiError as ListingApiError } from "@/lib/api/client";
@@ -104,4 +105,17 @@ export function addListingBlackout(listingId: string, start_date: string, end_da
 
 export function deleteListingBlackout(listingId: string, blackoutId: string) {
   return backendRequest(`/listings/${encodeURIComponent(listingId)}/blackouts/${encodeURIComponent(blackoutId)}`, { method: "DELETE" });
+}
+
+/**
+ * Issues a one-time S3 upload URL for a single photo. The browser PUTs the
+ * file straight to that URL itself — this only gets as far as handing back
+ * the URL, since backendRequest (and the Supabase session it reads) is
+ * server-only and can't run in the client component that owns the file.
+ */
+export function presignListingPhoto(contentType: string) {
+  return backendRequest<PresignPhotoResponse>("/listings/photos/presign", {
+    method: "POST",
+    body: JSON.stringify({ content_type: contentType }),
+  });
 }
