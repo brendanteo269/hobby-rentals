@@ -31,14 +31,9 @@ export default async function MyListingsPage() {
 
   return (
     <Container className="py-16">
-      <div className="flex items-baseline justify-between gap-4">
-        <div>
-          <p className="eyebrow">Owner dashboard</p>
-          <h1 className="display-caps mt-3 text-3xl">My listings</h1>
-        </div>
-        <ButtonLink href="/listings/new" className="px-4 py-2 text-xs">
-          List new gear
-        </ButtonLink>
+      <div>
+        <p className="eyebrow">Owner dashboard</p>
+        <h1 className="heading mt-3 text-3xl">My listings</h1>
       </div>
 
       <div className="mt-8">

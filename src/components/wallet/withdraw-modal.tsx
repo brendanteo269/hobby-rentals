@@ -62,7 +62,7 @@ export function WithdrawModal({ apiUrl, availableCents, onClose, onWalletRefresh
       } catch {
         // Wallet view will catch up next time it loads.
       }
-      onSuccess(`Withdrawal of ${formatWalletAmount(cents)} submitted — funds will be transferred to your linked bank account.`);
+      onSuccess(`Withdrawal of ${formatWalletAmount(cents)} submitted.`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Unable to submit withdrawal.");
     } finally {
