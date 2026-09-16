@@ -148,7 +148,7 @@ export async function getWalletTransactions(
 const typeLabels: Record<TransactionType, { label: string; tone: StatusTone }> = {
   TOPUP: { label: "Top-up", tone: "positive" },
   ESCROW_HOLD: { label: "Escrow hold", tone: "warning" },
-  ESCROW_RELEASE: { label: "Escrow release", tone: "positive" },
+  ESCROW_RELEASE: { label: "Earnings", tone: "positive" },
   WITHDRAWAL: { label: "Withdrawal", tone: "neutral" },
   REFUND: { label: "Refund", tone: "positive" },
   ADMIN_CREDIT: { label: "Manual credit", tone: "critical" },

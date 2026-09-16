@@ -25,7 +25,7 @@ import {
  */
 export function ListingFilters({ filters }: { filters: BrowseFilters }) {
   return (
-    <form method="get" action="/browse" role="search" className="rounded-2xl border border-line bg-white p-5">
+    <form method="get" action="/browse" role="search" className="card p-5">
       {/* Filters already applied ride along as hidden fields, so submitting
           the keyword box narrows the current view instead of resetting it. */}
       {filters.category.map((value) => (
@@ -44,7 +44,7 @@ export function ListingFilters({ filters }: { filters: BrowseFilters }) {
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-56 flex-1">
           <label htmlFor="q" className="block text-sm font-medium">
-            Search gear
+            Search listings
           </label>
           <Input
             id="q"
@@ -108,7 +108,7 @@ export function ListingFilters({ filters }: { filters: BrowseFilters }) {
           />
         </div>
         <p className="body-copy min-w-48 flex-1 pb-2.5">
-          Give both dates to hide gear that is already booked or blacked out then.
+          Give both dates to hide listings that are already booked or blacked out then.
         </p>
         <Button type="submit">Apply</Button>
       </div>

@@ -8,12 +8,12 @@ import { LOCATION_AREAS, LOCATION_LABELS } from "@/lib/listings";
 const OPTIONS = [
   {
     name: "wants_to_rent",
-    title: "I want to rent gear",
+    title: "I want to rent listings",
     body: "Borrow cameras, kayaks and kit from people nearby for a weekend or a week.",
   },
   {
     name: "wants_to_own",
-    title: "I want to list my gear",
+    title: "I want to create listings",
     body: "Earn from equipment that would otherwise sit in a cupboard between uses.",
   },
 ];
@@ -41,7 +41,7 @@ export function OnboardingForm() {
         {OPTIONS.map((option) => (
           <label
             key={option.name}
-            className="flex cursor-pointer gap-4 rounded-2xl border border-line bg-white p-5 transition-colors hover:border-ink has-checked:border-ink has-checked:bg-surface-muted"
+            className="flex cursor-pointer gap-4 card p-5 transition-colors hover:border-ink has-checked:border-ink has-checked:bg-surface-muted"
           >
             <input
               type="checkbox"
@@ -72,7 +72,7 @@ export function OnboardingForm() {
             defaultValue=""
             required
             className="truncate"
-            hint="Where you'd usually hand off gear."
+            hint="Where you'd usually hand off a listing."
           >
             <option value="" disabled>
               Choose one

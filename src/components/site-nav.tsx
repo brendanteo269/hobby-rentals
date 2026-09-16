@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 
 const NAV: { label: string; href: Route }[] = [
   { label: "Home", href: "/" },
-  { label: "Browse products", href: "/browse" },
+  { label: "Browse listings", href: "/browse" },
 ];
 
 /** Header nav links, highlighting whichever one matches the current route. */

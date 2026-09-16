@@ -1,8 +1,11 @@
 import Link from "next/link";
-import { Button, ButtonLink, EmptyState } from "./ui";
+import { Badge, Button, ButtonLink, EmptyState, ImageSlot } from "./ui";
 import { enableRenting, enableOwning } from "@/app/profile/actions";
 import { saveProfileAvailability } from "@/app/profile/actions";
 import { ProfileAvailabilityCard } from "@/components/profile-availability-card";
+import { RateLine } from "@/components/browse/listing-card";
+import { CATEGORY_LABELS, type Listing } from "@/lib/listings";
+import { CATEGORY_IMAGES } from "@/lib/mock-images";
 
 export type ProfileView = "renter" | "owner" | "wallet" | "account";
 
@@ -47,13 +50,13 @@ function NotEnabled({ side }: { side: "renter" | "owner" }) {
     side === "renter"
       ? {
           title: "Renting is not switched on",
-          body: "Turn it on to book gear from people nearby. Nothing is charged until an owner accepts.",
+          body: "Turn it on to book listings from people nearby. Nothing is charged until an owner accepts.",
           label: "Start renting",
           action: enableRenting,
         }
       : {
           title: "Owning is not switched on",
-          body: "Turn it on to list the gear you already have and earn from it between uses.",
+          body: "Turn it on to create listings for the gear you already have and earn from it between uses.",
           label: "Start listing",
           action: enableOwning,
         };
@@ -76,22 +79,75 @@ export function RenterView({ enabled }: { enabled: boolean }) {
   return (
     <EmptyState
       title="No bookings yet"
-      body="Gear you book will appear here, with collection dates and the owner's details."
-      action={<ButtonLink href="/browse">Browse products</ButtonLink>}
+      body="Listings you book will appear here, with collection dates and the owner's details."
+      action={<ButtonLink href="/browse">Browse listings</ButtonLink>}
     />
   );
 }
 
-export function OwnerView({ enabled, availableDays = [1, 2, 3, 4, 5, 6, 7] }: { enabled: boolean; availableDays?: number[] }) {
+const STATUS_LABELS: Record<Listing["status"], string> = {
+  DRAFT: "Draft",
+  ACTIVE: "Active",
+  ARCHIVED: "Archived",
+};
+
+/**
+ * An owner's own listing, styled like the browse grid's ListingCard — same
+ * photo/badge/price shell — with a status badge added, since that only
+ * makes sense from the owner's own management view.
+ */
+function OwnerListingCard({ listing }: { listing: Listing }) {
+  return (
+    <li className="overflow-hidden card">
+      <div className="relative overflow-hidden">
+        <ImageSlot
+          label={listing.photo_keys[0] ?? "No photo yet"}
+          src={CATEGORY_IMAGES[listing.category]}
+          className="aspect-square w-full"
+        />
+        <Badge variant={listing.status === "ACTIVE" ? "dark" : "neutral"} className="absolute left-3 top-3">
+          {STATUS_LABELS[listing.status]}
+        </Badge>
+      </div>
+
+      <div className="p-4">
+        <p className="eyebrow">{CATEGORY_LABELS[listing.category]}</p>
+        <h3 className="heading mt-1.5 text-sm leading-snug">{listing.name}</h3>
+
+        <div className="mt-3 border-t border-line pt-3">
+          <RateLine listing={listing} />
+        </div>
+      </div>
+    </li>
+  );
+}
+
+export function OwnerView({
+  enabled,
+  availableDays = [1, 2, 3, 4, 5, 6, 7],
+  listings,
+}: {
+  enabled: boolean;
+  availableDays?: number[];
+  listings: Listing[];
+}) {
   if (!enabled) return <NotEnabled side="owner" />;
   return (
     <div className="space-y-6">
       <ProfileAvailabilityCard availableDays={availableDays} action={saveProfileAvailability} />
-      <EmptyState
-        title="No listings yet"
-        body="Gear you list will appear here, along with requests from people wanting to book it."
-        action={<ButtonLink href="/listings/new">List your gear</ButtonLink>}
-      />
+      {listings.length > 0 ? (
+        <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {listings.map((listing) => (
+            <OwnerListingCard key={listing.id} listing={listing} />
+          ))}
+        </ul>
+      ) : (
+        <EmptyState
+          title="No listings yet"
+          body="Listings you create will appear here, along with requests from people wanting to book them."
+          action={<ButtonLink href="/listings/new">Create a listing</ButtonLink>}
+        />
+      )}
     </div>
   );
 }

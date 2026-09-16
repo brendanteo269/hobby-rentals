@@ -284,7 +284,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="rounded-2xl border border-line bg-white px-6 py-16 text-center">
+    <div className="card px-6 py-16 text-center">
       <p className="heading text-base">{title}</p>
       <p className="body-copy mx-auto mt-2 max-w-sm">{body}</p>
       {action && <div className="mt-6 flex justify-center">{action}</div>}
@@ -317,7 +317,7 @@ export function Modal({ title, children, onClose }: { title: string; children: R
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-line bg-white p-6 shadow-xl sm:p-8"
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto card p-6 shadow-xl sm:p-8"
       >
         <div className="flex items-start justify-between gap-4">
           <h2 id="modal-title" className="heading text-xl">

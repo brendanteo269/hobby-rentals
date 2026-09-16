@@ -19,7 +19,7 @@ export function ProfileAvailabilityCard({
     setDays((current) => (current.includes(day) ? current.filter((value) => value !== day) : [...current, day].sort()));
 
   return (
-    <section className="rounded-2xl border border-line bg-white p-6">
+    <section className="card p-6">
       <h2 className="heading text-lg">General rental availability</h2>
       <p className="body-copy mt-2">
         Choose the days your equipment is normally available for rental. You can set different

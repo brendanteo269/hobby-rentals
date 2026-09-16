@@ -238,7 +238,7 @@ function todayIso() {
  */
 function FormSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="overflow-hidden rounded-2xl border border-line bg-white">
+    <section className="overflow-hidden card">
       <div className="border-b border-line px-6 py-4 sm:px-8">
         <h2 className="heading text-lg">{title}</h2>
       </div>

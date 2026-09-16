@@ -11,7 +11,7 @@ const FEATURES: TrustFeature[] = [
   },
   {
     icon: BadgeCheck,
-    title: "Guided condition Passport",
+    title: "Product Passport",
     body: "Inspect and snap guided photos at pickup. Every item carries an append-only digital condition history.",
   },
   {
@@ -30,7 +30,7 @@ export function TrustFeatures() {
         <h2 className="heading mt-3 text-center text-2xl sm:text-3xl">Built for worry-free handover</h2>
         <ul className="mt-10 grid gap-10 sm:grid-cols-3">
           {FEATURES.map((feature) => (
-            <li key={feature.title} className="rounded-2xl border border-line bg-white p-6">
+            <li key={feature.title} className="card p-6">
               <span className="flex size-10 items-center justify-center rounded-full bg-accent-soft text-accent-dark">
                 <feature.icon className="size-5" aria-hidden="true" />
               </span>

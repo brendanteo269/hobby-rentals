@@ -19,7 +19,7 @@ import { CATEGORY_IMAGES } from "@/lib/mock-images";
  */
 export function ListingCard({ listing }: { listing: ListingCardData }) {
   return (
-    <li className="group overflow-hidden rounded-2xl border border-line bg-white transition-colors hover:border-ink-soft">
+    <li className="group overflow-hidden card transition-colors hover:border-ink-soft">
       <div className="relative overflow-hidden">
         {/* Photo hosting is not wired up yet, so a category mock photo
             stands in until a real one exists for this listing. */}
@@ -50,7 +50,7 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
  * listing, so this renders whichever are set. The figure leads in a heavier
  * weight and the unit trails in a lighter one, the usual price-tag hierarchy.
  */
-function RateLine({
+export function RateLine({
   listing,
 }: {
   listing: Pick<ListingCardData, "price_per_day_cents" | "price_per_week_cents">;

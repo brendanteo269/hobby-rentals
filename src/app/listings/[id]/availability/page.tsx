@@ -18,7 +18,7 @@ export default async function ListingAvailabilityPage({ params }: { params: Prom
       <p className="eyebrow">Listing settings</p>
       <h1 className="heading mt-3 text-3xl">Availability</h1>
 
-      <section className="mt-8 rounded-2xl border border-line bg-white p-6">
+      <section className="mt-8 card p-6">
         <h2 className="heading text-lg">Weekly handover schedule</h2>
         <form
           action={async (formData) => {
@@ -72,7 +72,7 @@ export default async function ListingAvailabilityPage({ params }: { params: Prom
         </form>
       </section>
 
-      <section className="mt-6 rounded-2xl border border-line bg-white p-6">
+      <section className="mt-6 card p-6">
         <h2 className="heading text-lg">Calendar</h2>
         <p className="body-copy mt-2">Booked dates are reserved and cannot be blacked out.</p>
 

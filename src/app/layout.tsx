@@ -8,7 +8,7 @@ import "./globals.css";
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "HobbyRentals — Rent the gear you want",
+  title: "HobbyRentals — Rent the listings you want",
   description:
     "Singapore's peer-to-peer marketplace for high-value hobby equipment — cameras, kayaks, keyboards, kilns.",
 };

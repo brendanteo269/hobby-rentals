@@ -26,7 +26,7 @@ export async function SiteHeader() {
           {user ? (
             <>
               <ButtonLink href="/listings/new" className="hidden sm:flex">
-                + List your gear
+                + New listing
               </ButtonLink>
               <AccountMenu initial={(user.email ?? "?").charAt(0)} signOutAction={signOut} />
             </>
