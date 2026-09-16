@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState } from "react";
-import { Button, Field, TextareaField } from "./ui";
+import { Button, Field, FormError, SelectField, TextareaField } from "./ui";
 import { completeOnboarding, type OnboardingState } from "@/app/profile/actions";
+import { LOCATION_AREAS, LOCATION_LABELS } from "@/lib/listings";
 
 const OPTIONS = [
   {
@@ -30,7 +31,7 @@ export function OnboardingForm() {
   return (
     <div className="w-full max-w-lg">
       <p className="eyebrow">Welcome</p>
-      <h1 className="display-caps mt-3 text-3xl">What brings you here?</h1>
+      <h1 className="heading mt-3 text-3xl">What brings you here?</h1>
       <p className="body-copy mt-3">
         Pick either, or both. This only shapes what you see first — you can change it whenever
         you like.
@@ -40,7 +41,7 @@ export function OnboardingForm() {
         {OPTIONS.map((option) => (
           <label
             key={option.name}
-            className="flex cursor-pointer gap-4 border border-line bg-white p-5 transition-colors hover:border-ink has-checked:border-ink has-checked:bg-sand"
+            className="flex cursor-pointer gap-4 rounded-2xl border border-line bg-white p-5 transition-colors hover:border-ink has-checked:border-ink has-checked:bg-surface-muted"
           >
             <input
               type="checkbox"
@@ -64,15 +65,24 @@ export function OnboardingForm() {
             required
             hint="Shown to the other party once a booking is confirmed."
           />
-          <Field
+          <SelectField
             label="Preferred meetup location"
             id="preferred_meetup_location"
             name="preferred_meetup_location"
-            type="text"
-            maxLength={120}
+            defaultValue=""
             required
-            hint="Where you'd usually hand off gear, e.g. an MRT station."
-          />
+            className="truncate"
+            hint="Where you'd usually hand off gear."
+          >
+            <option value="" disabled>
+              Choose one
+            </option>
+            {LOCATION_AREAS.map((value) => (
+              <option key={value} value={value}>
+                {LOCATION_LABELS[value]}
+              </option>
+            ))}
+          </SelectField>
           <TextareaField
             label="Bio"
             id="bio"
@@ -83,11 +93,7 @@ export function OnboardingForm() {
           />
         </div>
 
-        {state?.error && (
-          <p role="alert" className="border-l-2 border-clay bg-sand px-3 py-2 text-sm text-ink">
-            {state.error}
-          </p>
-        )}
+        <FormError message={state?.error} />
 
         <Button type="submit" disabled={pending} className="w-full">
           {pending ? "Saving…" : "Continue"}

@@ -12,7 +12,7 @@ export function BalanceSummaryCard({
 }) {
   const belowMinimum = wallet.availableCents < MIN_WITHDRAWAL_CENTS;
   return (
-    <div className="border border-line bg-white p-6 sm:p-8">
+    <div className="rounded-2xl border border-line bg-white p-6 sm:p-8">
       <div className="grid gap-6 sm:grid-cols-3">
         <Metric
           label="Available balance"

@@ -211,7 +211,7 @@ export function CreateListingForm({ profileAvailableDays }: { profileAvailableDa
         />
       </FormSection>
 
-      <div className="border border-line bg-sand p-6 sm:p-8">
+      <div className="rounded-2xl border border-line bg-surface-muted p-6 sm:p-8">
         <FormError message={state?.error} />
         <Button type="submit" disabled={pending} className="w-full sm:w-auto">
           {pending ? "Publishing…" : "Publish listing"}
@@ -232,15 +232,15 @@ function todayIso() {
 
 /**
  * One step of the form as its own surface, matching how a listing card gets
- * its own bordered white panel against the cream page — the same "distinct
+ * its own bordered white panel against the page — the same "distinct
  * things get distinct boxes" language, applied here to keep a long form
  * legible as a sequence of steps rather than one continuous scroll.
  */
 function FormSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="border border-line bg-white">
+    <section className="overflow-hidden rounded-2xl border border-line bg-white">
       <div className="border-b border-line px-6 py-4 sm:px-8">
-        <h2 className="display-caps text-lg">{title}</h2>
+        <h2 className="heading text-lg">{title}</h2>
       </div>
       <div className="space-y-6 p-6 sm:p-8">{children}</div>
     </section>

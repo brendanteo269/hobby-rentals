@@ -1,15 +1,10 @@
 import Link from "next/link";
-import type { Route } from "next";
+import { Package } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Container, ButtonLink } from "./ui";
+import { SiteNav } from "./site-nav";
+import { AccountMenu } from "./account-menu";
 import { signOut } from "@/app/auth/actions";
-
-const NAV: { label: string; href: Route }[] = [
-  { label: "Marketplace", href: "/browse" },
-  { label: "List your gear", href: "/listings/new" },
-  { label: "About", href: "/" },
-  { label: "Contact", href: "/" },
-];
 
 export async function SiteHeader() {
   const supabase = await createClient();
@@ -18,40 +13,25 @@ export async function SiteHeader() {
   } = await supabase.auth.getUser();
 
   return (
-    <header className="border-b border-line bg-cream">
+    <header className="border-b border-line bg-white">
       <Container className="flex h-16 items-center justify-between gap-6">
-        <Link href="/" className="display-caps text-lg tracking-wide">
-          HobbyRentals
+        <Link href="/" className="flex items-center gap-2">
+          <Package className="size-5 text-accent" aria-hidden="true" />
+          <span className="heading text-lg">HobbyRentals</span>
         </Link>
 
-        <nav className="hidden items-center gap-7 md:flex">
-          {NAV.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className="text-sm text-ink-soft transition-colors hover:text-ink"
-            >
-              {item.label}
-            </Link>
-          ))}
-        </nav>
+        <SiteNav />
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-4">
           {user ? (
             <>
-              <Link href="/profile" className="hidden text-sm text-ink-soft hover:text-ink sm:block">
-                Profile
-              </Link>
-              <form action={signOut}>
-                <button type="submit" className="text-sm text-ink-soft transition-colors hover:text-ink">
-                  Sign out
-                </button>
-              </form>
+              <ButtonLink href="/listings/new" className="hidden sm:flex">
+                + List your gear
+              </ButtonLink>
+              <AccountMenu initial={(user.email ?? "?").charAt(0)} signOutAction={signOut} />
             </>
           ) : (
-            <ButtonLink href="/login" className="px-4 py-2 text-xs">
-              Log in / Sign up
-            </ButtonLink>
+            <ButtonLink href="/login">Log in / Sign up</ButtonLink>
           )}
         </div>
       </Container>

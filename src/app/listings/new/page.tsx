@@ -10,7 +10,7 @@ export default async function NewListingPage() {
     <Container className="py-16">
       <div className="mx-auto max-w-2xl">
         <p className="eyebrow">Your inventory</p>
-        <h1 className="display-caps mt-3 text-3xl">List your gear</h1>
+        <h1 className="heading mt-3 text-3xl">List your gear</h1>
         <p className="body-copy mt-3">
           Fields marked with an asterisk are required. Everything here can be edited after it goes
           live.

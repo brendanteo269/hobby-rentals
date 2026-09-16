@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import Link from "next/link";
-import { Button, Field } from "./ui";
+import { Button, Field, FormError } from "./ui";
 import type { AuthState } from "@/app/auth/actions";
 import { PASSWORD_REQUIREMENTS_HINT } from "@/lib/password";
 
@@ -39,7 +39,7 @@ export function AuthForm({ mode, action }: Props) {
   return (
     <div className="w-full max-w-md">
       <p className="eyebrow">{copy.eyebrow}</p>
-      <h1 className="display-caps mt-3 text-3xl">{copy.title}</h1>
+      <h1 className="heading mt-3 text-3xl">{copy.title}</h1>
       <p className="body-copy mt-3">{copy.blurb}</p>
 
       <form action={formAction} className="mt-8 space-y-5">
@@ -87,11 +87,7 @@ export function AuthForm({ mode, action }: Props) {
           </label>
         )}
 
-        {state?.error && (
-          <p role="alert" className="border-l-2 border-clay bg-sand px-3 py-2 text-sm text-ink">
-            {state.error}
-          </p>
-        )}
+        <FormError message={state?.error} />
 
         <Button type="submit" disabled={pending} className="w-full">
           {pending ? "Working…" : copy.submit}

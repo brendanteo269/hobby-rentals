@@ -1,18 +1,19 @@
 import Link from "next/link";
-import { Button, ButtonLink } from "./ui";
+import { Button, ButtonLink, EmptyState } from "./ui";
 import { enableRenting, enableOwning } from "@/app/profile/actions";
 import { saveProfileAvailability } from "@/app/profile/actions";
 import { ProfileAvailabilityCard } from "@/components/profile-availability-card";
 
-export type ProfileView = "renter" | "owner" | "account";
+export type ProfileView = "renter" | "owner" | "wallet" | "account";
 
 const TABS: { view: ProfileView; label: string }[] = [
   { view: "renter", label: "Renting" },
   { view: "owner", label: "Owning" },
+  { view: "wallet", label: "Wallet" },
   { view: "account", label: "Account" },
 ];
 
-/** Switches between the two sides of the marketplace. */
+/** Switches between the sides of the marketplace and the account panels. */
 export function ViewTabs({ active }: { active: ProfileView }) {
   return (
     <nav className="flex gap-6 border-b border-line" aria-label="Profile view">
@@ -34,25 +35,6 @@ export function ViewTabs({ active }: { active: ProfileView }) {
         );
       })}
     </nav>
-  );
-}
-
-/** Shared empty state, so both sides read the same way before there is data. */
-function EmptyState({
-  title,
-  body,
-  action,
-}: {
-  title: string;
-  body: string;
-  action: React.ReactNode;
-}) {
-  return (
-    <div className="border border-line bg-white px-8 py-14 text-center">
-      <h2 className="display-caps text-xl">{title}</h2>
-      <p className="body-copy mx-auto mt-3 max-w-sm">{body}</p>
-      <div className="mt-6 flex justify-center">{action}</div>
-    </div>
   );
 }
 
@@ -95,19 +77,21 @@ export function RenterView({ enabled }: { enabled: boolean }) {
     <EmptyState
       title="No bookings yet"
       body="Gear you book will appear here, with collection dates and the owner's details."
-      action={<ButtonLink href="/">Browse gear</ButtonLink>}
+      action={<ButtonLink href="/browse">Browse products</ButtonLink>}
     />
   );
 }
 
 export function OwnerView({ enabled, availableDays = [1, 2, 3, 4, 5, 6, 7] }: { enabled: boolean; availableDays?: number[] }) {
   if (!enabled) return <NotEnabled side="owner" />;
-  return <div className="space-y-6">
-    <ProfileAvailabilityCard availableDays={availableDays} action={saveProfileAvailability} />
-    <EmptyState
-      title="No listings yet"
-      body="Gear you list will appear here, along with requests from people wanting to book it."
-      action={<ButtonLink href="/">List your gear</ButtonLink>}
-    />
-  </div>;
+  return (
+    <div className="space-y-6">
+      <ProfileAvailabilityCard availableDays={availableDays} action={saveProfileAvailability} />
+      <EmptyState
+        title="No listings yet"
+        body="Gear you list will appear here, along with requests from people wanting to book it."
+        action={<ButtonLink href="/listings/new">List your gear</ButtonLink>}
+      />
+    </div>
+  );
 }

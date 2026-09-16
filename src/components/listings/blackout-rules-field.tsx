@@ -179,14 +179,14 @@ export function BlackoutRulesField({
 
       <input type="hidden" name="initial_blackouts" value={JSON.stringify(ranges)} />
 
-      <div className="mt-4 max-w-sm rounded-sm border border-line select-none">
+      <div className="mt-4 max-w-sm rounded-2xl border border-line select-none">
         <div className="flex items-center justify-between border-b border-line px-3 py-2">
           <button
             type="button"
             onClick={() => step(-1)}
             disabled={!canGoBack}
             aria-label="Previous month"
-            className="rounded-sm px-2 py-1 text-sm text-ink-soft transition-colors hover:bg-sand hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
+            className="rounded-full px-2 py-1 text-sm text-ink-soft transition-colors hover:bg-surface-muted hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
           >
             ‹
           </button>
@@ -196,7 +196,7 @@ export function BlackoutRulesField({
             onClick={() => step(1)}
             disabled={!canGoForward}
             aria-label="Next month"
-            className="rounded-sm px-2 py-1 text-sm text-ink-soft transition-colors hover:bg-sand hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
+            className="rounded-full px-2 py-1 text-sm text-ink-soft transition-colors hover:bg-surface-muted hover:text-ink disabled:opacity-30 disabled:hover:bg-transparent"
           >
             ›
           </button>
@@ -235,13 +235,13 @@ export function BlackoutRulesField({
                 onPointerEnter={() => {
                   if (selectable && drag) setDrag({ ...drag, over: day });
                 }}
-                className={`aspect-square rounded-sm text-sm transition-colors ${
+                className={`aspect-square rounded-lg text-sm transition-colors ${
                   isSelected
-                    ? "bg-ink text-cream"
+                    ? "bg-ink text-white"
                     : selectable
-                      ? "hover:bg-sand"
+                      ? "hover:bg-surface-muted"
                       : "cursor-default text-ink-soft/30"
-                } ${dragging && !isSelected ? "bg-sand" : ""}`}
+                } ${dragging && !isSelected ? "bg-surface-muted" : ""}`}
               >
                 {index + 1}
               </button>
@@ -255,7 +255,7 @@ export function BlackoutRulesField({
           {ranges.map((range) => (
             <li
               key={range.start_date}
-              className="flex items-center gap-2 rounded-sm border border-line px-3 py-2 text-sm"
+              className="flex items-center gap-2 rounded-full border border-line px-3 py-2 text-sm"
             >
               <span>{describe(range)}</span>
               <button
@@ -276,7 +276,7 @@ export function BlackoutRulesField({
       )}
 
       {error && (
-        <p role="alert" className="mt-3 text-xs text-clay">
+        <p role="alert" className="mt-3 text-xs text-accent-dark">
           {error}
         </p>
       )}

@@ -3,9 +3,8 @@
 import { useState } from "react";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import { Button, Field } from "../ui";
+import { Button, Chip, Field, Modal } from "../ui";
 import { formatWalletAmount, simulateWalletRequest, walletAuthHeader, type WalletState } from "@/lib/wallet";
-import { WalletDialog } from "./wallet-dialog";
 
 const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
@@ -108,17 +107,16 @@ export function TopUpModal({ apiUrl, onClose, onWalletRefresh, onSuccess }: Prop
           <p className="text-sm font-medium">Choose an amount</p>
           <div className="mt-2 flex flex-wrap gap-2">
             {[20, 50, 100, 200].map((preset) => (
-              <button
-                type="button"
+              <Chip
                 key={preset}
+                selected={Number(amount) === preset}
                 onClick={() => {
                   setAmount(String(preset));
                   setError("");
                 }}
-                className={`rounded-sm border px-4 py-2 text-sm ${Number(amount) === preset ? "border-ink bg-sand" : "border-line bg-white"}`}
               >
                 ${preset}
-              </button>
+              </Chip>
             ))}
           </div>
         </div>
@@ -136,7 +134,7 @@ export function TopUpModal({ apiUrl, onClose, onWalletRefresh, onSuccess }: Prop
           }}
         />
         {error && (
-          <p role="alert" className="text-sm text-clay">
+          <p role="alert" className="text-sm text-accent-dark">
             {error}
           </p>
         )}
@@ -161,7 +159,7 @@ export function TopUpModal({ apiUrl, onClose, onWalletRefresh, onSuccess }: Prop
     title = "Enter payment details";
     content = (
       <div className="mt-6 space-y-5">
-        <div className="border border-line bg-sand p-4">
+        <div className="rounded-2xl border border-line bg-surface-muted p-4">
           <p className="text-sm">Test mode payment for {formatWalletAmount(amountCents)}</p>
           <p className="body-copy mt-2">No Stripe key is configured. This simulated payment does not charge a card.</p>
         </div>
@@ -189,11 +187,11 @@ export function TopUpModal({ apiUrl, onClose, onWalletRefresh, onSuccess }: Prop
     title = "Payment submitted";
     content = (
       <div className="mt-6 space-y-5">
-        <p role="status" className="border-l-2 border-ink bg-sand px-3 py-2 text-sm">
+        <p role="status" className="rounded-lg border-l-2 border-ink bg-surface-muted px-3 py-2 text-sm">
           Payment confirmed, updating your balance…
         </p>
         {error && (
-          <p role="alert" className="text-sm text-clay">
+          <p role="alert" className="text-sm text-accent-dark">
             {error}
           </p>
         )}
@@ -210,9 +208,9 @@ export function TopUpModal({ apiUrl, onClose, onWalletRefresh, onSuccess }: Prop
   }
 
   return (
-    <WalletDialog title={title} onClose={onClose}>
+    <Modal title={title} onClose={onClose}>
       {content}
-    </WalletDialog>
+    </Modal>
   );
 }
 
@@ -254,11 +252,11 @@ function StripePaymentForm({
   return (
     <form className="mt-6 space-y-5" onSubmit={submit}>
       <p className="body-copy">Paying {formatWalletAmount(amountCents)} securely with Stripe.</p>
-      <div className="rounded-sm border border-line bg-white p-3">
+      <div className="rounded-lg border border-line bg-white p-3">
         <PaymentElement />
       </div>
       {error && (
-        <p role="alert" className="text-sm text-clay">
+        <p role="alert" className="text-sm text-accent-dark">
           {error}
         </p>
       )}

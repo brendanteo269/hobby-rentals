@@ -1,17 +1,19 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Route } from "next";
+import { X } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 
-/** Page-width container. Matches the wireframe's narrow editorial measure. */
+/** Page-width container for the marketplace's wider card grids. */
 export function Container({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <div className={`mx-auto w-full max-w-5xl px-6 ${className}`}>{children}</div>;
+  return <div className={`mx-auto w-full max-w-7xl px-6 ${className}`}>{children}</div>;
 }
 
 /** Section heading with an optional link on the right. */
 export function SectionHead({ title, href, linkLabel }: { title: string; href?: Route; linkLabel?: string }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <h2 className="display-caps text-2xl sm:text-3xl">{title}</h2>
+      <h2 className="heading text-2xl sm:text-3xl">{title}</h2>
       {href && linkLabel && (
         <Link href={href} className="eyebrow hover:text-ink transition-colors">
           {linkLabel} <span aria-hidden="true">→</span>
@@ -21,17 +23,23 @@ export function SectionHead({ title, href, linkLabel }: { title: string; href?: 
   );
 }
 
-type ButtonProps = { variant?: "solid" | "outline"; className?: string; children: ReactNode };
+type ButtonProps = { variant?: "accent" | "solid" | "outline" | "outlineOnDark"; className?: string; children: ReactNode };
 
 const buttonBase =
-  "inline-flex items-center justify-center rounded-sm px-5 py-2.5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-clay disabled:opacity-60";
+  "inline-flex items-center justify-center rounded-full px-5 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 disabled:opacity-60";
 
 const buttonVariants = {
-  solid: "bg-ink text-cream hover:bg-ink-soft",
-  outline: "border border-line bg-transparent text-ink hover:bg-sand",
+  accent: "bg-accent text-white hover:bg-accent-dark",
+  solid: "bg-ink text-white hover:bg-ink/90",
+  outline: "border border-line bg-white text-ink hover:bg-surface-muted",
+  /** Bordered button for dark sections (footer, dark cards) — a separate
+   * variant rather than an `outline` override, since overriding conflicting
+   * border/bg/text utilities via className fights the base variant's own
+   * classes and can lose depending on Tailwind's generated CSS order. */
+  outlineOnDark: "border border-white/40 bg-transparent text-white hover:bg-white/10",
 };
 
-export function Button({ variant = "solid", className = "", children, ...props }: ButtonProps & ComponentProps<"button">) {
+export function Button({ variant = "accent", className = "", children, ...props }: ButtonProps & ComponentProps<"button">) {
   return (
     <button className={`${buttonBase} ${buttonVariants[variant]} ${className}`} {...props}>
       {children}
@@ -39,7 +47,7 @@ export function Button({ variant = "solid", className = "", children, ...props }
   );
 }
 
-export function ButtonLink({ variant = "solid", className = "", children, ...props }: ButtonProps & ComponentProps<typeof Link>) {
+export function ButtonLink({ variant = "accent", className = "", children, ...props }: ButtonProps & ComponentProps<typeof Link>) {
   return (
     <Link className={`${buttonBase} ${buttonVariants[variant]} ${className}`} {...props}>
       {children}
@@ -48,21 +56,21 @@ export function ButtonLink({ variant = "solid", className = "", children, ...pro
 }
 
 const inputBase =
-  "w-full rounded-sm border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-ink";
+  "w-full border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-ink placeholder:text-ink-soft/70 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-ink-soft";
 
-/** Bare text input carrying the shared field styling. */
-export function Input({ className = "", ...props }: ComponentProps<"input">) {
-  return <input className={`${inputBase} ${className}`} {...props} />;
+/** Bare text input carrying the shared field styling. `pill` is for search-bar-style contexts (hero, filter bars); form fields stay `rounded-lg`. */
+export function Input({ className = "", pill = false, ...props }: ComponentProps<"input"> & { pill?: boolean }) {
+  return <input className={`${inputBase} ${pill ? "rounded-full" : "rounded-lg"} ${className}`} {...props} />;
 }
 
-export function Select({ className = "", ...props }: ComponentProps<"select">) {
-  return <select className={`${inputBase} ${className}`} {...props} />;
+export function Select({ className = "", pill = false, ...props }: ComponentProps<"select"> & { pill?: boolean }) {
+  return <select className={`${inputBase} ${pill ? "rounded-full" : "rounded-lg"} ${className}`} {...props} />;
 }
 
 /** Marks a label as required, so it reads before a glance reaches the control. */
 function RequiredMark() {
   return (
-    <span aria-hidden="true" className="text-clay">
+    <span aria-hidden="true" className="text-accent">
       {" "}
       *
     </span>
@@ -107,7 +115,7 @@ function FieldWrapper({
         <p
           id={messageId}
           {...(error ? { role: "alert" } : {})}
-          className={`mt-2 text-xs ${error ? "text-clay" : "text-ink-soft"}`}
+          className={`mt-2 text-xs ${error ? "text-accent-dark" : "text-ink-soft"}`}
         >
           {error ?? hint}
         </p>
@@ -165,7 +173,7 @@ export function TextareaField({
       <textarea
         id={id}
         required={required}
-        className={`${inputBase} mt-2 resize-y ${className}`}
+        className={`${inputBase} rounded-lg mt-2 resize-y ${className}`}
         {...messageProps({ label, hint, error, id })}
         {...props}
       />
@@ -199,6 +207,72 @@ export function SelectField({
   );
 }
 
+type BadgeVariant = "neutral" | "accent" | "dark";
+
+const badgeVariants: Record<BadgeVariant, string> = {
+  neutral: "border border-line bg-white/95 text-ink",
+  accent: "bg-accent-soft text-accent-dark",
+  dark: "bg-ink text-white",
+};
+
+/** Small pill label — location tags, filter chips, marketing ribbons. */
+export function Badge({
+  variant = "neutral",
+  className = "",
+  children,
+}: {
+  variant?: BadgeVariant;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-full px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide ${badgeVariants[variant]} ${className}`}
+    >
+      {children}
+    </span>
+  );
+}
+
+/**
+ * Toggle pill — the "selected / unselected" control repeated across price
+ * blocks, weekday pickers, duration toggles and filter bars. One primitive
+ * instead of each caller hand-rolling the same two-state style.
+ */
+const chipSizes = {
+  md: "px-4 py-2 text-sm",
+  sm: "px-3 py-1.5 text-xs",
+};
+
+export function Chip({
+  selected = false,
+  size = "md",
+  className = "",
+  children,
+  ...props
+}: {
+  selected?: boolean;
+  /** "sm" for a dense row (filter bars); "md" everywhere else. */
+  size?: keyof typeof chipSizes;
+  className?: string;
+  children: ReactNode;
+} & ComponentProps<"button">) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      className={`inline-flex items-center justify-center rounded-full border font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 ${chipSizes[size]} ${
+        selected
+          ? "border-ink bg-ink text-white"
+          : "border-line bg-white text-ink-soft hover:border-ink hover:text-ink"
+      } ${className}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+
 /** Shown where a list would be, when the list is empty. */
 export function EmptyState({
   title,
@@ -210,8 +284,8 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="border border-line bg-white px-6 py-16 text-center">
-      <p className="display-caps text-base">{title}</p>
+    <div className="rounded-2xl border border-line bg-white px-6 py-16 text-center">
+      <p className="heading text-base">{title}</p>
       <p className="body-copy mx-auto mt-2 max-w-sm">{body}</p>
       {action && <div className="mt-6 flex justify-center">{action}</div>}
     </div>
@@ -222,30 +296,74 @@ export function EmptyState({
 export function FormError({ message }: { message?: string }) {
   if (!message) return null;
   return (
-    <p role="alert" className="border-l-2 border-clay bg-sand px-3 py-2 text-sm text-ink">
+    <p role="alert" className="rounded-lg border-l-2 border-accent bg-accent-soft px-3 py-2 text-sm text-ink">
       {message}
     </p>
   );
 }
 
 /**
- * Stands in for photography that hasn't been shot yet. The wireframe marks
- * these slots too — swap for next/image once real assets exist.
+ * Fixed-overlay modal shared by the wallet flows. Closes on a click outside
+ * the panel; callers own their own step/error state.
+ */
+export function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+      role="presentation"
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl border border-line bg-white p-6 shadow-xl sm:p-8"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <h2 id="modal-title" className="heading text-xl">
+            {title}
+          </h2>
+          <button className="text-ink-soft hover:text-ink" aria-label="Close dialog" onClick={onClose}>
+            <X className="size-5" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A listing/hero photo, or — until one exists — a labelled placeholder box.
+ * `src` is optional on purpose: real listings have no photo pipeline yet
+ * (see `ListingCard.primary_photo_key` in `lib/listings.ts`), so callers
+ * pass a mock photo where they have one and fall back to the label
+ * otherwise, without the two cases needing separate components.
  */
 export function ImageSlot({
   label,
+  src,
   align = "center",
   className = "",
 }: {
   label: string;
+  src?: string;
   /** "end" keeps the caption clear of content overlaid on the slot. */
   align?: "center" | "end";
   className?: string;
 }) {
+  if (src) {
+    return (
+      <div className={`relative overflow-hidden bg-surface-muted ${className}`}>
+        <Image src={src} alt={label} fill sizes="(max-width: 768px) 100vw, 480px" className="object-cover" />
+      </div>
+    );
+  }
+
   const position =
     align === "end" ? "items-end justify-end p-4" : "items-center justify-center px-4";
   return (
-    <div className={`flex bg-stone ${position} ${className}`}>
+    <div className={`flex bg-surface-muted ${position} ${className}`}>
       <span className="text-center text-xs text-ink-soft">{label}</span>
     </div>
   );

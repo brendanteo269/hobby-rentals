@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Field } from "@/components/ui";
+import { Chip, Field } from "@/components/ui";
 
 type Block = "DAY" | "WEEK";
 
@@ -24,15 +24,19 @@ export function PricePerBlockField({ error }: { error?: string }) {
     <div>
       <span className="block text-sm font-medium">
         Price per rental block
-        <span aria-hidden="true" className="text-clay">
+        <span aria-hidden="true" className="text-accent">
           {" "}
           *
         </span>
       </span>
 
       <div className="mt-2 flex flex-wrap gap-2">
-        <BlockChip label="Per day" checked={block === "DAY"} onSelect={() => setBlock("DAY")} />
-        <BlockChip label="Per week" checked={block === "WEEK"} onSelect={() => setBlock("WEEK")} />
+        <Chip selected={block === "DAY"} onClick={() => setBlock("DAY")}>
+          Per day
+        </Chip>
+        <Chip selected={block === "WEEK"} onClick={() => setBlock("WEEK")}>
+          Per week
+        </Chip>
       </div>
 
       {/* The field's own `name` carries which block was chosen straight into
@@ -58,35 +62,10 @@ export function PricePerBlockField({ error }: { error?: string }) {
       )}
 
       {!block && error && (
-        <p role="alert" className="mt-2 text-xs text-clay">
+        <p role="alert" className="mt-2 text-xs text-accent-dark">
           {error}
         </p>
       )}
     </div>
-  );
-}
-
-/** A toggleable pill, styled to match the blackout-rules weekday picker. */
-function BlockChip({
-  label,
-  checked,
-  onSelect,
-}: {
-  label: string;
-  checked: boolean;
-  onSelect: () => void;
-}) {
-  return (
-    <label className="cursor-pointer border border-line px-4 py-2 text-sm transition-colors hover:border-ink has-checked:border-ink has-checked:bg-sand">
-      {/* A radio, not a checkbox: the two blocks are mutually exclusive. */}
-      <input
-        type="radio"
-        name="price_block_choice"
-        checked={checked}
-        onChange={onSelect}
-        className="sr-only"
-      />
-      {label}
-    </label>
   );
 }

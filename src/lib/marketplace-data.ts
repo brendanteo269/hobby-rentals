@@ -6,75 +6,63 @@
  * renders it.
  */
 
-export type Category = { name: string; listings: string };
-export type Step = { n: string; title: string; body: string };
+const unsplash = (id: string) => `https://images.unsplash.com/photo-${id}?w=800&h=800&fit=crop&q=80`;
+
+export type Category = { name: string; count: string };
 export type Listing = {
   title: string;
   price: string;
-  body: string;
-  /** Neighbourhood and the owner's typical reply time. */
-  meta: string;
-  tag: string;
-  /** Description of the photograph this card still needs. */
+  category: string;
+  location: string;
+  rating: number;
+  /** Alt text for the photo, and its caption before one existed. */
   slot: string;
+  photoUrl: string;
 };
 
 export const CATEGORIES: Category[] = [
-  { name: "Cameras & drones", listings: "431 listings" },
-  { name: "Camping & hiking", listings: "687 listings" },
-  { name: "Water sports", listings: "312 listings" },
-  { name: "Music & audio", listings: "526 listings" },
-];
-
-export const STEPS: Step[] = [
-  {
-    n: "01",
-    title: "Find it nearby",
-    body: "Filter by hobby, dates and MRT stop. Every listing shows the owner's real response time.",
-  },
-  {
-    n: "02",
-    title: "Book the dates",
-    body: "Request the days you need and pay in the app. Nothing leaves your account until the owner accepts.",
-  },
-  {
-    n: "03",
-    title: "Collect and go",
-    body: "Meet the owner, check the kit together in the app, and the rental is covered from that moment.",
-  },
+  { name: "Cameras & drones", count: "140+ available" },
+  { name: "Camping & hiking", count: "220+ available" },
+  { name: "Water sports", count: "90+ available" },
+  { name: "Music & studio audio", count: "150+ available" },
+  { name: "Power tools & DIY", count: "110+ available" },
 ];
 
 export const LISTINGS: Listing[] = [
   {
     title: "DJI Osmo Pocket 4 Creator Combo",
     price: "$49.00 / 2 days",
-    body: "Wide lens, two batteries and the wireless mic in the case.",
-    meta: "Bukit Timah · replies in 2h",
-    tag: "Cameras",
+    category: "Cameras",
+    location: "Bukit Timah",
+    rating: 4.9,
     slot: "Pocket gimbal on a mini tripod",
+    photoUrl: unsplash("1495707902641-75cac588d2e9"),
   },
   {
     title: "Fujifilm X-T5 with 35mm f/1.4",
     price: "$58.00 / 2 days",
-    body: "Godox speedlight and three cards included. 41 rentals, no claims.",
-    meta: "Tiong Bahru · replies in 40m",
-    tag: "Cameras",
+    category: "Cameras",
+    location: "Tiong Bahru",
+    rating: 4.9,
     slot: "Mirrorless body with flash",
+    photoUrl: unsplash("1516035069371-29a1b244cc32"),
   },
   {
     title: "Perception Sound 10.5 Kayak",
     price: "$45.00 / day",
-    body: "Paddle, dry bag and roof straps. Collect two minutes from the water.",
-    meta: "East Coast Park · replies in 3h",
-    tag: "Water sports",
+    category: "Water sports",
+    location: "East Coast Park",
+    rating: 4.8,
     slot: "Sea kayak on the sand",
+    photoUrl: unsplash("1500534623283-312aade485b7"),
   },
   {
     title: "Nord Stage 4 Compact 73",
     price: "$72.00 / 2 days",
-    body: "Gig bag, sustain pedal and stand. Two-man lift, so bring a friend.",
-    meta: "Serangoon · replies in 1h",
-    tag: "Music & audio",
+    category: "Music & audio",
+    location: "Serangoon",
+    rating: 4.8,
     slot: "Stage keyboard in a home studio",
+    photoUrl: unsplash("1520523839897-bd0b52f945a0"),
   },
 ];

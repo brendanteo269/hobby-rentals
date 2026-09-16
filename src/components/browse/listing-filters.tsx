@@ -25,7 +25,7 @@ import {
  */
 export function ListingFilters({ filters }: { filters: BrowseFilters }) {
   return (
-    <form method="get" action="/browse" role="search" className="border border-line bg-white p-5">
+    <form method="get" action="/browse" role="search" className="rounded-2xl border border-line bg-white p-5">
       {/* Filters already applied ride along as hidden fields, so submitting
           the keyword box narrows the current view instead of resetting it. */}
       {filters.category.map((value) => (

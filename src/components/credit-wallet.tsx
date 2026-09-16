@@ -6,6 +6,7 @@ import { BalanceSummaryCard } from "./wallet/balance-summary-card";
 import { TopUpModal } from "./wallet/top-up-modal";
 import { WithdrawModal } from "./wallet/withdraw-modal";
 import { TransactionHistoryTable } from "./wallet/transaction-history-table";
+import { useToast } from "./toast";
 
 export function CreditWallet() {
   const [wallet, setWallet] = useState<WalletState>(EMPTY_WALLET);
@@ -17,6 +18,7 @@ export function CreditWallet() {
   // just changes silently with nothing marking that the action completed.
   const [statusMessage, setStatusMessage] = useState("");
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+  const { show, dismiss } = useToast();
 
   const refreshWallet = useCallback(async (): Promise<WalletState> => {
     const headers = await walletAuthHeader();
@@ -28,13 +30,26 @@ export function CreditWallet() {
   }, [apiUrl]);
 
   useEffect(() => {
+    const loadingToast = show("Loading wallet…", "loading");
     const timer = window.setTimeout(() => {
       refreshWallet()
         .catch(() => setApiError("Wallet data is temporarily unavailable."))
-        .finally(() => setLoading(false));
+        .finally(() => {
+          setLoading(false);
+          dismiss(loadingToast);
+        });
     }, 0);
-    return () => window.clearTimeout(timer);
-  }, [refreshWallet]);
+    // Strict Mode's dev-only mount→cleanup→mount cycle runs this effect body
+    // twice; the first pass's `show` already added a real toast before its
+    // timer is cancelled, so the cleanup must dismiss it too — otherwise that
+    // trial run's toast is never removed and lingers forever.
+    return () => {
+      window.clearTimeout(timer);
+      dismiss(loadingToast);
+    };
+    // Runs once on mount — refreshWallet, show and dismiss are all stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Auto-dismisses like a toast, rather than needing a close button — a
   // confirmation that lingers forever reads as a stuck notification.
@@ -55,27 +70,18 @@ export function CreditWallet() {
   };
 
   return (
-    <section className="space-y-8" aria-labelledby="credit-wallet-heading">
-      <div>
-        <p className="eyebrow">Money for your rentals</p>
-        <h2 id="credit-wallet-heading" className="display-caps mt-2 text-2xl">
-          Credit wallet
-        </h2>
-        <p className="body-copy mt-2">Keep credits ready for your next hobby, or withdraw funds you have earned.</p>
-      </div>
+    <section className="space-y-8" aria-label="Credit wallet">
       {apiError && (
-        <p role="alert" className="border-l-2 border-clay bg-sand px-3 py-2 text-sm">
+        <p role="alert" className="rounded-lg border-l-2 border-accent bg-accent-soft px-3 py-2 text-sm">
           {apiError}
         </p>
       )}
       {statusMessage && (
-        <p role="status" className="border-l-2 border-ink bg-sand px-3 py-2 text-sm">
+        <p role="status" className="rounded-lg border-l-2 border-ink bg-surface-muted px-3 py-2 text-sm">
           {statusMessage}
         </p>
       )}
-      {loading ? (
-        <p role="status">Loading wallet…</p>
-      ) : apiError ? (
+      {loading ? null : apiError ? (
         <p>Wallet balances are unavailable.</p>
       ) : (
         <>

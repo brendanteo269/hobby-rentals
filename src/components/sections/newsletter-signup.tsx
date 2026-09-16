@@ -7,11 +7,11 @@ import { Container, Button, Input } from "@/components/ui";
 export function NewsletterSignup() {
   return (
     <Container className="pt-20 text-center">
-      <p className="text-xs text-ink-soft">Sign up for emails</p>
-      <h2 className="display-caps mx-auto mt-3 max-w-lg text-2xl sm:text-3xl">
+      <p className="eyebrow">Sign up for emails</p>
+      <h2 className="heading mx-auto mt-3 max-w-lg text-2xl sm:text-3xl">
         New gear, new hobbies, every week
       </h2>
-      <form className="mx-auto mt-8 max-w-sm">
+      <form className="mx-auto mt-8 flex max-w-sm flex-col gap-3 sm:flex-row">
         <label htmlFor="newsletter" className="sr-only">
           Email address
         </label>
@@ -19,12 +19,11 @@ export function NewsletterSignup() {
           id="newsletter"
           name="email"
           type="email"
+          pill
           placeholder="Enter your email address"
-          className="text-center"
+          className="flex-1"
         />
-        <Button type="submit" className="mt-4">
-          Sign up
-        </Button>
+        <Button type="submit">Sign up</Button>
       </form>
     </Container>
   );
