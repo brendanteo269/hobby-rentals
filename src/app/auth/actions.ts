@@ -7,8 +7,9 @@ import { createClient } from "@/lib/supabase/server";
 import { ACTIVITY_COOKIE } from "@/lib/session-policy";
 import { validatePasswordComplexity, validateNewPassword } from "@/lib/password";
 import { validateEmail } from "@/lib/email";
-import { RESET_REQUESTED_PATH, checkEmailPath, loginPath } from "@/lib/routes";
+import { RESET_REQUESTED_PATH, authErrorPath, checkEmailPath, loginPath } from "@/lib/routes";
 import { clearRecoveryMark, hasRecoveryMarkFor } from "@/lib/recovery";
+import { exchangeEmailLink } from "@/lib/auth-callback";
 import type { FieldErrors } from "@/lib/api/client";
 import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/login-attempts";
 
@@ -297,4 +298,53 @@ export async function resetPassword(
   (await cookies()).delete(ACTIVITY_COOKIE);
 
   redirect(loginPath("password-reset"));
+}
+
+/**
+ * Verifies a signup confirmation link, from the POST the member's click makes
+ * rather than from the GET that merely opened the page.
+ *
+ * The split is the entire point of the /auth/confirm page existing. A
+ * confirmation token is single-use, and a link sitting in an inbox is fetched
+ * by plenty of things that are not the member: Gmail's link safety scan,
+ * Chrome's prefetcher, a university mail gateway rewriting URLs. Every one of
+ * those issues a GET. A GET that verified would spend the token before the
+ * member ever clicked, and they would be shown "that link has expired" for an
+ * account which by then is already confirmed — observed in Chrome against a
+ * personal Gmail address, not merely anticipated.
+ *
+ * None of those fetchers submit a form. Requiring a POST is what keeps the
+ * token alive until a human asks for it.
+ *
+ * The token arrives in hidden fields, which the URL controls — exactly as it
+ * did when this was a route handler reading the query string. That is safe for
+ * the same reason it was then: resolveLinkType refuses any `type` the callback
+ * does not serve, so a link still cannot talk its way into privileges the
+ * route was not meant to grant.
+ */
+export async function confirmEmail(formData: FormData): Promise<void> {
+  const params = new URLSearchParams();
+  for (const key of ["token_hash", "type", "code"]) {
+    const value = formData.get(key);
+    if (typeof value === "string" && value) params.set(key, value);
+  }
+
+  const supabase = await createClient();
+  const result = await exchangeEmailLink(supabase, params, ["signup", "email"]);
+
+  if (!result.ok) {
+    // Logged rather than reflected: an earlier version echoed this through the
+    // query string and back onto the page, which let a crafted link put
+    // arbitrary text on a HobbyRentals page.
+    console.error("Email confirmation failed:", result.detail);
+    redirect(authErrorPath("link-invalid"));
+  }
+
+  // Verifying established a session, and for a signup that session has to go:
+  // S1-01 AC2 sends the member to the login screen, and arriving there already
+  // logged in makes no sense. The link may well have been opened on a
+  // different device from the one they will actually use.
+  await supabase.auth.signOut();
+
+  redirect(loginPath("verified"));
 }

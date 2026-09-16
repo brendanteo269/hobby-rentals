@@ -30,7 +30,7 @@ type Advice = {
 const ADVICE: Record<AuthErrorCode, Advice> = {
   "link-invalid": {
     message: "That link has expired or has already been used.",
-    body: "Confirmation links expire after 24 hours and can only be used once. Signing up again will send a fresh one.",
+    body: "Confirmation links expire after 24 hours and can only be used once. Some mail providers follow the link before you do, which confirms the account and leaves you this message — so try logging in first. If that is refused, signing up again will send a fresh link.",
     action: { href: "/signup", label: "Back to sign up" },
   },
   "link-missing": {
