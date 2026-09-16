@@ -8,6 +8,20 @@ export function formatMoney(cents: number): string {
   return MONEY.format(cents / 100);
 }
 
+/**
+ * Parses a dollar-amount form field into integer cents.
+ *
+ * The form collects dollars, because that is what an owner is pricing in, but
+ * the API speaks cents everywhere. Rounding rather than truncating keeps
+ * "10.005" from quietly becoming $10.00. Returns null for a blank field; a
+ * malformed one becomes NaN, left for the caller to check.
+ */
+export function dollarsToCents(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  return Math.round(Number(trimmed) * 100);
+}
+
 /** "5 Sept 2026" — a calendar day, with no time of day implied. */
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(LOCALE, {

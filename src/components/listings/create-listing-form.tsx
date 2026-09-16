@@ -10,6 +10,7 @@ import { RentalDurationField } from "@/components/listings/rental-duration-field
 import { PhotoUploadField } from "@/components/listings/photo-upload-field";
 import { PricePerBlockField } from "@/components/listings/price-per-block-field";
 import { submitListing, type CreateListingState } from "@/app/listings/actions";
+import { dollarsToCents, formatMoney } from "@/lib/format";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
@@ -59,9 +60,12 @@ const EMPTY_FIELDS: FieldValues = {
 export function CreateListingForm({
   profileAvailableDays,
   profileDefaultLocation,
+  depositCapBps,
 }: {
   profileAvailableDays: number[];
   profileDefaultLocation: LocationArea | null;
+  /** Basis points (10000 = 100%) a deposit may not exceed of the weekly-equivalent rate - drives the live recommendation under the deposit field. */
+  depositCapBps: number;
 }) {
   const [state, formAction, pending] = useActionState<CreateListingState, FormData>(
     submitListing,
@@ -92,6 +96,14 @@ export function CreateListingForm({
     <K extends keyof FieldValues>(key: K) =>
     (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
       setFields((current) => ({ ...current, [key]: event.target.value }));
+
+  // Mirrors PricePerBlockField's own internal state via its onRateChange
+  // callback, purely so the deposit field below can show a live cap
+  // recommendation - the price itself is still submitted by that field's own
+  // named input, not from this copy.
+  const [priceBlock, setPriceBlock] = useState<"DAY" | "WEEK" | null>(null);
+  const [priceRate, setPriceRate] = useState("");
+  const depositHint = depositCapHint(depositCapBps, priceBlock, priceRate);
 
   return (
     <form action={formAction} className="space-y-6">
@@ -190,7 +202,13 @@ export function CreateListingForm({
         {/* Only one of the two is ever submitted, so at most one of these two
             backend error slots is ever populated - whichever it is applies to
             the one shared box. */}
-        <PricePerBlockField error={errors.price_per_day_cents ?? errors.price_per_week_cents} />
+        <PricePerBlockField
+          error={errors.price_per_day_cents ?? errors.price_per_week_cents}
+          onRateChange={(block, rate) => {
+            setPriceBlock(block);
+            setPriceRate(rate);
+          }}
+        />
 
         <Field
           label="Security deposit"
@@ -202,7 +220,7 @@ export function CreateListingForm({
           inputMode="decimal"
           placeholder="0.00"
           required
-          hint="Held, not charged. Enter 0 for none."
+          hint={depositHint}
           error={errors.deposit_cents}
           className="max-w-xs"
           value={fields.deposit}
@@ -280,6 +298,26 @@ export function CreateListingForm({
 function todayIso() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
+/**
+ * The deposit field's hint text: the static explanation always, plus a live
+ * "recommended up to $X" once a rate is entered.
+ *
+ * Mirrors CreateListingRequest._deposit_within_cap's formula exactly (a
+ * week rate used directly, or a day rate x7) so the number shown here is
+ * never a value the backend would then reject - a proactive echo of that
+ * rule, not a second one that could drift from it.
+ */
+function depositCapHint(depositCapBps: number, block: "DAY" | "WEEK" | null, rate: string): string {
+  const base = "Held, not charged. Enter 0 for none.";
+  const rateCents = dollarsToCents(rate);
+  if (block === null || rateCents === null || Number.isNaN(rateCents) || rateCents <= 0) {
+    return base;
+  }
+  const weeklyEquivalentCents = block === "WEEK" ? rateCents : rateCents * 7;
+  const capCents = Math.floor((weeklyEquivalentCents * depositCapBps) / 10_000);
+  return `${base} Recommended: up to ${formatMoney(capCents)} (${depositCapBps / 100}% of the weekly rate).`;
 }
 
 /**

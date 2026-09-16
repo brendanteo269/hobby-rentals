@@ -75,6 +75,16 @@ export function createListing(data: CreateListingRequest) {
   });
 }
 
+export type ListingLimits = {
+  /** Basis points (10000 = 100%) a deposit may not exceed of the listing's weekly-equivalent rate. */
+  deposit_cap_bps: number;
+};
+
+/** Server-enforced listing limits, so the create-listing form can show an owner the deposit cap before they submit, not just reject it after. */
+export function getListingLimits() {
+  return backendRequest<ListingLimits>("/listings/limits");
+}
+
 /**
  * The signed-in owner's full rental inventory — every status, newest first.
  * Unlike browseListings, this includes drafts and archived listings, since

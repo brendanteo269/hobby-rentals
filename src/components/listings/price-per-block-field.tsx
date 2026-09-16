@@ -16,9 +16,26 @@ type Block = "DAY" | "WEEK";
  * The backend requires at least one to be chosen; nothing is submitted under
  * either name until the owner picks one.
  */
-export function PricePerBlockField({ error }: { error?: string }) {
+export function PricePerBlockField({
+  error,
+  onRateChange,
+}: {
+  error?: string;
+  /** Fires on every block/rate change, including back to (null, "") when the owner hasn't picked a block yet - so a parent showing a rate-derived hint (the deposit cap) always reflects the current choice. */
+  onRateChange?: (block: Block | null, rateDollars: string) => void;
+}) {
   const [block, setBlock] = useState<Block | null>(null);
   const [rate, setRate] = useState("");
+
+  function chooseBlock(next: Block) {
+    setBlock(next);
+    onRateChange?.(next, rate);
+  }
+
+  function changeRate(next: string) {
+    setRate(next);
+    onRateChange?.(block, next);
+  }
 
   return (
     <div>
@@ -31,10 +48,10 @@ export function PricePerBlockField({ error }: { error?: string }) {
       </span>
 
       <div className="mt-2 flex flex-wrap gap-2">
-        <Chip selected={block === "DAY"} onClick={() => setBlock("DAY")}>
+        <Chip selected={block === "DAY"} onClick={() => chooseBlock("DAY")}>
           Per day
         </Chip>
-        <Chip selected={block === "WEEK"} onClick={() => setBlock("WEEK")}>
+        <Chip selected={block === "WEEK"} onClick={() => chooseBlock("WEEK")}>
           Per week
         </Chip>
       </div>
@@ -54,7 +71,7 @@ export function PricePerBlockField({ error }: { error?: string }) {
             inputMode="decimal"
             placeholder={block === "DAY" ? "25.00" : "120.00"}
             value={rate}
-            onChange={(event) => setRate(event.target.value)}
+            onChange={(event) => changeRate(event.target.value)}
             required
             hint="SGD"
             error={error}
