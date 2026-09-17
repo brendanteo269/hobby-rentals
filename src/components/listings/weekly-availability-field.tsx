@@ -18,12 +18,15 @@ export function WeeklyAvailabilityField({
   onCustomChange,
   days,
   onDaysChange,
+  error,
 }: {
   profileAvailableDays: number[];
   custom: boolean;
   onCustomChange: (custom: boolean) => void;
   days: number[];
   onDaysChange: (days: number[]) => void;
+  /** From the API: on edit, a schedule that would drop a confirmed booking's day is refused. */
+  error?: string;
 }) {
   const shown = custom ? days : profileAvailableDays;
 
@@ -94,6 +97,11 @@ export function WeeklyAvailabilityField({
       {custom && days.length === 0 && (
         <p role="alert" className="mt-3 text-xs text-accent-dark">
           Pick at least one day, or switch back to your profile default.
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="mt-3 text-xs text-accent-dark">
+          {error}
         </p>
       )}
     </div>

@@ -128,6 +128,9 @@ export async function backendRequest<T>(
   // explanation, rather than surfacing a raw 401 to the member.
   if (res.status === 401) redirect("/login?reason=expired");
 
+  // 204 has no body by definition; parsing it would read as a broken reply.
+  if (res.status === 204) return undefined as T;
+
   const body: unknown = await res.json().catch(() => null);
 
   if (!res.ok) {
@@ -138,13 +141,17 @@ export async function backendRequest<T>(
 
     const fieldErrors = parseFieldErrors(detail);
     // A 422 carries its specifics per field, so the summary stays generic and
-    // the form puts each message where the member is looking.
+    // the form puts each message where the member is looking. A conflict may
+    // arrive as {message, ...context} - the blackout endpoint attaches the
+    // booking it collided with - and its message is the part to show.
     const message =
       typeof detail === "string"
         ? detail
-        : Object.keys(fieldErrors).length > 0
-          ? "Please correct the highlighted fields."
-          : `Backend request failed (${res.status})`;
+        : detail !== null && typeof detail === "object" && "message" in detail && typeof detail.message === "string"
+          ? detail.message
+          : Object.keys(fieldErrors).length > 0
+            ? "Please correct the highlighted fields."
+            : `Backend request failed (${res.status})`;
 
     throw new BackendApiError(message, res.status, fieldErrors);
   }

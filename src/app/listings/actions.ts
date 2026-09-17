@@ -2,14 +2,24 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createListing, getListing, ListingApiError, updateListing as patchListing } from "@/lib/api/listings";
-import { dollarsToCents } from "@/lib/format";
+import {
+  addListingBlackout,
+  createListing,
+  deleteListingBlackout,
+  getListing,
+  getListingAvailability,
+  ListingApiError,
+  updateListing as patchListing,
+  updateListingAvailability,
+} from "@/lib/api/listings";
+import { dollarsToCents, todayIso } from "@/lib/format";
 import {
   isCategory,
   isCondition,
   isLocationArea,
   type BlackoutDate,
   type CreateListingRequest,
+  type DateRange,
   type Listing,
   type UpdateListingRequest,
 } from "@/lib/listings";
@@ -68,7 +78,11 @@ function hiddenList<T>(formData: FormData, name: string, keep: (item: unknown) =
 
 const isString = (value: unknown): value is string => typeof value === "string";
 const isNumber = (value: unknown): value is number => typeof value === "number";
-const isBlackout = (value: unknown): value is BlackoutDate => typeof value === "object" && value !== null;
+const isBlackout = (value: unknown): value is BlackoutDate =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as BlackoutDate).start_date === "string" &&
+  typeof (value as BlackoutDate).end_date === "string";
 
 /**
  * The fields both forms share, every one present. available_from is the
@@ -203,14 +217,56 @@ function changedFields(candidate: UpdateListingRequest, current: Listing): Updat
   return changes;
 }
 
+/** The weekly schedule as the form submits it, in the shape PUT /availability takes. */
+function parseWeeklySchedule(formData: FormData): { custom: boolean; days: number[] | null } {
+  const custom = text(formData, "has_custom_availability") === "true";
+  return { custom, days: custom ? hiddenList(formData, "custom_available_days", isNumber) : null };
+}
+
+const sameDays = (a: number[] | null, b: number[] | null) =>
+  JSON.stringify(a ? [...a].sort() : null) === JSON.stringify(b ? [...b].sort() : null);
+
+const rangeKey = (range: DateRange) => `${range.start_date}|${range.end_date}`;
+
+/**
+ * Brings the stored one-off blackouts into line with what the calendar now
+ * shows: rows the owner cleared are deleted, spans they drew are added,
+ * anything unchanged is left alone (and keeps its stored reason).
+ *
+ * Rows that ended before today are ignored on both sides. The calendar only
+ * offers days from today onward, so a past blackout is never in the desired
+ * set - deleting it for that reason alone would be rewriting history the
+ * owner never touched.
+ */
+async function syncBlackouts(listingId: string, stored: BlackoutDate[], desired: DateRange[]) {
+  const today = todayIso();
+  const live = stored.filter((row) => row.end_date >= today);
+  const wanted = new Set(desired.map(rangeKey));
+  const have = new Set(live.map(rangeKey));
+
+  for (const row of live) {
+    if (!wanted.has(rangeKey(row)) && row.id) await deleteListingBlackout(listingId, row.id);
+  }
+  for (const range of desired) {
+    if (!have.has(rangeKey(range))) await addListingBlackout(listingId, range.start_date, range.end_date);
+  }
+}
+
 /**
  * S1-10: saves an edit to the caller's own listing. Bound to a listing id by
  * the edit page, so the form itself never carries the id where a request
  * body could swap it.
  *
- * Stays on the page rather than redirecting: Scenario 4 wants the owner told
- * that existing bookings keep their terms, and that is a modal on this form,
- * not a message to smuggle through a query string.
+ * Availability lives behind its own endpoints (S1-11), each with its own
+ * booking-conflict check, so a save is three calls rather than one: the
+ * weekly schedule, then the blackouts, then everything else. There is no
+ * transaction across them. Every step diffs against what is stored and skips
+ * what already matches, so if one is refused the owner sees which, fixes it,
+ * and resubmitting redoes only what is still outstanding.
+ *
+ * Stays on the page rather than redirecting: the owner is told their changes
+ * do not reach existing bookings, and that is a modal on this form, not a
+ * message to smuggle through a query string.
  */
 export async function updateListing(
   listingId: string,
@@ -221,16 +277,53 @@ export async function updateListing(
   if (parsed.fieldErrors) {
     return { error: "Please correct the highlighted fields.", fieldErrors: parsed.fieldErrors };
   }
+  const schedule = parseWeeklySchedule(formData);
+  const blackouts = hiddenList(formData, "initial_blackouts", isBlackout);
+
+  // Re-read rather than trusting hidden "original value" fields: the diffs
+  // must be against what is stored, and this also 404s early for a listing
+  // that is not the caller's.
+  let current: Listing;
+  let storedBlackouts: BlackoutDate[];
+  try {
+    [current, { blackouts: storedBlackouts }] = await Promise.all([
+      getListing(listingId),
+      getListingAvailability(listingId),
+    ]);
+  } catch (caught) {
+    if (caught instanceof ListingApiError) return { error: caught.message };
+    throw caught;
+  }
+
+  if (
+    schedule.custom !== current.has_custom_availability ||
+    (schedule.custom && !sameDays(schedule.days, current.custom_available_days))
+  ) {
+    try {
+      await updateListingAvailability(listingId, schedule.custom, schedule.days);
+    } catch (caught) {
+      if (caught instanceof ListingApiError) {
+        return { error: caught.message, fieldErrors: { custom_available_days: caught.message } };
+      }
+      throw caught;
+    }
+  }
 
   try {
-    // Re-read rather than trusting hidden "original value" fields: the diff
-    // must be against what is stored, and this also 404s early for a listing
-    // that is not the caller's.
-    const current = await getListing(listingId);
+    await syncBlackouts(listingId, storedBlackouts, blackouts);
+  } catch (caught) {
+    if (caught instanceof ListingApiError) {
+      return { error: caught.message, fieldErrors: { blackout_dates: caught.message } };
+    }
+    throw caught;
+  }
+
+  try {
     const { active_booking_count } = await patchListing(listingId, changedFields(parsed.fields, current));
 
     revalidatePath("/listings/mine");
     revalidatePath(`/listings/${listingId}`);
+    revalidatePath(`/listings/${listingId}/availability`);
     return { success: { activeBookingCount: active_booking_count } };
   } catch (caught) {
     if (caught instanceof ListingApiError) {
