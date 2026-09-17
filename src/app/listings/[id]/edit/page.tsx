@@ -3,7 +3,7 @@ import { Container } from "@/components/ui";
 import { ListingForm } from "@/components/listings/listing-form";
 import { updateListing } from "@/app/listings/actions";
 import { getListingFormContext } from "@/app/listings/form-context";
-import { getListing } from "@/lib/api/listings";
+import { getListing, getListingAvailability } from "@/lib/api/listings";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Edit listing — HobbyRentals" };
@@ -21,13 +21,18 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
   const { id } = await params;
 
   const supabase = await createClient();
-  const [listing, { data: { user } }, context] = await Promise.all([
+  // The blackouts and bookings come from the availability endpoint, which is
+  // owner-only - so it 404s for anyone the ownership check below would reject.
+  const [listing, availability, { data: { user } }, context] = await Promise.all([
     getListing(id).catch(() => null),
+    getListingAvailability(id).catch(() => null),
     supabase.auth.getUser(),
     getListingFormContext(),
   ]);
 
-  if (!listing || listing.owner_id !== user?.id || listing.status === "REMOVED") notFound();
+  if (!listing || !availability || listing.owner_id !== user?.id || listing.status === "REMOVED") {
+    notFound();
+  }
 
   return (
     <Container className="py-16">
@@ -40,7 +45,15 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
         </p>
 
         <div className="mt-10">
-          <ListingForm action={updateListing.bind(null, listing.id)} listing={listing} {...context} />
+          <ListingForm
+            action={updateListing.bind(null, listing.id)}
+            listing={listing}
+            availability={{
+              blackouts: availability.blackouts,
+              bookedRanges: availability.confirmed_bookings,
+            }}
+            {...context}
+          />
         </div>
       </div>
     </Container>

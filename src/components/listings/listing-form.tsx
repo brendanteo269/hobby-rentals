@@ -10,12 +10,14 @@ import { RentalDurationField } from "@/components/listings/rental-duration-field
 import { PhotoUploadField } from "@/components/listings/photo-upload-field";
 import { PricePerBlockField } from "@/components/listings/price-per-block-field";
 import type { ListingFormState } from "@/app/listings/actions";
-import { centsToDollars, dollarsToCents, formatMoney } from "@/lib/format";
+import { centsToDollars, dollarsToCents, formatMoney, todayIso } from "@/lib/format";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
   CONDITIONS,
   CONDITION_LABELS,
+  type BlackoutDate,
+  type DateRange,
   type Listing,
   type LocationArea,
 } from "@/lib/listings";
@@ -74,10 +76,11 @@ function priceFrom(listing: Listing): { block: "DAY" | "WEEK"; rate: string } {
 /**
  * The owner's listing form, for creating a listing and for editing one.
  *
- * The two differ in where their values start, which action they submit to,
- * and one section: the weekly schedule and blackout dates are set here on
- * create but have their own page once the listing exists, so editing links
- * there instead of showing a second copy of those controls.
+ * The two differ only in where their values start and which action they
+ * submit to; the fields, including the availability section, are the same.
+ * The profile's default weekly schedule is shown but never edited here - a
+ * listing either follows it or sets its own - so editing a listing cannot
+ * quietly change every other listing that follows the default.
  *
  * Validation is the backend's: FastAPI returns one message per invalid field
  * and the action hands them back keyed by field name, which is what puts each
@@ -88,6 +91,7 @@ function priceFrom(listing: Listing): { block: "DAY" | "WEEK"; rate: string } {
 export function ListingForm({
   action,
   listing,
+  availability,
   profileAvailableDays,
   profileDefaultLocation,
   depositCapBps,
@@ -95,6 +99,12 @@ export function ListingForm({
   action: (prev: ListingFormState, formData: FormData) => Promise<ListingFormState>;
   /** Present when editing; every field then starts from this listing's stored values. */
   listing?: Listing;
+  /**
+   * Also present when editing: the listing's stored one-off blackouts, and
+   * the confirmed bookings whose days the calendar must refuse. Kept off
+   * `listing` because the API serves them from a separate endpoint.
+   */
+  availability?: { blackouts: BlackoutDate[]; bookedRanges: DateRange[] };
   profileAvailableDays: number[];
   profileDefaultLocation: LocationArea | null;
   /** Basis points (10000 = 100%) a deposit may not exceed of the weekly-equivalent rate - drives the live recommendation under the deposit field. */
@@ -117,10 +127,17 @@ export function ListingForm({
   const windowAlreadyOpen = editing && listing.available_from < today;
 
   // A custom schedule starts from the owner's current default. This makes
-  // switching modes predictable instead of silently reverting to Mon-Fri.
-  const [customAvailability, setCustomAvailability] = useState(false);
-  const [customDays, setCustomDays] = useState<number[]>(profileAvailableDays);
+  // switching modes predictable instead of silently reverting to Mon-Fri. On
+  // edit it starts from whatever the listing already has.
+  const [customAvailability, setCustomAvailability] = useState(listing?.has_custom_availability ?? false);
+  const [customDays, setCustomDays] = useState<number[]>(
+    listing?.custom_available_days ?? profileAvailableDays,
+  );
   const weeklyDays = customAvailability ? customDays : profileAvailableDays;
+  
+  // Blackouts are picked from today onward even when the window opened
+  // earlier: a blackout in the past has nothing left to block.
+  const calendarFrom = availableFrom && availableFrom < today ? today : availableFrom;
 
   // Same "starts from the current default" reasoning as customDays above: a
   // custom pickup location should not open on a blank box. On edit, a stored
@@ -316,29 +333,14 @@ export function ListingForm({
           />
         </div>
 
-        {editing ? (
-          <div className="rounded-lg border border-line bg-surface-muted p-4 text-sm">
-            <p className="font-medium">Weekly schedule and blackout dates</p>
-            <p className="body-copy mt-1">
-              These have their own page, where changes are checked against confirmed bookings.
-            </p>
-            <ButtonLink
-              variant="outline"
-              href={`/listings/${listing.id}/availability`}
-              className="mt-3 px-3 py-1.5 text-xs"
-            >
-              Manage availability
-            </ButtonLink>
-          </div>
-        ) : (
-          <WeeklyAvailabilityField
-            profileAvailableDays={profileAvailableDays}
-            custom={customAvailability}
-            onCustomChange={setCustomAvailability}
-            days={customDays}
-            onDaysChange={setCustomDays}
-          />
-        )}
+        <WeeklyAvailabilityField
+          profileAvailableDays={profileAvailableDays}
+          custom={customAvailability}
+          onCustomChange={setCustomAvailability}
+          days={customDays}
+          onDaysChange={setCustomDays}
+          error={errors.custom_available_days}
+        />
 
         <RentalDurationField
           minError={errors.min_rental_days}
@@ -347,14 +349,14 @@ export function ListingForm({
           initialMax={editing ? listing.max_rental_days : undefined}
         />
 
-        {!editing && (
-          <BlackoutRulesField
-            availableFrom={availableFrom}
-            availableUntil={availableUntil}
-            weeklyDays={weeklyDays}
-            error={errors.blackout_dates}
-          />
-        )}
+        <BlackoutRulesField
+          availableFrom={calendarFrom}
+          availableUntil={availableUntil}
+          weeklyDays={weeklyDays}
+          initialRanges={availability?.blackouts}
+          reservedRanges={availability?.bookedRanges}
+          error={errors.blackout_dates}
+        />
       </FormSection>
 
       <div className="rounded-2xl border border-line bg-surface-muted p-6 sm:p-8">
@@ -384,12 +386,6 @@ export function ListingForm({
       )}
     </form>
   );
-}
-
-/** Today as a local YYYY-MM-DD, which is what a date input's `min` expects. */
-function todayIso() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
 /**

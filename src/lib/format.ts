@@ -31,6 +31,21 @@ export function centsToDollars(cents: number): string {
   return (cents / 100).toFixed(2);
 }
 
+/**
+ * A local calendar day as YYYY-MM-DD - what a date input, the API, and the
+ * blackout calendar all speak. Built from the parts rather than
+ * toISOString(), which reports the UTC date and so shifts the day for any
+ * evening in Singapore.
+ */
+export function toIsoDate(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+/** Today, in the same form. */
+export function todayIso(): string {
+  return toIsoDate(new Date());
+}
+
 /** "5 Sept 2026" — a calendar day, with no time of day implied. */
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(LOCALE, {

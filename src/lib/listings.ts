@@ -65,12 +65,15 @@ export type LocationArea =
 
 export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "PENDING_REMOVAL" | "REMOVED";
 
+/** An inclusive span of calendar days, both ends as ISO dates (YYYY-MM-DD). */
+export type DateRange = { start_date: string; end_date: string };
+
 /**
  * Recurring unavailability on a listing. One-off ranges live here too, so an
  * owner blocking a single trip and an owner blocking every Sunday use the same
  * field. Weekdays are 0 = Monday … 6 = Sunday, matching the backend.
  */
-export type BlackoutDate = { id?: string; start_date: string; end_date: string; reason?: string | null };
+export type BlackoutDate = DateRange & { id?: string; reason?: string | null };
 
 /** One card in the browse grid. Deliberately slimmer than `Listing`. */
 export type ListingCard = {

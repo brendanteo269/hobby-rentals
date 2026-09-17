@@ -1,22 +1,26 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { WEEKDAY_LABELS } from "@/lib/listings";
-import { formatDate } from "@/lib/format";
+import { WEEKDAY_LABELS, type DateRange } from "@/lib/listings";
+import { formatDate, toIsoDate as iso } from "@/lib/format";
 
 export type BlackoutDateDraft = { start_date: string; end_date: string; reason?: string };
 
 const LOCALE = "en-SG";
 
-/** Local calendar day as YYYY-MM-DD. Built from the parts rather than
- *  toISOString(), which would shift the date across the UTC boundary. */
-const iso = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-
 const shiftDay = (value: string, delta: number) => {
   const [year, month, day] = value.split("-").map(Number);
   return iso(new Date(year, month - 1, day + delta));
 };
+
+/** The inverse of toRanges: every day a stored range covers, so it can be re-selected. */
+function expandRanges(ranges: DateRange[]): string[] {
+  const days: string[] = [];
+  for (const range of ranges) {
+    for (let day = range.start_date; day <= range.end_date; day = shiftDay(day, 1)) days.push(day);
+  }
+  return days;
+}
 
 const monthOf = (value: string) => {
   const [year, month] = value.split("-").map(Number);
@@ -51,24 +55,35 @@ function describe(range: BlackoutDateDraft) {
  *
  * Only days the listing is actually available can be blacked out: blocking a
  * date the item was never offered on is not a rule, and letting it be entered
- * would put a meaningless row in front of the backend to reject.
+ * would put a meaningless row in front of the backend to reject. Booked days
+ * are refused for the same reason from the other side - the API rejects a
+ * blackout over a confirmed booking, and the calendar should say so before
+ * the owner has drawn across it, not after the form has come back.
  */
 export function BlackoutRulesField({
   availableFrom,
   availableUntil,
   weeklyDays,
+  initialRanges = [],
+  reservedRanges = [],
   error,
 }: {
   availableFrom: string;
   availableUntil: string;
   /** ISO weekdays (1 = Monday) the weekly schedule above currently offers. */
   weeklyDays: number[];
+  /** Blackouts already stored on the listing, when editing. */
+  initialRanges?: DateRange[];
+  /** Confirmed bookings; their days cannot be picked. */
+  reservedRanges?: DateRange[];
   error?: string;
 }) {
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(() => expandRanges(initialRanges));
   // Anchor of an in-progress drag, plus the day the pointer is currently over.
   const [drag, setDrag] = useState<{ anchor: string; over: string; removing: boolean } | null>(null);
   const [paged, setPaged] = useState<{ year: number; month: number } | null>(null);
+
+  const reserved = useMemo(() => new Set(expandRanges(reservedRanges)), [reservedRanges]);
 
   // A day the weekly schedule never offers is already unavailable; blacking
   // it out would be a rule with nothing to switch off.
@@ -76,11 +91,12 @@ export function BlackoutRulesField({
     (day: string) => {
       if (!availableFrom || day < availableFrom) return false;
       if (availableUntil && day > availableUntil) return false;
+      if (reserved.has(day)) return false;
       const [year, month, date] = day.split("-").map(Number);
       const weekday = new Date(year, month - 1, date).getDay();
       return weeklyDays.includes(weekday === 0 ? 7 : weekday);
     },
-    [availableFrom, availableUntil, weeklyDays],
+    [availableFrom, availableUntil, weeklyDays, reserved],
   );
 
   const commit = useCallback(() => {
@@ -117,7 +133,7 @@ export function BlackoutRulesField({
   const live = useMemo(
     () => selected.filter((day) => inWindow(day)),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [selected, availableFrom, availableUntil, weeklyDays],
+    [selected, availableFrom, availableUntil, weeklyDays, reserved],
   );
   const ranges = useMemo(() => toRanges(live), [live]);
 
@@ -175,6 +191,7 @@ export function BlackoutRulesField({
       <p className="body-copy mt-2">
         Optional. Click a day the item cannot be rented, or drag across several. Only days your
         weekly schedule already offers, inside your availability window, can be picked.
+        {reserved.size > 0 && " Struck-through days are booked and can't be blacked out."}
       </p>
 
       <input type="hidden" name="initial_blackouts" value={JSON.stringify(ranges)} />
@@ -215,6 +232,7 @@ export function BlackoutRulesField({
 
           {Array.from({ length }, (_, index) => {
             const day = iso(new Date(month.year, month.month, index + 1));
+            const booked = reserved.has(day);
             const selectable = inWindow(day);
             const dragging = inDrag(day);
             const isSelected = dragging && drag ? !drag.removing : live.includes(day);
@@ -225,6 +243,8 @@ export function BlackoutRulesField({
                 type="button"
                 disabled={!selectable}
                 aria-pressed={isSelected}
+                aria-label={booked ? `${formatDate(day)}, booked` : undefined}
+                title={booked ? "Booked" : undefined}
                 onPointerDown={(event) => {
                   if (!selectable) return;
                   // Keeps the browser from turning the drag into a text or
@@ -240,7 +260,9 @@ export function BlackoutRulesField({
                     ? "bg-ink text-white"
                     : selectable
                       ? "hover:bg-surface-muted"
-                      : "cursor-default text-ink-soft/30"
+                      : booked
+                        ? "cursor-not-allowed text-ink-soft line-through"
+                        : "cursor-default text-ink-soft/30"
                 } ${dragging && !isSelected ? "bg-surface-muted" : ""}`}
               >
                 {index + 1}
@@ -251,28 +273,33 @@ export function BlackoutRulesField({
       </div>
 
       {ranges.length > 0 && (
-        <ul className="mt-4 flex flex-wrap gap-2">
-          {ranges.map((range) => (
-            <li
-              key={range.start_date}
-              className="flex items-center gap-2 rounded-full border border-line px-3 py-2 text-sm"
-            >
-              <span>{describe(range)}</span>
-              <button
-                type="button"
-                aria-label={`Remove ${describe(range)}`}
-                className="text-ink-soft underline transition-colors hover:text-ink"
-                onClick={() =>
-                  setSelected((current) =>
-                    current.filter((day) => day < range.start_date || day > range.end_date),
-                  )
-                }
+        <div className="mt-4">
+          <p id="selected-blackouts-label" className="text-sm font-medium">
+            Selected blackout dates:
+          </p>
+          <ul aria-labelledby="selected-blackouts-label" className="mt-2 flex flex-wrap gap-2">
+            {ranges.map((range) => (
+              <li
+                key={range.start_date}
+                className="flex items-center gap-2 rounded-full border border-line px-3 py-2 text-sm"
               >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
+                <span>{describe(range)}</span>
+                <button
+                  type="button"
+                  aria-label={`Remove ${describe(range)}`}
+                  className="text-ink-soft underline transition-colors hover:text-ink"
+                  onClick={() =>
+                    setSelected((current) =>
+                      current.filter((day) => day < range.start_date || day > range.end_date),
+                    )
+                  }
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {error && (
