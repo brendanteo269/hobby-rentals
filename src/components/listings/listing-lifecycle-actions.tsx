@@ -79,6 +79,10 @@ export function ListingLifecycleActions({ listing }: { listing: Listing }) {
       )}
 
       <div className="flex flex-wrap gap-2">
+        <ButtonLink variant="outline" href={`/listings/${current.id}/passport`} className="px-3 py-1.5 text-xs">
+          Passport
+        </ButtonLink>
+
         {current.status === "DRAFT" && (
           <ButtonLink href={`/listings/${current.id}/passport/baseline`} className="px-3 py-1.5 text-xs">
             Finish passport &amp; publish
