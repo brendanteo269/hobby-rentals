@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getListing, ListingApiError, publishListing, recordBaseline } from "@/lib/api/listings";
-import type { BaselineAngle } from "@/lib/listings";
+import { BASELINE_INCOMPLETE, parseBaselinePhotos } from "@/lib/listings";
 
 /**
  * S2-04: records the baseline, then publishes if the listing is still a
@@ -12,8 +12,12 @@ import type { BaselineAngle } from "@/lib/listings";
  */
 export async function saveBaselineAndPublish(
   listingId: string,
-  photos: Record<BaselineAngle, string>,
-): Promise<{ error: string }> {
+  _prev: { error?: string } | undefined,
+  formData: FormData,
+): Promise<{ error?: string }> {
+  const photos = parseBaselinePhotos(formData);
+  if (!photos) return { error: BASELINE_INCOMPLETE };
+
   try {
     await recordBaseline(listingId, photos);
     const listing = await getListing(listingId);

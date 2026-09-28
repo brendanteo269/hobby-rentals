@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useActionState, useState } from "react";
 import { Button, FormError, RequiredMark } from "@/components/ui";
 import { putPhotoToS3 } from "@/components/listings/photo-upload-field";
 import { saveBaselineAndPublish } from "@/app/listings/[id]/passport/baseline/actions";
@@ -13,27 +13,28 @@ type Slot = { key: string; previewUrl: string } | "uploading";
  *
  * Each slot uploads the moment a photo is picked, like PhotoUploadField, but
  * under the passport prefix and without the square crop: this is evidence of
- * the item's condition, so the owner's framing is kept as taken.
+ * the item's condition, so the owner's framing is kept as taken. The
+ * surrounding form submits the keys as one hidden JSON field,
+ * `baseline_photos` (see parseBaselinePhotos).
  */
-export function BaselineCaptureStep({ listingId, publishes }: { listingId: string; publishes: boolean }) {
+export function BaselinePhotosField({ error }: { error?: string }) {
   const [slots, setSlots] = useState<Partial<Record<BaselineAngle, Slot>>>({});
-  const [error, setError] = useState<string>();
-  const [saving, startSaving] = useTransition();
+  const [uploadError, setUploadError] = useState<string>();
 
   async function upload(angle: BaselineAngle, file: File | undefined) {
     if (!file) return;
     if (!ALLOWED_PHOTO_CONTENT_TYPES.includes(file.type as (typeof ALLOWED_PHOTO_CONTENT_TYPES)[number])) {
-      setError(`${file.name}: unsupported file type. Use JPEG, PNG or WebP.`);
+      setUploadError(`${file.name}: unsupported file type. Use JPEG, PNG or WebP.`);
       return;
     }
-    setError(undefined);
+    setUploadError(undefined);
     setSlots((current) => ({ ...current, [angle]: "uploading" }));
     try {
       const key = await putPhotoToS3(file, "passport");
       setSlots((current) => ({ ...current, [angle]: { key, previewUrl: URL.createObjectURL(file) } }));
     } catch (caught) {
       setSlots((current) => ({ ...current, [angle]: undefined }));
-      setError(caught instanceof Error ? caught.message : `${file.name} failed to upload.`);
+      setUploadError(caught instanceof Error ? caught.message : `${file.name} failed to upload.`);
     }
   }
 
@@ -42,19 +43,16 @@ export function BaselineCaptureStep({ listingId, publishes }: { listingId: strin
       const slot = slots[key];
       return slot && slot !== "uploading" ? [[key, slot.key]] : [];
     }),
-  ) as Record<BaselineAngle, string>;
-  const complete = Object.keys(keys).length === BASELINE_ANGLES.length;
-
-  function submit() {
-    startSaving(async () => {
-      const result = await saveBaselineAndPublish(listingId, keys);
-      setError(result.error);
-    });
-  }
+  );
 
   return (
-    <div className="space-y-6">
-      <ul className="grid grid-cols-2 gap-4">
+    <div className="space-y-4">
+      <p className="body-copy">
+        Photograph the item from all four angles. These start its Product Passport, a permanent
+        condition record that can&apos;t be edited or deleted later.
+      </p>
+      <input type="hidden" name="baseline_photos" value={JSON.stringify(keys)} />
+      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {BASELINE_ANGLES.map(({ key, label }) => {
           const slot = slots[key];
           return (
@@ -79,7 +77,7 @@ export function BaselineCaptureStep({ listingId, publishes }: { listingId: strin
                   accept={ALLOWED_PHOTO_CONTENT_TYPES.join(",")}
                   capture="environment"
                   className="sr-only"
-                  disabled={slot === "uploading" || saving}
+                  disabled={slot === "uploading"}
                   onChange={(event) => {
                     void upload(key, event.target.files?.[0]);
                     event.target.value = "";
@@ -90,12 +88,21 @@ export function BaselineCaptureStep({ listingId, publishes }: { listingId: strin
           );
         })}
       </ul>
-
-      <FormError message={error} />
-
-      <Button type="button" disabled={!complete || saving} onClick={submit}>
-        {saving ? "Saving…" : publishes ? "Save baseline and publish" : "Save baseline"}
-      </Button>
+      <FormError message={uploadError ?? error} />
     </div>
+  );
+}
+
+/** The baseline on its own, for a draft finishing its passport or a listing that predates passports. */
+export function BaselineForm({ listingId, publishes }: { listingId: string; publishes: boolean }) {
+  const [state, formAction, pending] = useActionState(saveBaselineAndPublish.bind(null, listingId), undefined);
+
+  return (
+    <form action={formAction} className="space-y-6">
+      <BaselinePhotosField error={state?.error} />
+      <Button disabled={pending}>
+        {pending ? "Saving…" : publishes ? "Save baseline and publish" : "Save baseline"}
+      </Button>
+    </form>
   );
 }
