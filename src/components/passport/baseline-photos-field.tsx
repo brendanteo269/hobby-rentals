@@ -12,10 +12,11 @@ type Slot = { key: string; previewUrl: string } | "uploading";
  * Guided four-angle capture for the Product Passport baseline (S2-04).
  *
  * Each slot uploads the moment a photo is picked, like PhotoUploadField, but
- * under the passport prefix and without the square crop: this is evidence of
- * the item's condition, so the owner's framing is kept as taken. The
- * surrounding form submits the keys as one hidden JSON field,
- * `baseline_photos` (see parseBaselinePhotos).
+ * without the square crop: this is evidence of the item's condition, so the
+ * owner's framing is kept as taken. The keys are submitted twice: as
+ * `baseline_photos` (see parseBaselinePhotos) for the passport, and as
+ * `photo_keys` so the create form uses the same four as the listing's photos.
+ * They go under the public listings/ prefix for that reason.
  */
 export function BaselinePhotosField({ error }: { error?: string }) {
   const [slots, setSlots] = useState<Partial<Record<BaselineAngle, Slot>>>({});
@@ -30,7 +31,7 @@ export function BaselinePhotosField({ error }: { error?: string }) {
     setUploadError(undefined);
     setSlots((current) => ({ ...current, [angle]: "uploading" }));
     try {
-      const key = await putPhotoToS3(file, "passport");
+      const key = await putPhotoToS3(file);
       setSlots((current) => ({ ...current, [angle]: { key, previewUrl: URL.createObjectURL(file) } }));
     } catch (caught) {
       setSlots((current) => ({ ...current, [angle]: undefined }));
@@ -48,10 +49,11 @@ export function BaselinePhotosField({ error }: { error?: string }) {
   return (
     <div className="space-y-4">
       <p className="body-copy">
-        Photograph the item from all four angles. These start its Product Passport, a permanent
-        condition record that can&apos;t be edited or deleted later.
+        Photograph the item from all four angles. These are shown on your listing and start its
+        Product Passport, a permanent condition record that can&apos;t be edited or deleted.
       </p>
       <input type="hidden" name="baseline_photos" value={JSON.stringify(keys)} />
+      <input type="hidden" name="photo_keys" value={JSON.stringify(Object.values(keys))} />
       <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {BASELINE_ANGLES.map(({ key, label }) => {
           const slot = slots[key];

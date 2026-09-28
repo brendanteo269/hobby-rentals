@@ -178,7 +178,12 @@ export async function submitListing(
   if (parsed.fieldErrors || !baseline) {
     return {
       error: "Please correct the highlighted fields.",
-      fieldErrors: { ...parsed.fieldErrors, ...(baseline ? {} : { baseline_photos: BASELINE_INCOMPLETE }) },
+      // The four condition photos are also the listing's photo_keys, so a
+      // missing one is reported once, against the field the owner can see.
+      fieldErrors: {
+        ...Object.fromEntries(Object.entries(parsed.fieldErrors ?? {}).filter(([name]) => name !== "photo_keys")),
+        ...(baseline ? {} : { baseline_photos: BASELINE_INCOMPLETE }),
+      },
     };
   }
 

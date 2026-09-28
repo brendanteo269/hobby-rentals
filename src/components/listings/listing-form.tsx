@@ -262,18 +262,18 @@ export function ListingForm({
       </FormSection>
 
       <FormSection title="Photos">
-        <PhotoUploadField
-          error={errors.photo_keys}
-          initialPhotos={listing?.photo_keys.map((key, index) => ({ key, url: listing.photo_urls[index] }))}
-        />
-      </FormSection>
-
-      {/* Create only: an existing listing's baseline is on record and can't be retaken here. */}
-      {!editing && (
-        <FormSection title="Condition photos">
+        {/* Create takes the four condition photos, which double as the
+            listing's photos. Edit changes only the listing's photos: the
+            passport baseline is on record and can't be retaken here. */}
+        {editing ? (
+          <PhotoUploadField
+            error={errors.photo_keys}
+            initialPhotos={listing.photo_keys.map((key, index) => ({ key, url: listing.photo_urls[index] }))}
+          />
+        ) : (
           <BaselinePhotosField error={errors.baseline_photos} />
-        </FormSection>
-      )}
+        )}
+      </FormSection>
 
       <FormSection title="Price">
         {/* Only one of the two is ever submitted, so at most one of these two
