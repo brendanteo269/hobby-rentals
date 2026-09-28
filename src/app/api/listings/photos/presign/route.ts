@@ -17,12 +17,17 @@ export async function POST(request: Request) {
       ? String((body as { content_type: unknown }).content_type)
       : "";
 
+  const kind =
+    body !== null && typeof body === "object" && "kind" in body && (body as { kind: unknown }).kind === "passport"
+      ? "passport"
+      : "listing";
+
   if (!contentType) {
     return NextResponse.json({ error: "content_type is required." }, { status: 400 });
   }
 
   try {
-    const presigned = await presignListingPhoto(contentType);
+    const presigned = await presignListingPhoto(contentType, kind);
     return NextResponse.json(presigned);
   } catch (caught) {
     if (caught instanceof ListingApiError) {

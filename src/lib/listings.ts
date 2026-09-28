@@ -137,6 +137,38 @@ export const ALLOWED_PHOTO_CONTENT_TYPES = ["image/jpeg", "image/png", "image/we
 export const MAX_LISTING_PHOTOS = 8;
 
 /** What POST /listings/photos/presign returns for one photo. */
+/** "passport" photos are condition evidence, stored apart from listing photos. */
+export type PhotoKind = "listing" | "passport";
+
+/** S2-04 Scenario 2: the four angles a baseline covers, in capture order. */
+export const BASELINE_ANGLES = [
+  { key: "front", label: "Front" },
+  { key: "back", label: "Back" },
+  { key: "high_wear", label: "High-wear area" },
+  { key: "underside", label: "Underside" },
+] as const;
+export type BaselineAngle = (typeof BASELINE_ANGLES)[number]["key"];
+
+/**
+ * Reads BaselinePhotosField's hidden `baseline_photos` field. Null unless
+ * every angle has a key, so callers can answer with one message rather than
+ * sending an incomplete baseline for FastAPI to reject.
+ */
+export function parseBaselinePhotos(formData: FormData): Record<BaselineAngle, string> | null {
+  try {
+    const parsed: unknown = JSON.parse(String(formData.get("baseline_photos") ?? ""));
+    if (typeof parsed !== "object" || parsed === null) return null;
+    const photos = parsed as Record<string, unknown>;
+    return BASELINE_ANGLES.every(({ key }) => typeof photos[key] === "string" && photos[key])
+      ? (photos as Record<BaselineAngle, string>)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+export const BASELINE_INCOMPLETE = "Add a photo for each of the four angles.";
+
 export type PresignPhotoResponse = {
   upload_url: string;
   photo_key: string;

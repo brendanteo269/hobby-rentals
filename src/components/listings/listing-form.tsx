@@ -9,6 +9,7 @@ import { PickupLocationField } from "@/components/listings/pickup-location-field
 import { RentalDurationField } from "@/components/listings/rental-duration-field";
 import { PhotoUploadField } from "@/components/listings/photo-upload-field";
 import { PricePerBlockField } from "@/components/listings/price-per-block-field";
+import { BaselinePhotosField } from "@/components/passport/baseline-photos-field";
 import type { ListingFormState } from "@/app/listings/actions";
 import { centsToDollars, dollarsToCents, formatMoney, todayIso } from "@/lib/format";
 import {
@@ -261,10 +262,17 @@ export function ListingForm({
       </FormSection>
 
       <FormSection title="Photos">
-        <PhotoUploadField
-          error={errors.photo_keys}
-          initialPhotos={listing?.photo_keys.map((key, index) => ({ key, url: listing.photo_urls[index] }))}
-        />
+        {/* Create takes the four condition photos, which double as the
+            listing's photos. Edit changes only the listing's photos: the
+            passport baseline is on record and can't be retaken here. */}
+        {editing ? (
+          <PhotoUploadField
+            error={errors.photo_keys}
+            initialPhotos={listing.photo_keys.map((key, index) => ({ key, url: listing.photo_urls[index] }))}
+          />
+        ) : (
+          <BaselinePhotosField error={errors.baseline_photos} />
+        )}
       </FormSection>
 
       <FormSection title="Price">
