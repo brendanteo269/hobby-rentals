@@ -14,8 +14,8 @@ export default async function NewListingPage() {
         <p className="eyebrow">Your inventory</p>
         <h1 className="heading mt-3 text-3xl">Create a listing</h1>
         <p className="body-copy mt-3">
-          Fields marked with an asterisk are required. Everything here can be edited after it goes
-          live.
+          Fields marked with an asterisk are required. Everything here can be edited later. Next,
+          you&apos;ll photograph the item for its Product Passport, and then it goes live.
         </p>
 
         <div className="mt-10">

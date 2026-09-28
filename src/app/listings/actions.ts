@@ -159,7 +159,7 @@ function parseListingFields(
   };
 }
 
-/** Creates a listing and sends the owner to the marketplace to see it. */
+/** Creates a DRAFT listing and sends the owner on to its passport baseline, which publishes it. */
 export async function submitListing(
   _prev: ListingFormState,
   formData: FormData,
@@ -179,8 +179,9 @@ export async function submitListing(
     initial_blackouts: hiddenList(formData, "initial_blackouts", isBlackout),
   };
 
+  let created: Listing;
   try {
-    await createListing(request);
+    created = await createListing(request);
   } catch (caught) {
     if (caught instanceof ListingApiError) {
       return { error: caught.message, fieldErrors: caught.fieldErrors };
@@ -190,7 +191,7 @@ export async function submitListing(
 
   // Outside the try: redirect signals by throwing, and catching it here would
   // report a successful creation as a failure.
-  redirect("/browse");
+  redirect(`/listings/${created.id}/passport/baseline`);
 }
 
 /**

@@ -10,12 +10,14 @@ import "server-only";
 
 import { backendRequest } from "@/lib/api/client";
 import type {
+  BaselineAngle,
   BrowseListingsResponse,
   CreateListingRequest,
   Listing,
   ListingCategory,
   ListingCondition,
   LocationArea,
+  PhotoKind,
   PresignPhotoResponse,
   UpdateListingRequest,
   UpdateListingResponse,
@@ -69,7 +71,7 @@ export function browseListings(params: BrowseListingsParams = {}) {
   return backendRequest<BrowseListingsResponse>(`/listings${browseQuery(params)}`);
 }
 
-/** Creates the listing and publishes it to the marketplace in one step. */
+/** Creates the listing as a DRAFT; publishListing takes it live once its passport baseline is on record. */
 export function createListing(data: CreateListingRequest) {
   return backendRequest<Listing>("/listings", {
     method: "POST",
@@ -185,9 +187,22 @@ export function deleteListingBlackout(listingId: string, blackoutId: string) {
  * the URL, since backendRequest (and the Supabase session it reads) is
  * server-only and can't run in the client component that owns the file.
  */
-export function presignListingPhoto(contentType: string) {
+export function presignListingPhoto(contentType: string, kind: PhotoKind = "listing") {
   return backendRequest<PresignPhotoResponse>("/listings/photos/presign", {
     method: "POST",
-    body: JSON.stringify({ content_type: contentType }),
+    body: JSON.stringify({ content_type: contentType, kind }),
   });
+}
+
+/** S2-04: appends the BASELINE passport entry. Keys come from presignListingPhoto(_, "passport"). */
+export function recordBaseline(listingId: string, photos: Record<BaselineAngle, string>) {
+  return backendRequest(`/listings/${encodeURIComponent(listingId)}/passport/baseline`, {
+    method: "POST",
+    body: JSON.stringify(photos),
+  });
+}
+
+/** DRAFT -> ACTIVE. A 422 means the passport is incomplete. */
+export function publishListing(listingId: string) {
+  return backendRequest<Listing>(`/listings/${encodeURIComponent(listingId)}/publish`, { method: "POST" });
 }

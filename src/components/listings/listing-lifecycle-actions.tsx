@@ -79,7 +79,13 @@ export function ListingLifecycleActions({ listing }: { listing: Listing }) {
       )}
 
       <div className="flex flex-wrap gap-2">
-        {(current.status === "ACTIVE" || current.status === "DRAFT") && (
+        {current.status === "DRAFT" && (
+          <ButtonLink href={`/listings/${current.id}/passport/baseline`} className="px-3 py-1.5 text-xs">
+            Finish passport &amp; publish
+          </ButtonLink>
+        )}
+
+        {current.status === "ACTIVE" && (
           <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={handleArchive}>
             Archive
           </Button>

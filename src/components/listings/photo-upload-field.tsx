@@ -6,6 +6,7 @@ import { Button, RequiredMark } from "@/components/ui";
 import {
   ALLOWED_PHOTO_CONTENT_TYPES,
   MAX_LISTING_PHOTOS,
+  type PhotoKind,
   type PresignPhotoResponse,
 } from "@/lib/listings";
 import { CENTERED_CROP, cropBitmapToFile, cropToSquare, type CropTransform } from "@/lib/image-crop";
@@ -45,11 +46,11 @@ type UploadingSlot = { id: string; fileName: string };
  * Shared by the initial upload and the re-crop-then-reupload path so the
  * presign protocol and its error handling live in exactly one place.
  */
-async function putPhotoToS3(file: File): Promise<string> {
+export async function putPhotoToS3(file: File, kind: PhotoKind = "listing"): Promise<string> {
   const presignRes = await fetch("/api/listings/photos/presign", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content_type: file.type }),
+    body: JSON.stringify({ content_type: file.type, kind }),
   });
   if (!presignRes.ok) {
     const body: unknown = await presignRes.json().catch(() => null);
