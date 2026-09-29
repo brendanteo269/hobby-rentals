@@ -52,6 +52,12 @@ export default async function PassportPage({ params }: { params: Promise<{ id: s
           </div>
         </dl>
 
+        {passport.serial_status !== "VERIFIED" && (
+          <ButtonLink href={`/listings/${id}/passport/serial`} variant="outline" className="mt-6 px-4 py-2 text-xs">
+            Verify serial number
+          </ButtonLink>
+        )}
+
         {missingBaseline && (
           <div className="mt-6 space-y-3">
             <FormNotice message="This item has no baseline condition photos yet. Renters can't rely on its condition record until it does." />

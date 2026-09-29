@@ -191,6 +191,38 @@ export type Passport = {
   entries: PassportEntry[];
 };
 
+/** POST /listings/{id}/passport/serial/extract. readable is false when the owner should retake or type it. */
+export type SerialExtraction = {
+  serial: string | null;
+  confidence: number;
+  readable: boolean;
+};
+
+/** The serial as the owner confirmed it, with the label photo (a passports/ key) as evidence. */
+export type SerialClaim = {
+  photo_key: string;
+  serial: string;
+  /** What extraction suggested, so the passport records whether the owner corrected it. */
+  extracted: string | null;
+  confidence: number | null;
+};
+
+/** Reads SerialField's inputs. Null until there's both a label photo and a serial. */
+export function parseSerialClaim(formData: FormData): SerialClaim | null {
+  const photoKey = String(formData.get("serial_photo_key") ?? "");
+  const serial = String(formData.get("serial") ?? "").trim();
+  if (!photoKey || !serial) return null;
+  const confidence = String(formData.get("serial_confidence") ?? "");
+  return {
+    photo_key: photoKey,
+    serial,
+    extracted: String(formData.get("serial_extracted") ?? "") || null,
+    confidence: confidence ? Number(confidence) : null,
+  };
+}
+
+export const SERIAL_INCOMPLETE = "Photograph the serial number label and confirm the serial.";
+
 export const PASSPORT_ENTRY_LABELS: Record<string, string> = {
   BASELINE: "Baseline condition",
   SERIAL_VERIFICATION: "Serial number verified",
@@ -232,6 +264,8 @@ export type CreateListingRequest = {
   initial_blackouts?: BlackoutDate[];
   /** At least one is required (FastAPI 422s on an empty list). */
   photo_keys: string[];
+  /** The item's identity; its passport is created with it. */
+  serial: SerialClaim;
 };
 
 /**
