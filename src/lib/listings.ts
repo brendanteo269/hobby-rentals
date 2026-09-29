@@ -169,6 +169,39 @@ export function parseBaselinePhotos(formData: FormData): Record<BaselineAngle, s
 
 export const BASELINE_INCOMPLETE = "Add a photo for each of the four angles.";
 
+export type PassportEntry = {
+  id: string;
+  /** BASELINE | SERIAL_VERIFICATION now; HANDOVER, RETURN, DAMAGE, RESOLUTION later. */
+  entry_type: string;
+  created_by: string;
+  created_at: string;
+  /** Angle (or "serial") -> a URL the browser can show directly. */
+  photo_urls: Record<string, string>;
+  data: Record<string, unknown>;
+};
+
+/** GET /listings/{id}/passport. Non-owners get no serial_number and empty entry data. */
+export type Passport = {
+  listing_id: string;
+  serial_number: string | null;
+  serial_status: "PENDING" | "VERIFIED";
+  /** What still blocks publishing, e.g. ["baseline"]; empty once complete. */
+  missing: string[];
+  /** Newest first. */
+  entries: PassportEntry[];
+};
+
+export const PASSPORT_ENTRY_LABELS: Record<string, string> = {
+  BASELINE: "Baseline condition",
+  SERIAL_VERIFICATION: "Serial number verified",
+};
+
+/** Label for a photo slot name; falls back to the raw name for types added later. */
+export const PASSPORT_PHOTO_LABELS: Record<string, string> = {
+  ...Object.fromEntries(BASELINE_ANGLES.map(({ key, label }) => [key, label])),
+  serial: "Serial number",
+};
+
 export type PresignPhotoResponse = {
   upload_url: string;
   photo_key: string;

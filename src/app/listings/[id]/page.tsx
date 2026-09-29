@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Container } from "@/components/ui";
+import { ButtonLink, Container } from "@/components/ui";
 import { ListingGallery } from "@/components/listings/listing-gallery";
 import { RateLine } from "@/components/browse/listing-card";
 import { getBookingAvailability, getListing } from "@/lib/api/listings";
@@ -76,6 +76,11 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             <p className="mt-8 border-t border-line pt-6 text-sm text-ink-soft">
               This listing is {listing.status === "PENDING_REMOVAL" ? `scheduled for removal on ${formatDate(listing.scheduled_removal_at!)}` : listing.status.toLowerCase()}.
             </p>
+          )}
+          {user && user.id === listing.owner_id && (
+            <ButtonLink href={`/listings/${listing.id}/passport`} variant="outline" className="mt-6 px-4 py-2 text-xs">
+              View Product Passport
+            </ButtonLink>
           )}
         </div>
       </div>

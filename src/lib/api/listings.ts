@@ -17,6 +17,7 @@ import type {
   ListingCategory,
   ListingCondition,
   LocationArea,
+  Passport,
   PhotoKind,
   PresignPhotoResponse,
   UpdateListingRequest,
@@ -200,6 +201,11 @@ export function recordBaseline(listingId: string, photos: Record<BaselineAngle, 
     method: "POST",
     body: JSON.stringify(photos),
   });
+}
+
+/** The owner sees the full passport; anyone else only an ACTIVE listing's, without the serial. */
+export function getPassport(listingId: string) {
+  return backendRequest<Passport>(`/listings/${encodeURIComponent(listingId)}/passport`);
 }
 
 /** DRAFT -> ACTIVE. A 422 means the passport is incomplete. */
