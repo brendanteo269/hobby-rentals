@@ -14,6 +14,7 @@ import type {
   BrowseListingsResponse,
   CreateListingRequest,
   Listing,
+  OwnerListing,
   ListingCategory,
   ListingCondition,
   LocationArea,
@@ -102,7 +103,7 @@ export function getListingLimits() {
  * it is the owner managing their own gear rather than a renter searching.
  */
 export function getMyListings() {
-  return backendRequest<Listing[]>("/listings/mine");
+  return backendRequest<OwnerListing[]>("/listings/mine");
 }
 
 /** A single listing, any status - the API 404s if this caller can't see it (not ACTIVE and not theirs). */

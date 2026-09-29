@@ -360,6 +360,12 @@ export const LOCATION_LABELS: Record<LocationArea, string> = {
   YISHUN: "Yishun",
 };
 
+/** A row of GET /listings/mine: the listing plus what its passport still lacks (S2-01). */
+export type OwnerListing = Listing & {
+  /** e.g. ["baseline", "serial"]; empty once the passport is complete. */
+  passport_missing: string[];
+};
+
 export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   DRAFT: "Draft",
   ACTIVE: "Published",
