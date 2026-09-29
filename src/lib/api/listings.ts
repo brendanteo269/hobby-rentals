@@ -20,6 +20,8 @@ import type {
   Passport,
   PhotoKind,
   PresignPhotoResponse,
+  SerialClaim,
+  SerialExtraction,
   UpdateListingRequest,
   UpdateListingResponse,
 } from "@/lib/listings";
@@ -72,7 +74,11 @@ export function browseListings(params: BrowseListingsParams = {}) {
   return backendRequest<BrowseListingsResponse>(`/listings${browseQuery(params)}`);
 }
 
-/** Creates the listing as a DRAFT; publishListing takes it live once its passport baseline is on record. */
+/**
+ * Creates the listing as a DRAFT, its passport carrying the serial.
+ * publishListing takes it live once its baseline is on record too. A 409
+ * means the serial is already registered to another listing.
+ */
 export function createListing(data: CreateListingRequest) {
   return backendRequest<Listing>("/listings", {
     method: "POST",
@@ -206,6 +212,25 @@ export function recordBaseline(listingId: string, photos: Record<BaselineAngle, 
 /** The owner sees the full passport; anyone else only an ACTIVE listing's, without the serial. */
 export function getPassport(listingId: string) {
   return backendRequest<Passport>(`/listings/${encodeURIComponent(listingId)}/passport`);
+}
+
+/** S2-05: reads the serial off a photo (a passports/ key). Saves nothing. */
+export function extractSerial(photoKey: string) {
+  return backendRequest<SerialExtraction>("/listings/serial/extract", {
+    method: "POST",
+    body: JSON.stringify({ photo_key: photoKey }),
+  });
+}
+
+/**
+ * For listings created before serials were required; new ones send theirs
+ * with createListing. A 409 means it's already registered to another listing.
+ */
+export function confirmSerial(listingId: string, body: SerialClaim) {
+  return backendRequest(`/listings/${encodeURIComponent(listingId)}/passport/serial/confirm`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 /** DRAFT -> ACTIVE. A 422 means the passport is incomplete. */
