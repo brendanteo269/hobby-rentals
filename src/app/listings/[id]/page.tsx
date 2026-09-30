@@ -1,8 +1,9 @@
 import { notFound } from "next/navigation";
-import { ButtonLink, Container } from "@/components/ui";
+import { Badge, ButtonLink, Container } from "@/components/ui";
 import { ListingGallery } from "@/components/listings/listing-gallery";
 import { RateLine } from "@/components/browse/listing-card";
-import { getBookingAvailability, getListing } from "@/lib/api/listings";
+import { PassportTimeline } from "@/components/passport/passport-timeline";
+import { getBookingAvailability, getListing, getPassport } from "@/lib/api/listings";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney } from "@/lib/format";
 import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS } from "@/lib/listings";
@@ -21,6 +22,9 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     listing.status === "ACTIVE" && user && user.id !== listing.owner_id
       ? await getBookingAvailability(listing.id)
       : null;
+  // S2-07: a live listing's condition record, for renters to judge it by.
+  // Supplementary, so a failure only hides the section.
+  const passport = listing.status === "ACTIVE" ? await getPassport(listing.id).catch(() => null) : null;
 
   return (
     <Container className="py-16">
@@ -87,6 +91,22 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           )}
         </div>
       </div>
+
+      {passport && (
+        <section className="mt-16 border-t border-line pt-10">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="heading text-lg">Product Passport</h2>
+            {passport.serial_status === "VERIFIED" && <Badge variant="dark">Serial verified</Badge>}
+          </div>
+          <p className="body-copy mt-1">
+            This item&apos;s permanent condition record. Nothing here can be edited or deleted, so what you see is
+            what was recorded before any rental.
+          </p>
+          <div className="mt-6">
+            <PassportTimeline entries={passport.entries} />
+          </div>
+        </section>
+      )}
     </Container>
   );
 }
