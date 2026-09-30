@@ -9,6 +9,7 @@
 import "server-only";
 
 import { backendRequest } from "@/lib/api/client";
+import type { Booking } from "@/lib/bookings";
 import type {
   BaselineAngle,
   BrowseListingsResponse,
@@ -20,6 +21,7 @@ import type {
   Passport,
   PhotoKind,
   PresignPhotoResponse,
+  UnavailableDate,
   UpdateListingRequest,
   UpdateListingResponse,
 } from "@/lib/listings";
@@ -159,7 +161,10 @@ export type ListingAvailability = {
   confirmed_bookings: { id: string; start_date: string; end_date: string; status: string }[];
 };
 
-export type BookingAvailability = { available_dates: string[] };
+export type BookingAvailability = {
+  available_dates: string[];
+  unavailable_dates: UnavailableDate[];
+};
 
 /** Dates a renter can currently select, including the listing's schedule and reserved dates. */
 export function getBookingAvailability(listingId: string) {
@@ -174,8 +179,17 @@ export function updateListingAvailability(listingId: string, has_custom_availabi
   return backendRequest(`/listings/${encodeURIComponent(listingId)}/availability`, { method: "PUT", body: JSON.stringify({ has_custom_availability, custom_available_days }) });
 }
 
+/**
+ * Blocks a date range on the listing. A blackout outranks an unanswered
+ * request, so any PENDING booking it covers is cancelled and returned in
+ * `cancelled_bookings` — the owner should be told what they just turned down.
+ * A blackout clashing with a CONFIRMED booking is refused instead (409).
+ */
 export function addListingBlackout(listingId: string, start_date: string, end_date: string, reason?: string) {
-  return backendRequest(`/listings/${encodeURIComponent(listingId)}/blackouts`, { method: "POST", body: JSON.stringify({ start_date, end_date, reason: reason || null }) });
+  return backendRequest<{ id: string; cancelled_bookings: Booking[] }>(
+    `/listings/${encodeURIComponent(listingId)}/blackouts`,
+    { method: "POST", body: JSON.stringify({ start_date, end_date, reason: reason || null }) },
+  );
 }
 
 export function deleteListingBlackout(listingId: string, blackoutId: string) {
