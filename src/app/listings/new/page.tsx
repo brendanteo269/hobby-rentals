@@ -2,10 +2,12 @@ import { Container } from "@/components/ui";
 import { ListingForm } from "@/components/listings/listing-form";
 import { submitListing } from "@/app/listings/actions";
 import { getListingFormContext } from "@/app/listings/form-context";
+import { requireOwner } from "@/components/owner-portal";
 
 export const metadata = { title: "Create a listing — HobbyRentals" };
 
 export default async function NewListingPage() {
+  await requireOwner();
   const context = await getListingFormContext();
 
   return (

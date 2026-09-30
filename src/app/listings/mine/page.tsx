@@ -1,10 +1,18 @@
 import Link from "next/link";
-import { Badge, Container, ButtonLink, EmptyState } from "@/components/ui";
+import { Badge, ButtonLink, EmptyState } from "@/components/ui";
+import { OwnerPortal, requireOwner } from "@/components/owner-portal";
 import { ListingLifecycleActions } from "@/components/listings/listing-lifecycle-actions";
 import { getListingHistory, getMyListings, type ListingHistory } from "@/lib/api/listings";
 import { getOwnerBookings } from "@/lib/api/bookings";
 import { formatMoney } from "@/lib/format";
-import { LISTING_STATUS_LABELS, LOCATION_LABELS, type Listing } from "@/lib/listings";
+import {
+  CATEGORY_LABELS,
+  LISTING_STATUS_LABELS,
+  LOCATION_LABELS,
+  type Listing,
+  type ListingStatus,
+  type OwnerListing,
+} from "@/lib/listings";
 import { OwnerBookingList } from "@/components/bookings/owner-booking-list";
 import type { Booking } from "@/lib/bookings";
 
@@ -15,9 +23,17 @@ export const metadata = { title: "My listings — HobbyRentals" };
  * whatever its status, with archive/restore/remove controls per row.
  * Unlike Browse, this never filters to ACTIVE - an owner managing their
  * listings needs to see drafts, archived items and pending removals too.
+ *
+ * S2-01: filterable by status. Filtered here rather than by the API: the
+ * page needs the full list anyway to tell "no listings yet" apart from
+ * "none with this status".
  */
-export default async function MyListingsPage() {
-  const [listings, bookings] = await Promise.all([getMyListings(), getOwnerBookings()]);
+export default async function MyListingsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  await requireOwner();
+  const { status } = await searchParams;
+  const filter = status && status in LISTING_STATUS_LABELS ? (status as ListingStatus) : undefined;
+  const [allListings, bookings] = await Promise.all([getMyListings(), getOwnerBookings()]);
+  const listings = filter ? allListings.filter((listing) => listing.status === filter) : allListings;
   // History is supplementary: an audit-service/network hiccup must not make
   // an owner lose access to their inventory and booking controls.
   const histories = await Promise.all(listings.map(async (listing) => {
@@ -30,18 +46,35 @@ export default async function MyListingsPage() {
   const historyByListing = new Map(histories);
 
   return (
-    <Container className="py-16">
-      <div>
-        <p className="eyebrow">Owner dashboard</p>
-        <h1 className="heading mt-3 text-3xl">My listings</h1>
-      </div>
+    <OwnerPortal active="Inventory" title="My listings">
+      {allListings.length > 0 && (
+        <nav aria-label="Filter by status" className="flex flex-wrap gap-2">
+          {([undefined, ...(Object.keys(LISTING_STATUS_LABELS) as ListingStatus[])] as const).map((value) => (
+            <ButtonLink
+              key={value ?? "ALL"}
+              href={value ? `/listings/mine?status=${value}` : "/listings/mine"}
+              variant={value === filter ? "solid" : "outline"}
+              aria-current={value === filter ? "page" : undefined}
+              className="px-3 py-1.5 text-xs"
+            >
+              {value ? LISTING_STATUS_LABELS[value] : "All"}
+            </ButtonLink>
+          ))}
+        </nav>
+      )}
 
       <div className="mt-8">
-        {listings.length === 0 ? (
+        {allListings.length === 0 ? (
           <EmptyState
             title="No listings yet"
             body="Once you list a piece of gear, it'll show up here so you can manage its availability, archive it, or remove it."
-            action={<ButtonLink href="/listings/new">List your gear</ButtonLink>}
+            action={<ButtonLink href="/listings/new">Create your first listing</ButtonLink>}
+          />
+        ) : listings.length === 0 ? (
+          <EmptyState
+            title={`No ${LISTING_STATUS_LABELS[filter!].toLowerCase()} listings`}
+            body="Try another status, or show all your listings."
+            action={<ButtonLink href="/listings/mine" variant="outline">Show all</ButtonLink>}
           />
         ) : (
           <ul className="space-y-4">
@@ -51,7 +84,7 @@ export default async function MyListingsPage() {
           </ul>
         )}
       </div>
-    </Container>
+    </OwnerPortal>
   );
 }
 
@@ -69,12 +102,12 @@ const STATUS_BADGE_VARIANT: Record<Listing["status"], "neutral" | "accent" | "da
   REMOVED: "neutral",
 };
 
-function ListingRow({ listing, bookings, history }: { listing: Listing; bookings: Booking[]; history?: ListingHistory }) {
+function ListingRow({ listing, bookings, history }: { listing: OwnerListing; bookings: Booking[]; history?: ListingHistory }) {
   return (
     <li className="border border-line bg-white p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="eyebrow">{LOCATION_LABELS[listing.location_area]}</p>
+          <p className="eyebrow">{CATEGORY_LABELS[listing.category]} · {LOCATION_LABELS[listing.location_area]}</p>
           <h2 className="mt-1 text-base font-semibold uppercase tracking-wide">
             <Link href={`/listings/${listing.id}`} className="hover:underline">
               {listing.name}
@@ -86,7 +119,15 @@ function ListingRow({ listing, bookings, history }: { listing: Listing; bookings
             {listing.price_per_week_cents !== null && `${formatMoney(listing.price_per_week_cents)} / week`}
           </p>
         </div>
-        <Badge variant={STATUS_BADGE_VARIANT[listing.status]}>{LISTING_STATUS_LABELS[listing.status]}</Badge>
+        <div className="flex flex-wrap gap-2">
+          {/* Removed items can't be finished, so there's nothing to flag. */}
+          {listing.passport_missing.length > 0 && listing.status !== "REMOVED" && (
+            <Link href={`/listings/${listing.id}/passport`} className="hover:underline">
+              <Badge variant="accent">Passport incomplete</Badge>
+            </Link>
+          )}
+          <Badge variant={STATUS_BADGE_VARIANT[listing.status]}>{LISTING_STATUS_LABELS[listing.status]}</Badge>
+        </div>
       </div>
 
       {listing.status !== "REMOVED" && <ListingLifecycleActions listing={listing} />}

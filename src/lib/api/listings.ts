@@ -9,17 +9,22 @@
 import "server-only";
 
 import { backendRequest } from "@/lib/api/client";
+import type { Booking } from "@/lib/bookings";
 import type {
   BaselineAngle,
   BrowseListingsResponse,
   CreateListingRequest,
   Listing,
+  OwnerListing,
   ListingCategory,
   ListingCondition,
   LocationArea,
   Passport,
   PhotoKind,
   PresignPhotoResponse,
+  SerialClaim,
+  SerialExtraction,
+  UnavailableDate,
   UpdateListingRequest,
   UpdateListingResponse,
 } from "@/lib/listings";
@@ -72,7 +77,11 @@ export function browseListings(params: BrowseListingsParams = {}) {
   return backendRequest<BrowseListingsResponse>(`/listings${browseQuery(params)}`);
 }
 
-/** Creates the listing as a DRAFT; publishListing takes it live once its passport baseline is on record. */
+/**
+ * Creates the listing as a DRAFT, its passport carrying the serial.
+ * publishListing takes it live once its baseline is on record too. A 409
+ * means the serial is already registered to another listing.
+ */
 export function createListing(data: CreateListingRequest) {
   return backendRequest<Listing>("/listings", {
     method: "POST",
@@ -96,7 +105,7 @@ export function getListingLimits() {
  * it is the owner managing their own gear rather than a renter searching.
  */
 export function getMyListings() {
-  return backendRequest<Listing[]>("/listings/mine");
+  return backendRequest<OwnerListing[]>("/listings/mine");
 }
 
 /** A single listing, any status - the API 404s if this caller can't see it (not ACTIVE and not theirs). */
@@ -159,7 +168,10 @@ export type ListingAvailability = {
   confirmed_bookings: { id: string; start_date: string; end_date: string; status: string }[];
 };
 
-export type BookingAvailability = { available_dates: string[] };
+export type BookingAvailability = {
+  available_dates: string[];
+  unavailable_dates: UnavailableDate[];
+};
 
 /** Dates a renter can currently select, including the listing's schedule and reserved dates. */
 export function getBookingAvailability(listingId: string) {
@@ -174,8 +186,17 @@ export function updateListingAvailability(listingId: string, has_custom_availabi
   return backendRequest(`/listings/${encodeURIComponent(listingId)}/availability`, { method: "PUT", body: JSON.stringify({ has_custom_availability, custom_available_days }) });
 }
 
+/**
+ * Blocks a date range on the listing. A blackout outranks an unanswered
+ * request, so any PENDING booking it covers is cancelled and returned in
+ * `cancelled_bookings` — the owner should be told what they just turned down.
+ * A blackout clashing with a CONFIRMED booking is refused instead (409).
+ */
 export function addListingBlackout(listingId: string, start_date: string, end_date: string, reason?: string) {
-  return backendRequest(`/listings/${encodeURIComponent(listingId)}/blackouts`, { method: "POST", body: JSON.stringify({ start_date, end_date, reason: reason || null }) });
+  return backendRequest<{ id: string; cancelled_bookings: Booking[] }>(
+    `/listings/${encodeURIComponent(listingId)}/blackouts`,
+    { method: "POST", body: JSON.stringify({ start_date, end_date, reason: reason || null }) },
+  );
 }
 
 export function deleteListingBlackout(listingId: string, blackoutId: string) {
@@ -208,7 +229,39 @@ export function getPassport(listingId: string) {
   return backendRequest<Passport>(`/listings/${encodeURIComponent(listingId)}/passport`);
 }
 
+/** S2-05: reads the serial off a photo (a passports/ key). Saves nothing. */
+export function extractSerial(photoKey: string) {
+  return backendRequest<SerialExtraction>("/listings/serial/extract", {
+    method: "POST",
+    body: JSON.stringify({ photo_key: photoKey }),
+  });
+}
+
+/**
+ * For listings created before serials were required; new ones send theirs
+ * with createListing. A 409 means it's already registered to another listing.
+ */
+export function confirmSerial(listingId: string, body: SerialClaim) {
+  return backendRequest(`/listings/${encodeURIComponent(listingId)}/passport/serial/confirm`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 /** DRAFT -> ACTIVE. A 422 means the passport is incomplete. */
 export function publishListing(listingId: string) {
   return backendRequest<Listing>(`/listings/${encodeURIComponent(listingId)}/publish`, { method: "POST" });
+}
+
+/**
+ * Publishes a draft once its passport has nothing missing, so the owner can
+ * record the baseline and the serial in either order. Returns whether the
+ * listing is still a draft afterwards.
+ */
+export async function publishIfComplete(listingId: string): Promise<boolean> {
+  const [listing, passport] = await Promise.all([getListing(listingId), getPassport(listingId)]);
+  if (listing.status !== "DRAFT") return false;
+  if (passport.missing.length > 0) return true;
+  await publishListing(listingId);
+  return false;
 }

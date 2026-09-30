@@ -17,6 +17,8 @@ export const ROUTES = {
   user: (id: string) => `/users/${id}` as Route,
   wallets: "/wallets",
   wallet: (id: string) => `/wallets/${id}` as Route,
+  listings: "/listings",
+  listingPassport: (id: string) => `/listings/${id}/passport` as Route,
 } as const;
 
 /** Paths reachable without the portal password. Everything else is guarded. */

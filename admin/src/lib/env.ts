@@ -77,3 +77,23 @@ export function supabaseSecretKey() {
 
   return secretKey;
 }
+
+/** The FastAPI backend, for the private passport photos this portal can't sign itself. */
+export function apiUrl(): string {
+  return process.env.API_URL ?? "http://localhost:8000";
+}
+
+/**
+ * Proves this portal to the API's /admin endpoints, standing in for the
+ * per-administrator token a shared password can't provide. Must match
+ * ADMIN_API_KEY in the API's .env. Server-only, like the secret key.
+ */
+export function adminApiKey(): string {
+  const key = process.env.ADMIN_API_KEY;
+  if (!key) {
+    throw new Error(
+      "Missing ADMIN_API_KEY. Set the same value in admin/.env.local and the API's .env to view Product Passports.",
+    );
+  }
+  return key;
+}

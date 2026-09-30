@@ -6,6 +6,7 @@ import {
   addListingBlackout,
   createListing,
   deleteListingBlackout,
+  extractSerial,
   getListing,
   getListingAvailability,
   ListingApiError,
@@ -18,6 +19,8 @@ import { dollarsToCents, todayIso } from "@/lib/format";
 import {
   BASELINE_INCOMPLETE,
   parseBaselinePhotos,
+  parseSerialClaim,
+  SERIAL_INCOMPLETE,
   isCategory,
   isCondition,
   isLocationArea,
@@ -25,8 +28,19 @@ import {
   type CreateListingRequest,
   type DateRange,
   type Listing,
+  type SerialExtraction,
   type UpdateListingRequest,
 } from "@/lib/listings";
+
+/** SerialField calls this as soon as the label photo has uploaded. Any failure reads as unreadable. */
+export async function readSerial(photoKey: string): Promise<SerialExtraction> {
+  try {
+    return await extractSerial(photoKey);
+  } catch (caught) {
+    if (caught instanceof ListingApiError) return { serial: null, confidence: 0, readable: false };
+    throw caught;
+  }
+}
 
 /** Shared by the create and edit forms, which render the same fields. */
 export type ListingFormState =
@@ -39,6 +53,13 @@ export type ListingFormState =
       success?: {
         /** See UpdateListingResponse.active_booking_count. */
         activeBookingCount: number;
+        /**
+         * Pending requests the edit's new blackouts turned down. A blackout
+         * outranks an unanswered request, so adding one can reject renters
+         * who were still waiting - the owner should hear that from the form,
+         * not from the renter.
+         */
+        cancelledBookingCount: number;
       };
     }
   | undefined;
@@ -175,7 +196,8 @@ export async function submitListing(
 ): Promise<ListingFormState> {
   const parsed = parseListingFields(formData);
   const baseline = parseBaselinePhotos(formData);
-  if (parsed.fieldErrors || !baseline) {
+  const serial = parseSerialClaim(formData);
+  if (parsed.fieldErrors || !baseline || !serial) {
     return {
       error: "Please correct the highlighted fields.",
       // The four condition photos are also the listing's photo_keys, so a
@@ -183,6 +205,7 @@ export async function submitListing(
       fieldErrors: {
         ...Object.fromEntries(Object.entries(parsed.fieldErrors ?? {}).filter(([name]) => name !== "photo_keys")),
         ...(baseline ? {} : { baseline_photos: BASELINE_INCOMPLETE }),
+        ...(serial ? {} : { serial: SERIAL_INCOMPLETE }),
       },
     };
   }
@@ -195,12 +218,17 @@ export async function submitListing(
     has_custom_availability: text(formData, "has_custom_availability") === "true",
     custom_available_days: hiddenList(formData, "custom_available_days", isNumber),
     initial_blackouts: hiddenList(formData, "initial_blackouts", isBlackout),
+    serial,
   };
 
   let created: Listing;
   try {
     created = await createListing(request);
   } catch (caught) {
+    // The serial is already another listing's: nothing was created.
+    if (caught instanceof ListingApiError && caught.status === 409) {
+      return { error: "Please correct the highlighted fields.", fieldErrors: { serial: caught.message } };
+    }
     if (caught instanceof ListingApiError) {
       return { error: caught.message, fieldErrors: caught.fieldErrors };
     }
@@ -267,7 +295,11 @@ const rangeKey = (range: DateRange) => `${range.start_date}|${range.end_date}`;
  * set - deleting it for that reason alone would be rewriting history the
  * owner never touched.
  */
-async function syncBlackouts(listingId: string, stored: BlackoutDate[], desired: DateRange[]) {
+async function syncBlackouts(
+  listingId: string,
+  stored: BlackoutDate[],
+  desired: DateRange[],
+): Promise<{ cancelledBookingCount: number }> {
   const today = todayIso();
   const live = stored.filter((row) => row.end_date >= today);
   const wanted = new Set(desired.map(rangeKey));
@@ -276,9 +308,16 @@ async function syncBlackouts(listingId: string, stored: BlackoutDate[], desired:
   for (const row of live) {
     if (!wanted.has(rangeKey(row)) && row.id) await deleteListingBlackout(listingId, row.id);
   }
+  // A new blackout cancels the pending requests it covers, so the owner is
+  // told how many their edit just turned down rather than finding out from
+  // the renter.
+  let cancelledBookingCount = 0;
   for (const range of desired) {
-    if (!have.has(rangeKey(range))) await addListingBlackout(listingId, range.start_date, range.end_date);
+    if (have.has(rangeKey(range))) continue;
+    const added = await addListingBlackout(listingId, range.start_date, range.end_date);
+    cancelledBookingCount += added.cancelled_bookings.length;
   }
+  return { cancelledBookingCount };
 }
 
 /**
@@ -338,8 +377,9 @@ export async function updateListing(
     }
   }
 
+  let cancelledBookingCount = 0;
   try {
-    await syncBlackouts(listingId, storedBlackouts, blackouts);
+    ({ cancelledBookingCount } = await syncBlackouts(listingId, storedBlackouts, blackouts));
   } catch (caught) {
     if (caught instanceof ListingApiError) {
       return { error: caught.message, fieldErrors: { blackout_dates: caught.message } };
@@ -353,7 +393,7 @@ export async function updateListing(
     revalidatePath("/listings/mine");
     revalidatePath(`/listings/${listingId}`);
     revalidatePath(`/listings/${listingId}/availability`);
-    return { success: { activeBookingCount: active_booking_count } };
+    return { success: { activeBookingCount: active_booking_count, cancelledBookingCount } };
   } catch (caught) {
     if (caught instanceof ListingApiError) {
       return { error: caught.message, fieldErrors: caught.fieldErrors };

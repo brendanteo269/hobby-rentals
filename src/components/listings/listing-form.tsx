@@ -10,6 +10,7 @@ import { RentalDurationField } from "@/components/listings/rental-duration-field
 import { PhotoUploadField } from "@/components/listings/photo-upload-field";
 import { PricePerBlockField } from "@/components/listings/price-per-block-field";
 import { BaselinePhotosField } from "@/components/passport/baseline-photos-field";
+import { SerialField } from "@/components/passport/serial-form";
 import type { ListingFormState } from "@/app/listings/actions";
 import { centsToDollars, dollarsToCents, formatMoney, todayIso } from "@/lib/format";
 import {
@@ -275,6 +276,13 @@ export function ListingForm({
         )}
       </FormSection>
 
+      {/* The item's identity, fixed once its passport is created. */}
+      {!editing && (
+        <FormSection title="Serial number">
+          <SerialField error={errors.serial} />
+        </FormSection>
+      )}
+
       <FormSection title="Price">
         {/* Only one of the two is ever submitted, so at most one of these two
             backend error slots is ever populated - whichever it is applies to
@@ -387,6 +395,14 @@ export function ListingForm({
             Note: Changes apply to new bookings only. Anyone who has
             already booked keeps the terms they agreed to.
           </p>
+          {saved.cancelledBookingCount > 0 && (
+            <p className="body-copy mt-3">
+              {saved.cancelledBookingCount === 1
+                ? "One booking request was"
+                : `${saved.cancelledBookingCount} booking requests were`}{" "}
+              declined, because your new blackout dates cover the dates they asked for.
+            </p>
+          )}
           <div className="mt-6 flex justify-end">
             <ButtonLink href="/listings/mine">Back to my listings</ButtonLink>
           </div>
