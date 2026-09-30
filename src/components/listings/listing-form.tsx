@@ -10,6 +10,7 @@ import { RentalDurationField } from "@/components/listings/rental-duration-field
 import { PhotoUploadField } from "@/components/listings/photo-upload-field";
 import { PricePerBlockField } from "@/components/listings/price-per-block-field";
 import { BaselinePhotosField } from "@/components/passport/baseline-photos-field";
+import { SerialField } from "@/components/passport/serial-form";
 import type { ListingFormState } from "@/app/listings/actions";
 import { centsToDollars, dollarsToCents, formatMoney, todayIso } from "@/lib/format";
 import {
@@ -274,6 +275,13 @@ export function ListingForm({
           <BaselinePhotosField error={errors.baseline_photos} />
         )}
       </FormSection>
+
+      {/* The item's identity, fixed once its passport is created. */}
+      {!editing && (
+        <FormSection title="Serial number">
+          <SerialField error={errors.serial} />
+        </FormSection>
+      )}
 
       <FormSection title="Price">
         {/* Only one of the two is ever submitted, so at most one of these two

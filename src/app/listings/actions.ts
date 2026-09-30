@@ -6,6 +6,7 @@ import {
   addListingBlackout,
   createListing,
   deleteListingBlackout,
+  extractSerial,
   getListing,
   getListingAvailability,
   ListingApiError,
@@ -18,6 +19,8 @@ import { dollarsToCents, todayIso } from "@/lib/format";
 import {
   BASELINE_INCOMPLETE,
   parseBaselinePhotos,
+  parseSerialClaim,
+  SERIAL_INCOMPLETE,
   isCategory,
   isCondition,
   isLocationArea,
@@ -25,8 +28,19 @@ import {
   type CreateListingRequest,
   type DateRange,
   type Listing,
+  type SerialExtraction,
   type UpdateListingRequest,
 } from "@/lib/listings";
+
+/** SerialField calls this as soon as the label photo has uploaded. Any failure reads as unreadable. */
+export async function readSerial(photoKey: string): Promise<SerialExtraction> {
+  try {
+    return await extractSerial(photoKey);
+  } catch (caught) {
+    if (caught instanceof ListingApiError) return { serial: null, confidence: 0, readable: false };
+    throw caught;
+  }
+}
 
 /** Shared by the create and edit forms, which render the same fields. */
 export type ListingFormState =
@@ -182,7 +196,8 @@ export async function submitListing(
 ): Promise<ListingFormState> {
   const parsed = parseListingFields(formData);
   const baseline = parseBaselinePhotos(formData);
-  if (parsed.fieldErrors || !baseline) {
+  const serial = parseSerialClaim(formData);
+  if (parsed.fieldErrors || !baseline || !serial) {
     return {
       error: "Please correct the highlighted fields.",
       // The four condition photos are also the listing's photo_keys, so a
@@ -190,6 +205,7 @@ export async function submitListing(
       fieldErrors: {
         ...Object.fromEntries(Object.entries(parsed.fieldErrors ?? {}).filter(([name]) => name !== "photo_keys")),
         ...(baseline ? {} : { baseline_photos: BASELINE_INCOMPLETE }),
+        ...(serial ? {} : { serial: SERIAL_INCOMPLETE }),
       },
     };
   }
@@ -202,12 +218,17 @@ export async function submitListing(
     has_custom_availability: text(formData, "has_custom_availability") === "true",
     custom_available_days: hiddenList(formData, "custom_available_days", isNumber),
     initial_blackouts: hiddenList(formData, "initial_blackouts", isBlackout),
+    serial,
   };
 
   let created: Listing;
   try {
     created = await createListing(request);
   } catch (caught) {
+    // The serial is already another listing's: nothing was created.
+    if (caught instanceof ListingApiError && caught.status === 409) {
+      return { error: "Please correct the highlighted fields.", fieldErrors: { serial: caught.message } };
+    }
     if (caught instanceof ListingApiError) {
       return { error: caught.message, fieldErrors: caught.fieldErrors };
     }
