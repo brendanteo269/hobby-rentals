@@ -395,6 +395,14 @@ export function ListingForm({
             Note: Changes apply to new bookings only. Anyone who has
             already booked keeps the terms they agreed to.
           </p>
+          {saved.cancelledBookingCount > 0 && (
+            <p className="body-copy mt-3">
+              {saved.cancelledBookingCount === 1
+                ? "One booking request was"
+                : `${saved.cancelledBookingCount} booking requests were`}{" "}
+              declined, because your new blackout dates cover the dates they asked for.
+            </p>
+          )}
           <div className="mt-6 flex justify-end">
             <ButtonLink href="/listings/mine">Back to my listings</ButtonLink>
           </div>

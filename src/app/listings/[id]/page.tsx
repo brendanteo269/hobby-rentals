@@ -63,8 +63,11 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             <BookingRequestForm
               listingId={listing.id}
               availableDates={bookingAvailability?.available_dates ?? []}
+              unavailableDates={bookingAvailability?.unavailable_dates ?? []}
               minRentalDays={listing.min_rental_days}
               maxRentalDays={listing.max_rental_days}
+              pricePerDayCents={listing.price_per_day_cents}
+              pricePerWeekCents={listing.price_per_week_cents}
             />
           )}
           {listing.status === "PENDING_REMOVAL" && user && user.id !== listing.owner_id && (
