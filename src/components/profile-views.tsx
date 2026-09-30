@@ -5,11 +5,16 @@ import { EnableOwningForm } from "@/components/enable-owning-form";
 import { saveProfileAvailability } from "@/app/profile/actions";
 import { ProfileAvailabilityCard } from "@/components/profile-availability-card";
 import { RateLine } from "@/components/browse/listing-card";
+import { MessageButton } from "@/components/messages/message-button";
 import { CATEGORY_LABELS, LISTING_STATUS_LABELS, type Listing } from "@/lib/listings";
 import { profilePath, type ProfileView } from "@/lib/routes";
 import type { Booking } from "@/lib/bookings";
 import type { BundleBooking } from "@/lib/bundles";
-import { BOOKING_STATUS_LABELS } from "@/lib/bookings";
+import {
+  BOOKING_STATUS_BADGE_VARIANT,
+  BOOKING_STATUS_LABELS,
+  MESSAGEABLE_BOOKING_STATUSES,
+} from "@/lib/bookings";
 import { formatDate } from "@/lib/format";
 
 export type { ProfileView } from "@/lib/routes";
@@ -125,7 +130,12 @@ export function RenterView({
                 <Link href={`/listings/${booking.listing_id}`} className="font-medium hover:underline">View listing</Link>
                 <p className="mt-1 text-sm text-ink-soft">{formatDate(booking.start_date)} – {formatDate(booking.end_date)}</p>
               </div>
-              <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
+              <div className="flex items-center gap-2">
+                {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
+                  <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
+                )}
+                <Badge variant={BOOKING_STATUS_BADGE_VARIANT[booking.status]}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
+              </div>
             </li>
           ))}
         </ul>
