@@ -2,13 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { getListing, ListingApiError, publishListing, recordBaseline } from "@/lib/api/listings";
+import { ListingApiError, publishIfComplete, recordBaseline } from "@/lib/api/listings";
 import { BASELINE_INCOMPLETE, parseBaselinePhotos } from "@/lib/listings";
 
 /**
- * S2-04: records the baseline, then publishes if the listing is still a
- * draft. A listing that went live before passports existed is only given its
- * baseline - it is already public.
+ * S2-04: records the baseline, then publishes the draft if its serial is
+ * already verified. A draft still missing its serial goes back to its
+ * passport page, which shows what's left.
  */
 export async function saveBaselineAndPublish(
   listingId: string,
@@ -18,10 +18,10 @@ export async function saveBaselineAndPublish(
   const photos = parseBaselinePhotos(formData);
   if (!photos) return { error: BASELINE_INCOMPLETE };
 
+  let draft: boolean;
   try {
     await recordBaseline(listingId, photos);
-    const listing = await getListing(listingId);
-    if (listing.status === "DRAFT") await publishListing(listingId);
+    draft = await publishIfComplete(listingId);
   } catch (caught) {
     if (caught instanceof ListingApiError) return { error: caught.message };
     throw caught;
@@ -30,5 +30,5 @@ export async function saveBaselineAndPublish(
   revalidatePath("/listings/mine");
   revalidatePath(`/listings/${listingId}`);
   // Outside the try: redirect signals by throwing.
-  redirect(`/listings/${listingId}`);
+  redirect(draft ? `/listings/${listingId}/passport` : `/listings/${listingId}`);
 }
