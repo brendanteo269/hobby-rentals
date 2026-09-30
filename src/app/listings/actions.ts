@@ -39,6 +39,13 @@ export type ListingFormState =
       success?: {
         /** See UpdateListingResponse.active_booking_count. */
         activeBookingCount: number;
+        /**
+         * Pending requests the edit's new blackouts turned down. A blackout
+         * outranks an unanswered request, so adding one can reject renters
+         * who were still waiting - the owner should hear that from the form,
+         * not from the renter.
+         */
+        cancelledBookingCount: number;
       };
     }
   | undefined;
@@ -267,7 +274,11 @@ const rangeKey = (range: DateRange) => `${range.start_date}|${range.end_date}`;
  * set - deleting it for that reason alone would be rewriting history the
  * owner never touched.
  */
-async function syncBlackouts(listingId: string, stored: BlackoutDate[], desired: DateRange[]) {
+async function syncBlackouts(
+  listingId: string,
+  stored: BlackoutDate[],
+  desired: DateRange[],
+): Promise<{ cancelledBookingCount: number }> {
   const today = todayIso();
   const live = stored.filter((row) => row.end_date >= today);
   const wanted = new Set(desired.map(rangeKey));
@@ -276,9 +287,16 @@ async function syncBlackouts(listingId: string, stored: BlackoutDate[], desired:
   for (const row of live) {
     if (!wanted.has(rangeKey(row)) && row.id) await deleteListingBlackout(listingId, row.id);
   }
+  // A new blackout cancels the pending requests it covers, so the owner is
+  // told how many their edit just turned down rather than finding out from
+  // the renter.
+  let cancelledBookingCount = 0;
   for (const range of desired) {
-    if (!have.has(rangeKey(range))) await addListingBlackout(listingId, range.start_date, range.end_date);
+    if (have.has(rangeKey(range))) continue;
+    const added = await addListingBlackout(listingId, range.start_date, range.end_date);
+    cancelledBookingCount += added.cancelled_bookings.length;
   }
+  return { cancelledBookingCount };
 }
 
 /**
@@ -338,8 +356,9 @@ export async function updateListing(
     }
   }
 
+  let cancelledBookingCount = 0;
   try {
-    await syncBlackouts(listingId, storedBlackouts, blackouts);
+    ({ cancelledBookingCount } = await syncBlackouts(listingId, storedBlackouts, blackouts));
   } catch (caught) {
     if (caught instanceof ListingApiError) {
       return { error: caught.message, fieldErrors: { blackout_dates: caught.message } };
@@ -353,7 +372,7 @@ export async function updateListing(
     revalidatePath("/listings/mine");
     revalidatePath(`/listings/${listingId}`);
     revalidatePath(`/listings/${listingId}/availability`);
-    return { success: { activeBookingCount: active_booking_count } };
+    return { success: { activeBookingCount: active_booking_count, cancelledBookingCount } };
   } catch (caught) {
     if (caught instanceof ListingApiError) {
       return { error: caught.message, fieldErrors: caught.fieldErrors };
