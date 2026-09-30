@@ -252,3 +252,16 @@ export function confirmSerial(listingId: string, body: SerialClaim) {
 export function publishListing(listingId: string) {
   return backendRequest<Listing>(`/listings/${encodeURIComponent(listingId)}/publish`, { method: "POST" });
 }
+
+/**
+ * Publishes a draft once its passport has nothing missing, so the owner can
+ * record the baseline and the serial in either order. Returns whether the
+ * listing is still a draft afterwards.
+ */
+export async function publishIfComplete(listingId: string): Promise<boolean> {
+  const [listing, passport] = await Promise.all([getListing(listingId), getPassport(listingId)]);
+  if (listing.status !== "DRAFT") return false;
+  if (passport.missing.length > 0) return true;
+  await publishListing(listingId);
+  return false;
+}

@@ -1,10 +1,12 @@
 import Link from "next/link";
-import { Badge, Container, ButtonLink, EmptyState } from "@/components/ui";
+import { Badge, ButtonLink, EmptyState } from "@/components/ui";
+import { OwnerPortal, requireOwner } from "@/components/owner-portal";
 import { ListingLifecycleActions } from "@/components/listings/listing-lifecycle-actions";
 import { getListingHistory, getMyListings, type ListingHistory } from "@/lib/api/listings";
 import { getOwnerBookings } from "@/lib/api/bookings";
 import { formatMoney } from "@/lib/format";
 import {
+  CATEGORY_LABELS,
   LISTING_STATUS_LABELS,
   LOCATION_LABELS,
   type Listing,
@@ -27,6 +29,7 @@ export const metadata = { title: "My listings — HobbyRentals" };
  * "none with this status".
  */
 export default async function MyListingsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  await requireOwner();
   const { status } = await searchParams;
   const filter = status && status in LISTING_STATUS_LABELS ? (status as ListingStatus) : undefined;
   const [allListings, bookings] = await Promise.all([getMyListings(), getOwnerBookings()]);
@@ -43,14 +46,9 @@ export default async function MyListingsPage({ searchParams }: { searchParams: P
   const historyByListing = new Map(histories);
 
   return (
-    <Container className="py-16">
-      <div>
-        <p className="eyebrow">Owner dashboard</p>
-        <h1 className="heading mt-3 text-3xl">My listings</h1>
-      </div>
-
+    <OwnerPortal active="Inventory" title="My listings">
       {allListings.length > 0 && (
-        <nav aria-label="Filter by status" className="mt-8 flex flex-wrap gap-2">
+        <nav aria-label="Filter by status" className="flex flex-wrap gap-2">
           {([undefined, ...(Object.keys(LISTING_STATUS_LABELS) as ListingStatus[])] as const).map((value) => (
             <ButtonLink
               key={value ?? "ALL"}
@@ -86,7 +84,7 @@ export default async function MyListingsPage({ searchParams }: { searchParams: P
           </ul>
         )}
       </div>
-    </Container>
+    </OwnerPortal>
   );
 }
 
@@ -109,7 +107,7 @@ function ListingRow({ listing, bookings, history }: { listing: OwnerListing; boo
     <li className="border border-line bg-white p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="eyebrow">{LOCATION_LABELS[listing.location_area]}</p>
+          <p className="eyebrow">{CATEGORY_LABELS[listing.category]} · {LOCATION_LABELS[listing.location_area]}</p>
           <h2 className="mt-1 text-base font-semibold uppercase tracking-wide">
             <Link href={`/listings/${listing.id}`} className="hover:underline">
               {listing.name}

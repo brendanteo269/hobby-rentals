@@ -37,6 +37,12 @@ export default async function PassportPage({ params }: { params: Promise<{ id: s
           </ButtonLink>
         </div>
 
+        {listing.status === "DRAFT" && (
+          <div className="mt-8">
+            <FormNotice message="This listing is a draft and hidden from renters. It goes live once its condition photos and serial number are both recorded." />
+          </div>
+        )}
+
         <dl className="mt-8 grid gap-4 border border-line bg-white p-5 text-sm sm:grid-cols-2">
           <div>
             <dt className="eyebrow">Serial number</dt>

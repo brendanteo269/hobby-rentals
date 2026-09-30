@@ -23,7 +23,7 @@ export default async function PassportBaselinePage({ params }: { params: Promise
         <h1 className="heading mt-3 text-3xl">Record its condition</h1>
         {publishes && (
           <p className="body-copy mt-3">
-            This listing is a draft. It goes live once its condition photos are saved.
+            This listing is a draft. It goes live once its condition photos and serial number are both recorded.
           </p>
         )}
 

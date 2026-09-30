@@ -91,6 +91,10 @@ export function SerialField({ error }: { error?: string }) {
           ) : (
             <FormNotice message="We couldn't read the serial number clearly. Retake the photo, or type it in below." />
           )}
+          {/* S2-05 Scenario 1: the owner sees how sure the reading is before confirming it. */}
+          {reading.serial && (
+            <p className="text-xs text-ink-soft">Read with {Math.round(reading.confidence * 100)}% confidence.</p>
+          )}
           <input type="hidden" name="serial_photo_key" value={ready.key} />
           <input type="hidden" name="serial_extracted" value={reading.serial ?? ""} />
           <input type="hidden" name="serial_confidence" value={reading.serial ? String(reading.confidence) : ""} />
