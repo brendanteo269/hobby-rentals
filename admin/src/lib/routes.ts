@@ -16,6 +16,7 @@ export const ROUTES = {
   // one line rather than repeated at every link.
   user: (id: string) => `/users/${id}` as Route,
   wallets: "/wallets",
+  categories: "/categories",
   wallet: (id: string) => `/wallets/${id}` as Route,
 } as const;
 

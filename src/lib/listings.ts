@@ -12,18 +12,7 @@
  * reminder that it needs a label too.
  */
 
-export type ListingCategory =
-  | "PHOTOGRAPHY_VIDEOGRAPHY"
-  | "CAMPING_OUTDOOR"
-  | "HIKING"
-  | "POWER_TOOLS_DIY"
-  | "SPORTS_FITNESS"
-  | "MUSIC_AUDIO"
-  | "GAMING_TECH"
-  | "EVENTS_PARTY"
-  | "COOKING_BAKING"
-  | "GARDENING"
-  | "OTHER";
+export type ListingCategory = string;
 
 export type ListingCondition = "NEW" | "GOOD" | "FAIR" | "POOR";
 
@@ -120,6 +109,7 @@ export type Listing = {
   available_from: string;
   available_until: string | null;
   blackout_dates: unknown[];
+  attributes: Record<string, unknown>;
   has_custom_availability: boolean;
   custom_available_days: number[] | null;
   photo_keys: string[];
@@ -232,6 +222,32 @@ export type CreateListingRequest = {
   initial_blackouts?: BlackoutDate[];
   /** At least one is required (FastAPI 422s on an empty list). */
   photo_keys: string[];
+  /** Values validated against the selected category's current schema on create. */
+  attributes?: Record<string, unknown>;
+};
+
+export type CategoryAttributeDefinition = {
+  id: string;
+  category_slug: string;
+  attribute_key: string;
+  label: string;
+  data_type: "text" | "number" | "select";
+  is_required: boolean;
+  options: string[];
+  min_val: number | null;
+  max_val: number | null;
+  display_order: number;
+};
+
+export type ListingCategoryOption = { slug: string; label: string; display_order: number; is_active: boolean };
+
+/** Compatibility mapping from the existing persisted category enum to schema slugs. */
+export const CATEGORY_ATTRIBUTE_SLUGS: Partial<Record<ListingCategory, string>> = {
+  PHOTOGRAPHY_VIDEOGRAPHY: "cameras",
+  CAMPING_OUTDOOR: "camping",
+  SPORTS_FITNESS: "water_sports",
+  MUSIC_AUDIO: "musical_instruments",
+  POWER_TOOLS_DIY: "power_tools",
 };
 
 /**

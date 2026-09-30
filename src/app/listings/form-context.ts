@@ -1,8 +1,9 @@
 import "server-only";
 
-import { getListingLimits } from "@/lib/api/listings";
+import { getListingCategories, getListingLimits } from "@/lib/api/listings";
 import { getProfileAvailability } from "@/lib/api/profile-availability";
 import { isLocationArea, type LocationArea } from "@/lib/listings";
+import type { ListingCategoryOption } from "@/lib/listings";
 import { getOwnProfile } from "@/lib/profile";
 
 /**
@@ -13,9 +14,10 @@ export async function getListingFormContext(): Promise<{
   profileAvailableDays: number[];
   profileDefaultLocation: LocationArea | null;
   depositCapBps: number;
+  categories: ListingCategoryOption[];
 }> {
-  const [{ available_days: profileAvailableDays }, profile, { deposit_cap_bps: depositCapBps }] =
-    await Promise.all([getProfileAvailability(), getOwnProfile(), getListingLimits()]);
+  const [{ available_days: profileAvailableDays }, profile, { deposit_cap_bps: depositCapBps }, categories] =
+    await Promise.all([getProfileAvailability(), getOwnProfile(), getListingLimits(), getListingCategories()]);
 
   // The stored value is a plain text column, so a guard rather than a cast:
   // a future free-text migration on profiles should not start pre-filling
@@ -25,5 +27,5 @@ export async function getListingFormContext(): Promise<{
       ? profile.default_pickup_location
       : null;
 
-  return { profileAvailableDays, profileDefaultLocation, depositCapBps };
+  return { profileAvailableDays, profileDefaultLocation, depositCapBps, categories };
 }

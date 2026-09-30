@@ -16,6 +16,7 @@ import type {
   Listing,
   ListingCategory,
   ListingCondition,
+  ListingCategoryOption,
   LocationArea,
   Passport,
   PhotoKind,
@@ -88,6 +89,10 @@ export type ListingLimits = {
 /** Server-enforced listing limits, so the create-listing form can show an owner the deposit cap before they submit, not just reject it after. */
 export function getListingLimits() {
   return backendRequest<ListingLimits>("/listings/limits");
+}
+
+export function getListingCategories() {
+  return backendRequest<ListingCategoryOption[]>("/categories");
 }
 
 /**

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import type { ChangeEvent, ReactNode } from "react";
 import { Button, ButtonLink, Field, FormError, Modal, SelectField, TextareaField } from "@/components/ui";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
@@ -13,15 +13,16 @@ import { BaselinePhotosField } from "@/components/passport/baseline-photos-field
 import type { ListingFormState } from "@/app/listings/actions";
 import { centsToDollars, dollarsToCents, formatMoney, todayIso } from "@/lib/format";
 import {
-  CATEGORIES,
-  CATEGORY_LABELS,
   CONDITIONS,
   CONDITION_LABELS,
   type BlackoutDate,
+  type CategoryAttributeDefinition,
   type DateRange,
   type Listing,
   type LocationArea,
+  type ListingCategoryOption,
 } from "@/lib/listings";
+import { getCategoryAttributes } from "@/lib/category-attributes";
 
 /**
  * Everything read via plain `name`/`defaultValue` (as these all were until a
@@ -96,6 +97,7 @@ export function ListingForm({
   profileAvailableDays,
   profileDefaultLocation,
   depositCapBps,
+  categories,
 }: {
   action: (prev: ListingFormState, formData: FormData) => Promise<ListingFormState>;
   /** Present when editing; every field then starts from this listing's stored values. */
@@ -110,6 +112,7 @@ export function ListingForm({
   profileDefaultLocation: LocationArea | null;
   /** Basis points (10000 = 100%) a deposit may not exceed of the weekly-equivalent rate - drives the live recommendation under the deposit field. */
   depositCapBps: number;
+  categories: ListingCategoryOption[];
 }) {
   const editing = listing !== undefined;
   const [state, formAction, pending] = useActionState<ListingFormState, FormData>(action, undefined);
@@ -151,10 +154,30 @@ export function ListingForm({
   );
 
   const [fields, setFields] = useState<FieldValues>(editing ? fieldsFrom(listing) : EMPTY_FIELDS);
+  const [attributeDefinitions, setAttributeDefinitions] = useState<CategoryAttributeDefinition[]>([]);
+  const [attributeValues, setAttributeValues] = useState<Record<string, string | number>>({});
+  const [attributeLoadError, setAttributeLoadError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!fields.category || editing) {
+      return;
+    }
+    getCategoryAttributes(fields.category)
+      .then((definitions) => { if (!cancelled) setAttributeDefinitions(definitions); })
+      .catch(() => { if (!cancelled) setAttributeLoadError("Category specifications could not be loaded. Please try again."); });
+    return () => { cancelled = true; };
+  }, [fields.category, editing]);
   const updateField =
     <K extends keyof FieldValues>(key: K) =>
-    (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+    (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+      if (key === "category") {
+        setAttributeDefinitions([]);
+        setAttributeValues({});
+        setAttributeLoadError(null);
+      }
       setFields((current) => ({ ...current, [key]: event.target.value }));
+    };
 
   // Mirrors PricePerBlockField's own internal state via its onRateChange
   // callback, purely so the deposit field below can show a live cap
@@ -224,9 +247,9 @@ export function ListingForm({
             <option value="" disabled>
               Choose one
             </option>
-            {CATEGORIES.map((value) => (
-              <option key={value} value={value}>
-                {CATEGORY_LABELS[value]}
+            {categories.map((category) => (
+              <option key={category.slug} value={category.slug}>
+                {category.label}
               </option>
             ))}
           </SelectField>
@@ -250,6 +273,35 @@ export function ListingForm({
             ))}
           </SelectField>
         </div>
+
+        {!editing && attributeDefinitions.length > 0 && (
+          <div className="border-t border-line pt-5">
+            <h3 className="text-sm font-medium">Category specifications</h3>
+            <p className="body-copy mt-1">Add the details renters need to compare this item.</p>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2">
+              {attributeDefinitions.map((definition) => {
+                const name = `attributes.${definition.attribute_key}`;
+                const value = attributeValues[definition.attribute_key] ?? "";
+                const setValue = (next: string) => setAttributeValues((current) => ({
+                  ...current,
+                  [definition.attribute_key]: definition.data_type === "number" && next !== "" ? Number(next) : next,
+                }));
+                return definition.data_type === "select" ? (
+                  <SelectField key={definition.id} label={definition.label} id={name} required={definition.is_required} error={errors[name]} value={value} onChange={(event) => setValue(event.target.value)}>
+                    <option value="">Choose one</option>
+                    {definition.options.map((option) => <option key={option} value={option}>{option}</option>)}
+                  </SelectField>
+                ) : definition.data_type === "text" ? (
+                  <TextareaField key={definition.id} label={definition.label} id={name} rows={3} required={definition.is_required} error={errors[name]} value={String(value)} onChange={(event) => setValue(event.target.value)} />
+                ) : (
+                  <Field key={definition.id} label={definition.label} id={name} type={definition.data_type === "number" ? "number" : "text"} min={definition.min_val ?? undefined} max={definition.max_val ?? undefined} step={definition.data_type === "number" ? "any" : undefined} required={definition.is_required} error={errors[name]} value={value} onChange={(event) => setValue(event.target.value)} />
+                );
+              })}
+            </div>
+            <input type="hidden" name="attributes" value={JSON.stringify(attributeValues)} />
+          </div>
+        )}
+        {attributeLoadError && <p role="alert" className="text-sm text-accent-dark">{attributeLoadError}</p>}
 
         <PickupLocationField
           profileDefault={profileDefaultLocation}
