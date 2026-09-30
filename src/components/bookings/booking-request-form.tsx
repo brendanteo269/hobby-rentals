@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui";
-import { requestBooking } from "@/app/bookings/actions";
+import { quoteBooking, requestBooking } from "@/app/bookings/actions";
+import type { BookingQuote } from "@/lib/api/bookings";
 import { formatDate, formatMoney } from "@/lib/format";
 import {
-  rentalDays,
   rentalDurationLimits,
-  rentalQuote,
   UNAVAILABLE_REASON_LABELS,
   WEEKDAY_LABELS,
   type UnavailableDate,
@@ -22,9 +22,6 @@ type Props = {
   unavailableDates: UnavailableDate[];
   minRentalDays: number | null;
   maxRentalDays: number | null;
-  /** Whichever rates the listing carries; at least one is always set. */
-  pricePerDayCents: number | null;
-  pricePerWeekCents: number | null;
 };
 
 const iso = (date: Date) =>
@@ -53,8 +50,6 @@ export function BookingRequestForm({
   unavailableDates,
   minRentalDays,
   maxRentalDays,
-  pricePerDayCents,
-  pricePerWeekCents,
 }: Props) {
   const availableSet = useMemo(() => new Set(availableDates), [availableDates]);
   const reasonByDate = useMemo(
@@ -79,6 +74,14 @@ export function BookingRequestForm({
   const [paged, setPaged] = useState<{ year: number; month: number } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | undefined>();
+  const [shortfallCents, setShortfallCents] = useState<number | undefined>();
+  const [quote, setQuote] = useState<BookingQuote | null>(null);
+  // Generated once per quoted date range and reused across retries of
+  // submitting it (e.g. a request that times out but actually succeeds
+  // server-side), so a double-submit places only one wallet hold. A new
+  // range gets its own key the next time a quote comes back.
+  const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const endDates = useMemo(() => {
     if (!startDate) return [];
@@ -98,18 +101,6 @@ export function BookingRequestForm({
     return reason ? { lastInRun, blocked, reason } : null;
   }, [startDate, endDate, availableSet, reasonByDate]);
 
-  // S2-08 Scenario 1: a complete selection is quoted back as its length and
-  // what it costs, so a renter is not left counting days off the calendar.
-  const quote = useMemo(() => {
-    if (!startDate || !endDate) return null;
-    const days = rentalDays(startDate, endDate);
-    const priced = rentalQuote(
-      { price_per_day_cents: pricePerDayCents, price_per_week_cents: pricePerWeekCents },
-      days,
-    );
-    return priced && { days, ...priced };
-  }, [startDate, endDate, pricePerDayCents, pricePerWeekCents]);
-
   // Begin at the first date that can actually start a valid rental, rather
   // than showing a month containing only disabled days before it.
   const firstAvailable = startDates[0];
@@ -128,21 +119,41 @@ export function BookingRequestForm({
   function pick(day: string) {
     setMessage(null);
     setError(null);
+    setErrorCode(undefined);
+    setShortfallCents(undefined);
     if (!startDate || endDate) {
       setStartDate(day);
       setEndDate("");
+      setQuote(null);
+      setIdempotencyKey(null);
     } else if (endDates.includes(day)) {
       setEndDate(day);
+      setQuote(null);
+      setIdempotencyKey(null);
+      startTransition(async () => {
+        const result = await quoteBooking(listingId, startDate, day);
+        if ("error" in result) setError(result.error);
+        else {
+          setQuote(result.quote);
+          setIdempotencyKey(crypto.randomUUID());
+        }
+      });
     }
   }
 
   function submit() {
-    if (!startDate || !endDate) return;
+    if (!startDate || !endDate || !idempotencyKey) return;
     setMessage(null);
     setError(null);
+    setErrorCode(undefined);
+    setShortfallCents(undefined);
     startTransition(async () => {
-      const result = await requestBooking(listingId, startDate, endDate);
-      if ("error" in result) setError(result.error);
+      const result = await requestBooking(listingId, startDate, endDate, idempotencyKey);
+      if ("error" in result) {
+        setError(result.error);
+        setErrorCode(result.code);
+        setShortfallCents(result.shortfallCents);
+      }
       else setMessage(`Request sent for ${formatDate(startDate)} – ${formatDate(endDate)}.`);
     });
   }
@@ -232,32 +243,64 @@ export function BookingRequestForm({
             <div key={`${line.unit}-${line.count}`} className="flex items-baseline justify-between gap-4">
               <dt className="text-ink-soft">
                 {line.count} {line.unit}
-                {line.count === 1 ? "" : "s"} × {formatMoney(line.rateCents)}
-                {line.cappedFromDays && (
+                {line.count === 1 ? "" : "s"} × {formatMoney(line.rate_cents)}
+                {line.capped_from_days && (
                   <span className="text-xs">
                     {" "}
-                    (for {line.cappedFromDays} days —{" "}
-                    {pricePerDayCents === null
+                    (for {line.capped_from_days} days —{" "}
+                    {quote.price_per_day_cents === null
                       ? "this listing rents by the week"
                       : "cheaper than the daily rate"}
                     )
                   </span>
                 )}
               </dt>
-              <dd>{formatMoney(line.amountCents)}</dd>
+              <dd>{formatMoney(line.amount_cents)}</dd>
             </div>
           ))}
+          <div className="flex items-baseline justify-between gap-4 border-t border-line pt-1">
+            <dt className="text-ink-soft">
+              {quote.price_per_day_cents === null ? "Weekly rate" : "Daily rate"}
+            </dt>
+            <dd>
+              {formatMoney(quote.price_per_day_cents ?? quote.price_per_week_cents ?? 0)}
+              {quote.price_per_day_cents === null && " / week"}
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-4">
+            <dt className="text-ink-soft">Rental subtotal</dt>
+            <dd>{formatMoney(quote.rental_subtotal_cents)}</dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-4">
+            <dt className="text-ink-soft">Platform fee</dt>
+            <dd>{formatMoney(quote.platform_fee_cents)}</dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-4">
+            <dt className="text-ink-soft">Security deposit</dt>
+            <dd>{formatMoney(quote.deposit_cents)}</dd>
+          </div>
           <div className="flex items-baseline justify-between gap-4 border-t border-line pt-1 font-semibold">
             <dt>
-              Total · {quote.days} {quote.days === 1 ? "day" : "days"}
+              Total · {quote.rental_days} {quote.rental_days === 1 ? "day" : "days"}
             </dt>
-            <dd>{formatMoney(quote.totalCents)}</dd>
+            <dd>{formatMoney(quote.total_amount_cents)}</dd>
           </div>
         </dl>
       )}
-      {error && <p role="alert" className="mt-3 text-sm text-accent-dark">{error}</p>}
+      {error && (
+        <p role="alert" className="mt-3 text-sm text-accent-dark">
+          {errorCode === "INSUFFICIENT_BALANCE" && shortfallCents !== undefined
+            ? `Insufficient wallet balance — you're ${formatMoney(shortfallCents)} short.`
+            : error}
+        </p>
+      )}
+      {errorCode === "INSUFFICIENT_BALANCE" && (
+        <Link href="/profile?view=wallet" className="mt-2 inline-block text-sm font-medium underline underline-offset-4">
+          Top up your wallet
+        </Link>
+      )}
       {message && <p role="status" className="mt-3 text-sm text-ink-soft">{message}</p>}
-      <Button className="mt-4" disabled={isPending || !endDate} onClick={submit}>{isPending ? "Sending…" : "Request booking"}</Button>
+      <Button className="mt-4" disabled={isPending || !endDate || !quote} onClick={submit}>{isPending ? "Sending…" : "Request booking"}</Button>
     </div>
   );
 }

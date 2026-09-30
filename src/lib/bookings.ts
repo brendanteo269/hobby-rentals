@@ -8,6 +8,14 @@ export type Booking = {
   start_date: string;
   end_date: string;
   status: BookingStatus;
+  rental_days?: number | null;
+  price_per_day_cents?: number | null;
+  price_per_week_cents?: number | null;
+  rental_subtotal_cents?: number | null;
+  platform_fee_bps?: number | null;
+  platform_fee_cents?: number | null;
+  deposit_cents?: number | null;
+  total_amount_cents?: number | null;
   created_at: string;
   updated_at: string;
 };
