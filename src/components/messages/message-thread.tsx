@@ -1,0 +1,52 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import type { Message } from "@/lib/conversations";
+import { formatChatTimestamp } from "@/lib/format";
+
+/**
+ * A thread's messages, oldest first. Read-only: a message is never edited,
+ * and a withdrawn one still occupies its place, showing a placeholder
+ * instead of its body rather than disappearing.
+ *
+ * A client component only so it can scroll to the newest message after
+ * mount (and whenever one arrives) - otherwise a thread longer than the pane
+ * opens showing its oldest messages, with the latest one - and the reply box
+ * right under it - out of view until the viewer scrolls down manually.
+ */
+export function MessageThread({ messages, currentUserId }: { messages: Message[]; currentUserId: string }) {
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ block: "end" });
+  }, [messages.length]);
+
+  if (messages.length === 0) {
+    return <p className="body-copy p-6 text-center">No messages yet. Say hello.</p>;
+  }
+
+  return (
+    <div>
+      <ol className="flex flex-col gap-4 p-5 sm:p-6">
+        {messages.map((message) => {
+          const mine = message.sender_id === currentUserId;
+          return (
+            <li key={message.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+              <div className={`max-w-[70%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${mine ? "bg-ink text-white" : "bg-surface-muted text-ink"}`}>
+                {message.withdrawn_at ? (
+                  <p className="italic opacity-70">Message withdrawn</p>
+                ) : (
+                  <p className="whitespace-pre-line">{message.body}</p>
+                )}
+                <p className={`mt-1.5 text-[0.6875rem] ${mine ? "text-white/70" : "text-ink-soft"}`}>
+                  <time dateTime={message.created_at}>{formatChatTimestamp(message.created_at)}</time>
+                </p>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      <div ref={bottomRef} />
+    </div>
+  );
+}
