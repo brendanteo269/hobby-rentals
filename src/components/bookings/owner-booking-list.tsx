@@ -3,7 +3,14 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui";
 import { changeBookingStatus, type BookingActionResult } from "@/app/bookings/actions";
-import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS, type Booking, type BookingStatus } from "@/lib/bookings";
+import { MessageButton } from "@/components/messages/message-button";
+import {
+  BOOKING_STATUS_LABELS,
+  MESSAGEABLE_BOOKING_STATUSES,
+  PAYMENT_STATUS_LABELS,
+  type Booking,
+  type BookingStatus,
+} from "@/lib/bookings";
 import { formatDate } from "@/lib/format";
 
 const NEXT_ACTION: Partial<Record<BookingStatus, { status: BookingStatus; label: string }>> = {
@@ -44,6 +51,9 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
               {next && <Button className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, next.status)}>{next.label}</Button>}
               {booking.status === "PENDING" && <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "DECLINED")}>Decline</Button>}
               {booking.status === "CONFIRMED" && <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "CANCELLED")}>Cancel booking</Button>}
+              {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
+                <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
+              )}
             </span>
           </li>;
         })}
