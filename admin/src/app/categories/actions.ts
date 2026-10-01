@@ -36,9 +36,9 @@ export async function saveCategoryAttributes(_previous: CategoryActionState, for
   try { raw = JSON.parse(String(formData.get("definitions") ?? "[]")); } catch { return { error: "The submitted attribute definitions were invalid." }; }
   if (!Array.isArray(raw)) return { error: "The submitted attribute definitions were invalid." };
   const definitions = raw.map(draftFrom);
-  if (definitions.some((definition) => definition === null)) return { error: "Every definition needs a unique lowercase key, label, valid type, and valid type-specific rules." };
+  if (definitions.some((definition) => definition === null)) return { error: "Every specification needs a label, valid type, and valid type-specific rules." };
   const rows = definitions as Draft[];
-  if (new Set(rows.map((row) => row.attribute_key)).size !== rows.length) return { error: "Attribute keys must be unique within a category." };
+  if (new Set(rows.map((row) => row.attribute_key)).size !== rows.length) return { error: "Specification names must be unique within a category." };
   const { data: existing, error: existingError } = await supabase.from("category_attribute_definitions").select("id,attribute_key").eq("category_slug", slug);
   if (existingError) return { error: existingError.message };
   if (rows.length) {
@@ -76,7 +76,9 @@ export async function renameCategory(slug: string, _previous: CategoryMutationSt
   return { success: "Category name updated." };
 }
 
-export async function deleteCategory(slug: string): Promise<CategoryMutationState> {
+export async function deleteCategory(slug: string, _previous: CategoryMutationState, _formData: FormData): Promise<CategoryMutationState> {
+  void _previous;
+  void _formData;
   await requirePortalSession();
   const supabase = createAdminClient();
   const { count, error: countError } = await supabase.from("listings").select("id", { count: "exact", head: true }).eq("category", slug);
