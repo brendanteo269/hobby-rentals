@@ -7,6 +7,7 @@ import type { AttributeDefinition } from "@/lib/category-attributes";
 
 export type CategoryActionState = { error?: string; success?: string } | undefined;
 export type AddCategoryState = { error?: string; success?: string } | undefined;
+export type CategoryMutationState = { error?: string; success?: string } | undefined;
 type Draft = Omit<AttributeDefinition, "id" | "category_slug">;
 
 function draftFrom(value: unknown): Draft | null {
@@ -57,10 +58,34 @@ export async function saveCategoryAttributes(_previous: CategoryActionState, for
 export async function addCategory(_previous: AddCategoryState, formData: FormData): Promise<AddCategoryState> {
   await requirePortalSession();
   const label = String(formData.get("label") ?? "").trim();
-  const slug = String(formData.get("slug") ?? "").trim();
-  if (!label || !/^[A-Z][A-Z0-9_]*$/.test(slug)) return { error: "Enter a category name and an uppercase underscore-separated category key." };
+  const slug = label.toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  if (!label || !/^[A-Z][A-Z0-9_]*$/.test(slug)) return { error: "Enter a category name." };
   const { error } = await createAdminClient().from("listing_categories").insert({ slug, label, display_order: 1000, is_active: true });
   if (error) return { error: error.code === "23505" ? "That category name or key already exists." : error.message };
   revalidatePath("/categories");
   return { success: "Category added. It is now available when owners create a listing." };
+}
+
+export async function renameCategory(slug: string, _previous: CategoryMutationState, formData: FormData): Promise<CategoryMutationState> {
+  await requirePortalSession();
+  const label = String(formData.get("label") ?? "").trim();
+  if (!label) return { error: "Enter a category name." };
+  const { error } = await createAdminClient().from("listing_categories").update({ label, updated_at: new Date().toISOString() }).eq("slug", slug);
+  if (error) return { error: error.code === "23505" ? "That category name already exists." : error.message };
+  revalidatePath("/categories");
+  return { success: "Category name updated." };
+}
+
+export async function deleteCategory(slug: string): Promise<CategoryMutationState> {
+  await requirePortalSession();
+  const supabase = createAdminClient();
+  const { count, error: countError } = await supabase.from("listings").select("id", { count: "exact", head: true }).eq("category", slug);
+  if (countError) return { error: countError.message };
+  if ((count ?? 0) > 0) return { error: "This category is used by existing listings and cannot be deleted. Keep it to preserve those records." };
+  const { error: definitionsError } = await supabase.from("category_attribute_definitions").delete().eq("category_slug", slug);
+  if (definitionsError) return { error: definitionsError.message };
+  const { error } = await supabase.from("listing_categories").delete().eq("slug", slug);
+  if (error) return { error: error.message };
+  revalidatePath("/categories");
+  return { success: "Category deleted." };
 }
