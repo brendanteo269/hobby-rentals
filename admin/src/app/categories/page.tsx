@@ -7,7 +7,11 @@ import type { AdminCategory, AttributeDefinition } from "@/lib/category-attribut
 
 export const metadata = { title: "Category management — HobbyRentals Admin" };
 
-export default async function CategoriesPage() {
+export default async function CategoriesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string }>;
+}) {
   await requirePortalSession();
   const supabase = createAdminClient();
   const [{ data: definitions, error: definitionsError }, { data: categories, error: categoriesError }] = await Promise.all([
@@ -15,5 +19,9 @@ export default async function CategoriesPage() {
     supabase.from("listing_categories").select("slug,label,display_order,is_active").order("display_order"),
   ]);
   const error = definitionsError ?? categoriesError;
-  return <Container className="py-12"><p className="eyebrow">Admin</p><h1 className="display-caps mt-3 text-3xl">Category management</h1><p className="body-copy mt-3">Configure the specifications owners provide for each equipment category.</p><AddCategory />{error ? <p role="alert" className="mt-8 text-sm text-bad">Could not load category definitions.</p> : <div className="mt-8"><CategoryManagement definitions={(definitions ?? []) as AttributeDefinition[]} categories={(categories ?? []) as AdminCategory[]} /></div>}</Container>;
+  const { category: selectedCategory } = await searchParams;
+  const initialSlug = (categories ?? []).some((category) => category.slug === selectedCategory)
+    ? selectedCategory!
+    : (categories ?? [])[0]?.slug ?? "";
+  return <Container className="py-12"><p className="eyebrow">Admin</p><h1 className="display-caps mt-3 text-3xl">Category management</h1><p className="body-copy mt-3">Configure the specifications owners provide for each equipment category.</p><AddCategory />{error ? <p role="alert" className="mt-8 text-sm text-bad">Could not load category definitions.</p> : <div className="mt-8"><CategoryManagement definitions={(definitions ?? []) as AttributeDefinition[]} categories={(categories ?? []) as AdminCategory[]} initialSlug={initialSlug} /></div>}</Container>;
 }

@@ -23,7 +23,7 @@ function draftFrom(value: unknown): Draft | null {
   const min = numeric(row.min_val);
   const max = numeric(row.max_val);
   if ((row.min_val !== null && row.min_val !== "" && min === null) || (row.max_val !== null && row.max_val !== "" && max === null) || (min !== null && max !== null && min > max)) return null;
-  return { attribute_key: key, label, data_type: dataType as Draft["data_type"], is_required: Boolean(row.is_required), options, min_val: min, max_val: max, display_order: typeof row.display_order === "number" && Number.isInteger(row.display_order) ? row.display_order : 0 };
+  return { attribute_key: key, label, data_type: dataType as Draft["data_type"], is_required: row.is_required === true, options, min_val: min, max_val: max, display_order: typeof row.display_order === "number" && Number.isInteger(row.display_order) ? row.display_order : 0 };
 }
 
 export async function saveCategoryAttributes(_previous: CategoryActionState, formData: FormData): Promise<CategoryActionState> {
