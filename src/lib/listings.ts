@@ -294,7 +294,6 @@ export type CategoryAttributeDefinition = {
 };
 
 export type ListingCategoryOption = { slug: string; label: string; display_order: number; is_active: boolean };
-};
 
 /**
  * A partial update for PATCH /listings/{id}. Every field is optional and an
