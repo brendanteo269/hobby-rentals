@@ -29,13 +29,17 @@ export function CategoryManagement({ definitions, categories, initialSlug }: { d
   const [deleteState, deleteAction, deleting] = useActionState<CategoryMutationState, FormData>(deleteCategory.bind(null, activeSlug), undefined);
   const { show } = useToast();
   useEffect(() => {
-    for (const outcome of [attributeState, categoryState, deleteState]) {
-      const message = outcome?.success ?? outcome?.error;
-      if (message) {
-        show(message, outcome?.error ? "error" : "success");
-      }
-    }
-  }, [attributeState, categoryState, deleteState, show]);
+    const message = attributeState?.success ?? attributeState?.error;
+    if (message) show(message, attributeState?.error ? "error" : "success");
+  }, [attributeState, show]);
+  useEffect(() => {
+    const message = categoryState?.success ?? categoryState?.error;
+    if (message) show(message, categoryState?.error ? "error" : "success");
+  }, [categoryState, show]);
+  useEffect(() => {
+    const message = deleteState?.success ?? deleteState?.error;
+    if (message) show(message, deleteState?.error ? "error" : "success");
+  }, [deleteState, show]);
   useEffect(() => {
     if (!categories.some((category) => category.slug === slug)) {
       const nextSlug = categories[0]?.slug ?? "";
