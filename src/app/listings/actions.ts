@@ -101,6 +101,22 @@ function hiddenList<T>(formData: FormData, name: string, keep: (item: unknown) =
   }
 }
 
+function hiddenAttributes(formData: FormData): Record<string, string | number> {
+  const raw = text(formData, "attributes");
+  if (!raw) return {};
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed).filter((entry): entry is [string, string | number] =>
+        typeof entry[1] === "string" || (typeof entry[1] === "number" && Number.isFinite(entry[1])),
+      ),
+    );
+  } catch {
+    return {};
+  }
+}
+
 const isString = (value: unknown): value is string => typeof value === "string";
 const isNumber = (value: unknown): value is number => typeof value === "number";
 const isBlackout = (value: unknown): value is BlackoutDate =>
@@ -135,7 +151,7 @@ function parseListingFields(
   const photos = hiddenList(formData, "photo_keys", isString);
 
   const fieldErrors: Record<string, string> = {};
-  if (!isCategory(category)) fieldErrors.category = "Choose a category.";
+  if (!category) fieldErrors.category = "Choose a category.";
   if (!isCondition(condition)) fieldErrors.condition = "Choose the item's condition.";
   if (!isLocationArea(locationArea)) fieldErrors.location_area = "Choose a collection area.";
   // PhotoUploadField already uploads each photo as it's picked, so by submit
@@ -166,7 +182,7 @@ function parseListingFields(
       name: text(formData, "name"),
       description: text(formData, "description"),
       brand: text(formData, "brand"),
-      category: category as CreateListingRequest["category"],
+      category,
       condition: condition as CreateListingRequest["condition"],
       location_area: locationArea as CreateListingRequest["location_area"],
       price_per_day_cents: pricePerDay,
@@ -218,6 +234,7 @@ export async function submitListing(
     has_custom_availability: text(formData, "has_custom_availability") === "true",
     custom_available_days: hiddenList(formData, "custom_available_days", isNumber),
     initial_blackouts: hiddenList(formData, "initial_blackouts", isBlackout),
+    attributes: hiddenAttributes(formData),
     serial,
   };
 

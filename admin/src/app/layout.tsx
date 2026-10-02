@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Newsreader } from "next/font/google";
 import { AdminHeader } from "@/components/admin-header";
+import { ToastProvider } from "@/components/toast";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -26,8 +27,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${newsreader.variable} h-full antialiased`}
     >
       <body className="font-sans flex min-h-full flex-col">
-        <AdminHeader />
-        <main className="flex flex-1 flex-col">{children}</main>
+        <ToastProvider>
+          <AdminHeader />
+          <main className="flex flex-1 flex-col">{children}</main>
+        </ToastProvider>
       </body>
     </html>
   );
