@@ -10,6 +10,15 @@ export type AddCategoryState = { error?: string; success?: string } | undefined;
 export type CategoryMutationState = { error?: string; success?: string } | undefined;
 type Draft = Omit<AttributeDefinition, "id" | "category_slug">;
 
+async function hasDuplicateCategoryName(label: string, excludingSlug?: string): Promise<{ duplicate: boolean; error?: string }> {
+  const { data, error } = await createAdminClient().from("listing_categories").select("slug,label");
+  if (error) return { duplicate: false, error: error.message };
+  const normalizedLabel = label.trim().toLocaleLowerCase();
+  return {
+    duplicate: (data ?? []).some((category) => category.slug !== excludingSlug && category.label.trim().toLocaleLowerCase() === normalizedLabel),
+  };
+}
+
 function draftFrom(value: unknown): Draft | null {
   if (!value || typeof value !== "object") return null;
   const row = value as Record<string, unknown>;
@@ -60,6 +69,9 @@ export async function addCategory(_previous: AddCategoryState, formData: FormDat
   const label = String(formData.get("label") ?? "").trim();
   const slug = label.toUpperCase().replace(/[^A-Z0-9]+/g, "_").replace(/^_+|_+$/g, "");
   if (!label || !/^[A-Z][A-Z0-9_]*$/.test(slug)) return { error: "Enter a category name." };
+  const duplicateName = await hasDuplicateCategoryName(label);
+  if (duplicateName.error) return { error: duplicateName.error };
+  if (duplicateName.duplicate) return { error: "A category with this name already exists." };
   const { error } = await createAdminClient().from("listing_categories").insert({ slug, label, display_order: 1000, is_active: true });
   if (error) return { error: error.code === "23505" ? "That category name or key already exists." : error.message };
   revalidatePath("/categories");
@@ -70,6 +82,9 @@ export async function renameCategory(slug: string, _previous: CategoryMutationSt
   await requirePortalSession();
   const label = String(formData.get("label") ?? "").trim();
   if (!label) return { error: "Enter a category name." };
+  const duplicateName = await hasDuplicateCategoryName(label, slug);
+  if (duplicateName.error) return { error: duplicateName.error };
+  if (duplicateName.duplicate) return { error: "A category with this name already exists." };
   const { error } = await createAdminClient().from("listing_categories").update({ label, updated_at: new Date().toISOString() }).eq("slug", slug);
   if (error) return { error: error.code === "23505" ? "That category name already exists." : error.message };
   revalidatePath("/categories");
