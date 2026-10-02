@@ -67,7 +67,7 @@ export function ButtonLink<T extends string>({
   );
 }
 
-const inputBase =
+export const inputBase =
   "w-full border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-ink placeholder:text-ink-soft/70 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-ink-soft";
 
 /** Bare text input carrying the shared field styling. `pill` is for search-bar-style contexts (hero, filter bars); form fields stay `rounded-lg`. */

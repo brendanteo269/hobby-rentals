@@ -93,6 +93,16 @@ export const FORGOT_PASSWORD_PATH = "/forgot-password";
 /** The neutral "if that address has an account" confirmation. */
 export const RESET_REQUESTED_PATH = "/reset-requested";
 
+/** Where a listing's "Message owner" link opens the composer for a new enquiry thread. */
+export function newListingConversationPath(listingId: string): `/messages/new?listing=${string}` {
+  return `/messages/new?listing=${listingId}`;
+}
+
+/** Where a booking's "Message" link opens the composer for that booking's thread. */
+export function newBookingConversationPath(bookingId: string): `/messages/new?booking=${string}` {
+  return `/messages/new?booking=${bookingId}`;
+}
+
 /**
  * Where a reset link lands, once /auth/confirm has verified it.
  *

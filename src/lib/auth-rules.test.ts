@@ -120,8 +120,8 @@ describe("route builders", () => {
 });
 
 describe("requiresVerifiedEmail", () => {
-  it.each(["/listings/new", "/listings/abc-123/availability"])(
-    "gates the lending action %s",
+  it.each(["/listings/new", "/listings/abc-123/availability", "/messages/new"])(
+    "gates the lending/messaging action %s",
     (path) => {
       expect(requiresVerifiedEmail(path)).toBe(true);
     },
@@ -133,6 +133,8 @@ describe("requiresVerifiedEmail", () => {
     ["/listings/abc-123", "a listing detail page is a read"],
     ["/profile", "the member's own profile"],
     ["/onboarding", "first-run setup must stay reachable"],
+    ["/messages", "the inbox is a read"],
+    ["/messages/abc-123", "reading an open thread is not starting one"],
     ["/", "the marketing home page"],
   ])("leaves %s open (%s)", (path) => {
     expect(requiresVerifiedEmail(path)).toBe(false);
@@ -144,7 +146,7 @@ describe("requiresVerifiedEmail", () => {
 });
 
 describe("requiresOnboarding", () => {
-  it.each(["/profile", "/browse", "/listings", "/listings/new", "/listings/abc/availability"])(
+  it.each(["/profile", "/browse", "/listings", "/listings/new", "/listings/abc/availability", "/messages"])(
     "gates %s",
     (path) => {
       expect(requiresOnboarding(path)).toBe(true);

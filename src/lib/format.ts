@@ -70,3 +70,21 @@ export function formatDateTime(iso: string): string {
     minute: "2-digit",
   });
 }
+
+/**
+ * A chat-style timestamp: a bare time today, "Yesterday" the day before, a
+ * weekday name within the last week, and a short date beyond that. Never a
+ * full date-and-time together - that's what made the inbox row and each
+ * message bubble feel cramped - and what a message actually needs to convey
+ * is "how long ago", not a precise instant.
+ */
+export function formatChatTimestamp(iso: string): string {
+  const date = new Date(iso);
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const dayDiff = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86_400_000);
+
+  if (dayDiff === 0) return date.toLocaleTimeString(LOCALE, { hour: "numeric", minute: "2-digit" });
+  if (dayDiff === 1) return "Yesterday";
+  if (dayDiff > 1 && dayDiff < 7) return date.toLocaleDateString(LOCALE, { weekday: "short" });
+  return date.toLocaleDateString(LOCALE, { day: "numeric", month: "short" });
+}
