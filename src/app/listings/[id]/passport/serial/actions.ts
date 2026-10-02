@@ -2,25 +2,21 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { ListingApiError, publishIfComplete, recordBaseline } from "@/lib/api/listings";
-import { BASELINE_INCOMPLETE, parseBaselinePhotos } from "@/lib/listings";
+import { confirmSerial, ListingApiError, publishIfComplete } from "@/lib/api/listings";
+import { parseSerialClaim, SERIAL_INCOMPLETE } from "@/lib/listings";
 
-/**
- * S2-04: records the baseline, then publishes the draft if its serial is
- * already verified. A draft still missing its serial goes back to its
- * passport page, which shows what's left.
- */
-export async function saveBaselineAndPublish(
+/** For a listing created before serials were required. Publishes it if it's a draft with its baseline already on record. */
+export async function saveSerial(
   listingId: string,
   _prev: { error?: string } | undefined,
   formData: FormData,
 ): Promise<{ error?: string }> {
-  const photos = parseBaselinePhotos(formData);
-  if (!photos) return { error: BASELINE_INCOMPLETE };
+  const claim = parseSerialClaim(formData);
+  if (!claim) return { error: SERIAL_INCOMPLETE };
 
   let draft: boolean;
   try {
-    await recordBaseline(listingId, photos);
+    await confirmSerial(listingId, claim);
     draft = await publishIfComplete(listingId);
   } catch (caught) {
     if (caught instanceof ListingApiError) return { error: caught.message };
@@ -29,6 +25,7 @@ export async function saveBaselineAndPublish(
 
   revalidatePath("/listings/mine");
   revalidatePath(`/listings/${listingId}`);
+  revalidatePath(`/listings/${listingId}/passport`);
   // Outside the try: redirect signals by throwing.
   redirect(draft ? `/listings/${listingId}/passport` : `/listings/${listingId}`);
 }

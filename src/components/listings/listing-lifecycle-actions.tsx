@@ -84,7 +84,7 @@ export function ListingLifecycleActions({ listing }: { listing: Listing }) {
         </ButtonLink>
 
         {current.status === "DRAFT" && (
-          <ButtonLink href={`/listings/${current.id}/passport/baseline`} className="px-3 py-1.5 text-xs">
+          <ButtonLink href={`/listings/${current.id}/passport`} className="px-3 py-1.5 text-xs">
             Finish passport &amp; publish
           </ButtonLink>
         )}

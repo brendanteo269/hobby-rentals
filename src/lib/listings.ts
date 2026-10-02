@@ -58,6 +58,26 @@ export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "PENDING_REMOVAL" 
 export type DateRange = { start_date: string; end_date: string };
 
 /**
+ * Why a date inside a listing's window cannot be booked. Mirrors
+ * booking_service.UnavailableReason.
+ *
+ * BOOKED is the one a renter might act on — that date could free up if the
+ * booking is cancelled — so it is labelled distinctly from the two the owner
+ * chose. A date *outside* the window carries no reason and appears in
+ * neither list: there is nothing to explain about a day the listing never
+ * covered.
+ */
+export type UnavailableReason = "BOOKED" | "BLACKOUT" | "OFF_SCHEDULE";
+
+export type UnavailableDate = { date: string; reason: UnavailableReason };
+
+export const UNAVAILABLE_REASON_LABELS: Record<UnavailableReason, string> = {
+  BOOKED: "Booked",
+  BLACKOUT: "Unavailable",
+  OFF_SCHEDULE: "Not offered on this day",
+};
+
+/**
  * Recurring unavailability on a listing. One-off ranges live here too, so an
  * owner blocking a single trip and an owner blocking every Sunday use the same
  * field. Weekdays are 0 = Monday … 6 = Sunday, matching the backend.
@@ -181,6 +201,38 @@ export type Passport = {
   entries: PassportEntry[];
 };
 
+/** POST /listings/{id}/passport/serial/extract. readable is false when the owner should retake or type it. */
+export type SerialExtraction = {
+  serial: string | null;
+  confidence: number;
+  readable: boolean;
+};
+
+/** The serial as the owner confirmed it, with the label photo (a passports/ key) as evidence. */
+export type SerialClaim = {
+  photo_key: string;
+  serial: string;
+  /** What extraction suggested, so the passport records whether the owner corrected it. */
+  extracted: string | null;
+  confidence: number | null;
+};
+
+/** Reads SerialField's inputs. Null until there's both a label photo and a serial. */
+export function parseSerialClaim(formData: FormData): SerialClaim | null {
+  const photoKey = String(formData.get("serial_photo_key") ?? "");
+  const serial = String(formData.get("serial") ?? "").trim();
+  if (!photoKey || !serial) return null;
+  const confidence = String(formData.get("serial_confidence") ?? "");
+  return {
+    photo_key: photoKey,
+    serial,
+    extracted: String(formData.get("serial_extracted") ?? "") || null,
+    confidence: confidence ? Number(confidence) : null,
+  };
+}
+
+export const SERIAL_INCOMPLETE = "Photograph the serial number label and confirm the serial.";
+
 export const PASSPORT_ENTRY_LABELS: Record<string, string> = {
   BASELINE: "Baseline condition",
   SERIAL_VERIFICATION: "Serial number verified",
@@ -222,8 +274,10 @@ export type CreateListingRequest = {
   initial_blackouts?: BlackoutDate[];
   /** At least one is required (FastAPI 422s on an empty list). */
   photo_keys: string[];
-  /** Values validated against the selected category's current schema on create. */
+/** Values validated against the selected category's current schema on create. */
   attributes?: Record<string, unknown>;
+  /** The item's identity; its passport is created with it. */
+  serial: SerialClaim;
 };
 
 export type CategoryAttributeDefinition = {
@@ -240,14 +294,6 @@ export type CategoryAttributeDefinition = {
 };
 
 export type ListingCategoryOption = { slug: string; label: string; display_order: number; is_active: boolean };
-
-/** Compatibility mapping from the existing persisted category enum to schema slugs. */
-export const CATEGORY_ATTRIBUTE_SLUGS: Partial<Record<ListingCategory, string>> = {
-  PHOTOGRAPHY_VIDEOGRAPHY: "cameras",
-  CAMPING_OUTDOOR: "camping",
-  SPORTS_FITNESS: "water_sports",
-  MUSIC_AUDIO: "musical_instruments",
-  POWER_TOOLS_DIY: "power_tools",
 };
 
 /**
@@ -342,6 +388,12 @@ export const LOCATION_LABELS: Record<LocationArea, string> = {
   YISHUN: "Yishun",
 };
 
+/** A row of GET /listings/mine: the listing plus what its passport still lacks (S2-01). */
+export type OwnerListing = Listing & {
+  /** e.g. ["baseline", "serial"]; empty once the passport is complete. */
+  passport_missing: string[];
+};
+
 export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   DRAFT: "Draft",
   ACTIVE: "Published",
@@ -356,6 +408,121 @@ export const LOCATION_AREAS = Object.keys(LOCATION_LABELS) as LocationArea[];
 
 /** Monday-first, matching the backend's 0 = Monday weekday numbering. */
 export const WEEKDAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/** Days a rental covers, both ends inclusive: 3 Oct to 5 Oct is three days, not two. */
+export function rentalDays(startDate: string, endDate: string): number {
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  return Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+}
+
+/**
+ * What a rental of `days` costs at a listing's rates, in cents.
+ *
+ * A listing prices by the day, by the week, or by both, so three rules:
+ * one rate alone is simply multiplied (a part-week on a weekly-only listing
+ * rounds up, since week granularity is what that owner chose to sell), and a
+ * listing carrying both charges whole weeks at the weekly rate with the
+ * remainder at the daily rate — capped at one more week, so six leftover days
+ * never cost more than a seventh one would.
+ *
+ * Returns null when the listing has neither rate, which the API forbids but
+ * the type permits.
+ *
+ * NOTE: this is the first place in the project that turns a rental length
+ * into money. Nothing on the backend computes a rental fee yet — escrow is
+ * handed one — so this rule is a proposal, not a mirror of a server-side
+ * one. When the booking/escrow flow starts charging, the two must agree, and
+ * this is the definition to reconcile against.
+ */
+export function rentalSubtotalCents(
+  listing: Pick<Listing, "price_per_day_cents" | "price_per_week_cents">,
+  days: number,
+): number | null {
+  return rentalQuote(listing, days)?.totalCents ?? null;
+}
+
+/** One line of a rental quote: "2 weeks x $100.00 = $200.00". */
+export type RentalQuoteLine = {
+  /** How many of the unit, for the "2 weeks" part. */
+  count: number;
+  unit: "day" | "week";
+  rateCents: number;
+  amountCents: number;
+  /**
+   * Set when this line charges a whole week for fewer than seven days,
+   * because the daily rate would have cost more. Without saying so, a renter
+   * reading "1 week" against a five-day booking would think it a mistake.
+   */
+  cappedFromDays?: number;
+};
+
+export type RentalQuote = { lines: RentalQuoteLine[]; totalCents: number };
+
+/**
+ * The same arithmetic as rentalSubtotalCents, itemised.
+ *
+ * Showing the working is not decoration: a renter who books six days on a
+ * listing priced both ways is charged a full week, and a bare total gives
+ * them no way to see that it was the cheaper of the two.
+ */
+export function rentalQuote(
+  listing: Pick<Listing, "price_per_day_cents" | "price_per_week_cents">,
+  days: number,
+): RentalQuote | null {
+  const daily = listing.price_per_day_cents;
+  const weekly = listing.price_per_week_cents;
+  if (days <= 0) return null;
+
+  const lines: RentalQuoteLine[] = [];
+
+  if (daily !== null && weekly !== null) {
+    const weeks = Math.floor(days / 7);
+    const remainder = days % 7;
+    if (weeks > 0) {
+      lines.push({ count: weeks, unit: "week", rateCents: weekly, amountCents: weeks * weekly });
+    }
+    if (remainder > 0) {
+      const asDays = remainder * daily;
+      lines.push(
+        asDays <= weekly
+          ? { count: remainder, unit: "day", rateCents: daily, amountCents: asDays }
+          : { count: 1, unit: "week", rateCents: weekly, amountCents: weekly, cappedFromDays: remainder },
+      );
+    }
+  } else if (daily !== null) {
+    lines.push({ count: days, unit: "day", rateCents: daily, amountCents: days * daily });
+  } else if (weekly !== null) {
+    const weeks = Math.ceil(days / 7);
+    lines.push({
+      count: weeks,
+      unit: "week",
+      rateCents: weekly,
+      amountCents: weeks * weekly,
+      ...(days % 7 === 0 ? {} : { cappedFromDays: days }),
+    });
+  } else {
+    return null;
+  }
+
+  return { lines, totalCents: lines.reduce((sum, line) => sum + line.amountCents, 0) };
+}
+
+/**
+ * How a listing's rental length limits read to a renter, or null when it
+ * accepts any length. S2-08 Scenario 4 asks for the permitted range to be
+ * shown, not only enforced.
+ */
+export function rentalDurationLimits(
+  listing: Pick<Listing, "min_rental_days" | "max_rental_days">,
+): string | null {
+  const { min_rental_days: min, max_rental_days: max } = listing;
+  const days = (count: number) => `${count} ${count === 1 ? "day" : "days"}`;
+  if (min !== null && max !== null) return min === max ? days(min) : `${min}–${days(max)}`;
+  if (min !== null) return `${days(min)} or longer`;
+  if (max !== null) return `up to ${days(max)}`;
+  return null;
+}
 
 export function isCategory(value: string): value is ListingCategory {
   return value in CATEGORY_LABELS;
