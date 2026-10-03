@@ -1,16 +1,35 @@
 import Link from "next/link";
+import { unstable_rethrow } from "next/navigation";
 import { Package } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { Container, ButtonLink } from "./ui";
 import { SiteNav } from "./site-nav";
 import { AccountMenu } from "./account-menu";
 import { signOut } from "@/app/auth/actions";
+import { NotificationBell } from "./notifications/notification-bell";
+import { getUnreadNotificationCount } from "@/lib/api/notifications";
+
+/**
+ * The unread count for the bell, or null when it cannot be had. The header is
+ * on every page, so a notifications outage must cost the badge, not the page.
+ */
+async function unreadCount(): Promise<number | null> {
+  try {
+    return await getUnreadNotificationCount();
+  } catch (error) {
+    // A redirect (the session ended) is Next's control flow, not a failure.
+    unstable_rethrow(error);
+    console.error("Unread notification count failed:", error);
+    return null;
+  }
+}
 
 export async function SiteHeader() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  const count = user ? await unreadCount() : null;
 
   return (
     <header className="border-b border-line bg-white">
@@ -31,6 +50,7 @@ export async function SiteHeader() {
               <ButtonLink href="/listings/new" className="hidden sm:flex">
                 + New listing
               </ButtonLink>
+              <NotificationBell unreadCount={count} />
               <AccountMenu initial={(user.email ?? "?").charAt(0)} signOutAction={signOut} />
             </>
           ) : (

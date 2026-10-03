@@ -8,7 +8,8 @@ import { RateLine } from "@/components/browse/listing-card";
 import { CATEGORY_LABELS, LISTING_STATUS_LABELS, type Listing } from "@/lib/listings";
 import { profilePath, type ProfileView } from "@/lib/routes";
 import type { Booking } from "@/lib/bookings";
-import { BOOKING_STATUS_LABELS } from "@/lib/bookings";
+import { BOOKING_STATUS_LABELS, BOOKING_STATUS_NEXT_STEP, PAYMENT_STATUS_LABELS } from "@/lib/bookings";
+import { WithdrawRequestButton } from "@/components/bookings/withdraw-request-button";
 import { formatDate } from "@/lib/format";
 
 export type { ProfileView } from "@/lib/routes";
@@ -92,12 +93,25 @@ export function RenterView({ enabled, bookings = [] }: { enabled: boolean; booki
         </div>
         <ul className="mt-6 space-y-3">
           {bookings.map((booking) => (
-            <li key={booking.id} className="flex flex-wrap items-center justify-between gap-3 border border-line bg-white p-4">
+            // The id is what a notification's link scrolls to
+            // (renter_booking_path in the backend's catalog).
+            <li
+              key={booking.id}
+              id={`booking-${booking.id}`}
+              className="flex scroll-mt-24 flex-wrap items-center justify-between gap-3 border border-line bg-white p-4 target:border-ink"
+            >
               <div>
                 <Link href={`/listings/${booking.listing_id}`} className="font-medium hover:underline">View listing</Link>
-                <p className="mt-1 text-sm text-ink-soft">{formatDate(booking.start_date)} – {formatDate(booking.end_date)}</p>
+                <p className="mt-1 text-sm text-ink-soft">
+                  {formatDate(booking.start_date)} – {formatDate(booking.end_date)}
+                  {booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}
+                </p>
+                <p className="mt-1 text-sm text-ink">{BOOKING_STATUS_NEXT_STEP[booking.status]}</p>
               </div>
-              <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
+              <div className="flex flex-col items-end gap-2">
+                <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
+                {booking.status === "PENDING" && <WithdrawRequestButton bookingId={booking.id} />}
+              </div>
             </li>
           ))}
         </ul>
