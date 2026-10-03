@@ -31,8 +31,10 @@ export class BackendApiError extends Error {
      * Populated only for 422s, where FastAPI returns one entry per invalid
      * field. Forms render these beside the field they name; anything that
      * only needs a summary can keep using `message`.
-     */
+    */
     public readonly fieldErrors: FieldErrors = {},
+    public readonly code?: string,
+    public readonly shortfallCents?: number,
   ) {
     super(message);
     this.name = "BackendApiError";
@@ -144,6 +146,12 @@ export async function backendRequest<T>(
     // the form puts each message where the member is looking. A conflict may
     // arrive as {message, ...context} - the blackout endpoint attaches the
     // booking it collided with - and its message is the part to show.
+    const code = detail !== null && typeof detail === "object" && "code" in detail && typeof detail.code === "string"
+      ? detail.code
+      : undefined;
+    const shortfallCents = detail !== null && typeof detail === "object" && "shortfall_cents" in detail && typeof detail.shortfall_cents === "number"
+      ? detail.shortfall_cents
+      : undefined;
     const message =
       typeof detail === "string"
         ? detail
@@ -153,7 +161,7 @@ export async function backendRequest<T>(
             ? "Please correct the highlighted fields."
             : `Backend request failed (${res.status})`;
 
-    throw new BackendApiError(message, res.status, fieldErrors);
+    throw new BackendApiError(message, res.status, fieldErrors, code, shortfallCents);
   }
 
   if (body === null) {
