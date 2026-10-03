@@ -7,7 +7,15 @@ import { createClient } from "@/lib/supabase/server";
 import { ACTIVITY_COOKIE } from "@/lib/session-policy";
 import { validatePasswordComplexity, validateNewPassword } from "@/lib/password";
 import { validateEmail } from "@/lib/email";
-import { RESET_REQUESTED_PATH, authErrorPath, checkEmailPath, loginPath } from "@/lib/routes";
+import type { Route } from "next";
+import {
+  DEFAULT_AFTER_LOGIN_PATH,
+  RESET_REQUESTED_PATH,
+  authErrorPath,
+  checkEmailPath,
+  loginPath,
+  safeNextPath,
+} from "@/lib/routes";
 import { clearRecoveryMark, hasRecoveryMarkFor } from "@/lib/recovery";
 import { exchangeEmailLink } from "@/lib/auth-callback";
 import type { FieldErrors } from "@/lib/api/client";
@@ -171,7 +179,10 @@ export async function logIn(_prev: AuthState, formData: FormData): Promise<AuthS
   await clearRecoveryMark();
 
   revalidatePath("/", "layout");
-  redirect("/profile");
+  // Back to the page that sent them here (an email's notification link, a
+  // protected page they were bounced from), if it is a path on this site.
+  const next = safeNextPath(String(formData.get("next") ?? ""));
+  redirect((next ?? DEFAULT_AFTER_LOGIN_PATH) as Route);
 }
 
 /**

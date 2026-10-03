@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui";
 import { changeBookingStatus, type BookingActionResult } from "@/app/bookings/actions";
-import { BOOKING_STATUS_LABELS, type Booking, type BookingStatus } from "@/lib/bookings";
+import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS, type Booking, type BookingStatus } from "@/lib/bookings";
 import { formatDate } from "@/lib/format";
 
 const NEXT_ACTION: Partial<Record<BookingStatus, { status: BookingStatus; label: string }>> = {
@@ -39,10 +39,11 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
         {items.map((booking) => {
           const next = NEXT_ACTION[booking.status];
           return <li key={booking.id} className="flex flex-wrap items-center justify-between gap-2 bg-surface-muted px-3 py-2 text-sm">
-            <span>{formatDate(booking.start_date)} – {formatDate(booking.end_date)} <span className="text-ink-soft">· {BOOKING_STATUS_LABELS[booking.status]}</span></span>
+            <span>{formatDate(booking.start_date)} – {formatDate(booking.end_date)} <span className="text-ink-soft">· {BOOKING_STATUS_LABELS[booking.status]}{booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}</span></span>
             <span className="flex gap-2">
               {next && <Button className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, next.status)}>{next.label}</Button>}
-              {(booking.status === "PENDING" || booking.status === "CONFIRMED") && <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "CANCELLED")}>Decline</Button>}
+              {booking.status === "PENDING" && <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "DECLINED")}>Decline</Button>}
+              {booking.status === "CONFIRMED" && <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "CANCELLED")}>Cancel booking</Button>}
             </span>
           </li>;
         })}

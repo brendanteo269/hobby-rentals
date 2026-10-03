@@ -1,7 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createBooking, getBookingQuote, updateBookingStatus, type BookingQuote } from "@/lib/api/bookings";
+import {
+  createBooking,
+  getBookingQuote,
+  updateBookingStatus,
+  withdrawBooking,
+  type BookingQuote,
+} from "@/lib/api/bookings";
 import { BackendApiError } from "@/lib/api/client";
 import type { Booking, BookingStatus } from "@/lib/bookings";
 
@@ -14,9 +20,9 @@ export type BookingQuoteResult = { error: string } | { quote: BookingQuote };
 async function run(action: () => Promise<Booking>): Promise<BookingActionResult> {
   try {
     const booking = await action();
-    revalidatePath("/profile");
-    revalidatePath("/listings/mine");
-    revalidatePath(`/listings/${booking.listing_id}`);
+    // The layout too: every booking change notifies the renter, so the
+    // header's unread count moves with it.
+    revalidatePath("/", "layout");
     return { booking };
   } catch (error) {
     if (error instanceof BackendApiError) {
@@ -41,4 +47,8 @@ export async function requestBooking(listingId: string, startDate: string, endDa
 
 export async function changeBookingStatus(bookingId: string, nextStatus: BookingStatus) {
   return run(() => updateBookingStatus(bookingId, nextStatus));
+}
+
+export async function withdrawRequest(bookingId: string) {
+  return run(() => withdrawBooking(bookingId));
 }

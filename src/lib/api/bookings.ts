@@ -47,3 +47,8 @@ export function updateBookingStatus(bookingId: string, nextStatus: BookingStatus
     body: JSON.stringify({ status: nextStatus }),
   });
 }
+
+/** The renter withdraws their own pending request, releasing its hold. */
+export function withdrawBooking(bookingId: string) {
+  return backendRequest<Booking>(`/bookings/${encodeURIComponent(bookingId)}/withdraw`, { method: "POST" });
+}
