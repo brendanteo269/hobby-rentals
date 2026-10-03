@@ -9,6 +9,7 @@ import { PickupLocationField } from "@/components/listings/pickup-location-field
 import { RentalDurationField } from "@/components/listings/rental-duration-field";
 import { PhotoUploadField } from "@/components/listings/photo-upload-field";
 import { PricePerBlockField } from "@/components/listings/price-per-block-field";
+import { PricingRecommendationPanel } from "@/components/listings/pricing-recommendation";
 import { BaselinePhotosField } from "@/components/passport/baseline-photos-field";
 import { SerialField } from "@/components/passport/serial-form";
 import type { ListingFormState } from "@/app/listings/actions";
@@ -342,9 +343,19 @@ export function ListingForm({
         <PricePerBlockField
           error={errors.price_per_day_cents ?? errors.price_per_week_cents}
           initialBlock={initialPrice?.block}
-          initialRate={initialPrice?.rate}
+          rate={priceRate}
           onRateChange={(block, rate) => {
             setPriceBlock(block);
+            setPriceRate(rate);
+          }}
+        />
+        <PricingRecommendationPanel
+          key={`${fields.category}:${fields.brand}:${fields.condition}:${priceBlock ?? ""}`}
+          category={fields.category}
+          brand={fields.brand}
+          condition={fields.condition}
+          billingCycle={priceBlock}
+          onApply={(rate) => {
             setPriceRate(rate);
           }}
         />

@@ -15,13 +15,26 @@ import {
   updateListing as patchListing,
   updateListingAvailability,
 } from "@/lib/api/listings";
+import { getPricingRecommendation } from "@/lib/api/pricing";
+import type { PricingRecommendation, PricingRecommendationRequest } from "@/lib/pricing";
+
+/** On-demand bridge for the client listing form; FastAPI remains server-only. */
+export async function requestPriceRecommendation(input: PricingRecommendationRequest): Promise<
+  { recommendation: PricingRecommendation; error?: undefined } | { recommendation?: undefined; error: string }
+> {
+  try {
+    return { recommendation: await getPricingRecommendation(input) };
+  } catch (caught) {
+    if (caught instanceof ListingApiError) return { error: caught.message };
+    throw caught;
+  }
+}
 import { dollarsToCents, todayIso } from "@/lib/format";
 import {
   BASELINE_INCOMPLETE,
   parseBaselinePhotos,
   parseSerialClaim,
   SERIAL_INCOMPLETE,
-  isCategory,
   isCondition,
   isLocationArea,
   type BlackoutDate,

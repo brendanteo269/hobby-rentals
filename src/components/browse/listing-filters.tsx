@@ -1,3 +1,7 @@
+"use client";
+
+import { useTransition } from "react";
+import { emitActivityEvent } from "@/app/analytics/actions";
 import { Button, Input, Select } from "@/components/ui";
 import type { BrowseFilters } from "@/lib/browse-params";
 import {
@@ -23,9 +27,14 @@ import {
  * results remove them one at a time; a member builds a multi-value filter by
  * choosing again, which the form appends rather than replaces.
  */
-export function ListingFilters({ filters }: { filters: BrowseFilters }) {
+export function ListingFilters({ filters, highDemandCategories = [] }: { filters: BrowseFilters; highDemandCategories?: string[] }) {
+  const [, startTransition] = useTransition();
+  function trackCategorySearch(formData: FormData) {
+    const category = String(formData.get("category") ?? "");
+    if (category) startTransition(async () => { await emitActivityEvent({ event_type: "category_search", category }); });
+  }
   return (
-    <form method="get" action="/browse" role="search" className="card p-5">
+    <form method="get" action="/browse" role="search" className="card p-5" onSubmit={(event) => trackCategorySearch(new FormData(event.currentTarget))}>
       {/* Filters already applied ride along as hidden fields, so submitting
           the keyword box narrows the current view instead of resetting it. */}
       {filters.category.map((value) => (
@@ -60,7 +69,7 @@ export function ListingFilters({ filters }: { filters: BrowseFilters }) {
         <FilterSelect id="category" label="Category" placeholder="Any category">
           {CATEGORIES.map((value) => (
             <option key={value} value={value}>
-              {CATEGORY_LABELS[value]}
+              {CATEGORY_LABELS[value]}{highDemandCategories.includes(value) ? " · High demand" : ""}
             </option>
           ))}
         </FilterSelect>

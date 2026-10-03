@@ -13,6 +13,7 @@ import {
   type SearchParams,
 } from "@/lib/browse-params";
 import type { BrowseListingsResponse } from "@/lib/listings";
+import { getCategoryDemandOverview } from "@/lib/api/analytics";
 
 export const metadata = { title: "Browse listings — HobbyRentals" };
 
@@ -23,6 +24,7 @@ export default async function BrowsePage({
 }) {
   const filters = parseBrowseFilters(await searchParams);
   const { data, error } = await loadListings(filters);
+  const highDemandCategories = new Set((await getCategoryDemandOverview().catch(() => [])).filter((category) => category.is_high_demand).map((category) => category.category));
 
   const total = data?.total_count ?? 0;
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -33,7 +35,7 @@ export default async function BrowsePage({
       <h1 className="heading mt-3 text-3xl">Browse listings</h1>
 
       <div className="mt-8">
-        <ListingFilters filters={filters} />
+        <ListingFilters filters={filters} highDemandCategories={[...highDemandCategories]} />
       </div>
 
       <div className="mt-6">
@@ -48,7 +50,7 @@ export default async function BrowsePage({
         {data && data.results.length > 0 ? (
           <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {data.results.map((listing) => (
-              <ListingCard key={listing.id} listing={listing} />
+              <ListingCard key={listing.id} listing={listing} highDemand={highDemandCategories.has(listing.category)} />
             ))}
           </ul>
         ) : (

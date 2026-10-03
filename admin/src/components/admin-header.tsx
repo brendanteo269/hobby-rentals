@@ -42,8 +42,9 @@ export async function AdminHeader() {
             Wallets
           </Link>
           <Link href={ROUTES.categories} className="text-sm text-ink-soft transition-colors hover:text-ink">
-            Listings
+            Categories
           </Link>
+          <Link href={ROUTES.analytics} className="text-sm text-ink-soft transition-colors hover:text-ink">Analytics</Link>
           <form action={leavePortal}>
             <button
               type="submit"

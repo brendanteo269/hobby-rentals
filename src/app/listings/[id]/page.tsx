@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney } from "@/lib/format";
 import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS } from "@/lib/listings";
 import { BookingRequestForm } from "@/components/bookings/booking-request-form";
+import { ListingViewTelemetry } from "@/components/analytics/listing-view-telemetry";
 
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -28,6 +29,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
 
   return (
     <Container className="py-16">
+      {listing.status === "ACTIVE" && user && user.id !== listing.owner_id && <ListingViewTelemetry listingId={listing.id} category={listing.category} />}
       <div className="grid gap-10 lg:grid-cols-2">
         <ListingGallery photoUrls={listing.photo_urls} name={listing.name} />
 

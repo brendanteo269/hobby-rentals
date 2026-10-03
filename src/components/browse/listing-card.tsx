@@ -22,7 +22,7 @@ import { ListingCardCarousel } from "./listing-card-carousel";
  * everything - the carousel's prev/next/dot buttons can't be nested inside
  * an <a>, so the photo needs its own link rather than sharing the outer one.
  */
-export function ListingCard({ listing }: { listing: ListingCardData }) {
+export function ListingCard({ listing, highDemand = false }: { listing: ListingCardData; highDemand?: boolean }) {
   return (
     <li className="group overflow-hidden card transition-colors hover:border-ink-soft">
       <ListingCardCarousel
@@ -33,7 +33,7 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
       />
 
       <Link href={`/listings/${listing.id}`} className="block p-4">
-        <p className="eyebrow">{CATEGORY_LABELS[listing.category]}</p>
+        <p className="eyebrow">{CATEGORY_LABELS[listing.category]}{highDemand ? " · High demand" : ""}</p>
         <h3 className="heading mt-1.5 text-sm leading-snug">{listing.name}</h3>
 
         <div className="mt-3 flex items-baseline gap-2 border-t border-line pt-3">
