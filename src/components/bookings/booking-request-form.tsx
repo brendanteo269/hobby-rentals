@@ -295,7 +295,7 @@ export function BookingRequestForm({
         </p>
       )}
       {errorCode === "INSUFFICIENT_BALANCE" && (
-        <Link href="/profile?view=wallet" className="mt-2 inline-block text-sm font-medium underline underline-offset-4">
+        <Link href="/profile?view=wallet" className="mt-2 block w-fit text-sm font-medium underline underline-offset-4">
           Top up your wallet
         </Link>
       )}
