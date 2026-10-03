@@ -102,3 +102,36 @@ export const RESET_REQUESTED_PATH = "/reset-requested";
  * allowed to recover their account. The page guards itself instead.
  */
 export const RESET_PASSWORD_PATH = "/reset-password";
+
+/** The full list of a member's notifications. */
+export const NOTIFICATIONS_PATH = "/notifications";
+
+/**
+ * Where a notification's call to action lands, on the site and in email
+ * alike. The page there decides whether to forward the member to the event
+ * or explain that the window has closed.
+ */
+export function notificationPath(id: string): `/notifications/${string}` {
+  return `/notifications/${encodeURIComponent(id)}`;
+}
+
+/** Where a member lands after signing in when nothing asked for elsewhere. */
+export const DEFAULT_AFTER_LOGIN_PATH = "/profile";
+
+/**
+ * A post-sign-in destination taken from the URL, or null if it is not a path
+ * on this site.
+ *
+ * `next` arrives in a query string anyone can write, so redirecting to it
+ * unchecked is an open redirect: `?next=//evil.example` and
+ * `?next=/\evil.example` are both read by browsers as another host. Only a
+ * single leading slash followed by something other than a slash or backslash
+ * is accepted, and control characters (which some browsers strip, turning a
+ * safe-looking path into a host) are refused outright.
+ */
+export function safeNextPath(value: string | null | undefined): string | null {
+  if (!value || !value.startsWith("/")) return null;
+  if (value.startsWith("//") || value.startsWith("/\\")) return null;
+  if (/[\u0000-\u001f\u007f]/.test(value)) return null;
+  return value;
+}

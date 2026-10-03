@@ -109,8 +109,11 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
+  const { pathname, search } = request.nextUrl;
   const isProtected = requiresSignIn(pathname);
+  // The query string is kept so a filtered page (or any link carrying state)
+  // comes back as it was after sign-in, not just to the same route.
+  const returnTo = pathname + search;
 
   if (!user) {
     // Nothing to keep alive, and a stale last-seen value must not survive to
@@ -120,7 +123,7 @@ export async function updateSession(request: NextRequest) {
       // No reason here: someone who simply never logged in should not be told
       // their session expired. The expiry message is set at the moment the
       // session is ended, below.
-      return withCookiesFrom(response, loginRedirect(request, { next: pathname }));
+      return withCookiesFrom(response, loginRedirect(request, { next: returnTo }));
     }
     return response;
   }
@@ -147,7 +150,7 @@ export async function updateSession(request: NextRequest) {
     if (isProtected) {
       const redirectResponse = withCookiesFrom(
         response,
-        loginRedirect(request, { reason: "expired", next: pathname }),
+        loginRedirect(request, { reason: "expired", next: returnTo }),
       );
       clearAuthCookies(request, redirectResponse);
       return redirectResponse;

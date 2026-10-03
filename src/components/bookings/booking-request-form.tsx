@@ -126,7 +126,13 @@ export function BookingRequestForm({
         setErrorCode(result.code);
         setShortfallCents(result.shortfallCents);
       }
-      else setMessage(`Request sent for ${formatDate(startDate)} – ${formatDate(endDate)}.`);
+      else {
+        const held = result.booking.total_amount_cents;
+        setMessage(
+          `Request sent for ${formatDate(startDate)} – ${formatDate(endDate)}.` +
+            (held ? ` ${formatMoney(held)} is on hold in your wallet until the owner responds.` : ""),
+        );
+      }
     });
   }
 
