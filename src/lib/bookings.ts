@@ -20,6 +20,37 @@ export type Booking = {
   updated_at: string;
 };
 
+/** One line of the working: "2 weeks x $100.00 = $200.00". */
+export type BookingQuoteLine = {
+  count: number;
+  unit: "day" | "week";
+  rate_cents: number;
+  amount_cents: number;
+  /**
+   * Set when a whole week is charged for fewer than seven days, because the
+   * daily rate would have cost more. Without saying so, a renter reading
+   * "1 week" against a five-day booking would think it a mistake.
+   */
+  capped_from_days?: number | null;
+};
+
+/**
+ * What a date range costs, itemised. Lives here rather than in
+ * @/lib/api/bookings so client components can read it - the bundle quote is
+ * this shape too, which is what lets one component render both.
+ */
+export type BookingQuote = {
+  rental_days: number;
+  price_per_day_cents: number | null;
+  price_per_week_cents: number | null;
+  lines: BookingQuoteLine[];
+  rental_subtotal_cents: number;
+  platform_fee_bps: number;
+  platform_fee_cents: number;
+  deposit_cents: number;
+  total_amount_cents: number;
+};
+
 export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
   PENDING: "Awaiting owner",
   CONFIRMED: "Confirmed",
