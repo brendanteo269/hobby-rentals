@@ -28,8 +28,14 @@ export async function SiteHeader() {
               <Link href="/listings/mine" className="hidden text-sm text-ink-soft hover:text-ink sm:block">
                 My listings
               </Link>
+              {/* Outline rather than a second accent button: two filled
+                  buttons side by side read as two primary actions and make
+                  the header fight for attention. Listing is the common one. */}
+              <ButtonLink href="/listings/mine/bundles/new" className="hidden sm:flex">
+                + New Bundle
+              </ButtonLink>
               <ButtonLink href="/listings/new" className="hidden sm:flex">
-                + New listing
+                + New Listing
               </ButtonLink>
               <AccountMenu initial={(user.email ?? "?").charAt(0)} signOutAction={signOut} />
             </>

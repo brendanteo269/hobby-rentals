@@ -68,7 +68,7 @@ async function runBundle(action: () => Promise<BundleBooking>): Promise<BundleBo
   try {
     const booking = await action();
     revalidatePath("/profile");
-    revalidatePath("/listings/mine/bundles");
+    revalidatePath("/listings/mine");
     revalidatePath(`/bundles/${booking.bundle_id}`);
     return { booking };
   } catch (error) {

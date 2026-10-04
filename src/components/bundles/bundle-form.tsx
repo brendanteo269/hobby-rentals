@@ -306,7 +306,7 @@ export function BundleForm({
             </p>
           )}
           <div className="mt-6 flex justify-end">
-            <ButtonLink href="/listings/mine/bundles">Back to my bundles</ButtonLink>
+            <ButtonLink href="/listings/mine">Back to my inventory</ButtonLink>
           </div>
         </Modal>
       )}

@@ -9,7 +9,9 @@
 import "server-only";
 
 import { backendRequest } from "@/lib/api/client";
+import type { ListingCategory, LocationArea } from "@/lib/listings";
 import type {
+  BrowseBundlesResponse,
   Bundle,
   BundleAvailability,
   BundleBooking,
@@ -23,13 +25,46 @@ import type { BookingStatus } from "@/lib/bookings";
 export { BackendApiError as BundleApiError } from "@/lib/api/client";
 
 /**
+ * Browse/search filters, as the backend expects them.
+ *
+ * Values within one list are OR'd; the lists are AND'd against each other.
+ * A bundle matches a category or an area if any item in it does. start_date
+ * and end_date only take effect together - the backend ignores a lone one.
+ */
+export type BrowseBundlesParams = {
+  q?: string;
+  category?: ListingCategory[];
+  location_area?: LocationArea[];
+  start_date?: string;
+  end_date?: string;
+  owner_id?: string;
+  page?: number;
+  page_size?: number;
+};
+
+/**
  * Published bundles only. One unpublished because a component stopped being
  * available is absent here, while that component's own listing is unaffected
  * and still browsable on its own (S2-20 Scenario 6).
  */
-export function browseBundles(ownerId?: string) {
-  const query = ownerId ? `?owner_id=${encodeURIComponent(ownerId)}` : "";
-  return backendRequest<Bundle[]>(`/bundles${query}`);
+export function browseBundles(params: BrowseBundlesParams = {}) {
+  const search = new URLSearchParams();
+
+  // Repeated key per value: FastAPI reads list query params that way.
+  const appendAll = (key: string, values: string[] | undefined) =>
+    values?.forEach((value) => search.append(key, value));
+
+  if (params.q) search.set("q", params.q);
+  appendAll("category", params.category);
+  appendAll("location_area", params.location_area);
+  if (params.start_date) search.set("start_date", params.start_date);
+  if (params.end_date) search.set("end_date", params.end_date);
+  if (params.owner_id) search.set("owner_id", params.owner_id);
+  if (params.page && params.page > 1) search.set("page", String(params.page));
+  if (params.page_size) search.set("page_size", String(params.page_size));
+
+  const query = search.toString();
+  return backendRequest<BrowseBundlesResponse>(`/bundles${query ? `?${query}` : ""}`);
 }
 
 /** The signed-in owner's bundles, unpublished ones included, newest first. */

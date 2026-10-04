@@ -11,7 +11,14 @@
  * fields, which a Bundle has. One rule, not two that could drift.
  */
 
-import type { DateRange, ListingCategory, ListingStatus, UnavailableReason } from "@/lib/listings";
+import type {
+  DateRange,
+  ListingCategory,
+  ListingCondition,
+  ListingStatus,
+  LocationArea,
+  UnavailableReason,
+} from "@/lib/listings";
 import type { BookingQuote, BookingStatus } from "@/lib/bookings";
 
 export type BundleStatus = "ACTIVE" | "UNPUBLISHED" | "REMOVED";
@@ -33,6 +40,8 @@ export type BundleComponent = {
    * on an UNPUBLISHED one, where it names the component that caused it.
    */
   status: ListingStatus;
+  condition: ListingCondition;
+  location_area: LocationArea;
   photo_keys: string[];
   photo_urls: string[];
   price_per_day_cents: number | null;
@@ -96,6 +105,15 @@ export type BundleQuote = BookingQuote & {
   /** Reported, never enforced - the package rate is the owner's to set. */
   components_subtotal_cents: number;
   savings_cents: number;
+};
+
+/** One page of the bundle marketplace, mirroring BrowseListingsResponse. */
+export type BrowseBundlesResponse = {
+  results: Bundle[];
+  /** Matches every applied filter, not just the current page. */
+  total_count: number;
+  page: number;
+  page_size: number;
 };
 
 export type BundleEvent = {

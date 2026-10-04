@@ -156,7 +156,7 @@ export async function createMyBundle(
     throw caught;
   }
 
-  revalidatePath("/listings/mine/bundles");
+  revalidatePath("/listings/mine");
   // Outside the try: redirect signals by throwing, and catching it here would
   // report a successful creation as a failure.
   redirect(`/bundles/${created.id}`);
@@ -222,7 +222,7 @@ export async function updateMyBundle(
     const changes = changedFields(parsed.fields, current);
     const saved = Object.keys(changes).length > 0 ? await updateBundle(bundleId, changes) : current;
 
-    revalidatePath("/listings/mine/bundles");
+    revalidatePath("/listings/mine");
     revalidatePath(`/bundles/${bundleId}`);
     return {
       success: {
@@ -242,7 +242,7 @@ export type BundleActionResult = { error: string } | { bundle: Bundle };
 export async function removeMyBundle(bundleId: string): Promise<BundleActionResult> {
   try {
     const bundle = await removeBundle(bundleId);
-    revalidatePath("/listings/mine/bundles");
+    revalidatePath("/listings/mine");
     return { bundle };
   } catch (caught) {
     if (caught instanceof BundleApiError) return { error: caught.message };
