@@ -101,6 +101,8 @@ export type ListingCard = {
   price_per_week_cents: number | null;
   deposit_cents: number;
   location_area: LocationArea;
+  /** The passport's serial status, for the card's badge (S2-30). */
+  serial_status: SerialStatus | null;
 };
 
 export type BrowseListingsResponse = {
@@ -179,9 +181,27 @@ export function parseBaselinePhotos(formData: FormData): Record<BaselineAngle, s
 
 export const BASELINE_INCOMPLETE = "Add a photo for each of the four angles.";
 
+/**
+ * VERIFIED: a unique serial. NO_SERIAL: the item has none, so a
+ * distinguishing-marks photo identifies it. DUPLICATE: the serial is already
+ * on another owner's listing of the same brand, so it's flagged for admins.
+ */
+export type SerialStatus = "PENDING" | "VERIFIED" | "NO_SERIAL" | "DUPLICATE";
+
+/**
+ * S2-30: two tiers. A unique serial earns the stronger one, an item with no
+ * serial the weaker. A flagged duplicate earns neither until an admin looks
+ * at it (renters are sent it as PENDING anyway, so they can't tell it apart).
+ */
+export function passportBadge(status: SerialStatus | null | undefined): string | null {
+  if (status === "VERIFIED") return "Serial verified";
+  if (status === "NO_SERIAL") return "Photo verified";
+  return null;
+}
+
 export type PassportEntry = {
   id: string;
-  /** BASELINE | SERIAL_VERIFICATION now; HANDOVER, RETURN, DAMAGE, RESOLUTION later. */
+  /** BASELINE | SERIAL_VERIFICATION | CONDITION_UPDATE now; HANDOVER, RETURN, DAMAGE, RESOLUTION later. */
   entry_type: string;
   created_by: string;
   created_at: string;
@@ -194,7 +214,7 @@ export type PassportEntry = {
 export type Passport = {
   listing_id: string;
   serial_number: string | null;
-  serial_status: "PENDING" | "VERIFIED";
+  serial_status: SerialStatus;
   /** What still blocks publishing, e.g. ["baseline"]; empty once complete. */
   missing: string[];
   /** Newest first. */
@@ -208,18 +228,26 @@ export type SerialExtraction = {
   readable: boolean;
 };
 
-/** The serial as the owner confirmed it, with the label photo (a passports/ key) as evidence. */
+/**
+ * The serial as the owner confirmed it, with the label photo (a passports/ key)
+ * as evidence. With no_serial, the photo is of the item's distinguishing marks
+ * instead and there's no serial (S2-32).
+ */
 export type SerialClaim = {
   photo_key: string;
-  serial: string;
+  no_serial?: boolean;
+  serial: string | null;
   /** What extraction suggested, so the passport records whether the owner corrected it. */
   extracted: string | null;
   confidence: number | null;
 };
 
-/** Reads SerialField's inputs. Null until there's both a label photo and a serial. */
+/** Reads SerialField's inputs. Null until there's a photo and either a serial or "no serial". */
 export function parseSerialClaim(formData: FormData): SerialClaim | null {
   const photoKey = String(formData.get("serial_photo_key") ?? "");
+  if (photoKey && formData.get("no_serial") === "true") {
+    return { photo_key: photoKey, no_serial: true, serial: null, extracted: null, confidence: null };
+  }
   const serial = String(formData.get("serial") ?? "").trim();
   if (!photoKey || !serial) return null;
   const confidence = String(formData.get("serial_confidence") ?? "");
@@ -231,17 +259,35 @@ export function parseSerialClaim(formData: FormData): SerialClaim | null {
   };
 }
 
-export const SERIAL_INCOMPLETE = "Photograph the serial number label and confirm the serial.";
+export const SERIAL_INCOMPLETE =
+  "Photograph the serial number label and confirm the serial, or mark the item as having no serial.";
 
 export const PASSPORT_ENTRY_LABELS: Record<string, string> = {
   BASELINE: "Baseline condition",
-  SERIAL_VERIFICATION: "Serial number verified",
+  // Recorded, not verified: a duplicate is recorded too. The badge says how far it's trusted.
+  SERIAL_VERIFICATION: "Serial number recorded",
+  CONDITION_UPDATE: "Condition update",
 };
+
+/** An entry's heading. An item without a serial records its marks photo under the same entry type. */
+export function passportEntryLabel(entry: Pick<PassportEntry, "entry_type" | "data">): string {
+  if (entry.entry_type === "SERIAL_VERIFICATION" && entry.data.method === "NO_SERIAL") {
+    return "Distinguishing marks recorded";
+  }
+  return PASSPORT_ENTRY_LABELS[entry.entry_type] ?? entry.entry_type;
+}
+
+/** S2-31: up to four photos per condition update. */
+export const MAX_CONDITION_UPDATE_PHOTOS = 4;
 
 /** Label for a photo slot name; falls back to the raw name for types added later. */
 export const PASSPORT_PHOTO_LABELS: Record<string, string> = {
   ...Object.fromEntries(BASELINE_ANGLES.map(({ key, label }) => [key, label])),
   serial: "Serial number",
+  marks: "Distinguishing marks",
+  ...Object.fromEntries(
+    Array.from({ length: MAX_CONDITION_UPDATE_PHOTOS }, (_, i) => [`photo_${i + 1}`, `Photo ${i + 1}`]),
+  ),
 };
 
 export type PresignPhotoResponse = {
