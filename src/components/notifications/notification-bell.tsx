@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import type { Route } from "next";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Bell } from "lucide-react";
 import { recentNotifications } from "@/app/notifications/actions";
 import type { NotificationView } from "@/lib/notifications";
-import { NOTIFICATIONS_PATH, notificationPath } from "@/lib/routes";
+import { NOTIFICATIONS_PATH } from "@/lib/routes";
 import { useDismiss } from "../use-dismiss";
 import { NotificationSummary } from "./notification-summary";
+import { OpenNotificationLink } from "./open-notification-link";
 
 /** How often an open tab re-checks the unread count. */
 const REFRESH_MS = 60_000;
@@ -91,16 +91,13 @@ export function NotificationBell({ unreadCount }: { unreadCount: number | null }
             <ul className="max-h-96 divide-y divide-line overflow-y-auto">
               {items.map((item) => (
                 <li key={item.id}>
-                  {/* prefetch off: opening a notification marks it read, and
-                      a hover prefetch must not do that. */}
-                  <Link
-                    href={notificationPath(item.id) as Route}
-                    prefetch={false}
-                    onClick={close}
+                  <OpenNotificationLink
+                    id={item.id}
+                    onOpen={close}
                     className="block px-4 py-3 transition-colors hover:bg-surface-muted"
                   >
                     <NotificationSummary notification={item} compact />
-                  </Link>
+                  </OpenNotificationLink>
                 </li>
               ))}
             </ul>

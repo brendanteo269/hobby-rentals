@@ -11,6 +11,7 @@ import type { Booking } from "@/lib/bookings";
 import type { BundleBooking } from "@/lib/bundles";
 import { BOOKING_STATUS_LABELS, BOOKING_STATUS_NEXT_STEP, PAYMENT_STATUS_LABELS } from "@/lib/bookings";
 import { WithdrawRequestButton } from "@/components/bookings/withdraw-request-button";
+import { HashTargetHighlight } from "@/components/hash-target-highlight";
 import { formatDate } from "@/lib/format";
 
 export type { ProfileView } from "@/lib/routes";
@@ -101,6 +102,7 @@ export function RenterView({
           </div>
           <ButtonLink href="/browse" variant="outline" className="px-4 py-2 text-xs">Browse more</ButtonLink>
         </div>
+        <HashTargetHighlight />
         <ul className="mt-6 space-y-3">
           {bundleBookings.map((booking) => (
             <li key={booking.id} className="flex flex-wrap items-center justify-between gap-3 border border-line bg-white p-4">
@@ -126,7 +128,7 @@ export function RenterView({
             <li
               key={booking.id}
               id={`booking-${booking.id}`}
-              className="flex scroll-mt-24 flex-wrap items-center justify-between gap-3 border border-line bg-white p-4 target:border-ink"
+              className="flex scroll-mt-24 flex-wrap items-center justify-between gap-3 border border-line bg-white p-4 data-[hash-target]:border-ink data-[hash-target]:ring-1 data-[hash-target]:ring-ink"
             >
               <div>
                 <Link href={`/listings/${booking.listing_id}`} className="font-medium hover:underline">View listing</Link>

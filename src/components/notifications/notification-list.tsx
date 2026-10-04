@@ -1,13 +1,11 @@
 "use client";
 
-import Link from "next/link";
-import type { Route } from "next";
 import { useState, useTransition } from "react";
 import { Badge, Button } from "@/components/ui";
 import { changeNotifications, markAllRead, type NotificationActionResult } from "@/app/notifications/actions";
 import type { BulkAction, NotificationType, NotificationView } from "@/lib/notifications";
-import { notificationPath } from "@/lib/routes";
 import { NotificationSummary } from "./notification-summary";
+import { OpenNotificationLink } from "./open-notification-link";
 
 /**
  * The notifications page's list: each notification with its call to action,
@@ -112,19 +110,19 @@ export function NotificationList({
               disabled={pending}
               aria-label={`Select "${item.title}"`}
             />
-            <div className="flex min-w-0 flex-1 flex-wrap items-start justify-between gap-3">
-              <NotificationSummary notification={item} />
+            {/* Stacked on narrow screens; side by side from sm up, with the
+                summary taking the slack so a long body never pushes the
+                call to action onto its own line. */}
+            <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+              <div className="min-w-0 sm:flex-1">
+                <NotificationSummary notification={item} />
+              </div>
               <div className="flex shrink-0 items-center gap-2">
                 {showingArchived && item.archived && <Badge>Archived</Badge>}
                 {item.expired && <Badge>Closed</Badge>}
-                {/* prefetch off: opening a notification marks it read. */}
-                <Link
-                  href={notificationPath(item.id) as Route}
-                  prefetch={false}
-                  className="text-sm font-medium underline underline-offset-4"
-                >
+                <OpenNotificationLink id={item.id} className="text-sm font-medium underline underline-offset-4">
                   {item.expired ? "See options" : item.cta_label}
-                </Link>
+                </OpenNotificationLink>
               </div>
             </div>
           </li>
