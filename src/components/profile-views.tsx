@@ -9,7 +9,12 @@ import { CATEGORY_LABELS, LISTING_STATUS_LABELS, type Listing } from "@/lib/list
 import { profilePath, type ProfileView } from "@/lib/routes";
 import type { Booking } from "@/lib/bookings";
 import type { BundleBooking } from "@/lib/bundles";
-import { BOOKING_STATUS_LABELS, BOOKING_STATUS_NEXT_STEP, PAYMENT_STATUS_LABELS } from "@/lib/bookings";
+import {
+  BOOKING_STATUS_LABELS,
+  BOOKING_STATUS_NEXT_STEP,
+  BUNDLE_STATUS_NEXT_STEP,
+  PAYMENT_STATUS_LABELS,
+} from "@/lib/bookings";
 import { WithdrawRequestButton } from "@/components/bookings/withdraw-request-button";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
 import { formatDate } from "@/lib/format";
@@ -105,7 +110,13 @@ export function RenterView({
         <HashTargetHighlight />
         <ul className="mt-6 space-y-3">
           {bundleBookings.map((booking) => (
-            <li key={booking.id} className="flex flex-wrap items-center justify-between gap-3 border border-line bg-white p-4">
+            // The id is what a bundle notification's link scrolls to
+            // (renter_bundle_booking_path in the backend's catalog).
+            <li
+              key={booking.id}
+              id={`bundle-booking-${booking.id}`}
+              className="flex scroll-mt-24 flex-wrap items-center justify-between gap-3 border border-line bg-white p-4 data-[hash-target]:border-ink data-[hash-target]:ring-1 data-[hash-target]:ring-ink"
+            >
               <div>
                 <Link href={`/bundles/${booking.bundle_id}`} className="font-medium hover:underline">
                   {booking.bundle_name ?? "View bundle"}
@@ -118,6 +129,7 @@ export function RenterView({
                 <p className="mt-1 text-xs text-ink-soft">
                   {booking.items.length} items · {booking.items.map((item) => item.listing_name ?? "an item").join(", ")}
                 </p>
+                <p className="mt-1 text-sm text-ink">{BUNDLE_STATUS_NEXT_STEP[booking.status]}</p>
               </div>
               <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
             </li>

@@ -104,6 +104,12 @@ export const BOOKING_STATUS_NEXT_STEP: Record<BookingStatus, string> = {
   COMPLETED: "This rental is finished.",
 };
 
+/** The same for a bundle booking, which is decided whole and cannot be withdrawn. */
+export const BUNDLE_STATUS_NEXT_STEP: Record<BookingStatus, string> = {
+  ...BOOKING_STATUS_NEXT_STEP,
+  PENDING: "The owner will accept or decline the whole bundle.",
+};
+
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   HOLD_PLACED: "Funds on hold",
   HELD_IN_ESCROW: "Held in escrow",

@@ -16,7 +16,16 @@ export type NotificationType =
   | "BOOKING_EXPIRED"
   | "BOOKING_STARTED"
   | "BOOKING_COMPLETED"
-  | "BOOKING_CANCELLED";
+  | "BOOKING_CANCELLED"
+  // A bundle booking notifies once per change, as one order.
+  | "BUNDLE_REQUESTED"
+  | "BUNDLE_ACCEPTED"
+  | "BUNDLE_DECLINED"
+  | "BUNDLE_WITHDRAWN"
+  | "BUNDLE_EXPIRED"
+  | "BUNDLE_STARTED"
+  | "BUNDLE_COMPLETED"
+  | "BUNDLE_CANCELLED";
 
 export type AppNotification = {
   id: string;
@@ -28,6 +37,8 @@ export type AppNotification = {
   next_step: string;
   cta_label: string;
   booking_id: string | null;
+  /** Set instead of booking_id when the notification is about a bundle. */
+  bundle_booking_id: string | null;
   created_at: string;
   read: boolean;
   archived: boolean;
@@ -64,6 +75,14 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   BOOKING_STARTED: "Rental started",
   BOOKING_COMPLETED: "Rental completed",
   BOOKING_CANCELLED: "Cancelled",
+  BUNDLE_REQUESTED: "Bundle request sent",
+  BUNDLE_ACCEPTED: "Bundle accepted",
+  BUNDLE_DECLINED: "Bundle declined",
+  BUNDLE_WITHDRAWN: "Bundle withdrawn",
+  BUNDLE_EXPIRED: "Bundle expired",
+  BUNDLE_STARTED: "Bundle rental started",
+  BUNDLE_COMPLETED: "Bundle rental completed",
+  BUNDLE_CANCELLED: "Bundle cancelled",
 };
 
 export const NOTIFICATION_TYPES = Object.keys(NOTIFICATION_TYPE_LABELS) as NotificationType[];
