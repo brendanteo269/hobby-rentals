@@ -43,9 +43,11 @@ export function requiresVerifiedEmail(pathname: string): boolean {
  * /onboarding is included so first-run setup cannot be reached anonymously.
  * /browse, /listings and /bundles read from the FastAPI backend, which
  * rejects an anonymous caller — guarding them here turns a redirect out of
- * a half-rendered page into a clean trip to the login screen.
+ * a half-rendered page into a clean trip to the login screen. /notifications
+ * is where email links land, so a signed-out reader is sent through the login
+ * screen with `next` set and comes back to the event.
  */
-export const PROTECTED_PREFIXES = ["/profile", "/onboarding", "/browse", "/listings", "/bundles"];
+export const PROTECTED_PREFIXES = ["/profile", "/onboarding", "/browse", "/listings", "/bundles", "/notifications"];
 
 export function requiresSignIn(pathname: string): boolean {
   return PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));

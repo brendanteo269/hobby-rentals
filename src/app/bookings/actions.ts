@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createBooking, getBookingQuote, updateBookingStatus } from "@/lib/api/bookings";
+import { createBooking, getBookingQuote, updateBookingStatus, withdrawBooking } from "@/lib/api/bookings";
 import {
   createBundleBooking,
   getBundleQuote,
@@ -20,9 +20,9 @@ export type BookingQuoteResult = { error: string } | { quote: BookingQuote };
 async function run(action: () => Promise<Booking>): Promise<BookingActionResult> {
   try {
     const booking = await action();
-    revalidatePath("/profile");
-    revalidatePath("/listings/mine");
-    revalidatePath(`/listings/${booking.listing_id}`);
+    // The layout too: every booking change notifies the renter, so the
+    // header's unread count moves with it.
+    revalidatePath("/", "layout");
     return { booking };
   } catch (error) {
     if (error instanceof BackendApiError) {
@@ -67,9 +67,9 @@ export type BundleQuoteResult = { error: string } | { quote: BundleQuote };
 async function runBundle(action: () => Promise<BundleBooking>): Promise<BundleBookingActionResult> {
   try {
     const booking = await action();
-    revalidatePath("/profile");
-    revalidatePath("/listings/mine");
-    revalidatePath(`/bundles/${booking.bundle_id}`);
+    // The layout too: every bundle booking change notifies the renter, so
+    // the header's unread count moves with it.
+    revalidatePath("/", "layout");
     return { booking };
   } catch (error) {
     if (error instanceof BackendApiError) {
@@ -103,4 +103,8 @@ export async function requestBundleBooking(
 
 export async function changeBundleBookingStatus(bundleBookingId: string, nextStatus: BookingStatus) {
   return runBundle(() => updateBundleBookingStatus(bundleBookingId, nextStatus));
+}
+
+export async function withdrawRequest(bookingId: string) {
+  return run(() => withdrawBooking(bookingId));
 }

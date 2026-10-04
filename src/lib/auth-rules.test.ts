@@ -23,8 +23,10 @@ import {
   isProfileView,
   loginPath,
   profilePath,
+  safeNextPath,
 } from "@/lib/routes";
 import {
+  requiresSignIn,
   requiresOnboarding,
   requiresVerifiedEmail,
   resolveLinkType,
@@ -313,5 +315,36 @@ describe("resolveLinkType", () => {
     expect(resolveLinkType(null, ["recovery"])).toBe("recovery");
     // Two candidates and nothing to choose between them: refuse rather than guess.
     expect(resolveLinkType(null, ["signup", "email"])).toBeNull();
+  });
+});
+
+describe("safeNextPath", () => {
+  it("accepts a path on this site, query and fragment included", () => {
+    expect(safeNextPath("/notifications/abc")).toBe("/notifications/abc");
+    expect(safeNextPath("/profile?view=renter#booking-1")).toBe("/profile?view=renter#booking-1");
+  });
+
+  it("refuses anything a browser would read as another host", () => {
+    // Each of these, handed to redirect(), leaves the site: the open redirect
+    // an email link's `next` would otherwise be.
+    expect(safeNextPath("//evil.example")).toBeNull();
+    expect(safeNextPath("/\\evil.example")).toBeNull();
+    expect(safeNextPath("https://evil.example")).toBeNull();
+    expect(safeNextPath("javascript:alert(1)")).toBeNull();
+    // Browsers strip tabs and newlines from URLs, which turns "/<tab>/evil" into "//evil".
+    expect(safeNextPath("/\t/evil.example")).toBeNull();
+  });
+
+  it("refuses an absent or relative value", () => {
+    expect(safeNextPath(null)).toBeNull();
+    expect(safeNextPath("")).toBeNull();
+    expect(safeNextPath("profile")).toBeNull();
+  });
+});
+
+describe("notifications are behind the sign-in wall", () => {
+  it("sends a signed-out email reader to log in first", () => {
+    expect(requiresSignIn("/notifications")).toBe(true);
+    expect(requiresSignIn("/notifications/abc")).toBe(true);
   });
 });
