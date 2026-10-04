@@ -1,9 +1,7 @@
 import Link from "next/link";
-import { Badge, ButtonLink, EmptyState } from "@/components/ui";
-import { OwnerPortal, requireOwner } from "@/components/owner-portal";
+import { Badge } from "@/components/ui";
 import { BundleLifecycleActions } from "@/components/bundles/bundle-lifecycle-actions";
 import { OwnerBundleBookingList } from "@/components/bundles/owner-bundle-booking-list";
-import { getBundleEvents, getMyBundles, getOwnerBundleBookings } from "@/lib/api/bundles";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import {
   BUNDLE_EVENT_LABELS,
@@ -15,64 +13,6 @@ import {
 } from "@/lib/bundles";
 import { LISTING_STATUS_LABELS } from "@/lib/listings";
 
-export const metadata = { title: "My bundles — HobbyRentals" };
-
-/**
- * S2-20: the owner's gear bundles, with the per-bundle event trail that
- * carries Scenario 6's notification - which component unpublished the bundle,
- * and when it came back.
- */
-export default async function MyBundlesPage() {
-  await requireOwner();
-  const [bundles, bookings] = await Promise.all([getMyBundles(), getOwnerBundleBookings()]);
-
-  // Supplementary: a hiccup reading the event trail must not cost the owner
-  // access to their bundles and the controls on them.
-  const trails = await Promise.all(
-    bundles.map(async (bundle) => {
-      try {
-        return [bundle.id, await getBundleEvents(bundle.id)] as const;
-      } catch {
-        return [bundle.id, undefined] as const;
-      }
-    }),
-  );
-  const eventsByBundle = new Map(trails);
-
-  return (
-    <OwnerPortal active="Bundles" title="My bundles">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <p className="body-copy max-w-xl">
-          Group related gear into a named set at a package rate. The listings inside a bundle stay
-          published and independently bookable.
-        </p>
-        {bundles.length > 0 && <ButtonLink href="/listings/mine/bundles/new">New bundle</ButtonLink>}
-      </div>
-
-      <div className="mt-8">
-        {bundles.length === 0 ? (
-          <EmptyState
-            title="No bundles yet"
-            body="Bundle two or more of your published listings so renters can book a common set of gear in one go."
-            action={<ButtonLink href="/listings/mine/bundles/new">Create your first bundle</ButtonLink>}
-          />
-        ) : (
-          <ul className="space-y-4">
-            {bundles.map((bundle) => (
-              <BundleRow
-                key={bundle.id}
-                bundle={bundle}
-                bookings={bookings.filter((booking) => booking.bundle_id === bundle.id)}
-                events={eventsByBundle.get(bundle.id)}
-              />
-            ))}
-          </ul>
-        )}
-      </div>
-    </OwnerPortal>
-  );
-}
-
 /** ACTIVE is the one status that should stand out; UNPUBLISHED wants attention. */
 const STATUS_BADGE_VARIANT: Record<BundleStatus, "neutral" | "accent" | "dark"> = {
   ACTIVE: "dark",
@@ -80,7 +20,11 @@ const STATUS_BADGE_VARIANT: Record<BundleStatus, "neutral" | "accent" | "dark"> 
   REMOVED: "neutral",
 };
 
-function BundleRow({
+/**
+ * One bundle on the owner's inventory, with its booking requests and the
+ * trail explaining any automatic unpublish (S2-20 Scenario 6).
+ */
+export function BundleRow({
   bundle,
   bookings,
   events,

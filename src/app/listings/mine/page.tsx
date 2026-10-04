@@ -2,7 +2,9 @@ import Link from "next/link";
 import { Badge, ButtonLink, EmptyState } from "@/components/ui";
 import { OwnerPortal, requireOwner } from "@/components/owner-portal";
 import { ListingLifecycleActions } from "@/components/listings/listing-lifecycle-actions";
+import { BundleRow } from "@/components/bundles/bundle-row";
 import { getListingHistory, getMyListings, type ListingHistory } from "@/lib/api/listings";
+import { getBundleEvents, getMyBundles, getOwnerBundleBookings } from "@/lib/api/bundles";
 import { getOwnerBookings } from "@/lib/api/bookings";
 import { formatMoney } from "@/lib/format";
 import {
@@ -27,12 +29,22 @@ export const metadata = { title: "My listings — HobbyRentals" };
  * S2-01: filterable by status. Filtered here rather than by the API: the
  * page needs the full list anyway to tell "no listings yet" apart from
  * "none with this status".
+ *
+ * S2-20: gear bundles are part of the same inventory and live in their own
+ * section below. The status filter above applies to items only - a bundle
+ * carries its own, different set of statuses - so the two sections are
+ * labelled rather than left to run together.
  */
 export default async function MyListingsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   await requireOwner();
   const { status } = await searchParams;
   const filter = status && status in LISTING_STATUS_LABELS ? (status as ListingStatus) : undefined;
-  const [allListings, bookings] = await Promise.all([getMyListings(), getOwnerBookings()]);
+  const [allListings, bookings, bundles, bundleBookings] = await Promise.all([
+    getMyListings(),
+    getOwnerBookings(),
+    getMyBundles(),
+    getOwnerBundleBookings(),
+  ]);
   const listings = filter ? allListings.filter((listing) => listing.status === filter) : allListings;
   // History is supplementary: an audit-service/network hiccup must not make
   // an owner lose access to their inventory and booking controls.
@@ -44,6 +56,19 @@ export default async function MyListingsPage({ searchParams }: { searchParams: P
     }
   }));
   const historyByListing = new Map(histories);
+
+  // Supplementary, like the listing histories above: a hiccup reading a
+  // bundle's event trail must not cost the owner the rest of the page.
+  const trails = await Promise.all(
+    bundles.map(async (bundle) => {
+      try {
+        return [bundle.id, await getBundleEvents(bundle.id)] as const;
+      } catch {
+        return [bundle.id, undefined] as const;
+      }
+    }),
+  );
+  const eventsByBundle = new Map(trails);
 
   return (
     <OwnerPortal active="Inventory" title="My listings">
@@ -64,26 +89,61 @@ export default async function MyListingsPage({ searchParams }: { searchParams: P
       )}
 
       <div className="mt-8">
-        {allListings.length === 0 ? (
-          <EmptyState
-            title="No listings yet"
-            body="Once you list a piece of gear, it'll show up here so you can manage its availability, archive it, or remove it."
-            action={<ButtonLink href="/listings/new">Create your first listing</ButtonLink>}
-          />
-        ) : listings.length === 0 ? (
-          <EmptyState
-            title={`No ${LISTING_STATUS_LABELS[filter!].toLowerCase()} listings`}
-            body="Try another status, or show all your listings."
-            action={<ButtonLink href="/listings/mine" variant="outline">Show all</ButtonLink>}
-          />
-        ) : (
-          <ul className="space-y-4">
-            {listings.map((listing) => (
-              <ListingRow key={listing.id} listing={listing} bookings={bookings.filter((booking) => booking.listing_id === listing.id)} history={historyByListing.get(listing.id)} />
-            ))}
-          </ul>
-        )}
+        <h2 className="eyebrow">Items</h2>
+        <div className="mt-3">
+          {allListings.length === 0 ? (
+            <EmptyState
+              title="No listings yet"
+              body="Once you list a piece of gear, it'll show up here so you can manage its availability, archive it, or remove it."
+              action={<ButtonLink href="/listings/new">Create your first listing</ButtonLink>}
+            />
+          ) : listings.length === 0 ? (
+            <EmptyState
+              title={`No ${LISTING_STATUS_LABELS[filter!].toLowerCase()} listings`}
+              body="Try another status, or show all your listings."
+              action={<ButtonLink href="/listings/mine" variant="outline">Show all</ButtonLink>}
+            />
+          ) : (
+            <ul className="space-y-4">
+              {listings.map((listing) => (
+                <ListingRow key={listing.id} listing={listing} bookings={bookings.filter((booking) => booking.listing_id === listing.id)} history={historyByListing.get(listing.id)} />
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
+
+      <div className="mt-12">
+        {/* No "new bundle" button here: that action lives in the site header
+            beside "+ New Listing", so there is one place to start either kind
+            of inventory from. */}
+        <h2 className="eyebrow">Bundles</h2>
+        <p className="body-copy mt-1 max-w-xl">
+          Related gear grouped into one named set at a package rate. The listings inside stay published and bookable on their own.
+        </p>
+
+        <div className="mt-4">
+          {bundles.length === 0 ? (
+            <EmptyState
+              title="No bundles yet"
+              body="Bundle two or more of your published listings so renters can book a common set of gear in one go."
+              action={<ButtonLink href="/listings/mine/bundles/new">Create your first bundle</ButtonLink>}
+            />
+          ) : (
+            <ul className="space-y-4">
+              {bundles.map((bundle) => (
+                <BundleRow
+                  key={bundle.id}
+                  bundle={bundle}
+                  bookings={bundleBookings.filter((booking) => booking.bundle_id === bundle.id)}
+                  events={eventsByBundle.get(bundle.id)}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
     </OwnerPortal>
   );
 }

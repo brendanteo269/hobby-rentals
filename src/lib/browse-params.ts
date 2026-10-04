@@ -36,18 +36,20 @@ export type SearchParams = Record<string, string | string[] | undefined>;
 
 /**
  * Normalises a repeatable param to a list, dropping blanks and duplicates.
+ * Exported for the bundle filters, which carry different filters in the same
+ * encoding.
  *
  * Duplicates are real: the filter form resubmits the applied values as hidden
  * fields, so choosing a value that is already applied would otherwise arrive
  * twice and render two identical chips, each removing only one of them.
  */
-function toList(value: string | string[] | undefined): string[] {
+export function toList(value: string | string[] | undefined): string[] {
   if (value === undefined) return [];
   const entries = Array.isArray(value) ? value : [value];
   return [...new Set(entries.filter((entry) => entry !== ""))];
 }
 
-function first(value: string | string[] | undefined): string {
+export function first(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value)?.trim() ?? "";
 }
 

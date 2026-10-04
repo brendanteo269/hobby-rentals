@@ -1,4 +1,5 @@
-import { Button, Input, Select } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
+import { FilterSelect } from "@/components/browse/filter-select";
 import type { BrowseFilters } from "@/lib/browse-params";
 import {
   CATEGORIES,
@@ -113,34 +114,5 @@ export function ListingFilters({ filters }: { filters: BrowseFilters }) {
         <Button type="submit">Apply</Button>
       </div>
     </form>
-  );
-}
-
-/**
- * One filter dropdown. Left uncontrolled and blank on every render: the
- * applied values are shown as removable chips above the results, so repeating
- * them as a selection here would offer two ways to change one thing.
- */
-function FilterSelect({
-  id,
-  label,
-  placeholder,
-  children,
-}: {
-  id: string;
-  label: string;
-  placeholder: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="min-w-44">
-      <label htmlFor={id} className="block text-sm font-medium">
-        {label}
-      </label>
-      <Select id={id} name={id} defaultValue="" className="mt-2">
-        <option value="">{placeholder}</option>
-        {children}
-      </Select>
-    </div>
   );
 }

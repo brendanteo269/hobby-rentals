@@ -7,7 +7,6 @@ import { profilePath } from "@/lib/routes";
 
 const SECTIONS = [
   { href: "/listings/mine", label: "Inventory" },
-  { href: "/listings/mine/bundles", label: "Bundles" },
   { href: "/listings/mine/bookings", label: "Bookings" },
   { href: "/listings/mine/earnings", label: "Earnings" },
   { href: "/listings/mine/settings", label: "Settings" },
