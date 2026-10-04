@@ -85,6 +85,7 @@ async function loadListings(
       location_area: filters.location_area,
       start_date: filters.start_date || undefined,
       end_date: filters.end_date || undefined,
+      verified_only: filters.verified,
       page: filters.page,
       page_size: PAGE_SIZE,
     });

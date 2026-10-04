@@ -111,6 +111,11 @@ export function ListingFilters({ filters }: { filters: BrowseFilters }) {
         <p className="body-copy min-w-48 flex-1 pb-2.5">
           Give both dates to hide listings that are already booked or blacked out then.
         </p>
+        {/* A checkbox, unlike the selects, so it shows its applied state and unticking it clears it. */}
+        <label className="flex items-center gap-2 pb-2.5 text-sm font-medium">
+          <input type="checkbox" name="verified" value="1" defaultChecked={filters.verified} />
+          Serial verified only
+        </label>
         <Button type="submit">Apply</Button>
       </div>
     </form>

@@ -53,6 +53,10 @@ export function ActiveFilters({ filters }: { filters: BrowseFilters }) {
     }),
   );
 
+  if (filters.verified) {
+    chips.push({ key: "verified", label: "Serial verified", href: without({ verified: false }) });
+  }
+
   // The two dates only filter as a pair, so they are removed as one chip —
   // clearing just the end date would silently stop the whole date filter.
   if (filters.start_date || filters.end_date) {

@@ -28,6 +28,8 @@ export type BrowseFilters = {
   /** ISO dates. Only applied by the backend when both are present. */
   start_date: string;
   end_date: string;
+  /** S2-30: serial-verified listings only. */
+  verified: boolean;
   page: number;
 };
 
@@ -68,6 +70,7 @@ export function parseBrowseFilters(params: SearchParams): BrowseFilters {
     location_area: toList(params.location_area).filter(isLocationArea),
     start_date: first(params.start_date),
     end_date: first(params.end_date),
+    verified: ["1", "true"].includes(first(params.verified)),
     page: Math.max(1, Number(first(params.page)) || 1),
   };
 }
@@ -81,7 +84,8 @@ export function hasActiveFilters(filters: BrowseFilters): boolean {
     filters.brand.length > 0 ||
     filters.location_area.length > 0 ||
     filters.start_date !== "" ||
-    filters.end_date !== ""
+    filters.end_date !== "" ||
+    filters.verified
   );
 }
 
@@ -101,6 +105,7 @@ export function browseHref(filters: BrowseFilters): string {
   filters.location_area.forEach((value) => search.append("location_area", value));
   if (filters.start_date) search.set("start_date", filters.start_date);
   if (filters.end_date) search.set("end_date", filters.end_date);
+  if (filters.verified) search.set("verified", "1");
   if (filters.page > 1) search.set("page", String(filters.page));
 
   const query = search.toString();

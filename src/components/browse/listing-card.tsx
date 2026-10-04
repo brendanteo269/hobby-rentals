@@ -1,8 +1,10 @@
 import Link from "next/link";
 import { formatMoney } from "@/lib/format";
+import { Badge } from "@/components/ui";
 import {
   CATEGORY_LABELS,
   LOCATION_LABELS,
+  passportBadge,
   type ListingCard as ListingCardData,
 } from "@/lib/listings";
 import { ListingCardCarousel } from "./listing-card-carousel";
@@ -14,8 +16,8 @@ import { ListingCardCarousel } from "./listing-card-carousel";
  * placeholder copy: that card's fields (a formatted price string, a marketing
  * line) are written by hand, while these come from the API as cents and enum
  * tokens. Merging them would mean one component pretending to two contracts.
- * Unlike that placeholder card, this one carries no rating or "Product
- * Passport" ribbon — real listings have no such field yet.
+ * Unlike that placeholder card, this one carries no rating; its passport
+ * badge comes from the listing's real serial status (S2-30).
  *
  * Two separate <Link>s to the same listing (one on the photo via
  * ListingCardCarousel, one on the info below) rather than one link wrapping
@@ -23,6 +25,7 @@ import { ListingCardCarousel } from "./listing-card-carousel";
  * an <a>, so the photo needs its own link rather than sharing the outer one.
  */
 export function ListingCard({ listing }: { listing: ListingCardData }) {
+  const badge = passportBadge(listing.serial_status);
   return (
     <li className="group overflow-hidden card transition-colors hover:border-ink-soft">
       <ListingCardCarousel
@@ -33,7 +36,14 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
       />
 
       <Link href={`/listings/${listing.id}`} className="block p-4">
-        <p className="eyebrow">{CATEGORY_LABELS[listing.category]}</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="eyebrow">{CATEGORY_LABELS[listing.category]}</p>
+          {badge && (
+            <Badge variant={listing.serial_status === "VERIFIED" ? "dark" : "neutral"} className="shrink-0 whitespace-nowrap">
+              {badge}
+            </Badge>
+          )}
+        </div>
         <h3 className="heading mt-1.5 text-sm leading-snug">{listing.name}</h3>
 
         <div className="mt-3 flex items-baseline gap-2 border-t border-line pt-3">

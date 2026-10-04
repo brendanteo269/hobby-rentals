@@ -6,7 +6,7 @@ import { PassportTimeline } from "@/components/passport/passport-timeline";
 import { getBookingAvailability, getListing, getPassport } from "@/lib/api/listings";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney } from "@/lib/format";
-import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS } from "@/lib/listings";
+import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS, passportBadge } from "@/lib/listings";
 import { BookingRequestForm } from "@/components/bookings/booking-request-form";
 
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -25,6 +25,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   // S2-07: a live listing's condition record, for renters to judge it by.
   // Supplementary, so a failure only hides the section.
   const passport = listing.status === "ACTIVE" ? await getPassport(listing.id).catch(() => null) : null;
+  const badge = passportBadge(passport?.serial_status);
 
   return (
     <Container className="py-16">
@@ -94,7 +95,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
         <section className="mt-16 border-t border-line pt-10">
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="heading text-lg">Product Passport</h2>
-            {passport.serial_status === "VERIFIED" && <Badge variant="dark">Serial verified</Badge>}
+            {badge && <Badge variant={passport?.serial_status === "VERIFIED" ? "dark" : "neutral"}>{badge}</Badge>}
           </div>
           <p className="body-copy mt-1">
             This item&apos;s permanent condition record. Nothing here can be edited or deleted, so what you see is

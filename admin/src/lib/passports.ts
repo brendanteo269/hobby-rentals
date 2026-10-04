@@ -23,7 +23,8 @@ export type PassportEntry = {
 export type AdminPassport = {
   listing: { id: string; name: string; owner_id: string; status: string };
   serial_number: string | null;
-  serial_status: "PENDING" | "VERIFIED";
+  /** NO_SERIAL: identified by a marks photo. DUPLICATE: serial already on another owner's same-brand listing (S2-32). */
+  serial_status: "PENDING" | "VERIFIED" | "NO_SERIAL" | "DUPLICATE";
   /** What still blocks publishing, e.g. ["baseline"]. */
   missing: string[];
   /** Newest first. */
@@ -70,7 +71,15 @@ export async function getAdminPassport(listingId: string): Promise<AdminPassport
 
 export const ENTRY_LABELS: Record<string, string> = {
   BASELINE: "Baseline condition",
-  SERIAL_VERIFICATION: "Serial number verified",
+  SERIAL_VERIFICATION: "Serial number recorded",
+  CONDITION_UPDATE: "Condition update",
+};
+
+export const SERIAL_STATUS: Record<AdminPassport["serial_status"], { label: string; tone: "positive" | "warning" | "critical" }> = {
+  VERIFIED: { label: "Verified", tone: "positive" },
+  PENDING: { label: "Pending", tone: "warning" },
+  NO_SERIAL: { label: "No serial", tone: "warning" },
+  DUPLICATE: { label: "Duplicate serial", tone: "critical" },
 };
 
 export const PHOTO_LABELS: Record<string, string> = {
@@ -79,4 +88,9 @@ export const PHOTO_LABELS: Record<string, string> = {
   high_wear: "High-wear area",
   underside: "Underside",
   serial: "Serial label",
+  marks: "Distinguishing marks",
+  photo_1: "Photo 1",
+  photo_2: "Photo 2",
+  photo_3: "Photo 3",
+  photo_4: "Photo 4",
 };

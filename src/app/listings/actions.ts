@@ -242,10 +242,6 @@ export async function submitListing(
   try {
     created = await createListing(request);
   } catch (caught) {
-    // The serial is already another listing's: nothing was created.
-    if (caught instanceof ListingApiError && caught.status === 409) {
-      return { error: "Please correct the highlighted fields.", fieldErrors: { serial: caught.message } };
-    }
     if (caught instanceof ListingApiError) {
       return { error: caught.message, fieldErrors: caught.fieldErrors };
     }
