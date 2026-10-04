@@ -108,6 +108,8 @@ export const BOOKING_STATUS_NEXT_STEP: Record<BookingStatus, string> = {
 export const BUNDLE_STATUS_NEXT_STEP: Record<BookingStatus, string> = {
   ...BOOKING_STATUS_NEXT_STEP,
   PENDING: "The owner will accept or decline the whole bundle.",
+  CONFIRMED: "Collect the items on your start date.",
+  ACTIVE: "Return the items by your end date.",
 };
 
 export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
