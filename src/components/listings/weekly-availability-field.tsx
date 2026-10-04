@@ -13,6 +13,7 @@ import { WEEKDAY_LABELS } from "@/lib/listings";
  * than as a control that has stopped working.
  */
 export function WeeklyAvailabilityField({
+  subject = "listing",
   profileAvailableDays,
   custom,
   onCustomChange,
@@ -20,6 +21,8 @@ export function WeeklyAvailabilityField({
   onDaysChange,
   error,
 }: {
+  /** What the custom schedule belongs to, for the radio label. */
+  subject?: "listing" | "bundle";
   profileAvailableDays: number[];
   custom: boolean;
   onCustomChange: (custom: boolean) => void;
@@ -39,8 +42,8 @@ export function WeeklyAvailabilityField({
     <div>
       <span className="block text-sm font-medium">Weekly rental availability</span>
       <p className="body-copy mt-2">
-        The days of the week this item can be collected and returned. Green days are available;
-        outlined days are unavailable.
+        The days of the week this {subject === "bundle" ? "set" : "item"} can be collected and
+        returned. Green days are available; outlined days are unavailable.
       </p>
 
       <input type="hidden" name="has_custom_availability" value={String(custom)} />
@@ -65,7 +68,7 @@ export function WeeklyAvailabilityField({
             checked={custom}
             onChange={() => onCustomChange(true)}
           />
-          Set a custom schedule for this listing
+          Set a custom schedule for this {subject}
         </label>
       </div>
 

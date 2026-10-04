@@ -61,6 +61,7 @@ function describe(range: BlackoutDateDraft) {
  * the owner has drawn across it, not after the form has come back.
  */
 export function BlackoutRulesField({
+  subject = "listing",
   availableFrom,
   availableUntil,
   weeklyDays,
@@ -68,6 +69,8 @@ export function BlackoutRulesField({
   reservedRanges = [],
   error,
 }: {
+  /** What the blackouts belong to, for the guidance copy. */
+  subject?: "listing" | "bundle";
   availableFrom: string;
   availableUntil: string;
   /** ISO weekdays (1 = Monday) the weekly schedule above currently offers. */
@@ -142,7 +145,7 @@ export function BlackoutRulesField({
       <div>
         <span className="block text-sm font-medium">Blackout dates</span>
         <p className="body-copy mt-2">
-          Choose an available-from date first — blackouts are picked from the days this listing is
+          Choose an available-from date first — blackouts are picked from the days this {subject} is
           open for.
         </p>
       </div>
@@ -189,7 +192,8 @@ export function BlackoutRulesField({
     <div>
       <span className="block text-sm font-medium">Blackout dates</span>
       <p className="body-copy mt-2">
-        Optional. Click a day the item cannot be rented, or drag across several. Only days your
+        Optional. Click a day the {subject === "bundle" ? "set" : "item"} cannot be rented, or drag
+        across several. Only days your
         weekly schedule already offers, inside your availability window, can be picked.
         {reserved.size > 0 && " Struck-through days are booked and can't be blacked out."}
       </p>

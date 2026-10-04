@@ -1,18 +1,18 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import type { ChangeEvent, ReactNode } from "react";
-import { Button, ButtonLink, Field, FormError, Modal, SelectField, TextareaField } from "@/components/ui";
+import type { ChangeEvent } from "react";
+import { Button, ButtonLink, Field, FormError, FormSection, Modal, SelectField, TextareaField } from "@/components/ui";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
 import { WeeklyAvailabilityField } from "@/components/listings/weekly-availability-field";
 import { PickupLocationField } from "@/components/listings/pickup-location-field";
 import { RentalDurationField } from "@/components/listings/rental-duration-field";
 import { PhotoUploadField } from "@/components/listings/photo-upload-field";
-import { PricePerBlockField } from "@/components/listings/price-per-block-field";
+import { PriceFields } from "@/components/listings/price-fields";
 import { BaselinePhotosField } from "@/components/passport/baseline-photos-field";
 import { SerialField } from "@/components/passport/serial-form";
 import type { ListingFormState } from "@/app/listings/actions";
-import { centsToDollars, dollarsToCents, formatMoney, todayIso } from "@/lib/format";
+import { todayIso } from "@/lib/format";
 import {
   CONDITIONS,
   CONDITION_LABELS,
@@ -30,9 +30,9 @@ import { getCategoryAttributes } from "@/lib/category-attributes";
  * failed submission was found to wipe them). React resets a form's
  * *uncontrolled* fields once a form action finishes, success or failure —
  * the fix is to drive each of these from state instead. available_from/
- * available_until, min/max rental days, photos, and the collection area each
- * have their own dedicated state already (below, or inside
- * PricePerBlockField, RentalDurationField, WeeklyAvailabilityField,
+ * available_until, min/max rental days, the rate and deposit, photos, and the
+ * collection area each have their own dedicated state already (below, or
+ * inside PriceFields, RentalDurationField, WeeklyAvailabilityField,
  * BlackoutRulesField, PhotoUploadField, PickupLocationField) and so don't
  * belong here too.
  */
@@ -42,7 +42,6 @@ type FieldValues = {
   description: string;
   category: string;
   condition: string;
-  deposit: string;
 };
 
 const EMPTY_FIELDS: FieldValues = {
@@ -51,7 +50,6 @@ const EMPTY_FIELDS: FieldValues = {
   description: "",
   category: "",
   condition: "",
-  deposit: "",
 };
 
 function fieldsFrom(listing: Listing): FieldValues {
@@ -61,19 +59,7 @@ function fieldsFrom(listing: Listing): FieldValues {
     description: listing.description,
     category: listing.category,
     condition: listing.condition,
-    deposit: centsToDollars(listing.deposit_cents),
   };
-}
-
-/**
- * The stored price as the one-block field shows it. A listing may carry both
- * rates (the API allows it), but this form prices by exactly one block, so
- * the daily rate is shown when present and the weekly one otherwise.
- */
-function priceFrom(listing: Listing): { block: "DAY" | "WEEK"; rate: string } {
-  return listing.price_per_day_cents !== null
-    ? { block: "DAY", rate: centsToDollars(listing.price_per_day_cents) }
-    : { block: "WEEK", rate: centsToDollars(listing.price_per_week_cents ?? 0) };
 }
 
 /**
@@ -179,15 +165,6 @@ export function ListingForm({
       }
       setFields((current) => ({ ...current, [key]: event.target.value }));
     };
-
-  // Mirrors PricePerBlockField's own internal state via its onRateChange
-  // callback, purely so the deposit field below can show a live cap
-  // recommendation - the price itself is still submitted by that field's own
-  // named input, not from this copy.
-  const initialPrice = editing ? priceFrom(listing) : null;
-  const [priceBlock, setPriceBlock] = useState<"DAY" | "WEEK" | null>(initialPrice?.block ?? null);
-  const [priceRate, setPriceRate] = useState(initialPrice?.rate ?? "");
-  const depositHint = depositCapHint(depositCapBps, priceBlock, priceRate);
 
   // Each save produces a fresh state object, so remembering which one the
   // owner dismissed is enough to show the modal once per save and not again
@@ -336,34 +313,14 @@ export function ListingForm({
       )}
 
       <FormSection title="Price">
-        {/* Only one of the two is ever submitted, so at most one of these two
-            backend error slots is ever populated - whichever it is applies to
-            the one shared box. */}
-        <PricePerBlockField
-          error={errors.price_per_day_cents ?? errors.price_per_week_cents}
-          initialBlock={initialPrice?.block}
-          initialRate={initialPrice?.rate}
-          onRateChange={(block, rate) => {
-            setPriceBlock(block);
-            setPriceRate(rate);
-          }}
-        />
-
-        <Field
-          label="Security deposit"
-          id="deposit"
-          name="deposit"
-          type="number"
-          min="0"
-          step="0.01"
-          inputMode="decimal"
-          placeholder="0.00"
-          required
-          hint={depositHint}
-          error={errors.deposit_cents}
-          className="max-w-xs"
-          value={fields.deposit}
-          onChange={updateField("deposit")}
+        <PriceFields
+          depositCapBps={depositCapBps}
+          // Only one of the two rates is ever submitted, so at most one of
+          // these backend error slots is ever populated - whichever it is
+          // applies to the one shared box.
+          priceError={errors.price_per_day_cents ?? errors.price_per_week_cents}
+          depositError={errors.deposit_cents}
+          initial={listing}
         />
       </FormSection>
 
@@ -461,42 +418,5 @@ export function ListingForm({
         </Modal>
       )}
     </form>
-  );
-}
-
-/**
- * The deposit field's hint text: the static explanation always, plus a live
- * "recommended up to $X" once a rate is entered.
- *
- * Mirrors CreateListingRequest._deposit_within_cap's formula exactly (a
- * week rate used directly, or a day rate x7) so the number shown here is
- * never a value the backend would then reject - a proactive echo of that
- * rule, not a second one that could drift from it.
- */
-function depositCapHint(depositCapBps: number, block: "DAY" | "WEEK" | null, rate: string): string {
-  const base = "Held, not charged. Enter 0 for none.";
-  const rateCents = dollarsToCents(rate);
-  if (block === null || rateCents === null || Number.isNaN(rateCents) || rateCents <= 0) {
-    return base;
-  }
-  const weeklyEquivalentCents = block === "WEEK" ? rateCents : rateCents * 7;
-  const capCents = Math.floor((weeklyEquivalentCents * depositCapBps) / 10_000);
-  return `${base} Recommended: up to ${formatMoney(capCents)} (${depositCapBps / 100}% of the weekly rate).`;
-}
-
-/**
- * One step of the form as its own surface, matching how a listing card gets
- * its own bordered white panel against the page — the same "distinct
- * things get distinct boxes" language, applied here to keep a long form
- * legible as a sequence of steps rather than one continuous scroll.
- */
-function FormSection({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="overflow-hidden card">
-      <div className="border-b border-line px-6 py-4 sm:px-8">
-        <h2 className="heading text-lg">{title}</h2>
-      </div>
-      <div className="space-y-6 p-6 sm:p-8">{children}</div>
-    </section>
   );
 }

@@ -41,11 +41,11 @@ export function requiresVerifiedEmail(pathname: string): boolean {
  * Routes requiring a signed-in member.
  *
  * /onboarding is included so first-run setup cannot be reached anonymously.
- * /browse and /listings read from the FastAPI backend, which rejects an
- * anonymous caller — guarding them here turns a redirect out of a
- * half-rendered page into a clean trip to the login screen.
+ * /browse, /listings and /bundles read from the FastAPI backend, which
+ * rejects an anonymous caller — guarding them here turns a redirect out of
+ * a half-rendered page into a clean trip to the login screen.
  */
-export const PROTECTED_PREFIXES = ["/profile", "/onboarding", "/browse", "/listings"];
+export const PROTECTED_PREFIXES = ["/profile", "/onboarding", "/browse", "/listings", "/bundles"];
 
 export function requiresSignIn(pathname: string): boolean {
   return PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));

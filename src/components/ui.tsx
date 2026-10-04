@@ -285,6 +285,23 @@ export function Chip({
   );
 }
 
+/**
+ * One step of a long form as its own surface, matching how a listing card
+ * gets its own bordered white panel against the page — the same "distinct
+ * things get distinct boxes" language, applied here to keep a long form
+ * legible as a sequence of steps rather than one continuous scroll.
+ */
+export function FormSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="overflow-hidden card">
+      <div className="border-b border-line px-6 py-4 sm:px-8">
+        <h2 className="heading text-lg">{title}</h2>
+      </div>
+      <div className="space-y-6 p-6 sm:p-8">{children}</div>
+    </section>
+  );
+}
+
 /** Shown where a list would be, when the list is empty. */
 export function EmptyState({
   title,

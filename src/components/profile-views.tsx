@@ -8,6 +8,7 @@ import { RateLine } from "@/components/browse/listing-card";
 import { CATEGORY_LABELS, LISTING_STATUS_LABELS, type Listing } from "@/lib/listings";
 import { profilePath, type ProfileView } from "@/lib/routes";
 import type { Booking } from "@/lib/bookings";
+import type { BundleBooking } from "@/lib/bundles";
 import { BOOKING_STATUS_LABELS } from "@/lib/bookings";
 import { formatDate } from "@/lib/format";
 
@@ -78,9 +79,18 @@ function NotEnabled({ side }: { side: "renter" | "owner" }) {
   );
 }
 
-export function RenterView({ enabled, bookings = [] }: { enabled: boolean; bookings?: Booking[] }) {
+export function RenterView({
+  enabled,
+  bookings = [],
+  bundleBookings = [],
+}: {
+  enabled: boolean;
+  bookings?: Booking[];
+  /** S2-20: a request for a whole set, shown beside the single-item ones. */
+  bundleBookings?: BundleBooking[];
+}) {
   if (!enabled) return <NotEnabled side="renter" />;
-  if (bookings.length > 0) {
+  if (bookings.length > 0 || bundleBookings.length > 0) {
     return (
       <div>
         <div className="flex items-baseline justify-between gap-4">
@@ -91,6 +101,24 @@ export function RenterView({ enabled, bookings = [] }: { enabled: boolean; booki
           <ButtonLink href="/browse" variant="outline" className="px-4 py-2 text-xs">Browse more</ButtonLink>
         </div>
         <ul className="mt-6 space-y-3">
+          {bundleBookings.map((booking) => (
+            <li key={booking.id} className="flex flex-wrap items-center justify-between gap-3 border border-line bg-white p-4">
+              <div>
+                <Link href={`/bundles/${booking.bundle_id}`} className="font-medium hover:underline">
+                  {booking.bundle_name ?? "View bundle"}
+                </Link>
+                <p className="mt-1 text-sm text-ink-soft">
+                  {formatDate(booking.start_date)} – {formatDate(booking.end_date)}
+                </p>
+                {/* A bundle booking covers several listings at once, which the
+                    dates alone would not tell the renter. */}
+                <p className="mt-1 text-xs text-ink-soft">
+                  {booking.items.length} items · {booking.items.map((item) => item.listing_name ?? "an item").join(", ")}
+                </p>
+              </div>
+              <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
+            </li>
+          ))}
           {bookings.map((booking) => (
             <li key={booking.id} className="flex flex-wrap items-center justify-between gap-3 border border-line bg-white p-4">
               <div>
