@@ -27,9 +27,12 @@ npm run dev:all
 
 ## Setup
 
-**1. Apply the migration.** `supabase/migrations/20260904000000_admin_user_management.sql`
-in the repository root adds the roles table, the audit log, and the lookup
-functions. Apply it with the Supabase CLI, or paste it into the SQL editor.
+**1. Apply the migrations.** `supabase/migrations/20260904000001_admin_user_management.sql`
+in the `hobby-rentals-server` repo adds the roles table, the audit log, and the
+lookup functions. Apply it with the Supabase CLI from that repo (`supabase db
+push`), never by pasting it into the SQL editor: a migration applied there is
+not recorded in the project's migration history, so the next push tries to
+run it again.
 
 **2. Fill in `SUPABASE_SECRET_KEY`.** Every account lookup uses it — see below.
 
