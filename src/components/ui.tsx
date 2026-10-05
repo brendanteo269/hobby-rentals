@@ -412,10 +412,10 @@ export function ImageSlot({
   }
 
   const position =
-    align === "end" ? "items-end justify-end p-4" : "items-center justify-center px-4";
+    align === "end" ? "items-end justify-end p-4" : "items-center justify-center px-1.5";
   return (
-    <div className={`flex bg-surface-muted ${position} ${className}`}>
-      <span className="text-center text-xs text-ink-soft">{label}</span>
+    <div className={`flex overflow-hidden bg-surface-muted ${position} ${className}`}>
+      <span className="line-clamp-3 text-center text-xs text-ink-soft">{label}</span>
     </div>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Message } from "@/lib/conversations";
 import { formatChatTimestamp } from "@/lib/format";
+import { AttachmentLightbox } from "./attachment-lightbox";
 
 /**
  * A thread's messages, oldest first. Read-only: a message is never edited,
@@ -16,6 +17,7 @@ import { formatChatTimestamp } from "@/lib/format";
  */
 export function MessageThread({ messages, currentUserId }: { messages: Message[]; currentUserId: string }) {
   const bottomRef = useRef<HTMLDivElement>(null);
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
@@ -40,9 +42,16 @@ export function MessageThread({ messages, currentUserId }: { messages: Message[]
                     {message.attachment_urls.length > 0 && (
                       <ul className="mb-2 flex flex-wrap gap-1.5">
                         {message.attachment_urls.map((url) => (
-                          <li key={url} className="h-32 w-32 overflow-hidden rounded-lg">
-                            {/* eslint-disable-next-line @next/next/no-img-element -- S3 attachment URL, not an optimizable remote image */}
-                            <img src={url} alt="" className="h-full w-full object-cover" />
+                          <li key={url}>
+                            <button
+                              type="button"
+                              onClick={() => setLightboxUrl(url)}
+                              aria-label="View attachment full size"
+                              className="block h-32 w-32 overflow-hidden rounded-lg"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element -- S3 attachment URL, not an optimizable remote image */}
+                              <img src={url} alt="" className="h-full w-full object-cover" />
+                            </button>
                           </li>
                         ))}
                       </ul>
@@ -59,6 +68,7 @@ export function MessageThread({ messages, currentUserId }: { messages: Message[]
         })}
       </ol>
       <div ref={bottomRef} />
+      {lightboxUrl && <AttachmentLightbox url={lightboxUrl} onClose={() => setLightboxUrl(null)} />}
     </div>
   );
 }

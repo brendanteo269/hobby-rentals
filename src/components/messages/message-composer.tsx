@@ -6,7 +6,8 @@ import { Paperclip } from "lucide-react";
 import { Button, inputBase } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { replyToConversation, startBookingConversation, startListingConversation } from "@/app/messages/actions";
-import { MAX_MESSAGE_ATTACHMENTS, type ConversationLimits } from "@/lib/conversations";
+import { MAX_MESSAGE_ATTACHMENTS, type ConversationLimits, type Message } from "@/lib/conversations";
+import { AttachmentCropModal } from "./attachment-crop-modal";
 
 type Target =
   | { kind: "reply"; conversationId: string }
@@ -77,12 +78,21 @@ export function MessageComposer({
   placeholder = "Write a message…",
   submitLabel = "Send",
   attachmentLimits,
+  onSent,
 }: {
   target: Target;
   label?: string;
   placeholder?: string;
   submitLabel?: string;
   attachmentLimits?: ConversationLimits;
+  /**
+   * Called with the sent message right after a `kind: "reply"` send
+   * succeeds, so the thread can show it immediately instead of waiting on a
+   * server round-trip to refetch the whole page. Only reply has one to call
+   * back with - starting a conversation navigates to the new thread instead,
+   * which loads its own messages.
+   */
+  onSent?: (message: Message) => void;
 }) {
   const router = useRouter();
   const { show } = useToast();
@@ -90,34 +100,32 @@ export function MessageComposer({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState<UploadingSlot[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  // The file waiting on the crop/review step, if any - set the moment a
+  // valid file is picked, cleared on cancel or once its (possibly cropped)
+  // result starts uploading. Nothing is uploaded until that step confirms
+  // it: picking a file is not the same as deciding to send it.
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [isPending, startTransition] = useTransition();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const remainingSlots = MAX_MESSAGE_ATTACHMENTS - attachments.length - uploading.length;
 
-  async function handleFilesSelected(files: FileList | null) {
-    if (!files || files.length === 0 || !attachmentLimits) return;
-    setAttachmentError(null);
-
-    const selected = Array.from(files).slice(0, Math.max(remainingSlots, 0));
-    if (selected.length < files.length) {
-      setAttachmentError(`Up to ${MAX_MESSAGE_ATTACHMENTS} images per message.`);
-    }
-
-    for (const file of selected) {
-      if (!attachmentLimits.allowed_attachment_content_types.includes(file.type)) {
-        setAttachmentError(`${file.name}: unsupported file type.`);
-        continue;
-      }
-      if (file.size > attachmentLimits.max_attachment_bytes) {
-        setAttachmentError(`${file.name}: file is too large (max ${Math.floor(attachmentLimits.max_attachment_bytes / (1024 * 1024))}MB).`);
-        continue;
-      }
-      void uploadOne(file);
-    }
-
+  function handleFileSelected(files: FileList | null) {
+    const file = files?.[0];
     // Cleared so picking the same file again (after removing it) re-fires onChange.
     if (fileInputRef.current) fileInputRef.current.value = "";
+    if (!file || !attachmentLimits) return;
+    setAttachmentError(null);
+
+    if (!attachmentLimits.allowed_attachment_content_types.includes(file.type)) {
+      setAttachmentError(`${file.name}: unsupported file type.`);
+      return;
+    }
+    if (file.size > attachmentLimits.max_attachment_bytes) {
+      setAttachmentError(`${file.name}: file is too large (max ${Math.floor(attachmentLimits.max_attachment_bytes / (1024 * 1024))}MB).`);
+      return;
+    }
+    setPendingFile(file);
   }
 
   async function uploadOne(file: File) {
@@ -157,6 +165,7 @@ export function MessageComposer({
         setText("");
         attachments.forEach((attachment) => releasePreview(attachment.previewUrl));
         setAttachments([]);
+        onSent?.(result.message);
         return;
       }
 
@@ -210,9 +219,8 @@ export function MessageComposer({
               ref={fileInputRef}
               type="file"
               accept={attachmentLimits.allowed_attachment_content_types.join(",")}
-              multiple
               disabled={remainingSlots <= 0}
-              onChange={(event) => void handleFilesSelected(event.target.files)}
+              onChange={(event) => handleFileSelected(event.target.files)}
               className="hidden"
               id="message-attachment-input"
             />
@@ -255,6 +263,17 @@ export function MessageComposer({
         <p role="alert" className="text-xs text-accent-dark">
           {attachmentError}
         </p>
+      )}
+
+      {pendingFile && (
+        <AttachmentCropModal
+          file={pendingFile}
+          onCancel={() => setPendingFile(null)}
+          onConfirm={(cropped) => {
+            setPendingFile(null);
+            void uploadOne(cropped);
+          }}
+        />
       )}
     </div>
   );

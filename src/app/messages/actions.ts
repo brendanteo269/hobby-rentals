@@ -20,11 +20,20 @@ async function runConversation(action: () => Promise<Conversation>): Promise<Con
   }
 }
 
-async function runMessage(conversationId: string, action: () => Promise<Message>): Promise<MessageActionResult> {
+async function runMessage(action: () => Promise<Message>): Promise<MessageActionResult> {
   try {
     const message = await action();
-    revalidatePath("/messages");
-    revalidatePath(`/messages/${conversationId}`);
+    // Deliberately not calling revalidatePath here. MessageComposer's onSent
+    // appends the result to client state directly, so there's nothing left
+    // that needs a server refetch - and revalidating *any* path inside a
+    // Server Action makes the client wait for a background refresh of the
+    // currently-viewed route before the action's own promise resolves, even
+    // when the revalidated path is a different one. That wait was what kept
+    // "Sending…" showing well after the message had already appeared:
+    // /messages/[id] re-fetching its conversation, every message, and the
+    // full conversations list for no reason anything was waiting on.
+    // /messages (the list) fetches with no-store on every visit regardless,
+    // so skipping this costs no real staleness.
     return { message };
   } catch (error) {
     if (error instanceof BackendApiError) return { error: error.message };
@@ -41,9 +50,9 @@ export async function startBookingConversation(bookingId: string, text: string, 
 }
 
 export async function replyToConversation(conversationId: string, text: string, attachmentKeys: string[] = []) {
-  return runMessage(conversationId, () => sendMessage(conversationId, text, attachmentKeys));
+  return runMessage(() => sendMessage(conversationId, text, attachmentKeys));
 }
 
-export async function withdrawOwnMessage(conversationId: string, messageId: string) {
-  return runMessage(conversationId, () => withdrawMessage(messageId));
+export async function withdrawOwnMessage(messageId: string) {
+  return runMessage(() => withdrawMessage(messageId));
 }
