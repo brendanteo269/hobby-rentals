@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney } from "@/lib/format";
 import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS, passportBadge } from "@/lib/listings";
 import { BookingRequestForm } from "@/components/bookings/booking-request-form";
+import { MessageButton } from "@/components/messages/message-button";
 
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -71,6 +72,9 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               unavailableDates={bookingAvailability?.unavailable_dates ?? []}
               minRentalDays={listing.min_rental_days}
               maxRentalDays={listing.max_rental_days}
+              secondaryAction={
+                <MessageButton target={{ kind: "listing", listingId: listing.id }} label="Message owner" />
+              }
             />
           )}
           {listing.status === "PENDING_REMOVAL" && user && user.id !== listing.owner_id && (

@@ -44,6 +44,9 @@ export async function SiteHeader() {
         <div className="flex items-center gap-4">
           {user ? (
             <>
+              <Link href="/messages" className="hidden text-sm text-ink-soft hover:text-ink sm:block">
+                Messages
+              </Link>
               <Link href="/listings/mine" className="hidden text-sm text-ink-soft hover:text-ink sm:block">
                 My listings
               </Link>
