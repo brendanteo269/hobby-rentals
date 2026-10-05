@@ -8,6 +8,8 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney } from "@/lib/format";
 import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS, passportBadge } from "@/lib/listings";
 import { BookingRequestForm } from "@/components/bookings/booking-request-form";
+import { WaitlistPanel } from "@/components/bookings/waitlist-panel";
+import { getMyWaitlist } from "@/lib/api/waitlist";
 
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -18,10 +20,16 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     notFound();
   }
   const { data: { user } } = await (await createClient()).auth.getUser();
-  const bookingAvailability =
-    listing.status === "ACTIVE" && user && user.id !== listing.owner_id
-      ? await getBookingAvailability(listing.id)
-      : null;
+  const canBook = listing.status === "ACTIVE" && user && user.id !== listing.owner_id;
+  const bookingAvailability = canBook ? await getBookingAvailability(listing.id) : null;
+  // S2-15: the renter's own queue places on this listing, so the panel can
+  // show "you are waiting" rather than offering to join again. Supplementary -
+  // a hiccup here must not cost them the booking form.
+  const waitlistEntries = canBook
+    ? await getMyWaitlist(true)
+        .then((entries) => entries.filter((entry) => entry.listing_id === listing.id))
+        .catch(() => [])
+    : [];
   // S2-07: a live listing's condition record, for renters to judge it by.
   // Supplementary, so a failure only hides the section.
   const passport = listing.status === "ACTIVE" ? await getPassport(listing.id).catch(() => null) : null;
@@ -71,6 +79,13 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               unavailableDates={bookingAvailability?.unavailable_dates ?? []}
               minRentalDays={listing.min_rental_days}
               maxRentalDays={listing.max_rental_days}
+            />
+          )}
+          {canBook && (
+            <WaitlistPanel
+              listingId={listing.id}
+              unavailableDates={bookingAvailability?.unavailable_dates ?? []}
+              entries={waitlistEntries}
             />
           )}
           {listing.status === "PENDING_REMOVAL" && user && user.id !== listing.owner_id && (

@@ -25,12 +25,17 @@ export type NotificationType =
   | "BUNDLE_EXPIRED"
   | "BUNDLE_STARTED"
   | "BUNDLE_COMPLETED"
-  | "BUNDLE_CANCELLED";
+  | "BUNDLE_CANCELLED"
+  // S2-15. A waitlist offer's call to action expires on a clock rather than
+  // on a booking's status, so these carry an expires_at that matters.
+  | "WAITLIST_JOINED"
+  | "WAITLIST_OFFERED"
+  | "WAITLIST_OFFER_EXPIRED";
 
 export type AppNotification = {
   id: string;
   type: NotificationType;
-  category: "BOOKING";
+  category: "BOOKING" | "WAITLIST";
   title: string;
   body: string;
   /** What the member can expect to happen next. */
@@ -83,6 +88,9 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   BUNDLE_STARTED: "Bundle rental started",
   BUNDLE_COMPLETED: "Bundle rental completed",
   BUNDLE_CANCELLED: "Bundle cancelled",
+  WAITLIST_JOINED: "Waitlist joined",
+  WAITLIST_OFFERED: "Waitlist dates free",
+  WAITLIST_OFFER_EXPIRED: "Waitlist offer closed",
 };
 
 export const NOTIFICATION_TYPES = Object.keys(NOTIFICATION_TYPE_LABELS) as NotificationType[];

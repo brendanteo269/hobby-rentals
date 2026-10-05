@@ -27,6 +27,8 @@ export type Booking = {
   id: string;
   listing_id: string;
   renter_id: string;
+  /** Who asked. Null when that member has not set a display name. */
+  renter_name?: string | null;
   owner_id: string;
   start_date: string;
   end_date: string;
