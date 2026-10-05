@@ -1,7 +1,14 @@
 import "server-only";
 
 import { backendRequest } from "@/lib/api/client";
-import type { Booking, BookingQuote, BookingStatus } from "@/lib/bookings";
+import type {
+  Booking,
+  BookingQuote,
+  BookingRequestDetail,
+  BookingRequestSummary,
+  BookingStatus,
+  DeclineReason,
+} from "@/lib/bookings";
 
 // Re-exported so existing callers keep importing the quote from here.
 export type { BookingQuote } from "@/lib/bookings";
@@ -24,6 +31,31 @@ export function getMyBookings() {
 
 export function getOwnerBookings() {
   return backendRequest<Booking[]>("/bookings/owner");
+}
+
+/** The owner's unanswered requests, the one about to lapse first. */
+export function getOwnerBookingRequests() {
+  return backendRequest<BookingRequestSummary[]>("/bookings/owner/requests");
+}
+
+/** One of the owner's requests, for review. 404 for anyone else's. */
+export function getOwnerBookingRequest(bookingId: string) {
+  return backendRequest<BookingRequestDetail>(`/bookings/owner/requests/${encodeURIComponent(bookingId)}`);
+}
+
+/** One of the owner's bundle requests, for review. 404 for anyone else's. */
+export function getOwnerBundleRequest(bundleBookingId: string) {
+  return backendRequest<BookingRequestDetail>(
+    `/bookings/owner/requests/bundles/${encodeURIComponent(bundleBookingId)}`,
+  );
+}
+
+/** The owner declines a request, saying why; the renter's hold is released. */
+export function declineBooking(bookingId: string, reason: DeclineReason, note: string | null) {
+  return backendRequest<Booking>(`/bookings/${encodeURIComponent(bookingId)}/decline`, {
+    method: "POST",
+    body: JSON.stringify({ reason, note }),
+  });
 }
 
 export function updateBookingStatus(bookingId: string, nextStatus: BookingStatus) {

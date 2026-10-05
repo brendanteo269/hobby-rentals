@@ -20,7 +20,7 @@ import type {
   CreateBundleRequest,
   UpdateBundleRequest,
 } from "@/lib/bundles";
-import type { BookingStatus } from "@/lib/bookings";
+import type { BookingStatus, DeclineReason } from "@/lib/bookings";
 
 export { BackendApiError as BundleApiError } from "@/lib/api/client";
 
@@ -144,7 +144,15 @@ export function getOwnerBundleBookings() {
   return backendRequest<BundleBooking[]>("/bundles/bookings/owner");
 }
 
-/** The owner's accept/decline, applied to the set and every item in it at once. */
+/** The owner declines a bundle request, saying why; every item goes with it and the hold is released. */
+export function declineBundleBooking(bundleBookingId: string, reason: DeclineReason, note: string | null) {
+  return backendRequest<BundleBooking>(
+    `/bundles/bookings/${encodeURIComponent(bundleBookingId)}/decline`,
+    { method: "POST", body: JSON.stringify({ reason, note }) },
+  );
+}
+
+/** The owner accepting, or cancelling once confirmed, applied to the set and every item in it at once. */
 export function updateBundleBookingStatus(bundleBookingId: string, nextStatus: BookingStatus) {
   return backendRequest<BundleBooking>(
     `/bundles/bookings/${encodeURIComponent(bundleBookingId)}/status`,

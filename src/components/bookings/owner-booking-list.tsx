@@ -1,20 +1,22 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button } from "@/components/ui";
+import { Button, ButtonLink } from "@/components/ui";
 import { changeBookingStatus, type BookingActionResult } from "@/app/bookings/actions";
 import { MessageButton } from "@/components/messages/message-button";
 import {
   BOOKING_STATUS_LABELS,
   MESSAGEABLE_BOOKING_STATUSES,
   PAYMENT_STATUS_LABELS,
+  requestReviewPath,
   type Booking,
   type BookingStatus,
 } from "@/lib/bookings";
 import { formatDate } from "@/lib/format";
 
+// A request is answered from its review page, where the owner sees the renter
+// and the earnings and has to give a reason to decline.
 const NEXT_ACTION: Partial<Record<BookingStatus, { status: BookingStatus; label: string }>> = {
-  PENDING: { status: "CONFIRMED", label: "Confirm" },
   CONFIRMED: { status: "ACTIVE", label: "Start rental" },
   ACTIVE: { status: "COMPLETED", label: "Mark returned" },
 };
@@ -49,7 +51,7 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
             <span>{formatDate(booking.start_date)} – {formatDate(booking.end_date)} <span className="text-ink-soft">· {BOOKING_STATUS_LABELS[booking.status]}{booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}</span></span>
             <span className="flex gap-2">
               {next && <Button className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, next.status)}>{next.label}</Button>}
-              {booking.status === "PENDING" && <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "DECLINED")}>Decline</Button>}
+              {booking.status === "PENDING" && <ButtonLink href={requestReviewPath("BOOKING", booking.id)} className="px-3 py-1.5 text-xs">Review request</ButtonLink>}
               {booking.status === "CONFIRMED" && <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "CANCELLED")}>Cancel booking</Button>}
               {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
                 <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
