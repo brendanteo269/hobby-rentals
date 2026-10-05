@@ -25,7 +25,10 @@ export type NotificationType =
   | "BUNDLE_EXPIRED"
   | "BUNDLE_STARTED"
   | "BUNDLE_COMPLETED"
-  | "BUNDLE_CANCELLED";
+  | "BUNDLE_CANCELLED"
+  // S2-19: handover meetup coordination on a confirmed booking.
+  | "MEETUP_PROPOSED"
+  | "MEETUP_ACCEPTED";
 
 export type AppNotification = {
   id: string;
@@ -83,6 +86,8 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   BUNDLE_STARTED: "Bundle rental started",
   BUNDLE_COMPLETED: "Bundle rental completed",
   BUNDLE_CANCELLED: "Bundle cancelled",
+  MEETUP_PROPOSED: "Meetup proposed",
+  MEETUP_ACCEPTED: "Meetup confirmed",
 };
 
 export const NOTIFICATION_TYPES = Object.keys(NOTIFICATION_TYPE_LABELS) as NotificationType[];

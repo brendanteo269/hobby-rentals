@@ -3,6 +3,7 @@ import { Badge, ImageSlot } from "@/components/ui";
 import { CONVERSATION_ROLE_BADGE_VARIANT, CONVERSATION_ROLE_LABELS, type ConversationRole } from "@/lib/conversations";
 import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_LABELS, type BookingStatus } from "@/lib/bookings";
 import { formatDate } from "@/lib/format";
+import { PersonAvatar } from "./person-avatar";
 
 /**
  * The listing a thread is about - what the row/page is actually recognised
@@ -57,7 +58,12 @@ export function ConversationHeader({
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
-        {otherPartyName && <span className="text-xs text-ink-soft">{otherPartyName}</span>}
+        {otherPartyName && (
+          <>
+            <PersonAvatar name={otherPartyName} size="sm" />
+            <span className="text-xs text-ink-soft">{otherPartyName}</span>
+          </>
+        )}
         <Badge variant={CONVERSATION_ROLE_BADGE_VARIANT[otherPartyRole]}>{CONVERSATION_ROLE_LABELS[otherPartyRole]}</Badge>
       </div>
     </Link>

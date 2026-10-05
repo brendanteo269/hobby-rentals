@@ -44,6 +44,9 @@ export type Booking = {
   escrow_holds?: EscrowHold[] | null;
   /** True when the server returned an earlier submission of the same attempt. */
   replayed?: boolean | null;
+  /** S2-19: the latest accepted meetup arrangement for this booking, if any. */
+  confirmed_meetup_location?: string | null;
+  confirmed_meetup_time?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -137,3 +140,6 @@ export const BOOKING_STATUS_BADGE_VARIANT: Record<BookingStatus, "dark" | "neutr
  * renders, not whether the backend accepts the request.
  */
 export const MESSAGEABLE_BOOKING_STATUSES: BookingStatus[] = ["CONFIRMED", "ACTIVE", "COMPLETED"];
+
+/** A booking in one of these states never went anywhere (or was undone before it did) - requesting again for the same listing is offered rather than treated as blocked. */
+export const RETRYABLE_BOOKING_STATUSES: BookingStatus[] = ["DECLINED", "CANCELLED", "EXPIRED"];

@@ -12,6 +12,7 @@ import {
 import { BookingQuoteSummary } from "@/components/bookings/booking-quote-summary";
 import { quoteBooking, requestBooking } from "@/app/bookings/actions";
 import type { BookingQuote } from "@/lib/api/bookings";
+import type { Booking } from "@/lib/bookings";
 import { formatDate, formatMoney } from "@/lib/format";
 import {
   rentalDurationLimits,
@@ -28,6 +29,10 @@ type Props = {
   maxRentalDays: number | null;
   /** Rendered beside the submit button, e.g. a "Message owner" link - this form's own concern is booking, not what else belongs next to it. */
   secondaryAction?: ReactNode;
+  /** Called with the created (or replayed) booking right after a successful request, alongside the form's own inline confirmation - lets an embedding caller (BookingRequestModal) react without a page refetch. */
+  onSuccess?: (booking: Booking) => void;
+  /** Drops the form's own "Request to book" heading and top divider - set when a caller already supplies its own heading, e.g. a Modal's title. */
+  hideHeading?: boolean;
 };
 
 export function BookingRequestForm({
@@ -37,6 +42,8 @@ export function BookingRequestForm({
   minRentalDays,
   maxRentalDays,
   secondaryAction,
+  onSuccess,
+  hideHeading,
 }: Props) {
   const availableSet = useMemo(() => new Set(availableDates), [availableDates]);
   const reasonByDate = useMemo(
@@ -136,14 +143,15 @@ export function BookingRequestForm({
           `Request sent for ${formatDate(startDate)} – ${formatDate(endDate)}.` +
             (held ? ` ${formatMoney(held)} is on hold in your wallet until the owner responds.` : ""),
         );
+        onSuccess?.(result.booking);
       }
     });
   }
 
   if (!anchorDate) {
     return (
-      <div className="mt-8 border-t border-line pt-6">
-        <h2 className="text-base font-semibold uppercase tracking-wide">Request to book</h2>
+      <div className={hideHeading ? "" : "mt-8 border-t border-line pt-6"}>
+        {!hideHeading && <h2 className="text-base font-semibold uppercase tracking-wide">Request to book</h2>}
         <p className="mt-4 text-sm text-ink-soft">There are no bookable dates available in the next year.</p>
         {secondaryAction && <div className="mt-4">{secondaryAction}</div>}
       </div>
@@ -151,8 +159,8 @@ export function BookingRequestForm({
   }
 
   return (
-    <div className="mt-8 border-t border-line pt-6">
-      <h2 className="text-base font-semibold uppercase tracking-wide">Request to book</h2>
+    <div className={hideHeading ? "" : "mt-8 border-t border-line pt-6"}>
+      {!hideHeading && <h2 className="text-base font-semibold uppercase tracking-wide">Request to book</h2>}
       <p className="body-copy mt-1">
         Select an available start date, then an available end date.
         {durationLimits && ` This listing rents for ${durationLimits}.`}
@@ -196,7 +204,7 @@ export function BookingRequestForm({
         </Link>
       )}
       {message && <p role="status" className="mt-3 text-sm text-ink-soft">{message}</p>}
-      <div className="mt-4 flex flex-wrap items-center gap-3">
+      <div className={`mt-4 flex flex-wrap items-center gap-3 ${hideHeading ? "justify-end" : ""}`}>
         <Button disabled={isPending || !endDate || !quote} onClick={submit}>{isPending ? "Sending…" : "Request booking"}</Button>
         {secondaryAction}
       </div>
