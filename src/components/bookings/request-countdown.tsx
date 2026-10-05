@@ -29,8 +29,14 @@ export function RequestCountdown({ expiresInSeconds }: { expiresInSeconds: numbe
 
   if (deadline === null) return null;
   const seconds = Math.floor((deadline - now) / 1000);
-  if (seconds <= 0) return <span className="text-accent-dark">Expired</span>;
+  // The server and the browser each work this out from their own clock, so
+  // the two renders can land either side of a minute boundary.
+  if (seconds <= 0) return <span className="text-accent-dark" suppressHydrationWarning>Expired</span>;
   // Under six hours left is when an owner should act now rather than later.
   const urgent = seconds < 6 * 3600;
-  return <span className={urgent ? "font-medium text-accent-dark" : undefined}>Expires in {remaining(seconds)}</span>;
+  return (
+    <span className={urgent ? "font-medium text-accent-dark" : undefined} suppressHydrationWarning>
+      Expires in {remaining(seconds)}
+    </span>
+  );
 }
