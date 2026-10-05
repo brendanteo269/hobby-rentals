@@ -27,7 +27,8 @@ export type NotificationType =
   | "BUNDLE_EXPIRED"
   | "BUNDLE_STARTED"
   | "BUNDLE_COMPLETED"
-  | "BUNDLE_CANCELLED";
+  | "BUNDLE_CANCELLED"
+  | "BUNDLE_REQUEST_EXPIRED_OWNER";
 
 export type AppNotification = {
   id: string;
@@ -86,6 +87,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   BUNDLE_STARTED: "Bundle rental started",
   BUNDLE_COMPLETED: "Bundle rental completed",
   BUNDLE_CANCELLED: "Bundle cancelled",
+  BUNDLE_REQUEST_EXPIRED_OWNER: "Bundle request expired unanswered",
 };
 
 export const NOTIFICATION_TYPES = Object.keys(NOTIFICATION_TYPE_LABELS) as NotificationType[];

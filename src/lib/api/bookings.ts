@@ -43,6 +43,13 @@ export function getOwnerBookingRequest(bookingId: string) {
   return backendRequest<BookingRequestDetail>(`/bookings/owner/requests/${encodeURIComponent(bookingId)}`);
 }
 
+/** One of the owner's bundle requests, for review. 404 for anyone else's. */
+export function getOwnerBundleRequest(bundleBookingId: string) {
+  return backendRequest<BookingRequestDetail>(
+    `/bookings/owner/requests/bundles/${encodeURIComponent(bundleBookingId)}`,
+  );
+}
+
 /** The owner declines a request, saying why; the renter's hold is released. */
 export function declineBooking(bookingId: string, reason: DeclineReason, note: string | null) {
   return backendRequest<Booking>(`/bookings/${encodeURIComponent(bookingId)}/decline`, {

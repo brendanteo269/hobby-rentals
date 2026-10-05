@@ -154,11 +154,25 @@ export const DECLINE_REASON_LABELS: Record<DeclineReason, string> = {
   OTHER: "Other",
 };
 
+/** What a request is for: one listing, or a bundle answered whole. */
+export type RequestKind = "BOOKING" | "BUNDLE";
+
+/** Where the owner reviews a request, by kind. */
+export function requestReviewPath(kind: RequestKind, id: string) {
+  return kind === "BUNDLE" ? `/listings/mine/bookings/bundle/${id}` as const : `/listings/mine/bookings/${id}` as const;
+}
+
 /** One unanswered request, as the owner's request list shows it. */
 export type BookingRequestSummary = {
   id: string;
-  listing_id: string;
-  listing_name: string | null;
+  kind: RequestKind;
+  /** One of these two, by kind. */
+  listing_id: string | null;
+  bundle_id: string | null;
+  /** The listing's name, or the bundle's. */
+  name: string | null;
+  /** How many listings the request covers: 1, or the bundle's items. */
+  item_count: number;
   renter_id: string;
   renter_display_name: string | null;
   start_date: string;
@@ -173,8 +187,12 @@ export type BookingRequestSummary = {
 /** One request as the owner reviews it before deciding. */
 export type BookingRequestDetail = {
   id: string;
-  listing_id: string;
-  listing_name: string | null;
+  kind: RequestKind;
+  listing_id: string | null;
+  bundle_id: string | null;
+  name: string | null;
+  /** What a bundle request covers; empty for a single listing. */
+  items: { listing_id: string; listing_name: string | null }[];
   status: BookingStatus;
   respond_by: string | null;
   expires_in_seconds: number | null;

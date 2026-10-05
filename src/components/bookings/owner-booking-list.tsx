@@ -8,6 +8,7 @@ import {
   BOOKING_STATUS_LABELS,
   MESSAGEABLE_BOOKING_STATUSES,
   PAYMENT_STATUS_LABELS,
+  requestReviewPath,
   type Booking,
   type BookingStatus,
 } from "@/lib/bookings";
@@ -50,7 +51,7 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
             <span>{formatDate(booking.start_date)} – {formatDate(booking.end_date)} <span className="text-ink-soft">· {BOOKING_STATUS_LABELS[booking.status]}{booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}</span></span>
             <span className="flex gap-2">
               {next && <Button className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, next.status)}>{next.label}</Button>}
-              {booking.status === "PENDING" && <ButtonLink href={`/listings/mine/bookings/${booking.id}`} className="px-3 py-1.5 text-xs">Review request</ButtonLink>}
+              {booking.status === "PENDING" && <ButtonLink href={requestReviewPath("BOOKING", booking.id)} className="px-3 py-1.5 text-xs">Review request</ButtonLink>}
               {booking.status === "CONFIRMED" && <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "CANCELLED")}>Cancel booking</Button>}
               {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
                 <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />

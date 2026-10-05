@@ -10,6 +10,7 @@ import {
 } from "@/lib/api/bookings";
 import {
   createBundleBooking,
+  declineBundleBooking,
   getBundleQuote,
   updateBundleBookingStatus,
 } from "@/lib/api/bundles";
@@ -113,6 +114,10 @@ export async function requestBundleBooking(
 
 export async function changeBundleBookingStatus(bundleBookingId: string, nextStatus: BookingStatus) {
   return runBundle(() => updateBundleBookingStatus(bundleBookingId, nextStatus));
+}
+
+export async function declineBundleRequest(bundleBookingId: string, reason: DeclineReason, note: string | null) {
+  return runBundle(() => declineBundleBooking(bundleBookingId, reason, note));
 }
 
 export async function withdrawRequest(bookingId: string) {

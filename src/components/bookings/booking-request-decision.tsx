@@ -3,13 +3,25 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button, FormError, Modal, SelectField, TextareaField } from "@/components/ui";
-import { changeBookingStatus, declineRequest } from "@/app/bookings/actions";
-import { DECLINE_REASON_LABELS, type DeclineReason } from "@/lib/bookings";
+import {
+  changeBookingStatus,
+  changeBundleBookingStatus,
+  declineBundleRequest,
+  declineRequest,
+} from "@/app/bookings/actions";
+import { DECLINE_REASON_LABELS, type DeclineReason, type RequestKind } from "@/lib/bookings";
 
 const REASONS = Object.keys(DECLINE_REASON_LABELS) as DeclineReason[];
 
-/** The owner's Approve and Decline on a request they are reviewing. */
-export function BookingRequestDecision({ bookingId }: { bookingId: string }) {
+// What every booking and bundle action resolves to.
+type Outcome = { error: string } | { booking: unknown };
+
+/**
+ * The owner's Approve and Decline on a request they are reviewing. A bundle
+ * is decided whole, through its own actions, but the choice is the same.
+ */
+export function BookingRequestDecision({ kind, bookingId }: { kind: RequestKind; bookingId: string }) {
+  const bundle = kind === "BUNDLE";
   const router = useRouter();
   const [declining, setDeclining] = useState(false);
   const [reason, setReason] = useState<DeclineReason | "">("");
@@ -17,7 +29,7 @@ export function BookingRequestDecision({ bookingId }: { bookingId: string }) {
   const [error, setError] = useState<string>();
   const [isPending, startTransition] = useTransition();
 
-  function decide(action: () => ReturnType<typeof declineRequest>) {
+  function decide(action: () => Promise<Outcome>) {
     startTransition(async () => {
       const result = await action();
       if ("error" in result) {
@@ -32,14 +44,22 @@ export function BookingRequestDecision({ bookingId }: { bookingId: string }) {
     event.preventDefault();
     if (!reason) return setError("Choose a reason for declining.");
     if (reason === "OTHER" && !note.trim()) return setError("Tell the renter why you are declining.");
-    decide(() => declineRequest(bookingId, reason, reason === "OTHER" ? note.trim() : null));
+    const stated = reason === "OTHER" ? note.trim() : null;
+    decide(() => (bundle ? declineBundleRequest(bookingId, reason, stated) : declineRequest(bookingId, reason, stated)));
   }
 
   return (
     <div className="space-y-3">
       {!declining && <FormError message={error} />}
       <div className="flex flex-wrap gap-3">
-        <Button disabled={isPending} onClick={() => decide(() => changeBookingStatus(bookingId, "CONFIRMED"))}>
+        <Button
+          disabled={isPending}
+          onClick={() =>
+            decide(() =>
+              bundle ? changeBundleBookingStatus(bookingId, "CONFIRMED") : changeBookingStatus(bookingId, "CONFIRMED"),
+            )
+          }
+        >
           Approve request
         </Button>
         <Button variant="outline" disabled={isPending} onClick={() => { setError(undefined); setDeclining(true); }}>
@@ -50,7 +70,10 @@ export function BookingRequestDecision({ bookingId }: { bookingId: string }) {
       {declining && (
         <Modal title="Decline this request" onClose={() => setDeclining(false)}>
           <form className="mt-6 space-y-5" onSubmit={submitDecline}>
-            <p className="body-copy">The renter is told your reason, and their wallet hold is released in full.</p>
+            <p className="body-copy">
+              The renter is told your reason, and their wallet hold is released in full.
+              {bundle && " Every item in the bundle is declined with it."}
+            </p>
             <SelectField
               id="decline-reason"
               label="Reason"

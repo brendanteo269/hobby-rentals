@@ -5,6 +5,7 @@ import { OwnerBookingList } from "@/components/bookings/owner-booking-list";
 import { RequestCountdown } from "@/components/bookings/request-countdown";
 import { getOwnerBookingRequests, getOwnerBookings } from "@/lib/api/bookings";
 import { getMyListings } from "@/lib/api/listings";
+import { requestReviewPath } from "@/lib/bookings";
 import { formatDate } from "@/lib/format";
 
 export const metadata = { title: "Bookings — HobbyRentals" };
@@ -31,11 +32,12 @@ export default async function OwnerBookingsPage() {
             {requests.map((request) => (
               <li key={request.id}>
                 <Link
-                  href={`/listings/mine/bookings/${request.id}`}
+                  href={requestReviewPath(request.kind, request.id)}
                   className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 hover:bg-surface-muted"
                 >
                   <span>
-                    <span className="font-semibold">{request.listing_name ?? "Listing"}</span>
+                    <span className="font-semibold">{request.name ?? (request.kind === "BUNDLE" ? "Bundle" : "Listing")}</span>
+                    {request.kind === "BUNDLE" && <span className="text-ink-soft"> · Bundle of {request.item_count}</span>}
                     <span className="text-ink-soft"> · {request.renter_display_name ?? "Unnamed member"}</span>
                     <span className="block text-sm text-ink-soft">
                       {formatDate(request.start_date)} – {formatDate(request.end_date)}
