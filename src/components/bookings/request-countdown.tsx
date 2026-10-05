@@ -13,11 +13,11 @@ function remaining(seconds: number): string {
 }
 
 /**
- * Time left to answer a request. Counts down from the server's figure rather
- * than from respond_by, so a browser whose clock is off still shows the
- * deadline the server will enforce.
+ * Seconds left to answer a request, ticking down; null when it has no
+ * deadline. Counts from the server's figure rather than from respond_by, so a
+ * browser whose clock is off still tracks the deadline the server enforces.
  */
-export function RequestCountdown({ expiresInSeconds }: { expiresInSeconds: number | null }) {
+export function useSecondsLeft(expiresInSeconds: number | null): number | null {
   const [deadline] = useState(() => (expiresInSeconds === null ? null : Date.now() + expiresInSeconds * 1000));
   const [now, setNow] = useState(() => Date.now());
 
@@ -27,8 +27,13 @@ export function RequestCountdown({ expiresInSeconds }: { expiresInSeconds: numbe
     return () => clearInterval(timer);
   }, [deadline]);
 
-  if (deadline === null) return null;
-  const seconds = Math.floor((deadline - now) / 1000);
+  return deadline === null ? null : Math.floor((deadline - now) / 1000);
+}
+
+/** Time left to answer a request. */
+export function RequestCountdown({ expiresInSeconds }: { expiresInSeconds: number | null }) {
+  const seconds = useSecondsLeft(expiresInSeconds);
+  if (seconds === null) return null;
   // The server and the browser each work this out from their own clock, so
   // the two renders can land either side of a minute boundary.
   if (seconds <= 0) return <span className="text-accent-dark" suppressHydrationWarning>Expired</span>;

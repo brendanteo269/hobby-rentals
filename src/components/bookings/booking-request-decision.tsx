@@ -9,6 +9,7 @@ import {
   declineBundleRequest,
   declineRequest,
 } from "@/app/bookings/actions";
+import { useSecondsLeft } from "@/components/bookings/request-countdown";
 import { DECLINE_REASON_LABELS, type DeclineReason, type RequestKind } from "@/lib/bookings";
 
 const REASONS = Object.keys(DECLINE_REASON_LABELS) as DeclineReason[];
@@ -19,10 +20,24 @@ type Outcome = { error: string } | { booking: unknown };
 /**
  * The owner's Approve and Decline on a request they are reviewing. A bundle
  * is decided whole, through its own actions, but the choice is the same.
+ *
+ * Once the deadline passes the request can no longer be answered - the
+ * server refuses an approval, and the expiry job closes it within minutes -
+ * so the choice is withdrawn rather than left to fail when clicked.
  */
-export function BookingRequestDecision({ kind, bookingId }: { kind: RequestKind; bookingId: string }) {
+export function BookingRequestDecision({
+  kind,
+  bookingId,
+  expiresInSeconds,
+}: {
+  kind: RequestKind;
+  bookingId: string;
+  expiresInSeconds: number | null;
+}) {
   const bundle = kind === "BUNDLE";
   const router = useRouter();
+  const secondsLeft = useSecondsLeft(expiresInSeconds);
+  const expired = secondsLeft !== null && secondsLeft <= 0;
   const [declining, setDeclining] = useState(false);
   const [reason, setReason] = useState<DeclineReason | "">("");
   const [note, setNote] = useState("");
@@ -46,6 +61,16 @@ export function BookingRequestDecision({ kind, bookingId }: { kind: RequestKind;
     if (reason === "OTHER" && !note.trim()) return setError("Tell the renter why you are declining.");
     const stated = reason === "OTHER" ? note.trim() : null;
     decide(() => (bundle ? declineBundleRequest(bookingId, reason, stated) : declineRequest(bookingId, reason, stated)));
+  }
+
+  // Replaces the whole component, an open decline form included.
+  if (expired) {
+    return (
+      <p role="status" className="body-copy" suppressHydrationWarning>
+        This request expired before it was answered. It closes automatically within a few minutes, and the
+        renter&apos;s hold is released in full. There&apos;s nothing you need to do.
+      </p>
+    );
   }
 
   return (

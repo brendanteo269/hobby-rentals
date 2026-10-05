@@ -92,7 +92,7 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
 
       <div className="mt-8">
         {request.status === "PENDING"
-          ? <BookingRequestDecision kind={request.kind} bookingId={request.id} />
+          ? <BookingRequestDecision kind={request.kind} bookingId={request.id} expiresInSeconds={request.expires_in_seconds} />
           : <EmptyState title="Already answered" body={`This request is ${BOOKING_STATUS_LABELS[request.status].toLowerCase()}.`} />}
       </div>
     </>
