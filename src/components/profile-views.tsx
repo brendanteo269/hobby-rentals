@@ -5,6 +5,7 @@ import { EnableOwningForm } from "@/components/enable-owning-form";
 import { saveProfileAvailability } from "@/app/profile/actions";
 import { ProfileAvailabilityCard } from "@/components/profile-availability-card";
 import { RateLine } from "@/components/browse/listing-card";
+import { MessageButton } from "@/components/messages/message-button";
 import { CATEGORY_LABELS, LISTING_STATUS_LABELS, type Listing } from "@/lib/listings";
 import { profilePath, type ProfileView } from "@/lib/routes";
 import type { Booking } from "@/lib/bookings";
@@ -14,6 +15,7 @@ import {
   BOOKING_STATUS_LABELS,
   BOOKING_STATUS_NEXT_STEP,
   BUNDLE_STATUS_NEXT_STEP,
+  MESSAGEABLE_BOOKING_STATUSES,
   PAYMENT_STATUS_LABELS,
 } from "@/lib/bookings";
 import { WithdrawRequestButton } from "@/components/bookings/withdraw-request-button";
@@ -157,6 +159,9 @@ export function RenterView({
               <div className="flex flex-col items-end gap-2">
                 <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
                 {booking.status === "PENDING" && <WithdrawRequestButton bookingId={booking.id} />}
+                {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
+                  <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
+                )}
               </div>
             </li>
           ))}

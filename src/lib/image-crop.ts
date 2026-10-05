@@ -15,8 +15,11 @@ export type CropTransform = { x: number; y: number; scale: number };
 export const CENTERED_CROP: CropTransform = { x: 0, y: 0, scale: 1 };
 
 /**
- * Draws the region of `bitmap` selected by `crop` onto a fresh square
- * canvas and encodes it as `mimeType`.
+ * Renders the region [sx, sy, sWidth, sHeight] of `bitmap` onto a
+ * fresh canvas sized to match and encodes it as `mimeType`. Shared by
+ * cropBitmapToFile and cropBitmapKeepingAspect, which differ only in how
+ * they compute that region - square for one, bitmap's own aspect for the
+ * other - not in how a region becomes pixels.
  *
  * Always at native resolution: the source rectangle shrinks as scale grows
  * rather than the canvas being scaled, so this never resamples (no
@@ -25,6 +28,34 @@ export const CENTERED_CROP: CropTransform = { x: 0, y: 0, scale: 1 };
  * bilinearly blend across pixel boundaries even at 1:1 scale, which is what
  * actually caused the original auto-crop blur.
  */
+async function drawCropRegion(
+  bitmap: ImageBitmap,
+  sx: number,
+  sy: number,
+  sWidth: number,
+  sHeight: number,
+  mimeType: string,
+  fileName: string,
+): Promise<File | null> {
+  const canvas = document.createElement("canvas");
+  canvas.width = sWidth;
+  canvas.height = sHeight;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  ctx.drawImage(bitmap, sx, sy, sWidth, sHeight, 0, 0, sWidth, sHeight);
+
+  // 0.95: any canvas re-encode of a JPEG/WebP is already a second
+  // generation of lossy compression on top of the original file's own - this
+  // only controls how much additional loss that second pass adds. PNG
+  // (lossless) ignores the argument entirely.
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mimeType, 0.95));
+  if (!blob) return null;
+
+  return new File([blob], fileName, { type: mimeType });
+}
+
+/** Draws the square region of `bitmap` selected by `crop` and encodes it as `mimeType`. */
 export async function cropBitmapToFile(
   bitmap: ImageBitmap,
   crop: CropTransform,
@@ -37,23 +68,30 @@ export async function cropBitmapToFile(
   const maxOffsetY = (bitmap.height - sSide) / 2;
   const sx = Math.floor(maxOffsetX + crop.x * maxOffsetX);
   const sy = Math.floor(maxOffsetY + crop.y * maxOffsetY);
+  return drawCropRegion(bitmap, sx, sy, sSide, sSide, mimeType, fileName);
+}
 
-  const canvas = document.createElement("canvas");
-  canvas.width = sSide;
-  canvas.height = sSide;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-
-  ctx.drawImage(bitmap, sx, sy, sSide, sSide, 0, 0, sSide, sSide);
-
-  // 0.95: any canvas re-encode of a JPEG/WebP is already a second
-  // generation of lossy compression on top of the original file's own - this
-  // only controls how much additional loss that second pass adds. PNG
-  // (lossless) ignores the argument entirely.
-  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, mimeType, 0.95));
-  if (!blob) return null;
-
-  return new File([blob], fileName, { type: mimeType });
+/**
+ * Same pan/zoom crop as cropBitmapToFile, but the window keeps `bitmap`'s
+ * own aspect ratio instead of forcing it to a square. Used for message
+ * attachments (S2-17): a photo of an item's condition or a handover spot
+ * loses the context a square crop would cut off, unlike a listing's square
+ * thumbnail grid. At crop.scale 1 the window is the whole image - zooming
+ * in crops into it without changing its aspect ratio.
+ */
+export async function cropBitmapKeepingAspect(
+  bitmap: ImageBitmap,
+  crop: CropTransform,
+  mimeType: string,
+  fileName: string,
+): Promise<File | null> {
+  const sWidth = Math.round(bitmap.width / crop.scale);
+  const sHeight = Math.round(bitmap.height / crop.scale);
+  const maxOffsetX = (bitmap.width - sWidth) / 2;
+  const maxOffsetY = (bitmap.height - sHeight) / 2;
+  const sx = Math.floor(maxOffsetX + crop.x * maxOffsetX);
+  const sy = Math.floor(maxOffsetY + crop.y * maxOffsetY);
+  return drawCropRegion(bitmap, sx, sy, sWidth, sHeight, mimeType, fileName);
 }
 
 /**

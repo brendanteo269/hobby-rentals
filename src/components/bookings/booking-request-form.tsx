@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
 import {
@@ -25,6 +26,8 @@ type Props = {
   unavailableDates: UnavailableDate[];
   minRentalDays: number | null;
   maxRentalDays: number | null;
+  /** Rendered beside the submit button, e.g. a "Message owner" link - this form's own concern is booking, not what else belongs next to it. */
+  secondaryAction?: ReactNode;
 };
 
 export function BookingRequestForm({
@@ -33,6 +36,7 @@ export function BookingRequestForm({
   unavailableDates,
   minRentalDays,
   maxRentalDays,
+  secondaryAction,
 }: Props) {
   const availableSet = useMemo(() => new Set(availableDates), [availableDates]);
   const reasonByDate = useMemo(
@@ -144,6 +148,7 @@ export function BookingRequestForm({
       <div className="mt-8 border-t border-line pt-6">
         <h2 className="text-base font-semibold uppercase tracking-wide">Request to book</h2>
         <p className="mt-4 text-sm text-ink-soft">There are no bookable dates available in the next year.</p>
+        {secondaryAction && <div className="mt-4">{secondaryAction}</div>}
       </div>
     );
   }
@@ -194,7 +199,10 @@ export function BookingRequestForm({
         </Link>
       )}
       {message && <p role="status" className="mt-3 text-sm text-ink-soft">{message}</p>}
-      <Button className="mt-4" disabled={isPending || !endDate || !quote} onClick={submit}>{isPending ? "Sending…" : "Request booking"}</Button>
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <Button disabled={isPending || !endDate || !quote} onClick={submit}>{isPending ? "Sending…" : "Request booking"}</Button>
+        {secondaryAction}
+      </div>
     </div>
   );
 }

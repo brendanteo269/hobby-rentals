@@ -3,7 +3,14 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui";
 import { changeBookingStatus, type BookingActionResult } from "@/app/bookings/actions";
-import { BOOKING_STATUS_LABELS, PAYMENT_STATUS_LABELS, type Booking, type BookingStatus } from "@/lib/bookings";
+import { MessageButton } from "@/components/messages/message-button";
+import {
+  BOOKING_STATUS_LABELS,
+  MESSAGEABLE_BOOKING_STATUSES,
+  PAYMENT_STATUS_LABELS,
+  type Booking,
+  type BookingStatus,
+} from "@/lib/bookings";
 import { formatDate } from "@/lib/format";
 
 const NEXT_ACTION: Partial<Record<BookingStatus, { status: BookingStatus; label: string }>> = {
@@ -50,41 +57,17 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
       <ul className="mt-2 space-y-2">
         {items.map((booking) => {
           const next = NEXT_ACTION[booking.status];
-          return (
-            <li key={booking.id} className="flex flex-wrap items-center justify-between gap-2 bg-surface-muted px-3 py-2 text-sm">
-              <span>
-                <span className="font-medium">{requesterName(booking)}</span>{" "}
-                <span className="text-ink-soft">
-                  · {formatDate(booking.start_date)} – {formatDate(booking.end_date)} ·{" "}
-                  {BOOKING_STATUS_LABELS[booking.status]}
-                  {booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}
-                </span>
-              </span>
-              <span className="flex gap-2">
-                {next && (
-                  <Button className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, next.status)}>
-                    {next.label}
-                  </Button>
-                )}
-                {/* Turning down a request and cancelling a booking already
-                    agreed are different acts: they are separate transitions,
-                    send different notifications, and only the second is a
-                    CANCELLED. Collapsing them would also be refused - an
-                    owner may not move a PENDING booking to CANCELLED, which
-                    is the renter's own withdrawal. */}
-                {booking.status === "PENDING" && (
-                  <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "DECLINED")}>
-                    Decline
-                  </Button>
-                )}
-                {booking.status === "CONFIRMED" && (
-                  <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "CANCELLED")}>
-                    Cancel booking
-                  </Button>
-                )}
-              </span>
-            </li>
-          );
+          return <li key={booking.id} className="flex flex-wrap items-center justify-between gap-2 bg-surface-muted px-3 py-2 text-sm">
+            <span><span className="font-medium">{requesterName(booking)}</span> <span className="text-ink-soft">· {formatDate(booking.start_date)} – {formatDate(booking.end_date)} · {BOOKING_STATUS_LABELS[booking.status]}{booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}</span></span>
+            <span className="flex gap-2">
+              {next && <Button className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, next.status)}>{next.label}</Button>}
+              {booking.status === "PENDING" && <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "DECLINED")}>Decline</Button>}
+              {booking.status === "CONFIRMED" && <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "CANCELLED")}>Cancel booking</Button>}
+              {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
+                <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
+              )}
+            </span>
+          </li>;
         })}
       </ul>
     </div>

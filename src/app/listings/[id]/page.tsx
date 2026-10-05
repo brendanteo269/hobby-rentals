@@ -10,6 +10,7 @@ import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS, passportBadge } fro
 import { BookingRequestForm } from "@/components/bookings/booking-request-form";
 import { WaitlistPanel } from "@/components/bookings/waitlist-panel";
 import { getMyWaitlist } from "@/lib/api/waitlist";
+import { MessageButton } from "@/components/messages/message-button";
 
 export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -79,6 +80,9 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               unavailableDates={bookingAvailability?.unavailable_dates ?? []}
               minRentalDays={listing.min_rental_days}
               maxRentalDays={listing.max_rental_days}
+              secondaryAction={
+                <MessageButton target={{ kind: "listing", listingId: listing.id }} label="Message owner" />
+              }
             />
           )}
           {canBook && (
