@@ -123,10 +123,13 @@ export function AvailabilityCalendar({
           const note = reason
             ? `${UNAVAILABLE_REASON_LABELS[reason]}${culprit ? ` — ${culprit}` : ""}`
             : undefined;
-          const unavailableStyle =
-            reason === "BOOKED"
-              ? "cursor-not-allowed text-ink-soft line-through"
-              : "cursor-default text-ink-soft/30";
+          // Struck through for a date someone holds - a booking, or a live
+          // waitlist offer - and merely dimmed for one the listing never
+          // offered. The first may free up; the second will not.
+          const heldBySomeone = reason === "BOOKED" || reason === "WAITLIST_HOLD";
+          const unavailableStyle = heldBySomeone
+            ? "cursor-not-allowed text-ink-soft line-through"
+            : "cursor-default text-ink-soft/30";
           return (
             <button
               key={day}

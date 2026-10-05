@@ -10,6 +10,7 @@ import { CATEGORY_LABELS, LISTING_STATUS_LABELS, type Listing } from "@/lib/list
 import { profilePath, type ProfileView } from "@/lib/routes";
 import type { Booking } from "@/lib/bookings";
 import type { BundleBooking } from "@/lib/bundles";
+import { hasLiveOffer, WAITLIST_STATUS_LABELS, type WaitlistEntry } from "@/lib/waitlist";
 import {
   BOOKING_STATUS_LABELS,
   BOOKING_STATUS_NEXT_STEP,
@@ -92,14 +93,17 @@ export function RenterView({
   enabled,
   bookings = [],
   bundleBookings = [],
+  waitlist = [],
 }: {
   enabled: boolean;
   bookings?: Booking[];
   /** S2-20: a request for a whole set, shown beside the single-item ones. */
   bundleBookings?: BundleBooking[];
+  /** S2-15: dates the renter is queueing for, which are not bookings yet. */
+  waitlist?: WaitlistEntry[];
 }) {
   if (!enabled) return <NotEnabled side="renter" />;
-  if (bookings.length > 0 || bundleBookings.length > 0) {
+  if (bookings.length > 0 || bundleBookings.length > 0 || waitlist.length > 0) {
     return (
       <div>
         <div className="flex items-baseline justify-between gap-4">
@@ -168,6 +172,42 @@ export function RenterView({
             </li>
           ))}
         </ul>
+
+        {/* S2-15: queue places are not bookings - nothing is held and no
+            dates are reserved - so they sit in their own section rather than
+            among the rentals above. */}
+        {waitlist.length > 0 && (
+          <div className="mt-10">
+            <p className="eyebrow">Waiting on</p>
+            <ul className="mt-4 space-y-3">
+              {waitlist.map((entry) => (
+                <li
+                  key={entry.id}
+                  className={`flex flex-wrap items-center justify-between gap-3 border p-4 ${
+                    hasLiveOffer(entry) ? "border-accent bg-accent-soft" : "border-line bg-white"
+                  }`}
+                >
+                  <div>
+                    <Link href={`/listings/${entry.listing_id}`} className="font-medium hover:underline">
+                      {entry.listing_name ?? "View listing"}
+                    </Link>
+                    <p className="mt-1 text-sm text-ink-soft">
+                      {formatDate(entry.start_date)} – {formatDate(entry.end_date)}
+                    </p>
+                    {hasLiveOffer(entry) && (
+                      <p className="mt-1 text-xs text-accent-dark">
+                        Yours to book until {formatDateTime(entry.offer_expires_at!)}.
+                      </p>
+                    )}
+                  </div>
+                  <Badge variant={hasLiveOffer(entry) ? "accent" : "neutral"}>
+                    {WAITLIST_STATUS_LABELS[entry.status]}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     );
   }

@@ -27,6 +27,8 @@ export type Booking = {
   id: string;
   listing_id: string;
   renter_id: string;
+  /** Who asked. Null when that member has not set a display name. */
+  renter_name?: string | null;
   owner_id: string;
   start_date: string;
   end_date: string;
@@ -40,6 +42,10 @@ export type Booking = {
   deposit_cents?: number | null;
   total_amount_cents?: number | null;
   payment_status?: PaymentStatus | null;
+  /** When an unanswered request lapses; set on every request. */
+  respond_by?: string | null;
+  decline_reason?: DeclineReason | null;
+  decline_note?: string | null;
   /** Only on responses from creating, replaying or accepting a request. */
   escrow_holds?: EscrowHold[] | null;
   /** True when the server returned an earlier submission of the same attempt. */
@@ -143,3 +149,83 @@ export const MESSAGEABLE_BOOKING_STATUSES: BookingStatus[] = ["CONFIRMED", "ACTI
 
 /** A booking in one of these states never went anywhere (or was undone before it did) - requesting again for the same listing is offered rather than treated as blocked. */
 export const RETRYABLE_BOOKING_STATUSES: BookingStatus[] = ["DECLINED", "CANCELLED", "EXPIRED"];
+
+/** Why an owner turned a request down. The renter is told which. */
+export type DeclineReason = "DATES_UNAVAILABLE" | "ITEM_UNAVAILABLE" | "RENTER_NOT_SUITABLE" | "LOGISTICS" | "OTHER";
+
+/** In the order the owner's decline form offers them; OTHER needs a note. */
+export const DECLINE_REASON_LABELS: Record<DeclineReason, string> = {
+  DATES_UNAVAILABLE: "I can't do those dates",
+  ITEM_UNAVAILABLE: "The item isn't available",
+  RENTER_NOT_SUITABLE: "Not the right fit for this rental",
+  LOGISTICS: "I can't arrange the handover",
+  OTHER: "Other",
+};
+
+/** What a request is for: one listing, or a bundle answered whole. */
+export type RequestKind = "BOOKING" | "BUNDLE";
+
+/** Where the owner reviews a request, by kind. */
+export function requestReviewPath(kind: RequestKind, id: string) {
+  return kind === "BUNDLE" ? `/listings/mine/bookings/bundle/${id}` as const : `/listings/mine/bookings/${id}` as const;
+}
+
+/** One unanswered request, as the owner's request list shows it. */
+export type BookingRequestSummary = {
+  id: string;
+  kind: RequestKind;
+  /** One of these two, by kind. */
+  listing_id: string | null;
+  bundle_id: string | null;
+  /** The listing's name, or the bundle's. */
+  name: string | null;
+  /** How many listings the request covers: 1, or the bundle's items. */
+  item_count: number;
+  renter_id: string;
+  renter_display_name: string | null;
+  start_date: string;
+  end_date: string;
+  rental_days: number | null;
+  respond_by: string | null;
+  /** By the server's clock, so a client whose clock is off still counts down correctly. */
+  expires_in_seconds: number | null;
+  created_at: string;
+};
+
+/** One request as the owner reviews it before deciding. */
+export type BookingRequestDetail = {
+  id: string;
+  kind: RequestKind;
+  listing_id: string | null;
+  bundle_id: string | null;
+  name: string | null;
+  /** What a bundle request covers; empty for a single listing. */
+  items: { listing_id: string; listing_name: string | null }[];
+  status: BookingStatus;
+  respond_by: string | null;
+  expires_in_seconds: number | null;
+  renter: {
+    id: string;
+    display_name: string | null;
+    bio: string | null;
+    member_since: string | null;
+    email_verified: boolean;
+    /** Null until renters can be rated. */
+    rating: number | null;
+    review_count: number;
+    completed_rentals: number;
+  };
+  period: { start_date: string; end_date: string; rental_days: number | null };
+  pricing: {
+    price_per_day_cents: number | null;
+    price_per_week_cents: number | null;
+    rental_subtotal_cents: number | null;
+    platform_fee_cents: number | null;
+    deposit_cents: number | null;
+    total_amount_cents: number | null;
+    /** Nothing can be selected until damage protection is offered. */
+    damage_protection: { selected: boolean; fee_cents: number };
+    owner_net_earnings_cents: number | null;
+  };
+  created_at: string;
+};

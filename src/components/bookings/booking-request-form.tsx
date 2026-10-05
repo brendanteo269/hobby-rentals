@@ -50,8 +50,11 @@ export function BookingRequestForm({
     () => new Map(unavailableDates.map((entry) => [entry.date, entry.reason])),
     [unavailableDates],
   );
-  const hasBookedDays = useMemo(
-    () => unavailableDates.some((entry) => entry.reason === "BOOKED"),
+  // Days somebody else holds - a booking, or a live waitlist offer - which
+  // the calendar strikes through and the waitlist panel below offers to
+  // queue for.
+  const hasHeldDays = useMemo(
+    () => unavailableDates.some((entry) => entry.reason === "BOOKED" || entry.reason === "WAITLIST_HOLD"),
     [unavailableDates],
   );
   const durationLimits = rentalDurationLimits({
@@ -164,7 +167,7 @@ export function BookingRequestForm({
       <p className="body-copy mt-1">
         Select an available start date, then an available end date.
         {durationLimits && ` This listing rents for ${durationLimits}.`}
-        {hasBookedDays && " Struck-through days are already booked."}
+        {hasHeldDays && " Struck-through days are taken — you can join the waitlist for them below."}
       </p>
 
       <AvailabilityCalendar
