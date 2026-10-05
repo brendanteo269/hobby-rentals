@@ -40,6 +40,10 @@ export type Booking = {
   deposit_cents?: number | null;
   total_amount_cents?: number | null;
   payment_status?: PaymentStatus | null;
+  /** When an unanswered request lapses; set on every request. */
+  respond_by?: string | null;
+  decline_reason?: DeclineReason | null;
+  decline_note?: string | null;
   /** Only on responses from creating, replaying or accepting a request. */
   escrow_holds?: EscrowHold[] | null;
   /** True when the server returned an earlier submission of the same attempt. */
@@ -137,3 +141,65 @@ export const BOOKING_STATUS_BADGE_VARIANT: Record<BookingStatus, "dark" | "neutr
  * renders, not whether the backend accepts the request.
  */
 export const MESSAGEABLE_BOOKING_STATUSES: BookingStatus[] = ["CONFIRMED", "ACTIVE", "COMPLETED"];
+
+/** Why an owner turned a request down. The renter is told which. */
+export type DeclineReason = "DATES_UNAVAILABLE" | "ITEM_UNAVAILABLE" | "RENTER_NOT_SUITABLE" | "LOGISTICS" | "OTHER";
+
+/** In the order the owner's decline form offers them; OTHER needs a note. */
+export const DECLINE_REASON_LABELS: Record<DeclineReason, string> = {
+  DATES_UNAVAILABLE: "I can't do those dates",
+  ITEM_UNAVAILABLE: "The item isn't available",
+  RENTER_NOT_SUITABLE: "Not the right fit for this rental",
+  LOGISTICS: "I can't arrange the handover",
+  OTHER: "Other",
+};
+
+/** One unanswered request, as the owner's request list shows it. */
+export type BookingRequestSummary = {
+  id: string;
+  listing_id: string;
+  listing_name: string | null;
+  renter_id: string;
+  renter_display_name: string | null;
+  start_date: string;
+  end_date: string;
+  rental_days: number | null;
+  respond_by: string | null;
+  /** By the server's clock, so a client whose clock is off still counts down correctly. */
+  expires_in_seconds: number | null;
+  created_at: string;
+};
+
+/** One request as the owner reviews it before deciding. */
+export type BookingRequestDetail = {
+  id: string;
+  listing_id: string;
+  listing_name: string | null;
+  status: BookingStatus;
+  respond_by: string | null;
+  expires_in_seconds: number | null;
+  renter: {
+    id: string;
+    display_name: string | null;
+    bio: string | null;
+    member_since: string | null;
+    email_verified: boolean;
+    /** Null until renters can be rated. */
+    rating: number | null;
+    review_count: number;
+    completed_rentals: number;
+  };
+  period: { start_date: string; end_date: string; rental_days: number | null };
+  pricing: {
+    price_per_day_cents: number | null;
+    price_per_week_cents: number | null;
+    rental_subtotal_cents: number | null;
+    platform_fee_cents: number | null;
+    deposit_cents: number | null;
+    total_amount_cents: number | null;
+    /** Nothing can be selected until damage protection is offered. */
+    damage_protection: { selected: boolean; fee_cents: number };
+    owner_net_earnings_cents: number | null;
+  };
+  created_at: string;
+};

@@ -1,14 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createBooking, getBookingQuote, updateBookingStatus, withdrawBooking } from "@/lib/api/bookings";
+import {
+  createBooking,
+  declineBooking,
+  getBookingQuote,
+  updateBookingStatus,
+  withdrawBooking,
+} from "@/lib/api/bookings";
 import {
   createBundleBooking,
   getBundleQuote,
   updateBundleBookingStatus,
 } from "@/lib/api/bundles";
 import { BackendApiError } from "@/lib/api/client";
-import type { Booking, BookingQuote, BookingStatus } from "@/lib/bookings";
+import type { Booking, BookingQuote, BookingStatus, DeclineReason } from "@/lib/bookings";
 import type { BundleBooking, BundleQuote } from "@/lib/bundles";
 
 export type BookingActionResult =
@@ -47,6 +53,10 @@ export async function requestBooking(listingId: string, startDate: string, endDa
 
 export async function changeBookingStatus(bookingId: string, nextStatus: BookingStatus) {
   return run(() => updateBookingStatus(bookingId, nextStatus));
+}
+
+export async function declineRequest(bookingId: string, reason: DeclineReason, note: string | null) {
+  return run(() => declineBooking(bookingId, reason, note));
 }
 
 
