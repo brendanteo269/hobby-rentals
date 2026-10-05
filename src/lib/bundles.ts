@@ -19,7 +19,7 @@ import type {
   LocationArea,
   UnavailableReason,
 } from "@/lib/listings";
-import type { BookingQuote, BookingStatus } from "@/lib/bookings";
+import type { BookingQuote, BookingStatus, DeclineReason } from "@/lib/bookings";
 
 export type BundleStatus = "ACTIVE" | "UNPUBLISHED" | "REMOVED";
 
@@ -197,6 +197,10 @@ export type BundleBooking = {
   platform_fee_cents: number | null;
   deposit_cents: number | null;
   total_amount_cents: number | null;
+  /** When an unanswered request lapses. */
+  respond_by?: string | null;
+  decline_reason?: DeclineReason | null;
+  decline_note?: string | null;
   items: BundleBookingComponent[];
   created_at: string;
   updated_at: string;

@@ -2,25 +2,67 @@ import Link from "next/link";
 import { EmptyState } from "@/components/ui";
 import { OwnerPortal, requireOwner } from "@/components/owner-portal";
 import { OwnerBookingList } from "@/components/bookings/owner-booking-list";
-import { getOwnerBookings } from "@/lib/api/bookings";
+import { RequestCountdown } from "@/components/bookings/request-countdown";
+import { getOwnerBookingRequests, getOwnerBookings } from "@/lib/api/bookings";
 import { getMyListings } from "@/lib/api/listings";
+import { requestReviewPath } from "@/lib/bookings";
+import { formatDate } from "@/lib/format";
 
 export const metadata = { title: "Bookings — HobbyRentals" };
 
-/** Every booking request across the owner's listings, grouped by listing. */
+/**
+ * The requests waiting on the owner, the one about to lapse first, then every
+ * booking across their listings, grouped by listing.
+ */
 export default async function OwnerBookingsPage() {
   await requireOwner();
-  const [listings, bookings] = await Promise.all([getMyListings(), getOwnerBookings()]);
+  const [listings, bookings, requests] = await Promise.all([
+    getMyListings(),
+    getOwnerBookings(),
+    getOwnerBookingRequests(),
+  ]);
   const booked = listings.filter((listing) => bookings.some((booking) => booking.listing_id === listing.id));
+  // Bundle requests appear only in the requests list, never under a listing,
+  // so an owner whose only request is a bundle still has something here.
+  const nothingYet = requests.length === 0 && booked.length === 0;
 
   return (
     <OwnerPortal active="Bookings" title="Bookings">
-      {booked.length === 0 ? (
+      {!nothingYet && (
+        <section className="mb-10" aria-labelledby="requests-heading">
+          <h2 id="requests-heading" className="heading text-xl">Booking requests</h2>
+          {requests.length === 0 ? (
+            <p className="body-copy mt-2">No requests are waiting on you. New ones appear here, soonest deadline first.</p>
+          ) : (
+            <ul className="mt-4 divide-y divide-line border border-line bg-white">
+              {requests.map((request) => (
+                <li key={request.id}>
+                  <Link
+                    href={requestReviewPath(request.kind, request.id)}
+                    className="flex flex-wrap items-center justify-between gap-2 px-5 py-4 hover:bg-surface-muted"
+                  >
+                    <span>
+                      <span className="font-semibold">{request.name ?? (request.kind === "BUNDLE" ? "Bundle" : "Listing")}</span>
+                      {request.kind === "BUNDLE" && <span className="text-ink-soft"> · Bundle of {request.item_count}</span>}
+                      <span className="text-ink-soft"> · {request.renter_display_name ?? "Unnamed member"}</span>
+                      <span className="block text-sm text-ink-soft">
+                        {formatDate(request.start_date)} – {formatDate(request.end_date)}
+                      </span>
+                    </span>
+                    <span className="text-sm"><RequestCountdown expiresInSeconds={request.expires_in_seconds} /></span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+      {nothingYet ? (
         <EmptyState
           title="No booking requests yet"
           body="When a renter asks to book one of your listings, the request shows up here for you to confirm or decline."
         />
-      ) : (
+      ) : booked.length > 0 && (
         <ul className="space-y-4">
           {booked.map((listing) => (
             <li key={listing.id} className="border border-line bg-white p-5">

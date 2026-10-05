@@ -17,6 +17,8 @@ export type NotificationType =
   | "BOOKING_STARTED"
   | "BOOKING_COMPLETED"
   | "BOOKING_CANCELLED"
+  // The owner's side of a request lapsing before they answered it.
+  | "BOOKING_REQUEST_EXPIRED_OWNER"
   // A bundle booking notifies once per change, as one order.
   | "BUNDLE_REQUESTED"
   | "BUNDLE_ACCEPTED"
@@ -26,11 +28,13 @@ export type NotificationType =
   | "BUNDLE_STARTED"
   | "BUNDLE_COMPLETED"
   | "BUNDLE_CANCELLED"
+  | "BUNDLE_REQUEST_EXPIRED_OWNER"
   // S2-15. A waitlist offer's call to action expires on a clock rather than
   // on a booking's status, so these carry an expires_at that matters.
   | "WAITLIST_JOINED"
   | "WAITLIST_OFFERED"
   | "WAITLIST_OFFER_EXPIRED";
+  
 
 export type AppNotification = {
   id: string;
@@ -80,6 +84,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   BOOKING_STARTED: "Rental started",
   BOOKING_COMPLETED: "Rental completed",
   BOOKING_CANCELLED: "Cancelled",
+  BOOKING_REQUEST_EXPIRED_OWNER: "Request expired unanswered",
   BUNDLE_REQUESTED: "Bundle request sent",
   BUNDLE_ACCEPTED: "Bundle accepted",
   BUNDLE_DECLINED: "Bundle declined",
@@ -88,6 +93,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   BUNDLE_STARTED: "Bundle rental started",
   BUNDLE_COMPLETED: "Bundle rental completed",
   BUNDLE_CANCELLED: "Bundle cancelled",
+  BUNDLE_REQUEST_EXPIRED_OWNER: "Bundle request expired unanswered",
   WAITLIST_JOINED: "Waitlist joined",
   WAITLIST_OFFERED: "Waitlist dates free",
   WAITLIST_OFFER_EXPIRED: "Waitlist offer closed",

@@ -1,16 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button } from "@/components/ui";
+import { Button, ButtonLink } from "@/components/ui";
 import { changeBundleBookingStatus } from "@/app/bookings/actions";
 import { requesterName } from "@/components/bookings/owner-booking-list";
-import { BOOKING_STATUS_LABELS, type BookingStatus } from "@/lib/bookings";
+import { BOOKING_STATUS_LABELS, requestReviewPath, type BookingStatus } from "@/lib/bookings";
 import type { BundleBooking } from "@/lib/bundles";
 import { formatDate, formatMoney } from "@/lib/format";
 
-/** Same ladder the single-listing list offers, so an owner learns one flow. */
+/**
+ * Same ladder the single-listing list offers, so an owner learns one flow. A
+ * request is answered from its review page, where declining needs a reason.
+ */
 const NEXT_ACTION: Partial<Record<BookingStatus, { status: BookingStatus; label: string }>> = {
-  PENDING: { status: "CONFIRMED", label: "Confirm" },
   CONFIRMED: { status: "ACTIVE", label: "Start rental" },
   ACTIVE: { status: "COMPLETED", label: "Mark returned" },
 };
@@ -83,14 +85,19 @@ export function OwnerBundleBookingList({ bookings }: { bookings: BundleBooking[]
                       {next.label}
                     </Button>
                   )}
-                  {(booking.status === "PENDING" || booking.status === "CONFIRMED") && (
+                  {booking.status === "PENDING" && (
+                    <ButtonLink href={requestReviewPath("BUNDLE", booking.id)} className="px-3 py-1.5 text-xs">
+                      Review request
+                    </ButtonLink>
+                  )}
+                  {booking.status === "CONFIRMED" && (
                     <Button
                       variant="outline"
                       className="px-3 py-1.5 text-xs"
                       disabled={isPending}
                       onClick={() => update(booking.id, "CANCELLED")}
                     >
-                      Decline
+                      Cancel booking
                     </Button>
                   )}
                 </span>
