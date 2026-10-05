@@ -122,8 +122,10 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
 export const BOOKING_STATUS_BADGE_VARIANT: Record<BookingStatus, "dark" | "neutral"> = {
   PENDING: "neutral",
   CONFIRMED: "dark",
-  ACTIVE: "dark",
+  DECLINED: "neutral",
   CANCELLED: "neutral",
+  EXPIRED: "neutral",
+  ACTIVE: "dark",
   COMPLETED: "neutral",
 };
 
