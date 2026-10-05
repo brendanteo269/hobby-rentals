@@ -32,16 +32,16 @@ async function runMessage(conversationId: string, action: () => Promise<Message>
   }
 }
 
-export async function startListingConversation(listingId: string, text: string) {
-  return runConversation(() => sendListingMessage(listingId, text));
+export async function startListingConversation(listingId: string, text: string, attachmentKeys: string[] = []) {
+  return runConversation(() => sendListingMessage(listingId, text, attachmentKeys));
 }
 
-export async function startBookingConversation(bookingId: string, text: string) {
-  return runConversation(() => sendBookingMessage(bookingId, text));
+export async function startBookingConversation(bookingId: string, text: string, attachmentKeys: string[] = []) {
+  return runConversation(() => sendBookingMessage(bookingId, text, attachmentKeys));
 }
 
-export async function replyToConversation(conversationId: string, text: string) {
-  return runMessage(conversationId, () => sendMessage(conversationId, text));
+export async function replyToConversation(conversationId: string, text: string, attachmentKeys: string[] = []) {
+  return runMessage(conversationId, () => sendMessage(conversationId, text, attachmentKeys));
 }
 
 export async function withdrawOwnMessage(conversationId: string, messageId: string) {

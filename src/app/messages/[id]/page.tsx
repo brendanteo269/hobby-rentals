@@ -4,7 +4,7 @@ import { ConversationList } from "@/components/messages/conversation-list";
 import { ConversationHeader } from "@/components/messages/conversation-header";
 import { MessageThread } from "@/components/messages/message-thread";
 import { MessageComposer } from "@/components/messages/message-composer";
-import { getConversation, getMessages, getMyConversations } from "@/lib/api/conversations";
+import { getConversation, getConversationLimits, getMessages, getMyConversations } from "@/lib/api/conversations";
 import { conversationPriceLocationLine } from "@/lib/conversations";
 import { createClient } from "@/lib/supabase/server";
 
@@ -15,13 +15,17 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
   } = await (await createClient()).auth.getUser();
   if (!user) notFound();
 
-  let conversation, messages, conversations;
+  let conversation, messages, conversations, attachmentLimits;
   try {
     // Fetched first, and awaited on its own: GET /conversations/{id} marks
     // the thread read as a side effect, and the list fetch right after needs
     // that to have already happened so its own unread dot is correct.
     conversation = await getConversation(id);
-    [messages, conversations] = await Promise.all([getMessages(id), getMyConversations()]);
+    [messages, conversations, attachmentLimits] = await Promise.all([
+      getMessages(id),
+      getMyConversations(),
+      getConversationLimits(),
+    ]);
   } catch {
     notFound();
   }
@@ -52,7 +56,12 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
         </div>
 
         <div className="border-t border-line p-4">
-          <MessageComposer target={{ kind: "reply", conversationId: id }} label="Reply" placeholder="Write a reply…" />
+          <MessageComposer
+            target={{ kind: "reply", conversationId: id }}
+            label="Reply"
+            placeholder="Write a reply…"
+            attachmentLimits={attachmentLimits}
+          />
         </div>
       </div>
     </MessagesShell>

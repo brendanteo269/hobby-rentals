@@ -36,7 +36,19 @@ export function MessageThread({ messages, currentUserId }: { messages: Message[]
                 {message.withdrawn_at ? (
                   <p className="italic opacity-70">Message withdrawn</p>
                 ) : (
-                  <p className="whitespace-pre-line">{message.body}</p>
+                  <>
+                    {message.attachment_urls.length > 0 && (
+                      <ul className="mb-2 flex flex-wrap gap-1.5">
+                        {message.attachment_urls.map((url) => (
+                          <li key={url} className="h-32 w-32 overflow-hidden rounded-lg">
+                            {/* eslint-disable-next-line @next/next/no-img-element -- S3 attachment URL, not an optimizable remote image */}
+                            <img src={url} alt="" className="h-full w-full object-cover" />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    {message.body && <p className="whitespace-pre-line">{message.body}</p>}
+                  </>
                 )}
                 <p className={`mt-1.5 text-[0.6875rem] ${mine ? "text-white/70" : "text-ink-soft"}`}>
                   <time dateTime={message.created_at}>{formatChatTimestamp(message.created_at)}</time>

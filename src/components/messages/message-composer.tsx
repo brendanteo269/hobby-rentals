@@ -1,15 +1,57 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { Paperclip } from "lucide-react";
 import { Button, inputBase } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { replyToConversation, startBookingConversation, startListingConversation } from "@/app/messages/actions";
+import { MAX_MESSAGE_ATTACHMENTS, type ConversationLimits } from "@/lib/conversations";
 
 type Target =
   | { kind: "reply"; conversationId: string }
   | { kind: "listing"; listingId: string }
   | { kind: "booking"; bookingId: string };
+
+type Attachment = { key: string; previewUrl: string; fileName: string };
+type UploadingSlot = { id: string; fileName: string };
+
+/** Only blob: URLs are ours to free; nothing else is held here. */
+function releasePreview(url: string) {
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Presigns and PUTs one attachment to S3, returning the resulting
+ * attachment_key - the same presign-then-PUT protocol putPhotoToS3 uses for
+ * listing photos (src/components/listings/photo-upload-field.tsx), just
+ * against the message-attachments endpoint.
+ */
+async function putAttachmentToS3(file: File): Promise<string> {
+  const presignRes = await fetch("/api/messages/attachments/presign", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ content_type: file.type }),
+  });
+  if (!presignRes.ok) {
+    const body: unknown = await presignRes.json().catch(() => null);
+    const message =
+      body !== null && typeof body === "object" && "error" in body
+        ? String((body as { error: unknown }).error)
+        : "Could not prepare the upload.";
+    throw new Error(message);
+  }
+  const { upload_url, attachment_key } = (await presignRes.json()) as { upload_url: string; attachment_key: string };
+
+  const putRes = await fetch(upload_url, {
+    method: "PUT",
+    headers: { "Content-Type": file.type },
+    body: file,
+  });
+  if (!putRes.ok) throw new Error(`${file.name} failed to upload. Try again.`);
+
+  return attachment_key;
+}
 
 /**
  * A chat-bar composer - one text box and a send button beside it, like every
@@ -23,41 +65,105 @@ type Target =
  * arbitrary closure wrapping one (React rejects it as an "event handler"
  * crossing the boundary) - so the binding happens here, on the client, using
  * the id the caller already has.
+ *
+ * `attachmentLimits` is omitted only by old call sites during a migration;
+ * every current one passes it (S2-17's GET /conversations/limits), since
+ * without it there would be nothing to validate a picked file against
+ * before uploading it.
  */
 export function MessageComposer({
   target,
   label = "Message",
   placeholder = "Write a message…",
   submitLabel = "Send",
+  attachmentLimits,
 }: {
   target: Target;
   label?: string;
   placeholder?: string;
   submitLabel?: string;
+  attachmentLimits?: ConversationLimits;
 }) {
   const router = useRouter();
   const { show } = useToast();
   const [text, setText] = useState("");
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [uploading, setUploading] = useState<UploadingSlot[]>([]);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const remainingSlots = MAX_MESSAGE_ATTACHMENTS - attachments.length - uploading.length;
+
+  async function handleFilesSelected(files: FileList | null) {
+    if (!files || files.length === 0 || !attachmentLimits) return;
+    setAttachmentError(null);
+
+    const selected = Array.from(files).slice(0, Math.max(remainingSlots, 0));
+    if (selected.length < files.length) {
+      setAttachmentError(`Up to ${MAX_MESSAGE_ATTACHMENTS} images per message.`);
+    }
+
+    for (const file of selected) {
+      if (!attachmentLimits.allowed_attachment_content_types.includes(file.type)) {
+        setAttachmentError(`${file.name}: unsupported file type.`);
+        continue;
+      }
+      if (file.size > attachmentLimits.max_attachment_bytes) {
+        setAttachmentError(`${file.name}: file is too large (max ${Math.floor(attachmentLimits.max_attachment_bytes / (1024 * 1024))}MB).`);
+        continue;
+      }
+      void uploadOne(file);
+    }
+
+    // Cleared so picking the same file again (after removing it) re-fires onChange.
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  async function uploadOne(file: File) {
+    const slot: UploadingSlot = { id: crypto.randomUUID(), fileName: file.name };
+    setUploading((current) => [...current, slot]);
+
+    try {
+      const key = await putAttachmentToS3(file);
+      setAttachments((current) => [...current, { key, previewUrl: URL.createObjectURL(file), fileName: file.name }]);
+    } catch (caught) {
+      setAttachmentError(caught instanceof Error ? caught.message : `${file.name} failed to upload.`);
+    } finally {
+      setUploading((current) => current.filter((item) => item.id !== slot.id));
+    }
+  }
+
+  function removeAttachment(key: string) {
+    setAttachments((current) => {
+      const target = current.find((attachment) => attachment.key === key);
+      if (target) releasePreview(target.previewUrl);
+      return current.filter((attachment) => attachment.key !== key);
+    });
+  }
 
   function submit() {
     const value = text.trim();
-    if (!value) return;
+    const attachmentKeys = attachments.map((attachment) => attachment.key);
+    if (!value && attachmentKeys.length === 0) return;
+
     startTransition(async () => {
       if (target.kind === "reply") {
-        const result = await replyToConversation(target.conversationId, value);
+        const result = await replyToConversation(target.conversationId, value, attachmentKeys);
         if ("error" in result) {
           show(result.error, "error");
           return;
         }
         setText("");
+        attachments.forEach((attachment) => releasePreview(attachment.previewUrl));
+        setAttachments([]);
         return;
       }
 
       const result =
         target.kind === "listing"
-          ? await startListingConversation(target.listingId, value)
-          : await startBookingConversation(target.bookingId, value);
+          ? await startListingConversation(target.listingId, value, attachmentKeys)
+          : await startBookingConversation(target.bookingId, value, attachmentKeys);
       if ("error" in result) {
         show(result.error, "error");
         return;
@@ -66,29 +172,90 @@ export function MessageComposer({
     });
   }
 
+  const canSend = !isPending && uploading.length === 0 && (text.trim().length > 0 || attachments.length > 0);
+
   return (
-    <div className="flex items-end gap-2">
-      <textarea
-        aria-label={label}
-        id="message-text"
-        name="text"
-        rows={1}
-        value={text}
-        onChange={(event) => setText(event.target.value)}
-        onKeyDown={(event) => {
-          // Enter sends, like every chat app; Shift+Enter still inserts a
-          // newline for a multi-line message.
-          if (event.key === "Enter" && !event.shiftKey) {
-            event.preventDefault();
-            submit();
-          }
-        }}
-        placeholder={placeholder}
-        className={`${inputBase} max-h-32 flex-1 resize-none rounded-2xl`}
-      />
-      <Button className="shrink-0" disabled={isPending || !text.trim()} onClick={submit}>
-        {isPending ? "Sending…" : submitLabel}
-      </Button>
+    <div className="flex flex-col gap-2">
+      {(attachments.length > 0 || uploading.length > 0) && (
+        <ul className="flex flex-wrap gap-2">
+          {attachments.map((attachment) => (
+            <li key={attachment.key} className="group relative h-16 w-16 overflow-hidden rounded-lg border border-line">
+              {/* eslint-disable-next-line @next/next/no-img-element -- a local blob: URL, not an optimizable remote image */}
+              <img src={attachment.previewUrl} alt="" className="h-full w-full object-cover" />
+              <button
+                type="button"
+                onClick={() => removeAttachment(attachment.key)}
+                aria-label={`Remove ${attachment.fileName}`}
+                className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-ink/80 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+              >
+                ×
+              </button>
+            </li>
+          ))}
+          {uploading.map((slot) => (
+            <li
+              key={slot.id}
+              className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-line bg-surface-muted text-center text-[0.625rem] text-ink-soft"
+            >
+              Uploading…
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <div className="flex items-end gap-2">
+        {attachmentLimits && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept={attachmentLimits.allowed_attachment_content_types.join(",")}
+              multiple
+              disabled={remainingSlots <= 0}
+              onChange={(event) => void handleFilesSelected(event.target.files)}
+              className="hidden"
+              id="message-attachment-input"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              className="shrink-0 px-2.5"
+              disabled={remainingSlots <= 0}
+              aria-label="Attach an image"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Paperclip className="size-4" aria-hidden="true" />
+            </Button>
+          </>
+        )}
+        <textarea
+          aria-label={label}
+          id="message-text"
+          name="text"
+          rows={1}
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          onKeyDown={(event) => {
+            // Enter sends, like every chat app; Shift+Enter still inserts a
+            // newline for a multi-line message.
+            if (event.key === "Enter" && !event.shiftKey) {
+              event.preventDefault();
+              submit();
+            }
+          }}
+          placeholder={placeholder}
+          className={`${inputBase} max-h-32 flex-1 resize-none rounded-2xl`}
+        />
+        <Button className="shrink-0" disabled={!canSend} onClick={submit}>
+          {isPending ? "Sending…" : submitLabel}
+        </Button>
+      </div>
+
+      {attachmentError && (
+        <p role="alert" className="text-xs text-accent-dark">
+          {attachmentError}
+        </p>
+      )}
     </div>
   );
 }

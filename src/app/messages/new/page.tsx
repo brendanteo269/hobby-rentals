@@ -3,7 +3,7 @@ import { MessagesShell } from "@/components/messages/messages-shell";
 import { ConversationList } from "@/components/messages/conversation-list";
 import { ConversationHeader } from "@/components/messages/conversation-header";
 import { MessageComposer } from "@/components/messages/message-composer";
-import { getMyConversations } from "@/lib/api/conversations";
+import { getConversationLimits, getMyConversations } from "@/lib/api/conversations";
 import { getListing } from "@/lib/api/listings";
 import { getMyBookings, getOwnerBookings } from "@/lib/api/bookings";
 import type { BookingStatus } from "@/lib/bookings";
@@ -33,7 +33,7 @@ export default async function NewConversationPage({
   // unique index in the DB); re-opening "Message" on one you've already
   // messaged about should land on that thread, not ask for a first message
   // again.
-  const conversations = await getMyConversations();
+  const [conversations, attachmentLimits] = await Promise.all([getMyConversations(), getConversationLimits()]);
   const existing = listing
     ? conversations.find((c) => c.scope === "LISTING" && c.listing_id === listing)
     : conversations.find((c) => c.scope === "BOOKING" && c.booking_id === booking);
@@ -83,6 +83,7 @@ export default async function NewConversationPage({
             target={listing ? { kind: "listing", listingId: listing } : { kind: "booking", bookingId: booking! }}
             label="Your message"
             placeholder="Is it free this Saturday?"
+            attachmentLimits={attachmentLimits}
           />
         </div>
       </div>

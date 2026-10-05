@@ -44,9 +44,20 @@ export type Message = {
   conversation_id: string;
   sender_id: string;
   body: string;
+  /** S2-17: already-uploaded image URLs, resolved server-side from the stored S3 keys. Empty for a withdrawn message, same as body. */
+  attachment_urls: string[];
   withdrawn_at: string | null;
   created_at: string;
 };
+
+/** What GET /conversations/limits returns - the composer validates a picked file against these before uploading it. */
+export type ConversationLimits = {
+  allowed_attachment_content_types: string[];
+  max_attachment_bytes: number;
+};
+
+/** A message may carry at most this many image attachments - matches MessageRequest.attachment_keys' server-side cap. */
+export const MAX_MESSAGE_ATTACHMENTS = 4;
 
 /**
  * "$18/day · Tampines · Booking", trimmed to whatever's known. The listing's
