@@ -20,11 +20,16 @@ async function runConversation(action: () => Promise<Conversation>): Promise<Con
   }
 }
 
-async function runMessage(conversationId: string, action: () => Promise<Message>): Promise<MessageActionResult> {
+async function runMessage(action: () => Promise<Message>): Promise<MessageActionResult> {
   try {
     const message = await action();
+    // Not revalidating the thread's own path: MessageComposer's onSent
+    // appends the result to client state directly, so refetching the whole
+    // page (conversation, every message, the full conversations list) here
+    // would just be paying for a refetch nothing is waiting on. /messages
+    // still revalidates so the list's last-message preview and ordering are
+    // fresh next time it's actually visited.
     revalidatePath("/messages");
-    revalidatePath(`/messages/${conversationId}`);
     return { message };
   } catch (error) {
     if (error instanceof BackendApiError) return { error: error.message };
@@ -41,9 +46,9 @@ export async function startBookingConversation(bookingId: string, text: string, 
 }
 
 export async function replyToConversation(conversationId: string, text: string, attachmentKeys: string[] = []) {
-  return runMessage(conversationId, () => sendMessage(conversationId, text, attachmentKeys));
+  return runMessage(() => sendMessage(conversationId, text, attachmentKeys));
 }
 
-export async function withdrawOwnMessage(conversationId: string, messageId: string) {
-  return runMessage(conversationId, () => withdrawMessage(messageId));
+export async function withdrawOwnMessage(messageId: string) {
+  return runMessage(() => withdrawMessage(messageId));
 }

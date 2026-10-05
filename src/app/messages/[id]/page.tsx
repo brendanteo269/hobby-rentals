@@ -2,8 +2,7 @@ import { notFound } from "next/navigation";
 import { MessagesShell } from "@/components/messages/messages-shell";
 import { ConversationList } from "@/components/messages/conversation-list";
 import { ConversationHeader } from "@/components/messages/conversation-header";
-import { MessageThread } from "@/components/messages/message-thread";
-import { MessageComposer } from "@/components/messages/message-composer";
+import { ConversationThreadPanel } from "@/components/messages/conversation-thread-panel";
 import { getConversation, getConversationLimits, getMessages, getMyConversations } from "@/lib/api/conversations";
 import { conversationPriceLocationLine } from "@/lib/conversations";
 import { createClient } from "@/lib/supabase/server";
@@ -51,18 +50,13 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
           otherPartyRole={conversation.other_party_role}
         />
 
-        <div className="flex-1 overflow-y-auto">
-          <MessageThread messages={messages} currentUserId={user.id} />
-        </div>
-
-        <div className="border-t border-line p-4">
-          <MessageComposer
-            target={{ kind: "reply", conversationId: id }}
-            label="Reply"
-            placeholder="Write a reply…"
-            attachmentLimits={attachmentLimits}
-          />
-        </div>
+        <ConversationThreadPanel
+          key={id}
+          conversationId={id}
+          initialMessages={messages}
+          currentUserId={user.id}
+          attachmentLimits={attachmentLimits}
+        />
       </div>
     </MessagesShell>
   );

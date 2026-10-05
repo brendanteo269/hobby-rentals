@@ -6,7 +6,7 @@ import { Paperclip } from "lucide-react";
 import { Button, inputBase } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { replyToConversation, startBookingConversation, startListingConversation } from "@/app/messages/actions";
-import { MAX_MESSAGE_ATTACHMENTS, type ConversationLimits } from "@/lib/conversations";
+import { MAX_MESSAGE_ATTACHMENTS, type ConversationLimits, type Message } from "@/lib/conversations";
 import { AttachmentCropModal } from "./attachment-crop-modal";
 
 type Target =
@@ -78,12 +78,21 @@ export function MessageComposer({
   placeholder = "Write a message…",
   submitLabel = "Send",
   attachmentLimits,
+  onSent,
 }: {
   target: Target;
   label?: string;
   placeholder?: string;
   submitLabel?: string;
   attachmentLimits?: ConversationLimits;
+  /**
+   * Called with the sent message right after a `kind: "reply"` send
+   * succeeds, so the thread can show it immediately instead of waiting on a
+   * server round-trip to refetch the whole page. Only reply has one to call
+   * back with - starting a conversation navigates to the new thread instead,
+   * which loads its own messages.
+   */
+  onSent?: (message: Message) => void;
 }) {
   const router = useRouter();
   const { show } = useToast();
@@ -156,6 +165,7 @@ export function MessageComposer({
         setText("");
         attachments.forEach((attachment) => releasePreview(attachment.previewUrl));
         setAttachments([]);
+        onSent?.(result.message);
         return;
       }
 
