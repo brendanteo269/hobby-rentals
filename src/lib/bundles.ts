@@ -183,6 +183,8 @@ export type BundleBooking = {
   bundle_id: string;
   bundle_name: string | null;
   renter_id: string;
+  /** Who asked. Null when that member has not set a display name. */
+  renter_name: string | null;
   owner_id: string;
   start_date: string;
   end_date: string;

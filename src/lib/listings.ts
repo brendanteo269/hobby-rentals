@@ -61,13 +61,13 @@ export type DateRange = { start_date: string; end_date: string };
  * Why a date inside a listing's window cannot be booked. Mirrors
  * booking_service.UnavailableReason.
  *
- * BOOKED is the one a renter might act on — that date could free up if the
- * booking is cancelled — so it is labelled distinctly from the two the owner
- * chose. A date *outside* the window carries no reason and appears in
+ * BOOKED and WAITLIST_HOLD are the ones a renter might act on — those dates
+ * could free up, and can be queued for — so they are labelled distinctly
+ * from the two the owner chose. A date *outside* the window carries no reason and appears in
  * neither list: there is nothing to explain about a day the listing never
  * covered.
  */
-export type UnavailableReason = "BOOKED" | "BLACKOUT" | "OFF_SCHEDULE";
+export type UnavailableReason = "BOOKED" | "BLACKOUT" | "OFF_SCHEDULE" | "WAITLIST_HOLD";
 
 export type UnavailableDate = { date: string; reason: UnavailableReason };
 
@@ -75,6 +75,9 @@ export const UNAVAILABLE_REASON_LABELS: Record<UnavailableReason, string> = {
   BOOKED: "Booked",
   BLACKOUT: "Unavailable",
   OFF_SCHEDULE: "Not offered on this day",
+  // S2-15: free of bookings, but inside someone else's 24-hour waitlist
+  // window. Like BOOKED, it may open up shortly, and can be queued behind.
+  WAITLIST_HOLD: "Reserved for someone on the waitlist",
 };
 
 /**

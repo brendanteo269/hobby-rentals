@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button, ButtonLink } from "@/components/ui";
 import { changeBundleBookingStatus } from "@/app/bookings/actions";
+import { requesterName } from "@/components/bookings/owner-booking-list";
 import { BOOKING_STATUS_LABELS, requestReviewPath, type BookingStatus } from "@/lib/bookings";
 import type { BundleBooking } from "@/lib/bundles";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -25,9 +26,14 @@ const NEXT_ACTION: Partial<Record<BookingStatus, { status: BookingStatus; label:
  * with gear that does not do the job they asked for.
  */
 export function OwnerBundleBookingList({ bookings }: { bookings: BundleBooking[] }) {
-  const [items, setItems] = useState(bookings);
+  // Only the rows this list has itself changed are held locally; the rest
+  // come straight from props. Seeding state from `bookings` would freeze the
+  // list at mount, hiding every request that arrived afterwards.
+  const [changed, setChanged] = useState<Record<string, BundleBooking>>({});
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const items = bookings.map((booking) => changed[booking.id] ?? booking);
 
   function update(bundleBookingId: string, nextStatus: BookingStatus) {
     startTransition(async () => {
@@ -37,9 +43,7 @@ export function OwnerBundleBookingList({ bookings }: { bookings: BundleBooking[]
         return;
       }
       setError(null);
-      setItems((current) =>
-        current.map((item) => (item.id === result.booking.id ? result.booking : item)),
-      );
+      setChanged((current) => ({ ...current, [result.booking.id]: result.booking }));
     });
   }
 
@@ -62,8 +66,11 @@ export function OwnerBundleBookingList({ bookings }: { bookings: BundleBooking[]
             <li key={booking.id} className="bg-surface-muted px-3 py-2 text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span>
-                  {formatDate(booking.start_date)} – {formatDate(booking.end_date)}{" "}
-                  <span className="text-ink-soft">· {BOOKING_STATUS_LABELS[booking.status]}</span>
+                  <span className="font-medium">{requesterName(booking)}</span>{" "}
+                  <span className="text-ink-soft">
+                    · {formatDate(booking.start_date)} – {formatDate(booking.end_date)} ·{" "}
+                    {BOOKING_STATUS_LABELS[booking.status]}
+                  </span>
                   {booking.total_amount_cents !== null && (
                     <span className="text-ink-soft"> · {formatMoney(booking.total_amount_cents)}</span>
                   )}
