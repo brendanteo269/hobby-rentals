@@ -12,7 +12,7 @@ import {
   type Booking,
   type BookingStatus,
 } from "@/lib/bookings";
-import { formatDate } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 
 // A request is answered from its review page, where the owner sees the renter
 // and the earnings and has to give a reason to decline.
@@ -60,7 +60,15 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
         {items.map((booking) => {
           const next = NEXT_ACTION[booking.status];
           return <li key={booking.id} className="flex flex-wrap items-center justify-between gap-2 bg-surface-muted px-3 py-2 text-sm">
-            <span><span className="font-medium">{requesterName(booking)}</span> <span className="text-ink-soft">· {formatDate(booking.start_date)} – {formatDate(booking.end_date)} · {BOOKING_STATUS_LABELS[booking.status]}{booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}</span></span>
+            <span>
+              <span className="font-medium">{requesterName(booking)}</span> <span className="text-ink-soft">· {formatDate(booking.start_date)} – {formatDate(booking.end_date)} · {BOOKING_STATUS_LABELS[booking.status]}{booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}</span>
+              {booking.confirmed_meetup_location && (
+                <span className="block text-ink-soft">
+                  Meetup: {booking.confirmed_meetup_location}
+                  {booking.confirmed_meetup_time && `, ${formatDateTime(booking.confirmed_meetup_time)}`}
+                </span>
+              )}
+            </span>
             <span className="flex gap-2">
               {next && <Button className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, next.status)}>{next.label}</Button>}
               {booking.status === "PENDING" && <ButtonLink href={requestReviewPath("BOOKING", booking.id)} className="px-3 py-1.5 text-xs">Review request</ButtonLink>}

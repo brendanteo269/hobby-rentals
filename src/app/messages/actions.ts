@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { sendBookingMessage, sendListingMessage, sendMessage, withdrawMessage } from "@/lib/api/conversations";
+import { acceptMeetup, proposeMeetup } from "@/lib/api/meetups";
 import { BackendApiError } from "@/lib/api/client";
 import type { Conversation, Message } from "@/lib/conversations";
 
@@ -55,4 +56,14 @@ export async function replyToConversation(conversationId: string, text: string, 
 
 export async function withdrawOwnMessage(messageId: string) {
   return runMessage(() => withdrawMessage(messageId));
+}
+
+/** S2-19: propose (or re-propose) a meetup for a confirmed booking. */
+export async function proposeBookingMeetup(bookingId: string, location: string, proposedTimes: string[]) {
+  return runMessage(() => proposeMeetup(bookingId, location, proposedTimes));
+}
+
+/** S2-19: accept one of a meetup proposal's candidate times. */
+export async function acceptBookingMeetup(proposalId: string, acceptedTime: string) {
+  return runMessage(() => acceptMeetup(proposalId, acceptedTime));
 }

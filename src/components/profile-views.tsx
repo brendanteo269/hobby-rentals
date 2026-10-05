@@ -155,6 +155,12 @@ export function RenterView({
                   {booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}
                 </p>
                 <p className="mt-1 text-sm text-ink">{BOOKING_STATUS_NEXT_STEP[booking.status]}</p>
+                {booking.confirmed_meetup_location && (
+                  <p className="mt-1 text-sm text-ink-soft">
+                    Meetup: {booking.confirmed_meetup_location}
+                    {booking.confirmed_meetup_time && `, ${formatDateTime(booking.confirmed_meetup_time)}`}
+                  </p>
+                )}
               </div>
               <div className="flex flex-col items-end gap-2">
                 <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>

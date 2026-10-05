@@ -39,6 +39,17 @@ export type Conversation = {
   updated_at: string;
 };
 
+/** A meetup proposal's current fields (S2-19), refreshed to the proposal's latest state rather than frozen at the moment a given message announced it. */
+export type MeetupProposal = {
+  id: string;
+  location: string;
+  proposed_times: string[];
+  proposed_by: string;
+  accepted_time: string | null;
+  accepted_by: string | null;
+  accepted_at: string | null;
+};
+
 export type Message = {
   id: string;
   conversation_id: string;
@@ -46,6 +57,9 @@ export type Message = {
   body: string;
   /** S2-17: already-uploaded image URLs, resolved server-side from the stored S3 keys. Empty for a withdrawn message, same as body. */
   attachment_urls: string[];
+  /** S2-19: set when this message announced a meetup proposal or its acceptance - see MeetupProposal. */
+  meetup_event_type: "PROPOSED" | "ACCEPTED" | null;
+  meetup_proposal: MeetupProposal | null;
   withdrawn_at: string | null;
   created_at: string;
 };
