@@ -23,13 +23,17 @@ async function runConversation(action: () => Promise<Conversation>): Promise<Con
 async function runMessage(action: () => Promise<Message>): Promise<MessageActionResult> {
   try {
     const message = await action();
-    // Not revalidating the thread's own path: MessageComposer's onSent
-    // appends the result to client state directly, so refetching the whole
-    // page (conversation, every message, the full conversations list) here
-    // would just be paying for a refetch nothing is waiting on. /messages
-    // still revalidates so the list's last-message preview and ordering are
-    // fresh next time it's actually visited.
-    revalidatePath("/messages");
+    // Deliberately not calling revalidatePath here. MessageComposer's onSent
+    // appends the result to client state directly, so there's nothing left
+    // that needs a server refetch - and revalidating *any* path inside a
+    // Server Action makes the client wait for a background refresh of the
+    // currently-viewed route before the action's own promise resolves, even
+    // when the revalidated path is a different one. That wait was what kept
+    // "Sending…" showing well after the message had already appeared:
+    // /messages/[id] re-fetching its conversation, every message, and the
+    // full conversations list for no reason anything was waiting on.
+    // /messages (the list) fetches with no-store on every visit regardless,
+    // so skipping this costs no real staleness.
     return { message };
   } catch (error) {
     if (error instanceof BackendApiError) return { error: error.message };
