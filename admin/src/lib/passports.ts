@@ -1,13 +1,4 @@
-import { createAdminClient } from "@/lib/supabase/admin";
 import { adminApiKey, apiUrl } from "@/lib/env";
-
-export type ListingRow = {
-  id: string;
-  name: string;
-  owner_id: string;
-  status: string;
-  created_at: string;
-};
 
 export type PassportEntry = {
   id: string;
@@ -30,29 +21,6 @@ export type AdminPassport = {
   /** Newest first. */
   entries: PassportEntry[];
 };
-
-export const LISTINGS_LIMIT = 50;
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** Listings by name (partial) or exact id, newest first, any status. */
-export async function searchListings(query: string): Promise<{ listings: ListingRow[]; error: string | null }> {
-  // ponytail: first LISTINGS_LIMIT matches only; paginate like searchUsers once there are more.
-  let request = createAdminClient()
-    .from("listings")
-    .select("id, name, owner_id, status, created_at")
-    .order("created_at", { ascending: false })
-    .limit(LISTINGS_LIMIT);
-  const q = query.trim();
-  if (q) request = UUID.test(q) ? request.eq("id", q) : request.ilike("name", `%${q.replace(/[%_\\]/g, "\\$&")}%`);
-
-  const { data, error } = await request;
-  if (error) {
-    console.error("Listing search failed:", error.message);
-    return { listings: [], error: "Could not load listings." };
-  }
-  return { listings: data ?? [], error: null };
-}
 
 /**
  * Through the API rather than Supabase: the serial label photo is private in
