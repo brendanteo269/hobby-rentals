@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState, type ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Paperclip } from "lucide-react";
 import { Button, inputBase } from "@/components/ui";
@@ -78,6 +79,7 @@ export function MessageComposer({
   placeholder = "Write a message…",
   submitLabel = "Send",
   attachmentLimits,
+  extraButton,
   onSent,
 }: {
   target: Target;
@@ -85,6 +87,8 @@ export function MessageComposer({
   placeholder?: string;
   submitLabel?: string;
   attachmentLimits?: ConversationLimits;
+  /** An extra control shown alongside the attachment button - e.g. the booking thread's "Arrange meetup" trigger. */
+  extraButton?: ReactNode;
   /**
    * Called with the sent message right after a `kind: "reply"` send
    * succeeds, so the thread can show it immediately instead of waiting on a
@@ -105,7 +109,7 @@ export function MessageComposer({
   // result starts uploading. Nothing is uploaded until that step confirms
   // it: picking a file is not the same as deciding to send it.
   const [pendingFile, setPendingFile] = useState<File | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [isSending, setIsSending] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const remainingSlots = MAX_MESSAGE_ATTACHMENTS - attachments.length - uploading.length;
@@ -155,47 +159,61 @@ export function MessageComposer({
     const attachmentKeys = attachments.map((attachment) => attachment.key);
     if (!value && attachmentKeys.length === 0) return;
 
-    startTransition(async () => {
-      if (target.kind === "reply") {
-        const result = await replyToConversation(target.conversationId, value, attachmentKeys);
+    setIsSending(true);
+    void (async () => {
+      try {
+        if (target.kind === "reply") {
+          const result = await replyToConversation(target.conversationId, value, attachmentKeys);
+          // Forced to commit and paint on its own, ahead of appending the
+          // message below: the button must stop showing "Sending…" before
+          // the new bubble appears, not in the same update as it - plain
+          // setState here left the two visibly out of order, since onSent
+          // updates a different component (ConversationThreadPanel) than
+          // this one's own pending flag.
+          flushSync(() => setIsSending(false));
+          if ("error" in result) {
+            show(result.error, "error");
+            return;
+          }
+          setText("");
+          attachments.forEach((attachment) => releasePreview(attachment.previewUrl));
+          setAttachments([]);
+          onSent?.(result.message);
+          return;
+        }
+
+        const result =
+          target.kind === "listing"
+            ? await startListingConversation(target.listingId, value, attachmentKeys)
+            : await startBookingConversation(target.bookingId, value, attachmentKeys);
+        setIsSending(false);
         if ("error" in result) {
           show(result.error, "error");
           return;
         }
-        setText("");
-        attachments.forEach((attachment) => releasePreview(attachment.previewUrl));
-        setAttachments([]);
-        onSent?.(result.message);
-        return;
+        router.push(`/messages/${result.conversation.id}`);
+      } catch (error) {
+        setIsSending(false);
+        throw error;
       }
-
-      const result =
-        target.kind === "listing"
-          ? await startListingConversation(target.listingId, value, attachmentKeys)
-          : await startBookingConversation(target.bookingId, value, attachmentKeys);
-      if ("error" in result) {
-        show(result.error, "error");
-        return;
-      }
-      router.push(`/messages/${result.conversation.id}`);
-    });
+    })();
   }
 
-  const canSend = !isPending && uploading.length === 0 && (text.trim().length > 0 || attachments.length > 0);
+  const canSend = !isSending && uploading.length === 0 && (text.trim().length > 0 || attachments.length > 0);
 
   return (
     <div className="flex flex-col gap-2">
       {(attachments.length > 0 || uploading.length > 0) && (
         <ul className="flex flex-wrap gap-2">
           {attachments.map((attachment) => (
-            <li key={attachment.key} className="group relative h-16 w-16 overflow-hidden rounded-lg border border-line">
+            <li key={attachment.key} className="group relative h-32 w-32 overflow-hidden rounded-lg border border-line">
               {/* eslint-disable-next-line @next/next/no-img-element -- a local blob: URL, not an optimizable remote image */}
               <img src={attachment.previewUrl} alt="" className="h-full w-full object-cover" />
               <button
                 type="button"
                 onClick={() => removeAttachment(attachment.key)}
                 aria-label={`Remove ${attachment.fileName}`}
-                className="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-ink/80 text-xs text-white opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+                className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center rounded-full bg-ink/80 text-sm text-white opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
               >
                 ×
               </button>
@@ -204,7 +222,7 @@ export function MessageComposer({
           {uploading.map((slot) => (
             <li
               key={slot.id}
-              className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-line bg-surface-muted text-center text-[0.625rem] text-ink-soft"
+              className="flex h-32 w-32 items-center justify-center rounded-lg border border-dashed border-line bg-surface-muted text-center text-xs text-ink-soft"
             >
               Uploading…
             </li>
@@ -236,6 +254,7 @@ export function MessageComposer({
             </Button>
           </>
         )}
+        {extraButton}
         <textarea
           aria-label={label}
           id="message-text"
@@ -255,7 +274,7 @@ export function MessageComposer({
           className={`${inputBase} max-h-32 flex-1 resize-none rounded-2xl`}
         />
         <Button className="shrink-0" disabled={!canSend} onClick={submit}>
-          {isPending ? "Sending…" : submitLabel}
+          {isSending ? "Sending…" : submitLabel}
         </Button>
       </div>
 

@@ -33,13 +33,15 @@ export type NotificationType =
   // on a booking's status, so these carry an expires_at that matters.
   | "WAITLIST_JOINED"
   | "WAITLIST_OFFERED"
-  | "WAITLIST_OFFER_EXPIRED";
-  
+  | "WAITLIST_OFFER_EXPIRED"
+  // S2-19: handover meetup coordination on a confirmed booking.
+  | "MEETUP_PROPOSED"
+  | "MEETUP_ACCEPTED";
 
 export type AppNotification = {
   id: string;
   type: NotificationType;
-  category: "BOOKING" | "WAITLIST";
+  category: "BOOKING" | "WAITLIST" | "MEETUP";
   title: string;
   body: string;
   /** What the member can expect to happen next. */
@@ -97,6 +99,8 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   WAITLIST_JOINED: "Waitlist joined",
   WAITLIST_OFFERED: "Waitlist dates free",
   WAITLIST_OFFER_EXPIRED: "Waitlist offer closed",
+  MEETUP_PROPOSED: "Meetup proposed",
+  MEETUP_ACCEPTED: "Meetup confirmed",
 };
 
 export const NOTIFICATION_TYPES = Object.keys(NOTIFICATION_TYPE_LABELS) as NotificationType[];
