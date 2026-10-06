@@ -1,9 +1,12 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { CalendarClock } from "lucide-react";
+import { Button } from "@/components/ui";
 import { MessageThread } from "./message-thread";
 import { MessageComposer } from "./message-composer";
 import { MeetupProposalModal } from "./meetup-proposal-modal";
+import { ConfirmedMeetupBar } from "./confirmed-meetup-bar";
 import { deriveMeetupState } from "@/lib/meetups";
 import type { ConversationLimits, Message } from "@/lib/conversations";
 
@@ -27,8 +30,11 @@ export function ConversationThreadPanel({
   otherPartyName,
   attachmentLimits,
   replaceComposerWith,
+  footerBanner,
   bookingId,
   meetupEligible = false,
+  defaultLocationArea = null,
+  bookingStartDate = null,
 }: {
   conversationId: string;
   initialMessages: Message[];
@@ -44,10 +50,27 @@ export function ConversationThreadPanel({
    * booking's status, so the banner and this swap can't disagree.
    */
   replaceComposerWith?: ReactNode;
+  /**
+   * Rendered above the composer, below the scrolling thread - the enquiry
+   * side's "ready to lock in your dates?" / request-status card lives here
+   * rather than above the thread, so it sits with the other actionable
+   * controls (the composer, the meetup trigger) instead of pushing the
+   * conversation itself further down the page.
+   */
+  footerBanner?: ReactNode;
   /** S2-19: the booking this thread belongs to - needed to propose a meetup. Only set for a BOOKING-scope thread. */
   bookingId?: string;
   /** S2-19: whether "Arrange meetup" should be offered at all (AC6) - true only while the booking is CONFIRMED. */
   meetupEligible?: boolean;
+  /** S2-19 UX follow-up: the listing's own area, offered as the meetup location's starting point. */
+  defaultLocationArea?: string | null;
+  /**
+   * The booking's own start date - the only day a proposed meetup may fall
+   * on. Earlier is unsafe (a back-to-back booking means the item can still
+   * be with the previous renter until this date), and the backend only
+   * guarantees the item is this renter's to collect on it, not after.
+   */
+  bookingStartDate?: string | null;
 }) {
   const [messages, setMessages] = useState(initialMessages);
   const [showMeetupModal, setShowMeetupModal] = useState(false);
@@ -57,30 +80,27 @@ export function ConversationThreadPanel({
     setMessages((current) => [...current, message]);
   }
 
+  const meetupActive = Boolean(meetupState.pending || meetupState.confirmed);
+
   return (
     <>
+      {meetupState.confirmed && (
+        <ConfirmedMeetupBar confirmed={meetupState.confirmed} rescheduleProposed={meetupState.pending !== null} />
+      )}
+
       <div className="flex-1 overflow-y-auto">
         <MessageThread
           messages={messages}
           currentUserId={currentUserId}
           otherPartyName={otherPartyName}
           pendingMeetupProposalId={meetupState.pending?.id ?? null}
+          confirmedMeetupProposalId={meetupState.confirmed?.id ?? null}
           onMeetupAccepted={appendMessage}
-          onReproposeMeetup={() => setShowMeetupModal(true)}
+          onMeetupRejected={() => setShowMeetupModal(true)}
         />
       </div>
 
-      {bookingId && meetupEligible && (
-        <div className="border-t border-line px-4 py-3">
-          <button
-            type="button"
-            onClick={() => setShowMeetupModal(true)}
-            className="text-sm font-medium underline underline-offset-4"
-          >
-            {meetupState.pending || meetupState.confirmed ? "Propose a new meetup" : "Arrange meetup"}
-          </button>
-        </div>
-      )}
+      {footerBanner}
 
       <div className="border-t border-line p-4">
         {replaceComposerWith ?? (
@@ -90,13 +110,28 @@ export function ConversationThreadPanel({
             placeholder="Write a reply…"
             attachmentLimits={attachmentLimits}
             onSent={appendMessage}
+            extraButton={
+              bookingId && meetupEligible ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0 px-2.5"
+                  aria-label={meetupActive ? "Propose a new meetup" : "Arrange meetup"}
+                  onClick={() => setShowMeetupModal(true)}
+                >
+                  <CalendarClock className="size-4" aria-hidden="true" />
+                </Button>
+              ) : undefined
+            }
           />
         )}
       </div>
 
-      {showMeetupModal && bookingId && (
+      {showMeetupModal && bookingId && bookingStartDate && (
         <MeetupProposalModal
           bookingId={bookingId}
+          defaultLocationArea={defaultLocationArea}
+          pickupDate={bookingStartDate}
           onClose={() => setShowMeetupModal(false)}
           onSent={appendMessage}
         />

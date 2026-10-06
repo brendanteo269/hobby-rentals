@@ -56,7 +56,7 @@ export function EnquiryBookingStatus({
   const canRequest = !booking || RETRYABLE_BOOKING_STATUSES.includes(booking.status);
 
   return (
-    <div className="border-b border-line p-3">
+    <div className="border-t border-line p-3">
       <div className="rounded-2xl border border-line bg-surface-muted p-4">
         {booking ? (
           <div className="flex flex-wrap items-start justify-between gap-3">

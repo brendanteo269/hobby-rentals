@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
 import { Paperclip } from "lucide-react";
@@ -79,6 +79,7 @@ export function MessageComposer({
   placeholder = "Write a message…",
   submitLabel = "Send",
   attachmentLimits,
+  extraButton,
   onSent,
 }: {
   target: Target;
@@ -86,6 +87,8 @@ export function MessageComposer({
   placeholder?: string;
   submitLabel?: string;
   attachmentLimits?: ConversationLimits;
+  /** An extra control shown alongside the attachment button - e.g. the booking thread's "Arrange meetup" trigger. */
+  extraButton?: ReactNode;
   /**
    * Called with the sent message right after a `kind: "reply"` send
    * succeeds, so the thread can show it immediately instead of waiting on a
@@ -251,6 +254,7 @@ export function MessageComposer({
             </Button>
           </>
         )}
+        {extraButton}
         <textarea
           aria-label={label}
           id="message-text"
