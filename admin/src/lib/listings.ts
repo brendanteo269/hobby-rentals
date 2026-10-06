@@ -4,11 +4,8 @@ import type { StatusTone } from "@/lib/users";
 /** Mirrors app/listing_service.py's ListingStatus enum on the backend. */
 export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "PENDING_REMOVAL" | "REMOVED";
 
-/** ACTIVE first: it's the default filter and the status an admin checks most often. */
+/** ACTIVE first: it's the status an admin checks most often. */
 export const LISTING_STATUSES: ListingStatus[] = ["ACTIVE", "DRAFT", "ARCHIVED", "PENDING_REMOVAL", "REMOVED"];
-
-/** What the status filter shows when nothing has been explicitly chosen - the live listings, not every draft and removal. */
-export const DEFAULT_LISTING_STATUSES: ListingStatus[] = ["ACTIVE"];
 
 export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   DRAFT: "Draft",
@@ -34,6 +31,61 @@ export function listingStatusLabel(status: string): string {
 
 export function listingStatusTone(status: string): StatusTone {
   return LISTING_STATUS_TONE[status as ListingStatus] ?? "neutral";
+}
+
+/** Mirrors app/listing_service.py's Condition enum. */
+export type ListingCondition = "NEW" | "GOOD" | "FAIR" | "POOR";
+
+export const LISTING_CONDITION_LABELS: Record<ListingCondition, string> = {
+  NEW: "New",
+  GOOD: "Good",
+  FAIR: "Fair",
+  POOR: "Poor",
+};
+
+/** Falls back to the raw enum value so an unrecognised condition never renders blank. */
+export function listingConditionLabel(condition: string): string {
+  return LISTING_CONDITION_LABELS[condition as ListingCondition] ?? condition;
+}
+
+/** Mirrors app/listing_service.py's LocationArea enum - Singapore planning areas, not compass regions. */
+export const LOCATION_LABELS: Record<string, string> = {
+  ANG_MO_KIO: "Ang Mo Kio",
+  BEDOK: "Bedok",
+  BISHAN: "Bishan",
+  BUKIT_BATOK: "Bukit Batok",
+  BUKIT_MERAH: "Bukit Merah",
+  BUKIT_PANJANG: "Bukit Panjang",
+  BUKIT_TIMAH: "Bukit Timah",
+  CHOA_CHU_KANG: "Choa Chu Kang",
+  CLEMENTI: "Clementi",
+  DOWNTOWN_CORE: "Downtown Core",
+  EAST_COAST: "East Coast",
+  GEYLANG: "Geylang",
+  HOUGANG: "Hougang",
+  JURONG_EAST: "Jurong East",
+  JURONG_WEST: "Jurong West",
+  KALLANG: "Kallang",
+  MARINE_PARADE: "Marine Parade",
+  NOVENA: "Novena",
+  ORCHARD: "Orchard",
+  PASIR_RIS: "Pasir Ris",
+  PUNGGOL: "Punggol",
+  QUEENSTOWN: "Queenstown",
+  SEMBAWANG: "Sembawang",
+  SENGKANG: "Sengkang",
+  SENTOSA: "Sentosa",
+  SERANGOON: "Serangoon",
+  TAMPINES: "Tampines",
+  TIONG_BAHRU: "Tiong Bahru",
+  TOA_PAYOH: "Toa Payoh",
+  WOODLANDS: "Woodlands",
+  YISHUN: "Yishun",
+};
+
+/** Falls back to the raw enum value so an unrecognised area never renders blank. */
+export function listingLocationLabel(locationArea: string): string {
+  return LOCATION_LABELS[locationArea] ?? locationArea;
 }
 
 export type CategoryOption = { slug: string; label: string };
@@ -78,12 +130,12 @@ export type ListingSearchResult = {
 
 /**
  * Finds listings by listing id, item name, owner display name, or owner
- * email, optionally narrowed by category and/or a set of statuses.
+ * email, optionally narrowed by a set of categories and/or a set of
+ * statuses.
  *
- * `statuses` is the already-resolved filter (the page applies the
- * "default to Published" rule before calling this) - an empty array here
- * means "no listing can match", not "any status", so callers must not pass
- * one expecting "any".
+ * `categories` and `statuses` both pass straight through: empty means
+ * "any category"/"any status" (admin_search_listings treats an empty or
+ * null array as no filter on that column), not "match nothing".
  *
  * The matching happens in admin_search_listings, which re-checks
  * authorisation itself. A caller without the secret key gets an error and an
@@ -94,7 +146,7 @@ export type ListingSearchResult = {
  */
 export async function searchListings(
   query: string,
-  category: string,
+  categories: string[],
   statuses: string[],
   page = 1,
 ): Promise<ListingSearchResult> {
@@ -102,7 +154,7 @@ export async function searchListings(
 
   const { data, error } = await supabase.rpc("admin_search_listings", {
     search: query,
-    category_filter: category || null,
+    category_filter: categories,
     status_filter: statuses,
     result_limit: PAGE_SIZE,
     result_offset: (page - 1) * PAGE_SIZE,
@@ -124,7 +176,7 @@ export async function searchListings(
   if (rows.length === 0 && page > 1) {
     const { data: firstPage, error: firstPageError } = await supabase.rpc("admin_search_listings", {
       search: query,
-      category_filter: category || null,
+      category_filter: categories,
       status_filter: statuses,
       result_limit: PAGE_SIZE,
       result_offset: 0,
@@ -184,6 +236,11 @@ export async function getListingById(id: string): Promise<AdminListingDetail | n
   const rows = (data ?? []) as Omit<AdminListingDetail, "upcomingBlackoutCount">[];
   const listing = rows[0];
   if (!listing) return null;
+
+  // Defensive: admin_get_listing on a database still running an older copy
+  // of the migration (photo_keys was added after the function's first
+  // version) won't carry this column at all, not even as null.
+  listing.photo_keys ??= [];
 
   // listing_blackout_dates grants select to authenticated/service_role
   // directly (see 20260915000000_owner_and_listing_availability.sql), so this

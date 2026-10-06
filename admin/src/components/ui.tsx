@@ -36,7 +36,7 @@ export function ButtonLink({ variant = "solid", className = "", children, ...pro
 // Shared by every native form control below, so the visual decision — border,
 // background, padding, focus ring — lives in one place rather than being
 // copied wherever a select or textarea needs to look like an Input.
-const fieldBase =
+export const fieldBase =
   "w-full rounded-sm border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-ink";
 
 export function Input({ className = "", ...props }: ComponentProps<"input">) {
