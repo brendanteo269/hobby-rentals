@@ -82,6 +82,11 @@ export function BookingQuoteSummary({
       <Row label="Rental subtotal">{formatMoney(quote.rental_subtotal_cents)}</Row>
       {extra}
       <Row label="Platform fee">{formatMoney(quote.platform_fee_cents)}</Row>
+      {/* S2-09: only once taken. An unselected option is not a charge, and a
+          zero row beside real ones reads as a thing you are paying for. */}
+      {quote.damage_protection?.selected && (
+        <Row label="Damage protection">{formatMoney(quote.damage_protection.fee_cents)}</Row>
+      )}
       <Row label="Security deposit">{formatMoney(quote.deposit_cents)}</Row>
       <Row
         strong

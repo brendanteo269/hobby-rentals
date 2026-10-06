@@ -97,6 +97,10 @@ export function createListing(data: CreateListingRequest) {
 export type ListingLimits = {
   /** Basis points (10000 = 100%) a deposit may not exceed of the listing's weekly-equivalent rate. */
   deposit_cap_bps: number;
+  /** S2-09: above this replacement value, damage protection is not offered. */
+  damage_protection_max_replacement_value_cents: number;
+  /** The most the scheme pays, before the per-listing cap. */
+  damage_protection_coverage_cap_cents: number;
 };
 
 /** Server-enforced listing limits, so the create-listing form can show an owner the deposit cap before they submit, not just reject it after. */

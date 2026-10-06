@@ -13,15 +13,31 @@ import type {
 // Re-exported so existing callers keep importing the quote from here.
 export type { BookingQuote } from "@/lib/bookings";
 
-export function createBooking(listing_id: string, start_date: string, end_date: string, idempotency_key: string) {
+export function createBooking(
+  listing_id: string,
+  start_date: string,
+  end_date: string,
+  idempotency_key: string,
+  damage_protection = false,
+) {
   return backendRequest<Booking>("/bookings", {
     method: "POST",
-    body: JSON.stringify({ listing_id, start_date, end_date, idempotency_key }),
+    body: JSON.stringify({ listing_id, start_date, end_date, idempotency_key, damage_protection }),
   });
 }
 
-export function getBookingQuote(listingId: string, startDate: string, endDate: string) {
-  const query = new URLSearchParams({ listing_id: listingId, start_date: startDate, end_date: endDate });
+export function getBookingQuote(
+  listingId: string,
+  startDate: string,
+  endDate: string,
+  damageProtection = false,
+) {
+  const query = new URLSearchParams({
+    listing_id: listingId,
+    start_date: startDate,
+    end_date: endDate,
+    damage_protection: String(damageProtection),
+  });
   return backendRequest<BookingQuote>(`/bookings/quote?${query.toString()}`);
 }
 
