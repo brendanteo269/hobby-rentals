@@ -76,6 +76,36 @@ export type BookingQuoteLine = {
  * @/lib/api/bookings so client components can read it - the bundle quote is
  * this shape too, which is what lets one component render both.
  */
+/**
+ * S2-09: the damage protection offer, and what was taken of it.
+ *
+ * `available` plus the terms describe the offer; `selected` and `fee_cents`
+ * describe the choice. All three terms are present before the renter decides,
+ * because consent to terms disclosed afterwards is not consent.
+ */
+export type DamageProtectionOffer = {
+  available: boolean;
+  selected: boolean;
+  /** What this booking is charged; zero when protection was declined. */
+  fee_cents: number;
+  /** What opting in costs, stated whether or not it was taken. */
+  offered_fee_cents: number | null;
+  coverage_cap_cents: number | null;
+  excess_cents: number | null;
+  /** Why there is no offer, in words for the renter. */
+  unavailable_reason: string | null;
+  /**
+   * The deposit held as security against damage. Not a cap on liability: it
+   * is the money already held, not the limit of what a renter owes.
+   */
+  deposit_at_risk_cents: number;
+  /**
+   * What replacing the item would cost - the real ceiling on unprotected
+   * damage. Null when the owner never declared one.
+   */
+  replacement_value_cents: number | null;
+};
+
 export type BookingQuote = {
   rental_days: number;
   price_per_day_cents: number | null;
@@ -85,6 +115,7 @@ export type BookingQuote = {
   platform_fee_bps: number;
   platform_fee_cents: number;
   deposit_cents: number;
+  damage_protection: DamageProtectionOffer;
   total_amount_cents: number;
 };
 

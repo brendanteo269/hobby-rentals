@@ -9,6 +9,7 @@ import { PickupLocationField } from "@/components/listings/pickup-location-field
 import { RentalDurationField } from "@/components/listings/rental-duration-field";
 import { PhotoUploadField } from "@/components/listings/photo-upload-field";
 import { PriceFields } from "@/components/listings/price-fields";
+import { ReplacementValueField } from "@/components/listings/replacement-value-field";
 import { BaselinePhotosField } from "@/components/passport/baseline-photos-field";
 import { SerialField } from "@/components/passport/serial-form";
 import type { ListingFormState } from "@/app/listings/actions";
@@ -84,6 +85,8 @@ export function ListingForm({
   profileAvailableDays,
   profileDefaultLocation,
   depositCapBps,
+  protectionEligibilityCapCents,
+  protectionCoverageCapCents,
   categories,
 }: {
   action: (prev: ListingFormState, formData: FormData) => Promise<ListingFormState>;
@@ -99,6 +102,9 @@ export function ListingForm({
   profileDefaultLocation: LocationArea | null;
   /** Basis points (10000 = 100%) a deposit may not exceed of the weekly-equivalent rate - drives the live recommendation under the deposit field. */
   depositCapBps: number;
+  /** S2-09 scheme limits, shown as guidance under the replacement value. */
+  protectionEligibilityCapCents: number;
+  protectionCoverageCapCents: number;
   categories: ListingCategoryOption[];
 }) {
   const editing = listing !== undefined;
@@ -321,6 +327,16 @@ export function ListingForm({
           priceError={errors.price_per_day_cents ?? errors.price_per_week_cents}
           depositError={errors.deposit_cents}
           initial={listing}
+        />
+
+        {/* S2-09. Below the deposit because the two answer related questions -
+            what the renter risks, and what the item is worth - and a renter
+            only ever sees the consequences of this one. */}
+        <ReplacementValueField
+          error={errors.replacement_value_cents}
+          initialCents={listing?.replacement_value_cents}
+          eligibilityCapCents={protectionEligibilityCapCents}
+          coverageCapCents={protectionCoverageCapCents}
         />
       </FormSection>
 

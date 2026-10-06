@@ -39,17 +39,28 @@ async function run(action: () => Promise<Booking>): Promise<BookingActionResult>
   }
 }
 
-export async function quoteBooking(listingId: string, startDate: string, endDate: string): Promise<BookingQuoteResult> {
+export async function quoteBooking(
+  listingId: string,
+  startDate: string,
+  endDate: string,
+  damageProtection = false,
+): Promise<BookingQuoteResult> {
   try {
-    return { quote: await getBookingQuote(listingId, startDate, endDate) };
+    return { quote: await getBookingQuote(listingId, startDate, endDate, damageProtection) };
   } catch (error) {
     if (error instanceof BackendApiError) return { error: error.message };
     throw error;
   }
 }
 
-export async function requestBooking(listingId: string, startDate: string, endDate: string, idempotencyKey: string) {
-  return run(() => createBooking(listingId, startDate, endDate, idempotencyKey));
+export async function requestBooking(
+  listingId: string,
+  startDate: string,
+  endDate: string,
+  idempotencyKey: string,
+  damageProtection = false,
+) {
+  return run(() => createBooking(listingId, startDate, endDate, idempotencyKey, damageProtection));
 }
 
 export async function changeBookingStatus(bookingId: string, nextStatus: BookingStatus) {

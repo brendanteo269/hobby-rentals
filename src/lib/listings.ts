@@ -129,6 +129,8 @@ export type Listing = {
   price_per_day_cents: number | null;
   price_per_week_cents: number | null;
   deposit_cents: number;
+  /** S2-09: what the owner says it would cost to replace. Null when undeclared. */
+  replacement_value_cents: number | null;
   min_rental_days: number | null;
   max_rental_days: number | null;
   available_from: string;
@@ -306,6 +308,7 @@ export type CreateListingRequest = {
   condition: ListingCondition;
   location_area: LocationArea;
   deposit_cents: number;
+  replacement_value_cents?: number | null;
   /**
    * Price per rental block is a choice, not two mandatory fields: at least
    * one of these two must be set (FastAPI 422s otherwise), but neither is
@@ -360,6 +363,7 @@ export type UpdateListingRequest = Partial<
     | "condition"
     | "location_area"
     | "deposit_cents"
+    | "replacement_value_cents"
     | "price_per_day_cents"
     | "price_per_week_cents"
     | "min_rental_days"

@@ -8,6 +8,7 @@ import {
   consecutiveDatesFrom,
 } from "@/components/bookings/availability-calendar";
 import { BookingQuoteSummary } from "@/components/bookings/booking-quote-summary";
+import { DamageProtectionField } from "@/components/bookings/damage-protection-field";
 import { joinListingWaitlist, leaveListingWaitlist } from "@/app/waitlist/actions";
 import { quoteBooking, requestBooking } from "@/app/bookings/actions";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
@@ -90,6 +91,9 @@ export function WaitlistPanel({
   // the key that makes a retry of that same attempt safe. Held per entry, so
   // only the row being booked expands.
   const [booking, setBooking] = useState<{ entryId: string; quote: BookingQuote; key: string } | null>(null);
+  // S2-09: the same choice the booking form offers, since this reaches the
+  // same place. Re-quoted on toggle so the total is always the server's.
+  const [damageProtection, setDamageProtection] = useState(false);
   const [errorCode, setErrorCode] = useState<string | undefined>();
   const [shortfallCents, setShortfallCents] = useState<number | undefined>();
 
@@ -105,7 +109,7 @@ export function WaitlistPanel({
     clearOutcome();
     setBooking(null);
     startTransition(async () => {
-      const result = await quoteBooking(listingId, entry.start_date, entry.end_date);
+      const result = await quoteBooking(listingId, entry.start_date, entry.end_date, damageProtection);
       if ("error" in result) {
         setError(result.error);
         return;
@@ -114,11 +118,21 @@ export function WaitlistPanel({
     });
   }
 
+  function toggleProtection(entry: WaitlistEntry, selected: boolean) {
+    setDamageProtection(selected);
+    clearOutcome();
+    startTransition(async () => {
+      const result = await quoteBooking(listingId, entry.start_date, entry.end_date, selected);
+      if ("error" in result) setError(result.error);
+      else setBooking({ entryId: entry.id, quote: result.quote, key: crypto.randomUUID() });
+    });
+  }
+
   function confirmOffer(entry: WaitlistEntry) {
     if (!booking || booking.entryId !== entry.id) return;
     clearOutcome();
     startTransition(async () => {
-      const result = await requestBooking(listingId, entry.start_date, entry.end_date, booking.key);
+      const result = await requestBooking(listingId, entry.start_date, entry.end_date, booking.key, damageProtection);
       if ("error" in result) {
         setError(result.error);
         setErrorCode(result.code);
@@ -239,6 +253,11 @@ export function WaitlistPanel({
                   breakdown the booking form shows, from the same component. */}
               {booking?.entryId === entry.id && (
                 <div className="mt-2">
+                  <DamageProtectionField
+                    offer={booking.quote.damage_protection}
+                    onChange={(selected) => toggleProtection(entry, selected)}
+                    disabled={isPending}
+                  />
                   <BookingQuoteSummary quote={booking.quote} />
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Button
