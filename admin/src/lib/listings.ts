@@ -1,9 +1,14 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { StatusTone } from "@/lib/users";
 
 /** Mirrors app/listing_service.py's ListingStatus enum on the backend. */
 export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "PENDING_REMOVAL" | "REMOVED";
 
-export const LISTING_STATUSES: ListingStatus[] = ["DRAFT", "ACTIVE", "ARCHIVED", "PENDING_REMOVAL", "REMOVED"];
+/** ACTIVE first: it's the default filter and the status an admin checks most often. */
+export const LISTING_STATUSES: ListingStatus[] = ["ACTIVE", "DRAFT", "ARCHIVED", "PENDING_REMOVAL", "REMOVED"];
+
+/** What the status filter shows when nothing has been explicitly chosen - the live listings, not every draft and removal. */
+export const DEFAULT_LISTING_STATUSES: ListingStatus[] = ["ACTIVE"];
 
 export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   DRAFT: "Draft",
@@ -12,6 +17,40 @@ export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   PENDING_REMOVAL: "Removal scheduled",
   REMOVED: "Removed",
 };
+
+/** Published reads as the "it's live" state; a scheduled removal is the one that needs attention. */
+export const LISTING_STATUS_TONE: Record<ListingStatus, StatusTone> = {
+  DRAFT: "neutral",
+  ACTIVE: "positive",
+  ARCHIVED: "neutral",
+  PENDING_REMOVAL: "warning",
+  REMOVED: "critical",
+};
+
+/** Falls back to the raw slug so an unrecognised status/category never renders blank. */
+export function listingStatusLabel(status: string): string {
+  return LISTING_STATUS_LABELS[status as ListingStatus] ?? status;
+}
+
+export function listingStatusTone(status: string): StatusTone {
+  return LISTING_STATUS_TONE[status as ListingStatus] ?? "neutral";
+}
+
+export type CategoryOption = { slug: string; label: string };
+
+/** Every listing category, slug to display label - "Photography & video" rather than PHOTOGRAPHY_VIDEOGRAPHY. */
+export async function getCategoryOptions(): Promise<CategoryOption[]> {
+  const { data, error } = await createAdminClient()
+    .from("listing_categories")
+    .select("slug,label")
+    .order("display_order");
+
+  if (error) {
+    console.error("Failed to load categories:", error.message);
+    return [];
+  }
+  return data ?? [];
+}
 
 /** A row of admin_search_listings - one listing, with just enough of its owner to show in a table. */
 export type AdminListingSummary = {
@@ -39,7 +78,12 @@ export type ListingSearchResult = {
 
 /**
  * Finds listings by listing id, item name, owner display name, or owner
- * email, optionally narrowed by category and/or status.
+ * email, optionally narrowed by category and/or a set of statuses.
+ *
+ * `statuses` is the already-resolved filter (the page applies the
+ * "default to Published" rule before calling this) - an empty array here
+ * means "no listing can match", not "any status", so callers must not pass
+ * one expecting "any".
  *
  * The matching happens in admin_search_listings, which re-checks
  * authorisation itself. A caller without the secret key gets an error and an
@@ -51,7 +95,7 @@ export type ListingSearchResult = {
 export async function searchListings(
   query: string,
   category: string,
-  status: string,
+  statuses: string[],
   page = 1,
 ): Promise<ListingSearchResult> {
   const supabase = createAdminClient();
@@ -59,7 +103,7 @@ export async function searchListings(
   const { data, error } = await supabase.rpc("admin_search_listings", {
     search: query,
     category_filter: category || null,
-    status_filter: status || null,
+    status_filter: statuses,
     result_limit: PAGE_SIZE,
     result_offset: (page - 1) * PAGE_SIZE,
   });
@@ -81,7 +125,7 @@ export async function searchListings(
     const { data: firstPage, error: firstPageError } = await supabase.rpc("admin_search_listings", {
       search: query,
       category_filter: category || null,
-      status_filter: status || null,
+      status_filter: statuses,
       result_limit: PAGE_SIZE,
       result_offset: 0,
     });
@@ -116,6 +160,7 @@ export type AdminListingDetail = {
   /** Recurring weekly blackout rules, as stored - only its presence is shown, not the rules themselves. */
   blackout_dates: unknown[];
   attributes: Record<string, unknown>;
+  photo_keys: string[];
   status: string;
   created_at: string;
   updated_at: string;

@@ -97,3 +97,20 @@ export function adminApiKey(): string {
   }
   return key;
 }
+
+/**
+ * The public URL a listing photo is served from - the same formula as
+ * storage_service.photo_url on the backend. Listing photos (unlike passport
+ * evidence) live under a public `listings/` prefix, so this needs no
+ * presigning: anyone with the URL can already open it.
+ */
+export function listingPhotoUrl(photoKey: string): string {
+  const bucket = process.env.S3_BUCKET_NAME;
+  const region = process.env.AWS_REGION;
+  if (!bucket || !region) {
+    throw new Error(
+      "Missing S3_BUCKET_NAME or AWS_REGION. Add them to admin/.env.local (same values as the API's .env).",
+    );
+  }
+  return `https://${bucket}.s3.${region}.amazonaws.com/${photoKey}`;
+}
