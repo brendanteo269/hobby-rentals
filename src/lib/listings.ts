@@ -116,6 +116,17 @@ export type BrowseListingsResponse = {
   page_size: number;
 };
 
+/** Public landing-page card enriched with the category-level demand badge. */
+export type PopularListingCard = ListingCard & {
+  is_high_demand: boolean;
+};
+
+export type PopularListingsResponse = {
+  results: PopularListingCard[];
+  /** Count before the endpoint limits the carousel to eight cards. */
+  active_inventory_count: number;
+};
+
 /** A listing in full, as returned when one is created. */
 export type Listing = {
   id: string;
@@ -200,7 +211,6 @@ export type SerialStatus = "PENDING" | "VERIFIED" | "NO_SERIAL" | "DUPLICATE";
  */
 export function passportBadge(status: SerialStatus | null | undefined): string | null {
   if (status === "VERIFIED") return "Serial verified";
-  if (status === "NO_SERIAL") return "Photo verified";
   return null;
 }
 

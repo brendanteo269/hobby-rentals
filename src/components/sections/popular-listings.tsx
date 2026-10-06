@@ -1,23 +1,14 @@
-import { Container, SectionHead } from "@/components/ui";
-import { ListingCard } from "@/components/listing-card";
-import { LISTINGS } from "@/lib/marketplace-data";
+import { ButtonLink, Container, SectionHead } from "@/components/ui";
+import { getPopularListings } from "@/lib/api/listings";
+import { PopularListingsCarousel } from "./popular-listings-carousel";
 
-/**
- * Grid of hand-picked listings.
- *
- * "Popular" is a label, not a ranking — LISTINGS is hand-authored placeholder
- * data (see marketplace-data.ts), and the real API has no popularity/booking
- * count field yet to sort by.
- */
-export function PopularListings() {
+export async function PopularListings() {
+  const popular = await getPopularListings().catch(() => null);
+  const hasEnoughInventory = popular !== null && popular.active_inventory_count >= 4;
   return (
     <Container className="pt-20">
-      <SectionHead title="Popular listings" href="/browse" linkLabel="See all" />
-      <ul className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {LISTINGS.map((listing) => (
-          <ListingCard key={listing.title} listing={listing} />
-        ))}
-      </ul>
+      <SectionHead title="Popular listings" />
+      {hasEnoughInventory ? <><PopularListingsCarousel listings={popular.results} /><div className="mt-9 flex justify-center"><ButtonLink href="/browse" variant="accent" className="px-10 py-4 text-base shadow-sm hover:-translate-y-0.5 hover:shadow-md">See more</ButtonLink></div></> : <div className="mt-8 rounded-2xl border border-line bg-surface-muted px-6 py-12 text-center"><p className="heading text-lg">More gear is coming soon</p><p className="body-copy mx-auto mt-2 max-w-md">Explore all available gear or list your own to start earning.</p><ButtonLink href="/browse" variant="accent" className="mt-6 px-10 py-4 text-base shadow-sm hover:-translate-y-0.5 hover:shadow-md">See more</ButtonLink></div>}
     </Container>
   );
 }
