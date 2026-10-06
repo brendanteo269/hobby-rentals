@@ -291,9 +291,9 @@ export function Chip({
  * things get distinct boxes" language, applied here to keep a long form
  * legible as a sequence of steps rather than one continuous scroll.
  */
-export function FormSection({ title, children }: { title: string; children: ReactNode }) {
+export function FormSection({ title, children, id }: { title: string; children: ReactNode; id?: string }) {
   return (
-    <section className="overflow-hidden card">
+    <section id={id} className="overflow-hidden card">
       <div className="border-b border-line px-6 py-4 sm:px-8">
         <h2 className="heading text-lg">{title}</h2>
       </div>

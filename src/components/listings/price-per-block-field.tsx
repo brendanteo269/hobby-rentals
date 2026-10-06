@@ -20,18 +20,17 @@ export function PricePerBlockField({
   error,
   onRateChange,
   initialBlock = null,
-  initialRate = "",
+  rate,
 }: {
   error?: string;
   /** Fires on every block/rate change, including back to (null, "") when the owner hasn't picked a block yet - so a parent showing a rate-derived hint (the deposit cap) always reflects the current choice. */
   onRateChange?: (block: Block | null, rateDollars: string) => void;
   /** The stored choice when editing; omitted on create, where the owner has not picked yet. */
   initialBlock?: Block | null;
-  /** Dollars, as the input shows them - see centsToDollars. */
-  initialRate?: string;
+  /** Controlled by ListingForm so an applied recommendation updates the submitted input. */
+  rate: string;
 }) {
   const [block, setBlock] = useState<Block | null>(initialBlock);
-  const [rate, setRate] = useState(initialRate);
 
   function chooseBlock(next: Block) {
     setBlock(next);
@@ -39,7 +38,6 @@ export function PricePerBlockField({
   }
 
   function changeRate(next: string) {
-    setRate(next);
     onRateChange?.(block, next);
   }
 

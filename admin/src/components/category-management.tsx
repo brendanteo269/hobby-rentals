@@ -14,7 +14,7 @@ type UiDraft = Draft & { uiId: string };
 const typeLabels: Record<Draft["data_type"], string> = { text: "Text", number: "Number", select: "Dropdown" };
 
 function toDraft(row: AttributeDefinition): UiDraft {
-  return { uiId: row.id, attribute_key: row.attribute_key, label: row.label, data_type: row.data_type, is_required: row.is_required, options: row.options, min_val: row.min_val, max_val: row.max_val, display_order: row.display_order };
+  return { uiId: row.id, attribute_key: row.attribute_key, label: row.label, data_type: row.data_type, is_required: row.is_required, is_pricing_factor: row.is_pricing_factor, options: row.options, min_val: row.min_val, max_val: row.max_val, display_order: row.display_order };
 }
 
 export function CategoryManagement({ definitions, categories, initialSlug }: { definitions: AttributeDefinition[]; categories: AdminCategory[]; initialSlug: string }) {
@@ -79,7 +79,7 @@ export function CategoryManagement({ definitions, categories, initialSlug }: { d
   const addSpecification = () => {
     setRowsByCategory((current) => ({
       ...current,
-      [activeSlug]: [...(current[activeSlug] ?? []), { uiId: "new-" + nextId.current++, attribute_key: "", label: "", data_type: "text", is_required: false, options: [], min_val: null, max_val: null, display_order: 0 }],
+      [activeSlug]: [...(current[activeSlug] ?? []), { uiId: "new-" + nextId.current++, attribute_key: "", label: "", data_type: "text", is_required: false, is_pricing_factor: false, options: [], min_val: null, max_val: null, display_order: 0 }],
     }));
     show("New specification added. Save specifications to publish it.");
   };
@@ -105,6 +105,7 @@ export function CategoryManagement({ definitions, categories, initialSlug }: { d
             <div className="flex min-w-0 items-center gap-2"><h3 className="truncate font-medium">{row.label || "New attribute"}</h3><Badge tone="neutral">{typeLabels[row.data_type]}</Badge></div>
             <div className="flex flex-wrap items-center gap-2">
               <label className="inline-flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={row.is_required} onChange={(event) => update(row.uiId, { is_required: event.target.checked })} /> Required on listing creation</label>
+              <label className="inline-flex items-center gap-2 text-sm font-medium"><input type="checkbox" checked={row.is_pricing_factor} onChange={(event) => update(row.uiId, { is_pricing_factor: event.target.checked })} /> Use in price matching</label>
               <button type="button" aria-label={"Move " + (row.label || "attribute") + " up"} disabled={index === 0} onClick={() => move(index, -1)} className="rounded-sm border border-line px-2 py-1 text-sm disabled:opacity-40">↑</button>
               <button type="button" aria-label={"Move " + (row.label || "attribute") + " down"} disabled={index === rows.length - 1} onClick={() => move(index, 1)} className="rounded-sm border border-line px-2 py-1 text-sm disabled:opacity-40">↓</button>
               <button type="button" aria-label={"Remove " + (row.label || "attribute")} onClick={() => remove(row.uiId)} className="rounded-sm px-2 py-1 text-sm text-bad hover:bg-sand">🗑</button>

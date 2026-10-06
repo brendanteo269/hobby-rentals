@@ -7,6 +7,7 @@ export type AttributeDefinition = {
   label: string;
   data_type: "text" | "number" | "select";
   is_required: boolean;
+  is_pricing_factor: boolean;
   options: string[];
   min_val: number | null;
   max_val: number | null;

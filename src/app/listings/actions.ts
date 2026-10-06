@@ -15,13 +15,26 @@ import {
   updateListing as patchListing,
   updateListingAvailability,
 } from "@/lib/api/listings";
+import { getPricingRecommendation } from "@/lib/api/pricing";
+import type { PricingRecommendation, PricingRecommendationRequest } from "@/lib/pricing";
+
+/** On-demand bridge for the client listing form; FastAPI remains server-only. */
+export async function requestPriceRecommendation(input: PricingRecommendationRequest): Promise<
+  { recommendation: PricingRecommendation; error?: undefined } | { recommendation?: undefined; error: string }
+> {
+  try {
+    return { recommendation: await getPricingRecommendation(input) };
+  } catch (caught) {
+    if (caught instanceof ListingApiError) return { error: caught.message };
+    throw caught;
+  }
+}
 import { dollarsToCents, todayIso } from "@/lib/format";
 import {
   BASELINE_INCOMPLETE,
   parseBaselinePhotos,
   parseSerialClaim,
   SERIAL_INCOMPLETE,
-  isCategory,
   isCondition,
   isLocationArea,
   type BlackoutDate,
@@ -130,7 +143,7 @@ const isBlackout = (value: unknown): value is BlackoutDate =>
  * exception: the edit form disables it once the window has opened, and a
  * disabled input is not submitted at all.
  */
-type ListingFields = Omit<Required<UpdateListingRequest>, "available_from"> &
+type ListingFields = Omit<Required<UpdateListingRequest>, "available_from" | "attributes"> &
   Pick<UpdateListingRequest, "available_from">;
 
 /**
@@ -284,6 +297,8 @@ function changedFields(candidate: UpdateListingRequest, current: Listing): Updat
     const same =
       Array.isArray(next) && Array.isArray(prev)
         ? JSON.stringify(next) === JSON.stringify(prev)
+        : typeof next === "object" && next !== null && typeof prev === "object" && prev !== null
+          ? JSON.stringify(next) === JSON.stringify(prev)
         : next === prev;
     if (!same) Object.assign(changes, { [key]: next });
   }
@@ -404,7 +419,11 @@ export async function updateListing(
   }
 
   try {
-    const { active_booking_count } = await patchListing(listingId, changedFields(parsed.fields, current));
+    const candidate: UpdateListingRequest = {
+      ...parsed.fields,
+      ...(formData.has("attributes") ? { attributes: hiddenAttributes(formData) } : {}),
+    };
+    const { active_booking_count } = await patchListing(listingId, changedFields(candidate, current));
 
     revalidatePath("/listings/mine");
     revalidatePath(`/listings/${listingId}`);

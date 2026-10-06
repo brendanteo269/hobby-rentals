@@ -24,7 +24,7 @@ import { ListingCardCarousel } from "./listing-card-carousel";
  * everything - the carousel's prev/next/dot buttons can't be nested inside
  * an <a>, so the photo needs its own link rather than sharing the outer one.
  */
-export function ListingCard({ listing }: { listing: ListingCardData }) {
+export function ListingCard({ listing, highDemand = false }: { listing: ListingCardData; highDemand?: boolean }) {
   const badge = passportBadge(listing.serial_status);
   return (
     <li className="group overflow-hidden card transition-colors hover:border-ink-soft">
@@ -36,8 +36,11 @@ export function ListingCard({ listing }: { listing: ListingCardData }) {
       />
 
       <Link href={`/listings/${listing.id}`} className="block p-4">
-        <div className="flex items-center justify-between gap-2">
-          <p className="eyebrow">{CATEGORY_LABELS[listing.category]}</p>
+<div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <p className="eyebrow">{CATEGORY_LABELS[listing.category]}</p>
+            {highDemand && <Badge variant="accent">🔥 High demand</Badge>}
+          </div>
           {badge && (
             <Badge variant={listing.serial_status === "VERIFIED" ? "dark" : "neutral"} className="shrink-0 whitespace-nowrap">
               {badge}
