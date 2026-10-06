@@ -157,19 +157,23 @@ export function ListingForm({
 
   const [fields, setFields] = useState<FieldValues>(editing ? fieldsFrom(listing) : EMPTY_FIELDS);
   const [attributeDefinitions, setAttributeDefinitions] = useState<CategoryAttributeDefinition[]>([]);
-  const [attributeValues, setAttributeValues] = useState<Record<string, string | number>>({});
+  const [attributeValues, setAttributeValues] = useState<Record<string, string | number>>(() =>
+    Object.fromEntries(Object.entries(listing?.attributes ?? {}).filter((entry): entry is [string, string | number] =>
+      typeof entry[1] === "string" || typeof entry[1] === "number",
+    )),
+  );
   const [attributeLoadError, setAttributeLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    if (!fields.category || editing) {
+    if (!fields.category) {
       return;
     }
     getCategoryAttributes(fields.category)
       .then((definitions) => { if (!cancelled) setAttributeDefinitions(definitions); })
       .catch(() => { if (!cancelled) setAttributeLoadError("Category specifications could not be loaded. Please try again."); });
     return () => { cancelled = true; };
-  }, [fields.category, editing]);
+  }, [fields.category]);
   const updateField =
     <K extends keyof FieldValues>(key: K) =>
     (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -276,7 +280,7 @@ export function ListingForm({
           </SelectField>
         </div>
 
-        {!editing && attributeDefinitions.length > 0 && (
+        {attributeDefinitions.length > 0 && (
           <div className="border-t border-line pt-5">
             <h3 className="text-sm font-medium">Category specifications</h3>
             <p className="body-copy mt-1">Add the details renters need to compare this item.</p>
@@ -350,11 +354,12 @@ export function ListingForm({
           }}
         />
         <PricingRecommendationPanel
-          key={`${fields.category}:${fields.brand}:${fields.condition}:${priceBlock ?? ""}`}
+          key={`${fields.category}:${fields.brand}:${fields.condition}:${priceBlock ?? ""}:${JSON.stringify(attributeDefinitions.filter((definition) => definition.is_pricing_factor).map((definition) => [definition.attribute_key, attributeValues[definition.attribute_key] ?? null]))}`}
           category={fields.category}
           brand={fields.brand}
           condition={fields.condition}
           billingCycle={priceBlock}
+          attributes={attributeValues}
           onApply={(rate) => {
             setPriceRate(rate);
           }}

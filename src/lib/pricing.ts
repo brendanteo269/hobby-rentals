@@ -7,6 +7,7 @@ export type PricingRecommendationRequest = {
   brand: string;
   condition: ListingCondition;
   billing_cycle: PricingCycle;
+  attributes: Record<string, string | number>;
 };
 
 export type PricingComparable = {
@@ -16,6 +17,7 @@ export type PricingComparable = {
   brand: string;
   condition: ListingCondition;
   normalized_daily_rate_cents: number;
+  matched_attributes: string[];
 };
 
 export type PricingDemand = {

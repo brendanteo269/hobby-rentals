@@ -143,7 +143,7 @@ const isBlackout = (value: unknown): value is BlackoutDate =>
  * exception: the edit form disables it once the window has opened, and a
  * disabled input is not submitted at all.
  */
-type ListingFields = Omit<Required<UpdateListingRequest>, "available_from"> &
+type ListingFields = Omit<Required<UpdateListingRequest>, "available_from" | "attributes"> &
   Pick<UpdateListingRequest, "available_from">;
 
 /**
@@ -298,6 +298,8 @@ function changedFields(candidate: UpdateListingRequest, current: Listing): Updat
     const same =
       Array.isArray(next) && Array.isArray(prev)
         ? JSON.stringify(next) === JSON.stringify(prev)
+        : typeof next === "object" && next !== null && typeof prev === "object" && prev !== null
+          ? JSON.stringify(next) === JSON.stringify(prev)
         : next === prev;
     if (!same) Object.assign(changes, { [key]: next });
   }
@@ -418,7 +420,11 @@ export async function updateListing(
   }
 
   try {
-    const { active_booking_count } = await patchListing(listingId, changedFields(parsed.fields, current));
+    const candidate: UpdateListingRequest = {
+      ...parsed.fields,
+      ...(formData.has("attributes") ? { attributes: hiddenAttributes(formData) } : {}),
+    };
+    const { active_booking_count } = await patchListing(listingId, changedFields(candidate, current));
 
     revalidatePath("/listings/mine");
     revalidatePath(`/listings/${listingId}`);

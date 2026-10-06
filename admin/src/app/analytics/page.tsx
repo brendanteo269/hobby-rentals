@@ -17,35 +17,6 @@ export default async function AnalyticsPage() {
   return <Container className="py-12">
     <p className="eyebrow">Admin</p>
     <h1 className="display-caps mt-3 text-3xl">Category activity & demand</h1>
-    <section className="mt-6 border border-line bg-sand p-6">
-      <h2 className="display-caps text-lg">About dynamic price recommendations & demand analytics</h2>
-      <p className="body-copy mt-2 max-w-4xl">This dashboard monitors the market data and demand trends used to generate pricing suggestions for equipment owners.</p>
-
-      <div className="mt-5 grid gap-6 lg:grid-cols-2">
-        <div>
-          <h3 className="text-sm font-semibold">How the pricing engine works</h3>
-          <p className="mt-2 text-sm text-ink-soft">When an owner clicks “Get Price Suggestion” on a listing, the engine finds active competitor listings in that category, converts all rates to a daily amount, and removes extreme pricing outliers using an Interquartile Range (IQR) filter.</p>
-          <p className="mt-3 text-sm text-ink-soft">It needs at least three comparable listings and searches through these fallback tiers:</p>
-          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-ink-soft">
-            <li><span className="font-medium text-ink">Tier 1 — Exact match:</span> Category + Brand + Condition, such as Camping + Naturehike + Good.</li>
-            <li><span className="font-medium text-ink">Tier 2 — Condition match:</span> Category + Condition, when Tier 1 has fewer than three listings.</li>
-            <li><span className="font-medium text-ink">Tier 3 — Broad match:</span> Category only, when Tier 2 has fewer than three listings.</li>
-          </ol>
-          <p className="mt-3 text-sm text-ink-soft">If Tier 3 still has fewer than three listings after filtering, the system returns <span className="font-medium text-ink">Insufficient market data</span> and leaves the owner free to set a price manually.</p>
-        </div>
-
-        <div>
-          <h3 className="text-sm font-semibold">How demand surges work</h3>
-          <p className="mt-2 text-sm text-ink-soft">The engine tracks customer interest over the latest seven days — listing views and category searches — and compares it with the prior 28-day baseline. If activity is at least 25% above normal, the category enters <span className="font-medium text-ink">High Demand</span>.</p>
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-soft">
-            <li>The recommended rate, lower bound, and upper bound are all raised by a <span className="font-medium text-ink">1.15× (+15%)</span> multiplier.</li>
-            <li>A public <span className="font-medium text-ink">High Demand</span> label appears on the browse page for that category and its listing cards.</li>
-            <li>Cold-start protection keeps the multiplier at <span className="font-medium text-ink">1.0×</span> when the baseline is zero or total current-plus-baseline activity is under five events.</li>
-          </ul>
-        </div>
-      </div>
-    </section>
-
     {rows ? <div className="mt-8 overflow-x-auto border border-line bg-white">
       <table className="min-w-full text-left text-sm">
         <thead className="border-b border-line bg-sand text-ink-soft">
@@ -61,5 +32,40 @@ export default async function AnalyticsPage() {
         <tbody>{rows.map((row) => <tr key={row.category} className="border-b border-line last:border-0"><td className="p-3 font-medium">{row.label}</td><td className="p-3">{row.views_7d}</td><td className="p-3">{row.searches_7d}</td><td className="p-3">{row.baseline_score.toFixed(1)}</td><td className="p-3">{row.surge_percentage > 0 ? "+" : ""}{row.surge_percentage.toFixed(1)}%</td><td className="p-3">{row.is_high_demand ? "High demand" : "Normal"}</td></tr>)}</tbody>
       </table>
     </div> : <p role="alert" className="mt-8 text-sm text-bad">Could not load category activity.</p>}
+
+    <section className="mt-8 border border-line bg-sand p-6 text-sm text-ink-soft">
+      <h2 className="display-caps text-lg text-ink">Pricing Q&amp;A</h2>
+      <p className="mt-3"><span className="font-medium text-ink">Which specifications should be pricing factors?</span> Enable only objective characteristics that materially affect value, such as equipment type, capacity, size, sensor format, or power rating. Leave descriptive or cosmetic fields, such as colour and free-text accessories, disabled unless they genuinely determine rental value.</p>
+      <p className="mt-3"><span className="font-medium text-ink">What happens if a listing has no configured specifications?</span> Nothing changes: Tier 0 is skipped and the engine begins with Category + Brand + Condition.</p>
+      <p className="mt-3"><span className="font-medium text-ink">What happens when an owner changes a pricing factor?</span> The displayed recommendation is cleared. A new request evaluates the updated specification values; changing a non-pricing specification does not invalidate it.</p>
+    </section>
+
+    <section className="mt-8 border border-line bg-sand p-6">
+      <h2 className="display-caps text-lg">About dynamic price recommendations &amp; demand analytics</h2>
+      <p className="body-copy mt-2 max-w-4xl">This dashboard monitors the market data and demand trends used to generate pricing suggestions for equipment owners.</p>
+      <div className="mt-5 grid gap-6 lg:grid-cols-2">
+        <div>
+          <h3 className="text-sm font-semibold">How the pricing engine works</h3>
+          <p className="mt-2 text-sm text-ink-soft">When an owner clicks “Get Price Suggestion”, the engine considers only active listings from other owners in the same category. It converts every comparable to a daily amount, uses a daily rate when one exists (otherwise weekly ÷ 7), and removes extreme rates with a 1.5× Interquartile Range (IQR) filter.</p>
+          <p className="mt-3 text-sm text-ink-soft">It needs at least three post-filter comparables. The recommendation is the median daily rate, with P25 and P75 as the lower and upper bounds. It searches through these tiers in order:</p>
+          <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-ink-soft">
+            <li><span className="font-medium text-ink">Tier 0 — Specification match:</span> Category + Brand + Condition + every specification marked <span className="font-medium text-ink">Use in price matching</span> by an admin. Text and dropdown values must match ignoring surrounding whitespace and letter case; numeric values must be within 25% of the owner&apos;s value.</li>
+            <li><span className="font-medium text-ink">Tier 1 — Exact match:</span> Category + Brand + Condition, used if Tier 0 has too few reliable matches, or if the category has no enabled pricing factors.</li>
+            <li><span className="font-medium text-ink">Tier 2 — Condition match:</span> Category + Condition, used if Tier 1 has fewer than three reliable listings.</li>
+            <li><span className="font-medium text-ink">Tier 3 — Broad match:</span> Category only, used if Tier 2 has fewer than three reliable listings.</li>
+          </ol>
+          <p className="mt-3 text-sm text-ink-soft">If Tier 3 still has fewer than three listings after filtering, the system returns <span className="font-medium text-ink">Insufficient market data</span> and leaves the owner free to set a price manually. The owner panel lists each comparable and the fields it matched on.</p>
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold">How demand surges work</h3>
+          <p className="mt-2 text-sm text-ink-soft">The engine tracks customer interest over the latest seven days — listing views and category searches — and compares it with the prior 28-day baseline. If activity is at least 25% above normal, the category enters <span className="font-medium text-ink">High Demand</span>.</p>
+          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-ink-soft">
+            <li>The recommended rate, lower bound, and upper bound are all raised by a <span className="font-medium text-ink">1.15× (+15%)</span> multiplier.</li>
+            <li>A public <span className="font-medium text-ink">High Demand</span> label appears on the browse page for that category and its listing cards.</li>
+            <li>Cold-start protection keeps the multiplier at <span className="font-medium text-ink">1.0×</span> when the baseline is zero or total current-plus-baseline activity is under five events.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
   </Container>;
 }

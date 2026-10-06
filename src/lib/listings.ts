@@ -287,6 +287,7 @@ export type CategoryAttributeDefinition = {
   label: string;
   data_type: "text" | "number" | "select";
   is_required: boolean;
+  is_pricing_factor: boolean;
   options: string[];
   min_val: number | null;
   max_val: number | null;
@@ -318,6 +319,7 @@ export type UpdateListingRequest = Partial<
     | "available_from"
     | "available_until"
     | "photo_keys"
+    | "attributes"
   >
 >;
 

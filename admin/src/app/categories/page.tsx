@@ -15,7 +15,7 @@ export default async function CategoriesPage({
   await requirePortalSession();
   const supabase = createAdminClient();
   const [{ data: definitions, error: definitionsError }, { data: categories, error: categoriesError }] = await Promise.all([
-    supabase.from("category_attribute_definitions").select("id,category_slug,attribute_key,label,data_type,is_required,options,min_val,max_val,display_order").order("display_order"),
+    supabase.from("category_attribute_definitions").select("id,category_slug,attribute_key,label,data_type,is_required,is_pricing_factor,options,min_val,max_val,display_order").order("display_order"),
     supabase.from("listing_categories").select("slug,label,display_order,is_active").order("display_order"),
   ]);
   const error = definitionsError ?? categoriesError;
