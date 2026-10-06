@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge, EmptyState } from "./ui";
 import { ROUTES } from "@/lib/routes";
 import { formatDate, shortId } from "@/lib/format";
-import { LISTING_STATUS_LABELS, type AdminListingSummary, type ListingStatus } from "@/lib/listings";
+import { listingStatusLabel, listingStatusTone, type AdminListingSummary, type CategoryOption } from "@/lib/listings";
 
 /**
  * Search results.
@@ -11,7 +11,15 @@ import { LISTING_STATUS_LABELS, type AdminListingSummary, type ListingStatus } f
  * place - same reasoning as UserTable: the detail is where an administrator
  * actually investigates something, not a list that has scrolled.
  */
-export function ListingTable({ listings }: { listings: AdminListingSummary[] }) {
+export function ListingTable({
+  listings,
+  categories,
+}: {
+  listings: AdminListingSummary[];
+  /** Slug -> display label, so the Category column reads "Photography & video" rather than a raw enum slug. */
+  categories: CategoryOption[];
+}) {
+  const categoryLabel = (slug: string) => categories.find((c) => c.slug === slug)?.label ?? slug;
   if (listings.length === 0) {
     return (
       <EmptyState
@@ -43,7 +51,7 @@ export function ListingTable({ listings }: { listings: AdminListingSummary[] }) 
                 </Link>
               </td>
               <td className="px-6 py-4">
-                <Badge>{LISTING_STATUS_LABELS[listing.status as ListingStatus] ?? listing.status}</Badge>
+                <Badge tone={listingStatusTone(listing.status)}>{listingStatusLabel(listing.status)}</Badge>
               </td>
               <td className="px-6 py-4">
                 <Link href={ROUTES.user(listing.owner_id)} className="block underline-offset-4 hover:underline">
@@ -51,7 +59,9 @@ export function ListingTable({ listings }: { listings: AdminListingSummary[] }) 
                   <span className="mt-0.5 block text-xs text-ink-soft">{listing.owner_email ?? "No email"}</span>
                 </Link>
               </td>
-              <td className="px-6 py-4 text-ink-soft">{listing.category}</td>
+              <td className="px-6 py-4">
+                <Badge>{categoryLabel(listing.category)}</Badge>
+              </td>
               <td className="px-6 py-4 whitespace-nowrap text-ink-soft">{formatDate(listing.created_at)}</td>
             </tr>
           ))}

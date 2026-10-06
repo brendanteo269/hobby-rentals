@@ -4,10 +4,11 @@ import { requirePortalSession } from "@/lib/admin";
 import { recordAdminAction } from "@/lib/audit";
 import { ROUTES } from "@/lib/routes";
 import { formatDate, formatMoney, shortId } from "@/lib/format";
-import { getListingById, LISTING_STATUS_LABELS, type ListingStatus } from "@/lib/listings";
+import { listingPhotoUrl } from "@/lib/env";
+import { getCategoryOptions, getListingById, listingStatusLabel, listingStatusTone } from "@/lib/listings";
 import { getAdminPassport, SERIAL_STATUS } from "@/lib/passports";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { Badge, Container, DescriptionList, Panel } from "@/components/ui";
+import { Badge, Container, DescriptionList, EmptyState, Panel } from "@/components/ui";
 
 export const metadata = { title: "Listing — HobbyRentals Admin" };
 
@@ -38,16 +39,17 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   // against the owner - same pattern as the passport page's own audit entry.
   await recordAdminAction("listing_viewed", listing.owner_id, { listing_id: id });
 
-  const [passport, { data: attributeDefs }] = await Promise.all([
+  const [passport, { data: attributeDefs }, categories] = await Promise.all([
     getAdminPassport(id).catch(() => null),
     createAdminClient()
       .from("category_attribute_definitions")
       .select("attribute_key,label,data_type")
       .eq("category_slug", listing.category)
       .order("display_order"),
+    getCategoryOptions(),
   ]);
 
-  const statusLabel = LISTING_STATUS_LABELS[listing.status as ListingStatus] ?? listing.status;
+  const categoryLabel = categories.find((c) => c.slug === listing.category)?.label ?? listing.category;
   const serialStatus = passport ? (SERIAL_STATUS[passport.serial_status] ?? SERIAL_STATUS.PENDING) : null;
 
   const setAttributes = ((attributeDefs ?? []) as AttributeDefinitionRow[]).filter(
@@ -75,15 +77,38 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           <h1 className="display-caps mt-3 text-3xl">{listing.name}</h1>
           <p className="body-copy mt-2">{shortId(listing.id)}</p>
         </div>
-        <Badge>{statusLabel}</Badge>
+        <Badge tone={listingStatusTone(listing.status)}>{listingStatusLabel(listing.status)}</Badge>
       </div>
 
       <div className="mt-10 space-y-6">
+        <Panel title="Photos">
+          {listing.photo_keys.length === 0 ? (
+            <div className="-mx-6 -my-5">
+              <EmptyState title="No photos" body="This listing has no photos on record." />
+            </div>
+          ) : (
+            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {listing.photo_keys.map((key) => (
+                <li key={key}>
+                  <a href={listingPhotoUrl(key)} target="_blank" rel="noreferrer" className="block">
+                    {/* eslint-disable-next-line @next/next/no-img-element -- public S3 URL built at request time */}
+                    <img
+                      src={listingPhotoUrl(key)}
+                      alt=""
+                      className="aspect-square w-full border border-line object-cover"
+                    />
+                  </a>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+
         <Panel title="Item details">
           <DescriptionList
             items={[
               { term: "Description", value: <span className="whitespace-pre-line">{listing.description}</span> },
-              { term: "Category", value: listing.category },
+              { term: "Category", value: <Badge>{categoryLabel}</Badge> },
               { term: "Brand", value: listing.brand },
               { term: "Condition", value: listing.condition },
               { term: "Location", value: listing.location_area },
