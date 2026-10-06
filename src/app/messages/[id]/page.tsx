@@ -105,17 +105,6 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
           otherPartyRole={conversation.other_party_role}
         />
 
-        {conversation.scope === "LISTING" && (
-          <EnquiryBookingStatus
-            initialBooking={relevantBooking}
-            listingId={conversation.listing_id}
-            availableDates={availability?.available_dates ?? []}
-            unavailableDates={availability?.unavailable_dates ?? []}
-            minRentalDays={listing?.min_rental_days ?? null}
-            maxRentalDays={listing?.max_rental_days ?? null}
-          />
-        )}
-
         <ConversationThreadPanel
           key={id}
           conversationId={id}
@@ -125,6 +114,20 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
           attachmentLimits={attachmentLimits}
           bookingId={conversation.scope === "BOOKING" ? conversation.booking_id ?? undefined : undefined}
           meetupEligible={conversation.scope === "BOOKING" && conversation.booking_status === "CONFIRMED"}
+          defaultLocationArea={conversation.listing_location_area}
+          bookingStartDate={conversation.scope === "BOOKING" ? conversation.booking_start_date : null}
+          footerBanner={
+            conversation.scope === "LISTING" ? (
+              <EnquiryBookingStatus
+                initialBooking={relevantBooking}
+                listingId={conversation.listing_id}
+                availableDates={availability?.available_dates ?? []}
+                unavailableDates={availability?.unavailable_dates ?? []}
+                minRentalDays={listing?.min_rental_days ?? null}
+                maxRentalDays={listing?.max_rental_days ?? null}
+              />
+            ) : undefined
+          }
           replaceComposerWith={
             bookingConfirmed && relevantBooking ? (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface-muted px-4 py-3">
