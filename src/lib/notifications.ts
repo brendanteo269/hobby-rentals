@@ -36,12 +36,16 @@ export type NotificationType =
   | "WAITLIST_OFFER_EXPIRED"
   // S2-19: handover meetup coordination on a confirmed booking.
   | "MEETUP_PROPOSED"
-  | "MEETUP_ACCEPTED";
+  | "MEETUP_ACCEPTED"
+  // S2-23: an administrator deactivated or reactivated the listing - the
+  // one lifecycle change the owner did not initiate themselves.
+  | "LISTING_DEACTIVATED"
+  | "LISTING_REACTIVATED";
 
 export type AppNotification = {
   id: string;
   type: NotificationType;
-  category: "BOOKING" | "WAITLIST" | "MEETUP";
+  category: "BOOKING" | "WAITLIST" | "MEETUP" | "LISTING";
   title: string;
   body: string;
   /** What the member can expect to happen next. */
@@ -101,6 +105,8 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   WAITLIST_OFFER_EXPIRED: "Waitlist offer closed",
   MEETUP_PROPOSED: "Meetup proposed",
   MEETUP_ACCEPTED: "Meetup confirmed",
+  LISTING_DEACTIVATED: "Listing deactivated",
+  LISTING_REACTIVATED: "Listing reactivated",
 };
 
 export const NOTIFICATION_TYPES = Object.keys(NOTIFICATION_TYPE_LABELS) as NotificationType[];

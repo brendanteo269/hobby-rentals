@@ -160,6 +160,9 @@ const STATUS_BADGE_VARIANT: Record<Listing["status"], "neutral" | "accent" | "da
   ARCHIVED: "neutral",
   PENDING_REMOVAL: "accent",
   REMOVED: "neutral",
+  // An administrator's action, not the owner's own - the one status here
+  // that needs the same "pay attention" treatment as a pending removal.
+  DEACTIVATED: "accent",
 };
 
 function ListingRow({ listing, bookings, history }: { listing: OwnerListing; bookings: Booking[]; history?: ListingHistory }) {

@@ -5,10 +5,18 @@ import { recordAdminAction } from "@/lib/audit";
 import { ROUTES } from "@/lib/routes";
 import { formatDate, formatMoney, shortId } from "@/lib/format";
 import { listingPhotoUrl } from "@/lib/env";
-import { getCategoryOptions, getListingById, listingStatusLabel, listingStatusTone } from "@/lib/listings";
+import {
+  getCategoryOptions,
+  getListingById,
+  listingConditionLabel,
+  listingLocationLabel,
+  listingStatusLabel,
+  listingStatusTone,
+} from "@/lib/listings";
 import { getAdminPassport, SERIAL_STATUS } from "@/lib/passports";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge, Container, DescriptionList, EmptyState, Panel } from "@/components/ui";
+import { ListingModerationPanel } from "@/components/listing-moderation-panel";
 
 export const metadata = { title: "Listing — HobbyRentals Admin" };
 
@@ -81,6 +89,12 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="mt-10 space-y-6">
+        <ListingModerationPanel
+          listingId={listing.id}
+          status={listing.status}
+          deactivationReason={listing.deactivation_reason}
+        />
+
         <Panel title="Photos">
           {listing.photo_keys.length === 0 ? (
             <div className="-mx-6 -my-5">
@@ -107,11 +121,14 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
         <Panel title="Item details">
           <DescriptionList
             items={[
-              { term: "Description", value: <span className="whitespace-pre-line">{listing.description}</span> },
+              {
+                term: "Description",
+                value: <span className="block max-w-prose break-words whitespace-pre-line">{listing.description}</span>,
+              },
               { term: "Category", value: <Badge>{categoryLabel}</Badge> },
               { term: "Brand", value: listing.brand },
-              { term: "Condition", value: listing.condition },
-              { term: "Location", value: listing.location_area },
+              { term: "Condition", value: <Badge>{listingConditionLabel(listing.condition)}</Badge> },
+              { term: "Location", value: <Badge>{listingLocationLabel(listing.location_area)}</Badge> },
             ]}
           />
         </Panel>

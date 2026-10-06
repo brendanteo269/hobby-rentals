@@ -2,13 +2,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { StatusTone } from "@/lib/users";
 
 /** Mirrors app/listing_service.py's ListingStatus enum on the backend. */
-export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "PENDING_REMOVAL" | "REMOVED";
+export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "PENDING_REMOVAL" | "REMOVED" | "DEACTIVATED";
 
-/** ACTIVE first: it's the default filter and the status an admin checks most often. */
-export const LISTING_STATUSES: ListingStatus[] = ["ACTIVE", "DRAFT", "ARCHIVED", "PENDING_REMOVAL", "REMOVED"];
-
-/** What the status filter shows when nothing has been explicitly chosen - the live listings, not every draft and removal. */
-export const DEFAULT_LISTING_STATUSES: ListingStatus[] = ["ACTIVE"];
+/** ACTIVE first: it's the status an admin checks most often. */
+export const LISTING_STATUSES: ListingStatus[] = [
+  "ACTIVE",
+  "DEACTIVATED",
+  "DRAFT",
+  "ARCHIVED",
+  "PENDING_REMOVAL",
+  "REMOVED",
+];
 
 export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   DRAFT: "Draft",
@@ -16,16 +20,21 @@ export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   ARCHIVED: "Archived",
   PENDING_REMOVAL: "Removal scheduled",
   REMOVED: "Removed",
+  DEACTIVATED: "Deactivated",
 };
 
-/** Published reads as the "it's live" state; a scheduled removal is the one that needs attention. */
+/** Published reads as the "it's live" state; a scheduled removal and an admin's own deactivation are the ones that need attention. */
 export const LISTING_STATUS_TONE: Record<ListingStatus, StatusTone> = {
   DRAFT: "neutral",
   ACTIVE: "positive",
   ARCHIVED: "neutral",
   PENDING_REMOVAL: "warning",
   REMOVED: "critical",
+  DEACTIVATED: "critical",
 };
+
+/** S2-23: statuses an administrator may deactivate from - mirrors the story's "active or paused listing" wording (paused = archived, the only other owner-hidden-but-restorable state). */
+export const DEACTIVATABLE_STATUSES: ListingStatus[] = ["ACTIVE", "ARCHIVED"];
 
 /** Falls back to the raw slug so an unrecognised status/category never renders blank. */
 export function listingStatusLabel(status: string): string {
@@ -34,6 +43,61 @@ export function listingStatusLabel(status: string): string {
 
 export function listingStatusTone(status: string): StatusTone {
   return LISTING_STATUS_TONE[status as ListingStatus] ?? "neutral";
+}
+
+/** Mirrors app/listing_service.py's Condition enum. */
+export type ListingCondition = "NEW" | "GOOD" | "FAIR" | "POOR";
+
+export const LISTING_CONDITION_LABELS: Record<ListingCondition, string> = {
+  NEW: "New",
+  GOOD: "Good",
+  FAIR: "Fair",
+  POOR: "Poor",
+};
+
+/** Falls back to the raw enum value so an unrecognised condition never renders blank. */
+export function listingConditionLabel(condition: string): string {
+  return LISTING_CONDITION_LABELS[condition as ListingCondition] ?? condition;
+}
+
+/** Mirrors app/listing_service.py's LocationArea enum - Singapore planning areas, not compass regions. */
+export const LOCATION_LABELS: Record<string, string> = {
+  ANG_MO_KIO: "Ang Mo Kio",
+  BEDOK: "Bedok",
+  BISHAN: "Bishan",
+  BUKIT_BATOK: "Bukit Batok",
+  BUKIT_MERAH: "Bukit Merah",
+  BUKIT_PANJANG: "Bukit Panjang",
+  BUKIT_TIMAH: "Bukit Timah",
+  CHOA_CHU_KANG: "Choa Chu Kang",
+  CLEMENTI: "Clementi",
+  DOWNTOWN_CORE: "Downtown Core",
+  EAST_COAST: "East Coast",
+  GEYLANG: "Geylang",
+  HOUGANG: "Hougang",
+  JURONG_EAST: "Jurong East",
+  JURONG_WEST: "Jurong West",
+  KALLANG: "Kallang",
+  MARINE_PARADE: "Marine Parade",
+  NOVENA: "Novena",
+  ORCHARD: "Orchard",
+  PASIR_RIS: "Pasir Ris",
+  PUNGGOL: "Punggol",
+  QUEENSTOWN: "Queenstown",
+  SEMBAWANG: "Sembawang",
+  SENGKANG: "Sengkang",
+  SENTOSA: "Sentosa",
+  SERANGOON: "Serangoon",
+  TAMPINES: "Tampines",
+  TIONG_BAHRU: "Tiong Bahru",
+  TOA_PAYOH: "Toa Payoh",
+  WOODLANDS: "Woodlands",
+  YISHUN: "Yishun",
+};
+
+/** Falls back to the raw enum value so an unrecognised area never renders blank. */
+export function listingLocationLabel(locationArea: string): string {
+  return LOCATION_LABELS[locationArea] ?? locationArea;
 }
 
 export type CategoryOption = { slug: string; label: string };
@@ -78,12 +142,12 @@ export type ListingSearchResult = {
 
 /**
  * Finds listings by listing id, item name, owner display name, or owner
- * email, optionally narrowed by category and/or a set of statuses.
+ * email, optionally narrowed by a set of categories and/or a set of
+ * statuses.
  *
- * `statuses` is the already-resolved filter (the page applies the
- * "default to Published" rule before calling this) - an empty array here
- * means "no listing can match", not "any status", so callers must not pass
- * one expecting "any".
+ * `categories` and `statuses` both pass straight through: empty means
+ * "any category"/"any status" (admin_search_listings treats an empty or
+ * null array as no filter on that column), not "match nothing".
  *
  * The matching happens in admin_search_listings, which re-checks
  * authorisation itself. A caller without the secret key gets an error and an
@@ -94,7 +158,7 @@ export type ListingSearchResult = {
  */
 export async function searchListings(
   query: string,
-  category: string,
+  categories: string[],
   statuses: string[],
   page = 1,
 ): Promise<ListingSearchResult> {
@@ -102,7 +166,7 @@ export async function searchListings(
 
   const { data, error } = await supabase.rpc("admin_search_listings", {
     search: query,
-    category_filter: category || null,
+    category_filter: categories,
     status_filter: statuses,
     result_limit: PAGE_SIZE,
     result_offset: (page - 1) * PAGE_SIZE,
@@ -124,7 +188,7 @@ export async function searchListings(
   if (rows.length === 0 && page > 1) {
     const { data: firstPage, error: firstPageError } = await supabase.rpc("admin_search_listings", {
       search: query,
-      category_filter: category || null,
+      category_filter: categories,
       status_filter: statuses,
       result_limit: PAGE_SIZE,
       result_offset: 0,
@@ -162,6 +226,8 @@ export type AdminListingDetail = {
   attributes: Record<string, unknown>;
   photo_keys: string[];
   status: string;
+  /** Set only while status is DEACTIVATED - the reason an administrator gave. */
+  deactivation_reason: string | null;
   created_at: string;
   updated_at: string;
   owner_id: string;
@@ -185,6 +251,13 @@ export async function getListingById(id: string): Promise<AdminListingDetail | n
   const listing = rows[0];
   if (!listing) return null;
 
+  // Defensive: admin_get_listing on a database still running an older copy
+  // of the migration (photo_keys and deactivation_reason were both added
+  // after the function's first version) won't carry these at all, not even
+  // as null.
+  listing.photo_keys ??= [];
+  listing.deactivation_reason ??= null;
+
   // listing_blackout_dates grants select to authenticated/service_role
   // directly (see 20260915000000_owner_and_listing_availability.sql), so this
   // reads it straight rather than needing a dedicated RPC.
@@ -198,4 +271,63 @@ export async function getListingById(id: string): Promise<AdminListingDetail | n
   if (blackoutError) console.error("Blackout count failed:", blackoutError.message);
 
   return { ...listing, upcomingBlackoutCount: count ?? 0 };
+}
+
+export type ListingModerationResult = { error: string | null };
+
+/**
+ * S2-23: pulls a listing out of public discovery with a recorded reason.
+ *
+ * A plain .update() rather than an RPC - this writes to public.listings only
+ * (no auth.users join, unlike admin_search_listings/admin_get_listing), and
+ * the secret-key client already bypasses RLS on it directly. The DB-level
+ * check constraint (listings_deactivation_reason_only_when_deactivated) is
+ * the backstop; this validates the same things up front so the admin sees a
+ * clear message instead of a raw constraint-violation error.
+ *
+ * The notification to the owner and the listing_lifecycle_events row both
+ * happen inside the same UPDATE, via the trigger that already logs every
+ * status change - there is nothing further to do here once the row is
+ * written.
+ */
+export async function deactivateListing(id: string, reason: string): Promise<ListingModerationResult> {
+  const trimmedReason = reason.trim();
+  if (!trimmedReason) return { error: "A reason is required to deactivate a listing." };
+
+  const listing = await getListingById(id);
+  if (!listing) return { error: "That listing no longer exists." };
+  if (!DEACTIVATABLE_STATUSES.includes(listing.status as ListingStatus)) {
+    return { error: `A ${listingStatusLabel(listing.status).toLowerCase()} listing can't be deactivated.` };
+  }
+
+  const { error } = await createAdminClient()
+    .from("listings")
+    .update({ status: "DEACTIVATED", deactivation_reason: trimmedReason })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Listing deactivation failed:", error.message);
+    return { error: "Could not deactivate the listing." };
+  }
+  return { error: null };
+}
+
+/** S2-23: restores a deactivated listing to Published, clearing the recorded reason. */
+export async function reactivateListing(id: string): Promise<ListingModerationResult> {
+  const listing = await getListingById(id);
+  if (!listing) return { error: "That listing no longer exists." };
+  if (listing.status !== "DEACTIVATED") {
+    return { error: "Only a deactivated listing can be reactivated." };
+  }
+
+  const { error } = await createAdminClient()
+    .from("listings")
+    .update({ status: "ACTIVE", deactivation_reason: null })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Listing reactivation failed:", error.message);
+    return { error: "Could not reactivate the listing." };
+  }
+  return { error: null };
 }

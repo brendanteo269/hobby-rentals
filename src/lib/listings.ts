@@ -52,7 +52,7 @@ export type LocationArea =
   | "WOODLANDS"
   | "YISHUN";
 
-export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "PENDING_REMOVAL" | "REMOVED";
+export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "PENDING_REMOVAL" | "REMOVED" | "DEACTIVATED";
 
 /** An inclusive span of calendar days, both ends as ISO dates (YYYY-MM-DD). */
 export type DateRange = { start_date: string; end_date: string };
@@ -464,6 +464,7 @@ export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   ARCHIVED: "Archived",
   PENDING_REMOVAL: "Removal scheduled",
   REMOVED: "Removed",
+  DEACTIVATED: "Deactivated",
 };
 
 export const CATEGORIES = Object.keys(CATEGORY_LABELS) as ListingCategory[];

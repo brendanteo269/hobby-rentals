@@ -1,89 +1,149 @@
-import Link from "next/link";
-import { Button, Input, Select } from "./ui";
-import { ROUTES } from "@/lib/routes";
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import type { Route } from "next";
+import { usePathname, useRouter } from "next/navigation";
+import { Input } from "./ui";
+import { MultiSelectDropdown } from "./multi-select-dropdown";
 import { LISTING_STATUSES, LISTING_STATUS_LABELS, type CategoryOption } from "@/lib/listings";
 
+const QUERY_DEBOUNCE_MS = 350;
+
+function buildSearch(q: string, categories: string[], statuses: string[]): string {
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  categories.forEach((c) => params.append("category", c));
+  statuses.forEach((s) => params.append("status", s));
+  // Omitted on purpose: any change here is a new search, so it always starts
+  // back at page one rather than wherever the previous search's pages left off.
+  const search = params.toString();
+  return search ? `?${search}` : "";
+}
+
 /**
- * Search box for the listing list.
+ * Live search for the listing list.
  *
- * A plain GET form, like UserSearch: the query and filters live in the URL,
- * so results can be linked to and survive a reload with no client
- * JavaScript. The page parameter is intentionally absent, so a new search or
- * filter change starts at the first page rather than page four of the
- * previous one.
+ * Typing or changing a filter updates the URL (via router.replace, so
+ * filtering doesn't pile up browser-history entries), which re-renders the
+ * server page with the new results - no Search button to click. The text
+ * box debounces so a fast typist doesn't fire a lookup per keystroke;
+ * category/status apply the moment a box is (un)checked, since picking one
+ * is already a single deliberate action.
  *
- * Status is a set of checkboxes rather than a single-select dropdown - an
- * admin investigating, say, an owner's account reasonably wants "draft and
- * published" at once, not one status at a time.
+ * Still a real <form> for structure and Enter-to-apply-now, but submission
+ * is intercepted - the live updates above already keep the URL current.
  */
 export function ListingSearch({
   query,
-  category,
-  statuses,
-  hasExplicitStatus,
-  categories,
+  categories: initialCategories,
+  statuses: initialStatuses,
+  categoryOptions,
 }: {
   query: string;
-  category: string;
-  /** The resolved filter - defaults to Published when nothing was chosen, so the boxes reflect what's actually applied. */
+  categories: string[];
   statuses: string[];
-  /** True only when the URL itself names a status - distinguishes "defaulted to Published" from "explicitly chose just Published", so Clear only appears when there's something to clear. */
-  hasExplicitStatus: boolean;
-  categories: CategoryOption[];
+  categoryOptions: CategoryOption[];
 }) {
-  const hasFilters = Boolean(query || category || hasExplicitStatus);
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const [q, setQ] = useState(query);
+  const [categories, setCategories] = useState(initialCategories);
+  const [statuses, setStatuses] = useState(initialStatuses);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function navigate(nextQ: string, nextCategories: string[], nextStatuses: string[]) {
+    // typedRoutes can't verify a string built from arbitrary filter values
+    // against the route tree - this one is always /listings plus a query
+    // string, never a different path, so the cast is safe.
+    router.replace(`${pathname}${buildSearch(nextQ, nextCategories, nextStatuses)}` as Route, { scroll: false });
+  }
+
+  function onQueryChange(value: string) {
+    setQ(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => navigate(value, categories, statuses), QUERY_DEBOUNCE_MS);
+  }
+
+  function onCategoriesChange(value: string[]) {
+    setCategories(value);
+    navigate(q, value, statuses);
+  }
+
+  function onStatusesChange(value: string[]) {
+    setStatuses(value);
+    navigate(q, categories, value);
+  }
+
+  // Flushes any pending debounce on unmount, so a quick type-then-navigate-away
+  // doesn't fire a now-pointless update after the page is already gone.
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+  }, []);
+
+  const hasFilters = Boolean(q || categories.length > 0 || statuses.length > 0);
 
   return (
-    <form method="get" role="search" className="flex flex-wrap items-end gap-6">
+    <form
+      role="search"
+      className="flex flex-wrap items-end gap-6"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        navigate(q, categories, statuses);
+      }}
+    >
       <div className="min-w-64 flex-1">
         <label htmlFor="q" className="block text-sm font-medium">
           Find a listing
         </label>
         <Input
           id="q"
-          name="q"
           type="search"
-          defaultValue={query}
+          value={q}
+          onChange={(event) => onQueryChange(event.target.value)}
           placeholder="Name, listing ID, owner name, or owner email"
           autoComplete="off"
           className="mt-2"
         />
       </div>
 
-      <div>
-        <label htmlFor="category" className="block text-sm font-medium">
-          Category
-        </label>
-        <Select id="category" name="category" defaultValue={category} className="mt-2">
-          <option value="">Any category</option>
-          {categories.map((c) => (
-            <option key={c.slug} value={c.slug}>
-              {c.label}
-            </option>
-          ))}
-        </Select>
-      </div>
+      <MultiSelectDropdown
+        name="category"
+        label="Category"
+        options={categoryOptions.map((c) => ({ value: c.slug, label: c.label }))}
+        selected={categories}
+        onChange={onCategoriesChange}
+        noneLabel="Any category"
+        allLabel="All categories"
+        noun="categories"
+      />
 
-      <fieldset>
-        <legend className="block text-sm font-medium">Status</legend>
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
-          {LISTING_STATUSES.map((s) => (
-            <label key={s} className="flex items-center gap-1.5 text-sm whitespace-nowrap">
-              <input type="checkbox" name="status" value={s} defaultChecked={statuses.includes(s)} className="accent-ink" />
-              {LISTING_STATUS_LABELS[s]}
-            </label>
-          ))}
-        </div>
-      </fieldset>
+      <MultiSelectDropdown
+        name="status"
+        label="Status"
+        options={LISTING_STATUSES.map((s) => ({ value: s, label: LISTING_STATUS_LABELS[s] }))}
+        selected={statuses}
+        onChange={onStatusesChange}
+        noneLabel="Any status"
+        allLabel="All statuses"
+        noun="statuses"
+      />
 
-      <Button type="submit">Search</Button>
       {hasFilters && (
-        <Link
-          href={ROUTES.listings}
+        <button
+          type="button"
+          onClick={() => {
+            setQ("");
+            setCategories([]);
+            setStatuses([]);
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+            navigate("", [], []);
+          }}
           className="px-1 pb-3 text-sm text-ink-soft underline underline-offset-4 hover:text-ink"
         >
           Clear
-        </Link>
+        </button>
       )}
     </form>
   );
