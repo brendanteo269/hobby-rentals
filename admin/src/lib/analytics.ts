@@ -8,7 +8,10 @@ export type AdminCategoryDemand = {
 
 export async function getAdminCategoryDemand(): Promise<AdminCategoryDemand[]> {
   const response = await fetch(`${apiUrl()}/admin/analytics/category-demand`, {
-    headers: { "X-Admin-Key": adminApiKey() }, next: { revalidate: 300 },
+    headers: { "X-Admin-Key": adminApiKey() },
+    // Admin analytics is used to verify live telemetry; never show a stale
+    // aggregate after the administrator explicitly refreshes this page.
+    cache: "no-store",
   });
   if (!response.ok) throw new Error(`Category demand lookup failed: ${response.status}`);
   return response.json();
