@@ -2,10 +2,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { StatusTone } from "@/lib/users";
 
 /** Mirrors app/listing_service.py's ListingStatus enum on the backend. */
-export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "PENDING_REMOVAL" | "REMOVED";
+export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "PENDING_REMOVAL" | "REMOVED" | "DEACTIVATED";
 
 /** ACTIVE first: it's the status an admin checks most often. */
-export const LISTING_STATUSES: ListingStatus[] = ["ACTIVE", "DRAFT", "ARCHIVED", "PENDING_REMOVAL", "REMOVED"];
+export const LISTING_STATUSES: ListingStatus[] = [
+  "ACTIVE",
+  "DEACTIVATED",
+  "DRAFT",
+  "ARCHIVED",
+  "PENDING_REMOVAL",
+  "REMOVED",
+];
 
 export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   DRAFT: "Draft",
@@ -13,16 +20,21 @@ export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   ARCHIVED: "Archived",
   PENDING_REMOVAL: "Removal scheduled",
   REMOVED: "Removed",
+  DEACTIVATED: "Deactivated",
 };
 
-/** Published reads as the "it's live" state; a scheduled removal is the one that needs attention. */
+/** Published reads as the "it's live" state; a scheduled removal and an admin's own deactivation are the ones that need attention. */
 export const LISTING_STATUS_TONE: Record<ListingStatus, StatusTone> = {
   DRAFT: "neutral",
   ACTIVE: "positive",
   ARCHIVED: "neutral",
   PENDING_REMOVAL: "warning",
   REMOVED: "critical",
+  DEACTIVATED: "critical",
 };
+
+/** S2-23: statuses an administrator may deactivate from - mirrors the story's "active or paused listing" wording (paused = archived, the only other owner-hidden-but-restorable state). */
+export const DEACTIVATABLE_STATUSES: ListingStatus[] = ["ACTIVE", "ARCHIVED"];
 
 /** Falls back to the raw slug so an unrecognised status/category never renders blank. */
 export function listingStatusLabel(status: string): string {
@@ -214,6 +226,8 @@ export type AdminListingDetail = {
   attributes: Record<string, unknown>;
   photo_keys: string[];
   status: string;
+  /** Set only while status is DEACTIVATED - the reason an administrator gave. */
+  deactivation_reason: string | null;
   created_at: string;
   updated_at: string;
   owner_id: string;
@@ -238,9 +252,11 @@ export async function getListingById(id: string): Promise<AdminListingDetail | n
   if (!listing) return null;
 
   // Defensive: admin_get_listing on a database still running an older copy
-  // of the migration (photo_keys was added after the function's first
-  // version) won't carry this column at all, not even as null.
+  // of the migration (photo_keys and deactivation_reason were both added
+  // after the function's first version) won't carry these at all, not even
+  // as null.
   listing.photo_keys ??= [];
+  listing.deactivation_reason ??= null;
 
   // listing_blackout_dates grants select to authenticated/service_role
   // directly (see 20260915000000_owner_and_listing_availability.sql), so this
@@ -255,4 +271,63 @@ export async function getListingById(id: string): Promise<AdminListingDetail | n
   if (blackoutError) console.error("Blackout count failed:", blackoutError.message);
 
   return { ...listing, upcomingBlackoutCount: count ?? 0 };
+}
+
+export type ListingModerationResult = { error: string | null };
+
+/**
+ * S2-23: pulls a listing out of public discovery with a recorded reason.
+ *
+ * A plain .update() rather than an RPC - this writes to public.listings only
+ * (no auth.users join, unlike admin_search_listings/admin_get_listing), and
+ * the secret-key client already bypasses RLS on it directly. The DB-level
+ * check constraint (listings_deactivation_reason_only_when_deactivated) is
+ * the backstop; this validates the same things up front so the admin sees a
+ * clear message instead of a raw constraint-violation error.
+ *
+ * The notification to the owner and the listing_lifecycle_events row both
+ * happen inside the same UPDATE, via the trigger that already logs every
+ * status change - there is nothing further to do here once the row is
+ * written.
+ */
+export async function deactivateListing(id: string, reason: string): Promise<ListingModerationResult> {
+  const trimmedReason = reason.trim();
+  if (!trimmedReason) return { error: "A reason is required to deactivate a listing." };
+
+  const listing = await getListingById(id);
+  if (!listing) return { error: "That listing no longer exists." };
+  if (!DEACTIVATABLE_STATUSES.includes(listing.status as ListingStatus)) {
+    return { error: `A ${listingStatusLabel(listing.status).toLowerCase()} listing can't be deactivated.` };
+  }
+
+  const { error } = await createAdminClient()
+    .from("listings")
+    .update({ status: "DEACTIVATED", deactivation_reason: trimmedReason })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Listing deactivation failed:", error.message);
+    return { error: "Could not deactivate the listing." };
+  }
+  return { error: null };
+}
+
+/** S2-23: restores a deactivated listing to Published, clearing the recorded reason. */
+export async function reactivateListing(id: string): Promise<ListingModerationResult> {
+  const listing = await getListingById(id);
+  if (!listing) return { error: "That listing no longer exists." };
+  if (listing.status !== "DEACTIVATED") {
+    return { error: "Only a deactivated listing can be reactivated." };
+  }
+
+  const { error } = await createAdminClient()
+    .from("listings")
+    .update({ status: "ACTIVE", deactivation_reason: null })
+    .eq("id", id);
+
+  if (error) {
+    console.error("Listing reactivation failed:", error.message);
+    return { error: "Could not reactivate the listing." };
+  }
+  return { error: null };
 }

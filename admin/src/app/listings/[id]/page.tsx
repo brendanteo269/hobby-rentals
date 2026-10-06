@@ -16,6 +16,7 @@ import {
 import { getAdminPassport, SERIAL_STATUS } from "@/lib/passports";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { Badge, Container, DescriptionList, EmptyState, Panel } from "@/components/ui";
+import { ListingModerationPanel } from "@/components/listing-moderation-panel";
 
 export const metadata = { title: "Listing — HobbyRentals Admin" };
 
@@ -88,6 +89,12 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
       </div>
 
       <div className="mt-10 space-y-6">
+        <ListingModerationPanel
+          listingId={listing.id}
+          status={listing.status}
+          deactivationReason={listing.deactivation_reason}
+        />
+
         <Panel title="Photos">
           {listing.photo_keys.length === 0 ? (
             <div className="-mx-6 -my-5">

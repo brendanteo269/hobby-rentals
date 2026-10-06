@@ -14,6 +14,8 @@ export const AUDIT_ACTIONS = {
   wallet_debit_applied: "Manual debit applied",
   passport_viewed: "Product Passport viewed",
   listing_viewed: "Listing viewed",
+  listing_deactivated: "Listing deactivated",
+  listing_reactivated: "Listing reactivated",
 } as const;
 
 export type AuditAction = keyof typeof AUDIT_ACTIONS;
