@@ -205,3 +205,28 @@ export type BundleBooking = {
   created_at: string;
   updated_at: string;
 };
+
+
+/**
+ * S2-30: one bundle on the landing page's showcase.
+ *
+ * Card data only — this is the one bundle read an anonymous visitor makes, so
+ * it carries nothing the marketplace does not already show publicly.
+ */
+export type FeaturedBundleItem = {
+  id: string;
+  name: string;
+  category: ListingCategory;
+  photo_url: string | null;
+};
+
+export type FeaturedBundleCard = {
+  id: string;
+  name: string;
+  description: string | null;
+  items: FeaturedBundleItem[];
+  item_count: number;
+  price_per_day_cents: number | null;
+  price_per_week_cents: number | null;
+  primary_photo_url: string | null;
+};

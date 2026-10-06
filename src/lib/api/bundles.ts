@@ -18,6 +18,7 @@ import type {
   BundleEvent,
   BundleQuote,
   CreateBundleRequest,
+  FeaturedBundleCard,
   UpdateBundleRequest,
 } from "@/lib/bundles";
 import type { BookingStatus, DeclineReason } from "@/lib/bookings";
@@ -158,4 +159,23 @@ export function updateBundleBookingStatus(bundleBookingId: string, nextStatus: B
     `/bundles/bookings/${encodeURIComponent(bundleBookingId)}/status`,
     { method: "PATCH", body: JSON.stringify({ status: nextStatus }) },
   );
+}
+
+
+/**
+ * S2-30: bundles for the landing page's showcase.
+ *
+ * The landing page is public, so this cannot use backendRequest, which rightly
+ * redirects an anonymous caller to login. Same arrangement as
+ * getPopularListings, against an endpoint that exposes only card data.
+ * Uncached, so a bundle that has just become unavailable stops being
+ * showcased on the next load rather than on the next deploy.
+ */
+export async function getFeaturedBundles(limit = 8): Promise<FeaturedBundleCard[]> {
+  const apiBase = (
+    process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+  ).replace(/\/+$/, "");
+  const response = await fetch(`${apiBase}/bundles/featured?limit=${limit}`, { cache: "no-store" });
+  if (!response.ok) throw new Error("Featured bundles are temporarily unavailable.");
+  return response.json() as Promise<FeaturedBundleCard[]>;
 }

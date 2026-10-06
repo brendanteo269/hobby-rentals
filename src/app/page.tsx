@@ -2,6 +2,7 @@ import { Hero } from "@/components/sections/hero";
 import { BrowseByHobby } from "@/components/sections/browse-by-hobby";
 import { TrustFeatures } from "@/components/sections/trust-features";
 import { PopularListings } from "@/components/sections/popular-listings";
+import { FeaturedBundles } from "@/components/sections/featured-bundles";
 import { OwnerRenterSplit } from "@/components/sections/owner-renter-split";
 import { getOwnProfile } from "@/lib/profile";
 
@@ -14,6 +15,7 @@ export default async function Home() {
       <BrowseByHobby />
       <TrustFeatures />
       <PopularListings />
+      <FeaturedBundles />
       <OwnerRenterSplit />
     </>
   );
