@@ -20,22 +20,31 @@ export function PricingRecommendationPanel({
   condition: string;
   billingCycle: PricingCycle | null;
   attributes: Record<string, string | number>;
-  onApply: (rateDollars: string) => void;
+  /** Omit on read-only owner views, where a suggestion cannot change the saved rate. */
+  onApply?: (rateDollars: string) => void;
 }) {
   const [result, setResult] = useState<PricingRecommendation | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showAllComparables, setShowAllComparables] = useState(false);
   const [pending, startTransition] = useTransition();
   const ready = Boolean(category && brand && condition && billingCycle);
 
   function request() {
     if (!billingCycle || !condition) return;
     setError(null);
+    setShowAllComparables(false);
     startTransition(async () => {
       const response = await requestPriceRecommendation({ category, brand, condition: condition as ListingCondition, billing_cycle: billingCycle, attributes });
       if (response.error) setError(response.error);
       else if (response.recommendation) setResult(response.recommendation);
     });
   }
+
+  const sortedComparables = result?.comparables.toSorted(
+    (left, right) => left.normalized_daily_rate_cents - right.normalized_daily_rate_cents || left.name.localeCompare(right.name),
+  ) ?? [];
+  const visibleComparables = showAllComparables ? sortedComparables : sortedComparables.slice(0, 5);
+  const hiddenComparableCount = sortedComparables.length - visibleComparables.length;
 
   return <div className="mt-4 border-t border-line pt-4">
     <Button type="button" variant="outline" disabled={!ready || pending} onClick={request}>
@@ -48,8 +57,8 @@ export function PricingRecommendationPanel({
       <p className="font-medium">Recommended rental price: {formatMoney(result.suggested_price_cents)} / {billingCycle === "DAY" ? "day" : "week"}</p>
       <p className="mt-1 text-ink-soft">Range: {formatMoney(result.lower_price_cents!)} – {formatMoney(result.upper_price_cents!)}</p>
       {result.demand?.is_high_demand && <p className="mt-3"><span className="font-medium">High demand detected (+{result.demand.surge_percentage}%).</span> The category’s recent activity raised this suggestion by {Math.round((result.demand.suggested_multiplier - 1) * 100)}%.</p>}
-      <Button type="button" className="mt-4" onClick={() => onApply(centsToDollars(result.suggested_price_cents!))}>Apply {formatMoney(result.suggested_price_cents)}</Button>
-      <div className="mt-4 border-t border-line pt-3"><p className="font-medium">Based on {result.usable_comparables_count} active comparables</p><ul className="mt-2 space-y-2 text-ink-soft">{result.comparables.map((item) => <li key={item.id}><p>{item.name} · {item.brand} · {CONDITION_LABELS[item.condition]} · {formatMoney(billingCycle === "DAY" ? item.normalized_daily_rate_cents : item.normalized_daily_rate_cents * 7)} / {billingCycle === "DAY" ? "day" : "week"}</p><p className="text-xs">Matched on: {item.matched_attributes.join(", ")}</p></li>)}</ul>{result.outliers_excluded_count > 0 && <p className="mt-2 text-xs text-ink-soft">{result.outliers_excluded_count} outlier{result.outliers_excluded_count === 1 ? "" : "s"} beyond 1.5× IQR excluded.</p>}</div>
+      {onApply && <Button type="button" className="mt-4" onClick={() => onApply(centsToDollars(result.suggested_price_cents!))}>Apply {formatMoney(result.suggested_price_cents)}</Button>}
+      <div className="mt-4 border-t border-line pt-3"><p className="font-medium">Based on {result.usable_comparables_count} active comparables</p>{result.matching_tier === "CATEGORY" && <p className="mt-1 text-xs text-ink-soft">Using a broader category comparison because fewer than three closer matches were available.</p>}<ul className="mt-2 space-y-2 text-ink-soft">{visibleComparables.map((item) => <li key={item.id}><p>{item.name} · {item.brand} · {CONDITION_LABELS[item.condition]} · {formatMoney(billingCycle === "DAY" ? item.normalized_daily_rate_cents : item.normalized_daily_rate_cents * 7)} / {billingCycle === "DAY" ? "day" : "week"}</p><p className="text-xs">Matched on: {item.matched_attributes.join(", ")}</p></li>)}</ul>{hiddenComparableCount > 0 && <Button type="button" variant="outline" className="mt-3" onClick={() => setShowAllComparables(true)}>Show all {sortedComparables.length} comparables</Button>}{showAllComparables && sortedComparables.length > 5 && <Button type="button" variant="outline" className="mt-3" onClick={() => setShowAllComparables(false)}>Show fewer comparables</Button>}{result.outliers_excluded_count > 0 && <p className="mt-2 text-xs text-ink-soft">{result.outliers_excluded_count} outlier{result.outliers_excluded_count === 1 ? "" : "s"} beyond 1.5× IQR excluded.</p>}</div>
     </div>}
   </div>;
 }

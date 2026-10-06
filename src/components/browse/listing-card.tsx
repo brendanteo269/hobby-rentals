@@ -6,6 +6,7 @@ import {
   type ListingCard as ListingCardData,
 } from "@/lib/listings";
 import { ListingCardCarousel } from "./listing-card-carousel";
+import { Badge } from "@/components/ui";
 
 /**
  * One real listing in the browse grid.
@@ -33,7 +34,10 @@ export function ListingCard({ listing, highDemand = false }: { listing: ListingC
       />
 
       <Link href={`/listings/${listing.id}`} className="block p-4">
-        <p className="eyebrow">{CATEGORY_LABELS[listing.category]}{highDemand ? " · High demand" : ""}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="eyebrow">{CATEGORY_LABELS[listing.category]}</p>
+          {highDemand && <Badge variant="accent">🔥 High demand</Badge>}
+        </div>
         <h3 className="heading mt-1.5 text-sm leading-snug">{listing.name}</h3>
 
         <div className="mt-3 flex items-baseline gap-2 border-t border-line pt-3">

@@ -19,6 +19,7 @@ import type {
   ListingCategory,
   ListingCondition,
   ListingCategoryOption,
+  CategoryAttributeDefinition,
   LocationArea,
   Passport,
   PhotoKind,
@@ -102,6 +103,11 @@ export function getListingLimits() {
 
 export function getListingCategories() {
   return backendRequest<ListingCategoryOption[]>("/categories");
+}
+
+/** Category labels and rules for rendering a listing's saved specifications. */
+export function getListingCategoryAttributes(category: ListingCategory) {
+  return backendRequest<CategoryAttributeDefinition[]>(`/categories/${encodeURIComponent(category)}/attributes`);
 }
 
 /**

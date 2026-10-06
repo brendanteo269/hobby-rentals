@@ -340,7 +340,7 @@ export function ListingForm({
         </FormSection>
       )}
 
-      <FormSection title="Price">
+      <FormSection title="Price" id="price">
         {/* Only one of the two is ever submitted, so at most one of these two
             backend error slots is ever populated - whichever it is applies to
             the one shared box. */}
@@ -506,9 +506,9 @@ function depositCapHint(depositCapBps: number, block: "DAY" | "WEEK" | null, rat
  * things get distinct boxes" language, applied here to keep a long form
  * legible as a sequence of steps rather than one continuous scroll.
  */
-function FormSection({ title, children }: { title: string; children: ReactNode }) {
+function FormSection({ title, children, id }: { title: string; children: ReactNode; id?: string }) {
   return (
-    <section className="overflow-hidden card">
+    <section id={id} className="overflow-hidden card">
       <div className="border-b border-line px-6 py-4 sm:px-8">
         <h2 className="heading text-lg">{title}</h2>
       </div>

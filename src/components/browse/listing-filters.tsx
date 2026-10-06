@@ -29,6 +29,7 @@ import {
  */
 export function ListingFilters({ filters, highDemandCategories = [] }: { filters: BrowseFilters; highDemandCategories?: string[] }) {
   const [, startTransition] = useTransition();
+  const highDemandLabels = highDemandCategories.map((category) => CATEGORY_LABELS[category]).filter(Boolean);
   function trackCategorySearch(formData: FormData) {
     const category = String(formData.get("category") ?? "");
     if (category) startTransition(async () => { await emitActivityEvent({ event_type: "category_search", category }); });
@@ -69,7 +70,7 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
         <FilterSelect id="category" label="Category" placeholder="Any category">
           {CATEGORIES.map((value) => (
             <option key={value} value={value}>
-              {CATEGORY_LABELS[value]}{highDemandCategories.includes(value) ? " · High demand" : ""}
+              {CATEGORY_LABELS[value]}
             </option>
           ))}
         </FilterSelect>
@@ -121,6 +122,7 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
         </p>
         <Button type="submit">Apply</Button>
       </div>
+      {highDemandLabels.length > 0 && <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4"><span className="inline-flex items-center rounded-full bg-accent-dark px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">🔥 High demand</span><p className="text-sm text-ink-soft">Popular categories right now: {highDemandLabels.join(", ")}</p></div>}
     </form>
   );
 }
