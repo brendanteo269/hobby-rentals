@@ -47,7 +47,6 @@ export function ListingCard({ listing, highDemand = false }: { listing: ListingC
             </Badge>
           )}
         </div>
-        </div>
         <h3 className="heading mt-1.5 text-sm leading-snug">{listing.name}</h3>
 
         <div className="mt-3 flex items-baseline gap-2 border-t border-line pt-3">

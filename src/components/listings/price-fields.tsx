@@ -75,7 +75,7 @@ export function PriceFields({
       <PricePerBlockField
         error={priceError}
         initialBlock={initialPrice?.block}
-        initialRate={initialPrice?.rate}
+        rate={rate}
         onRateChange={(nextBlock, nextRate) => {
           setBlock(nextBlock);
           setRate(nextRate);
