@@ -22,6 +22,7 @@ import type {
   CategoryAttributeDefinition,
   LocationArea,
   Passport,
+  PopularListingsResponse,
   PhotoKind,
   PresignPhotoResponse,
   SerialClaim,
@@ -80,6 +81,19 @@ function browseQuery(params: BrowseListingsParams): string {
 /** Active listings only; drafts and archived ones are never returned here. */
 export function browseListings(params: BrowseListingsParams = {}) {
   return backendRequest<BrowseListingsResponse>(`/listings${browseQuery(params)}`);
+}
+
+/**
+ * The landing page is public, so it cannot use backendRequest (which rightly
+ * redirects anonymous callers to login). This endpoint exposes only public
+ * card data. It is intentionally not cached so a just-fixed API failure or
+ * inventory threshold change cannot leave the landing page on a stale state.
+ */
+export async function getPopularListings() {
+  const apiBase = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
+  const response = await fetch(`${apiBase}/listings/popular`, { cache: "no-store" });
+  if (!response.ok) throw new Error("Popular listings are temporarily unavailable.");
+  return response.json() as Promise<PopularListingsResponse>;
 }
 
 /**

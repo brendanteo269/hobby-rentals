@@ -23,9 +23,9 @@ describe("parseSerialClaim", () => {
 });
 
 describe("passportBadge (S2-30)", () => {
-  it("gives the strong tier only to a unique serial", () => {
+  it("reserves the card pill for a unique serial", () => {
     expect(passportBadge("VERIFIED")).toBe("Serial verified");
-    expect(passportBadge("NO_SERIAL")).toBe("Photo verified");
+    expect(passportBadge("NO_SERIAL")).toBeNull();
     expect(passportBadge("DUPLICATE")).toBeNull();
     expect(passportBadge("PENDING")).toBeNull();
     expect(passportBadge(null)).toBeNull();

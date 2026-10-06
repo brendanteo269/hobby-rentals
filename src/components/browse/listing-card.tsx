@@ -24,10 +24,10 @@ import { ListingCardCarousel } from "./listing-card-carousel";
  * everything - the carousel's prev/next/dot buttons can't be nested inside
  * an <a>, so the photo needs its own link rather than sharing the outer one.
  */
-export function ListingCard({ listing, highDemand = false }: { listing: ListingCardData; highDemand?: boolean }) {
+export function ListingCard({ listing, highDemand = false, className = "" }: { listing: ListingCardData; highDemand?: boolean; className?: string }) {
   const badge = passportBadge(listing.serial_status);
   return (
-    <li className="group overflow-hidden card transition-colors hover:border-ink-soft">
+    <li className={`group overflow-hidden card transition-colors hover:border-ink-soft ${className}`}>
       <ListingCardCarousel
         photoUrls={listing.photo_urls}
         listingId={listing.id}
