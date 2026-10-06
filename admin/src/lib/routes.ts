@@ -19,6 +19,7 @@ export const ROUTES = {
   categories: "/categories",
   wallet: (id: string) => `/wallets/${id}` as Route,
   listings: "/listings",
+  listing: (id: string) => `/listings/${id}` as Route,
   listingPassport: (id: string) => `/listings/${id}/passport` as Route,
 } as const;
 
