@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { Button, FormMessage, Panel, Textarea } from "./ui";
+import { useActionState, useEffect, useState } from "react";
+import { Button, Panel, Textarea } from "./ui";
+import { useToast } from "./toast";
 import {
   deactivateListingAction,
   reactivateListingAction,
@@ -9,7 +10,11 @@ import {
 } from "@/app/listings/[id]/actions";
 import { DEACTIVATABLE_STATUSES, type ListingStatus } from "@/lib/listings";
 
-type Props = { listingId: string; status: string; deactivationReason: string | null };
+type Props = {
+  listingId: string;
+  status: string;
+  deactivationReason: string | null;
+};
 
 /**
  * S2-23: the two moderation actions an administrator can take on a listing.
@@ -18,15 +23,19 @@ type Props = { listingId: string; status: string; deactivationReason: string | n
  * one of those states, and an admin-only takedown is not the tool for the
  * owner's own in-progress removal.
  */
-export function ListingModerationPanel({ listingId, status, deactivationReason }: Props) {
-  const [deactivateState, deactivateAction, deactivating] = useActionState<ListingModerationState, FormData>(
-    deactivateListingAction,
-    undefined,
-  );
-  const [reactivateState, reactivateAction, reactivating] = useActionState<ListingModerationState, FormData>(
-    reactivateListingAction,
-    undefined,
-  );
+export function ListingModerationPanel({
+  listingId,
+  status,
+  deactivationReason,
+}: Props) {
+  const [deactivateState, deactivateAction, deactivating] = useActionState<
+    ListingModerationState,
+    FormData
+  >(deactivateListingAction, undefined);
+  const [reactivateState, reactivateAction, reactivating] = useActionState<
+    ListingModerationState,
+    FormData
+  >(reactivateListingAction, undefined);
   // Both are consequential (one hides the listing from every renter, the
   // other undoes that) and get the same inline, styled confirmation
   // VerificationPanel uses, rather than window.confirm().
@@ -34,9 +43,30 @@ export function ListingModerationPanel({ listingId, status, deactivationReason }
   const [confirmingReactivate, setConfirmingReactivate] = useState(false);
   const [reason, setReason] = useState("");
 
+  const { show } = useToast();
+
+  // Same pattern as add-category.tsx: the result of either action surfaces
+  // as a toast rather than an inline message. Resetting the confirmation
+  // box and typed reason on success is handled separately, by the parent
+  // page keying this component on `status` (both actions always change
+  // it) - a fresh mount clears all local state, including useActionState's,
+  // without this effect reaching for setState itself.
+  useEffect(() => {
+    const message = deactivateState?.success ?? deactivateState?.error;
+    if (message) show(message, deactivateState?.error ? "error" : "success");
+  }, [show, deactivateState]);
+
+  useEffect(() => {
+    const message = reactivateState?.success ?? reactivateState?.error;
+    if (message) show(message, reactivateState?.error ? "error" : "success");
+  }, [show, reactivateState]);
+
   if (status === "DEACTIVATED") {
     return (
-      <Panel title="Moderation" description="This listing was deactivated by an administrator.">
+      <Panel
+        title="Moderation"
+        description="This listing was deactivated by an administrator."
+      >
         <form action={reactivateAction} className="space-y-3">
           <input type="hidden" name="listing_id" value={listingId} />
           {deactivationReason && (
@@ -45,7 +75,6 @@ export function ListingModerationPanel({ listingId, status, deactivationReason }
               {deactivationReason}
             </p>
           )}
-          <FormMessage state={reactivateState} />
           {confirmingReactivate ? (
             <div className="space-y-3 border-l-2 border-bad bg-sand px-3 py-2">
               <p className="text-sm text-ink">
@@ -55,13 +84,21 @@ export function ListingModerationPanel({ listingId, status, deactivationReason }
                 <Button type="submit" variant="outline" disabled={reactivating}>
                   {reactivating ? "Reactivating…" : "Yes, reactivate listing"}
                 </Button>
-                <Button type="button" variant="outline" onClick={() => setConfirmingReactivate(false)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setConfirmingReactivate(false)}
+                >
                   Cancel
                 </Button>
               </div>
             </div>
           ) : (
-            <Button type="button" variant="outline" onClick={() => setConfirmingReactivate(true)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setConfirmingReactivate(true)}
+            >
               Reactivate listing
             </Button>
           )}
@@ -73,10 +110,12 @@ export function ListingModerationPanel({ listingId, status, deactivationReason }
   if (!DEACTIVATABLE_STATUSES.includes(status as ListingStatus)) return null;
 
   return (
-    <Panel title="Moderation" description="Removes this listing from public discovery until it's reactivated.">
+    <Panel
+      title="Moderation"
+      description="Removes this listing from public discovery until it's reactivated."
+    >
       <form action={deactivateAction} className="space-y-3">
         <input type="hidden" name="listing_id" value={listingId} />
-        <FormMessage state={deactivateState} />
         {confirmingDeactivate ? (
           <div className="space-y-3 border-l-2 border-bad bg-sand px-3 py-2">
             <Textarea
@@ -89,7 +128,11 @@ export function ListingModerationPanel({ listingId, status, deactivationReason }
               onChange={(event) => setReason(event.target.value)}
             />
             <div className="flex flex-wrap gap-2">
-              <Button type="submit" variant="outline" disabled={deactivating || !reason.trim()}>
+              <Button
+                type="submit"
+                variant="outline"
+                disabled={deactivating || !reason.trim()}
+              >
                 {deactivating ? "Deactivating…" : "Confirm deactivation"}
               </Button>
               <Button
@@ -105,7 +148,11 @@ export function ListingModerationPanel({ listingId, status, deactivationReason }
             </div>
           </div>
         ) : (
-          <Button type="button" variant="outline" onClick={() => setConfirmingDeactivate(true)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setConfirmingDeactivate(true)}
+          >
             Deactivate listing
           </Button>
         )}
