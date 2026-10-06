@@ -1,19 +1,25 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import type { ReactNode } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui";
-import { requestBooking } from "@/app/bookings/actions";
+import {
+  AvailabilityCalendar,
+  consecutiveDatesFrom,
+  nextDate,
+} from "@/components/bookings/availability-calendar";
+import { BookingQuoteSummary } from "@/components/bookings/booking-quote-summary";
+import { DamageProtectionField } from "@/components/bookings/damage-protection-field";
+import { quoteBooking, requestBooking } from "@/app/bookings/actions";
+import type { BookingQuote } from "@/lib/api/bookings";
+import type { Booking } from "@/lib/bookings";
 import { formatDate, formatMoney } from "@/lib/format";
 import {
-  rentalDays,
   rentalDurationLimits,
-  rentalQuote,
   UNAVAILABLE_REASON_LABELS,
-  WEEKDAY_LABELS,
   type UnavailableDate,
 } from "@/lib/listings";
-
-const LOCALE = "en-SG";
 
 type Props = {
   listingId: string;
@@ -22,30 +28,13 @@ type Props = {
   unavailableDates: UnavailableDate[];
   minRentalDays: number | null;
   maxRentalDays: number | null;
-  /** Whichever rates the listing carries; at least one is always set. */
-  pricePerDayCents: number | null;
-  pricePerWeekCents: number | null;
+  /** Rendered beside the submit button, e.g. a "Message owner" link - this form's own concern is booking, not what else belongs next to it. */
+  secondaryAction?: ReactNode;
+  /** Called with the created (or replayed) booking right after a successful request, alongside the form's own inline confirmation - lets an embedding caller (BookingRequestModal) react without a page refetch. */
+  onSuccess?: (booking: Booking) => void;
+  /** Drops the form's own "Request to book" heading and top divider - set when a caller already supplies its own heading, e.g. a Modal's title. */
+  hideHeading?: boolean;
 };
-
-const iso = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-
-function nextDate(date: string) {
-  const [year, month, day] = date.split("-").map(Number);
-  return iso(new Date(year, month - 1, day + 1));
-}
-
-function monthOf(value: string) {
-  const [year, month] = value.split("-").map(Number);
-  return { year, month: month - 1 };
-}
-
-/** A booking occupies every date in its range, so only continuous runs can be selected. */
-function consecutiveDatesFrom(startDate: string, availableDates: Set<string>) {
-  const dates = [startDate];
-  while (availableDates.has(nextDate(dates.at(-1)!))) dates.push(nextDate(dates.at(-1)!));
-  return dates;
-}
 
 export function BookingRequestForm({
   listingId,
@@ -53,16 +42,20 @@ export function BookingRequestForm({
   unavailableDates,
   minRentalDays,
   maxRentalDays,
-  pricePerDayCents,
-  pricePerWeekCents,
+  secondaryAction,
+  onSuccess,
+  hideHeading,
 }: Props) {
   const availableSet = useMemo(() => new Set(availableDates), [availableDates]);
   const reasonByDate = useMemo(
     () => new Map(unavailableDates.map((entry) => [entry.date, entry.reason])),
     [unavailableDates],
   );
-  const hasBookedDays = useMemo(
-    () => unavailableDates.some((entry) => entry.reason === "BOOKED"),
+  // Days somebody else holds - a booking, or a live waitlist offer - which
+  // the calendar strikes through and the waitlist panel below offers to
+  // queue for.
+  const hasHeldDays = useMemo(
+    () => unavailableDates.some((entry) => entry.reason === "BOOKED" || entry.reason === "WAITLIST_HOLD"),
     [unavailableDates],
   );
   const durationLimits = rentalDurationLimits({
@@ -76,10 +69,26 @@ export function BookingRequestForm({
   );
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [paged, setPaged] = useState<{ year: number; month: number } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [errorCode, setErrorCode] = useState<string | undefined>();
+  const [shortfallCents, setShortfallCents] = useState<number | undefined>();
+  const [quote, setQuote] = useState<BookingQuote | null>(null);
+  // S2-09. Kept here rather than read off the quote so the renter's choice
+  // survives re-picking dates, and so toggling it can re-price immediately.
+  const [damageProtection, setDamageProtection] = useState(false);
+  // Generated once per quoted date range and reused across retries of
+  // submitting it (e.g. a request that times out but actually succeeds
+  // server-side), so a double-submit places only one wallet hold. A new
+  // range gets its own key the next time a quote comes back.
+  const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
+  // Two transitions, not one: re-pricing and submitting are different waits,
+  // and sharing a flag made the submit button read "Sending…" while it was
+  // only fetching a quote - telling the renter their request was on its way
+  // when nothing had been sent.
+  const [isPricing, startPricing] = useTransition();
+  const [isSending, startSending] = useTransition();
+  const isPending = isPricing || isSending;
   const endDates = useMemo(() => {
     if (!startDate) return [];
     const maximum = maxRentalDays ?? Infinity;
@@ -98,120 +107,110 @@ export function BookingRequestForm({
     return reason ? { lastInRun, blocked, reason } : null;
   }, [startDate, endDate, availableSet, reasonByDate]);
 
-  // S2-08 Scenario 1: a complete selection is quoted back as its length and
-  // what it costs, so a renter is not left counting days off the calendar.
-  const quote = useMemo(() => {
-    if (!startDate || !endDate) return null;
-    const days = rentalDays(startDate, endDate);
-    const priced = rentalQuote(
-      { price_per_day_cents: pricePerDayCents, price_per_week_cents: pricePerWeekCents },
-      days,
-    );
-    return priced && { days, ...priced };
-  }, [startDate, endDate, pricePerDayCents, pricePerWeekCents]);
+  // Open on the first date that can actually start a valid rental, rather
+  // than on a month containing only disabled days before it.
+  const anchorDate = startDates[0];
+  const choosingEnd = Boolean(startDate && !endDate);
 
-  // Begin at the first date that can actually start a valid rental, rather
-  // than showing a month containing only disabled days before it.
-  const firstAvailable = startDates[0];
-  const lastAvailable = availableDates.at(-1);
-  const firstMonth = firstAvailable ? monthOf(firstAvailable) : null;
-  const lastMonth = lastAvailable ? monthOf(lastAvailable) : null;
-  const ordinal = (value: { year: number; month: number }) => value.year * 12 + value.month;
-  const month = (() => {
-    if (!firstMonth || !lastMonth) return null;
-    const fallback = startDate ? monthOf(startDate) : firstMonth;
-    if (!paged || ordinal(paged) < ordinal(firstMonth)) return firstMonth;
-    if (ordinal(paged) > ordinal(lastMonth)) return lastMonth;
-    return paged ?? fallback;
-  })();
-
-  function pick(day: string) {
+  /** Clears whatever the last attempt said, so a new one starts clean. */
+  function clearOutcome() {
     setMessage(null);
     setError(null);
+    setErrorCode(undefined);
+    setShortfallCents(undefined);
+  }
+
+  function pick(day: string) {
+    clearOutcome();
     if (!startDate || endDate) {
       setStartDate(day);
       setEndDate("");
+      setQuote(null);
+      setIdempotencyKey(null);
     } else if (endDates.includes(day)) {
       setEndDate(day);
+      setQuote(null);
+      setIdempotencyKey(null);
+      startPricing(async () => {
+        const result = await quoteBooking(listingId, startDate, day, damageProtection);
+        if ("error" in result) setError(result.error);
+        else {
+          setQuote(result.quote);
+          setIdempotencyKey(crypto.randomUUID());
+        }
+      });
     }
   }
 
-  function submit() {
+  /**
+   * S2-09 Scenario 2: the total is recalculated before confirmation, by the
+   * server rather than here - a fee the renter is shown must be the fee they
+   * are charged. A new key with it, since the amount to hold has changed.
+   */
+  function toggleProtection(selected: boolean) {
+    setDamageProtection(selected);
     if (!startDate || !endDate) return;
-    setMessage(null);
-    setError(null);
-    startTransition(async () => {
-      const result = await requestBooking(listingId, startDate, endDate);
+    clearOutcome();
+    setIdempotencyKey(null);
+    startPricing(async () => {
+      const result = await quoteBooking(listingId, startDate, endDate, selected);
       if ("error" in result) setError(result.error);
-      else setMessage(`Request sent for ${formatDate(startDate)} – ${formatDate(endDate)}.`);
+      else {
+        setQuote(result.quote);
+        setIdempotencyKey(crypto.randomUUID());
+      }
     });
   }
 
-  if (!month || !firstMonth || !lastMonth) {
+  function submit() {
+    if (!startDate || !endDate || !idempotencyKey) return;
+    clearOutcome();
+    startSending(async () => {
+      const result = await requestBooking(listingId, startDate, endDate, idempotencyKey, damageProtection);
+      if ("error" in result) {
+        setError(result.error);
+        setErrorCode(result.code);
+        setShortfallCents(result.shortfallCents);
+      }
+      else {
+        const held = result.booking.total_amount_cents;
+        setMessage(
+          `Request sent for ${formatDate(startDate)} – ${formatDate(endDate)}.` +
+            (held ? ` ${formatMoney(held)} is on hold in your wallet until the owner responds.` : ""),
+        );
+        onSuccess?.(result.booking);
+      }
+    });
+  }
+
+  if (!anchorDate) {
     return (
-      <div className="mt-8 border-t border-line pt-6">
-        <h2 className="text-base font-semibold uppercase tracking-wide">Request to book</h2>
+      <div className={hideHeading ? "" : "mt-8 border-t border-line pt-6"}>
+        {!hideHeading && <h2 className="text-base font-semibold uppercase tracking-wide">Request to book</h2>}
         <p className="mt-4 text-sm text-ink-soft">There are no bookable dates available in the next year.</p>
+        {secondaryAction && <div className="mt-4">{secondaryAction}</div>}
       </div>
     );
   }
 
-  const lead = (new Date(month.year, month.month, 1).getDay() + 6) % 7;
-  const length = new Date(month.year, month.month + 1, 0).getDate();
-  const label = new Date(month.year, month.month, 1).toLocaleDateString(LOCALE, { month: "long", year: "numeric" });
-  const canGoBack = ordinal(month) > ordinal(firstMonth);
-  const canGoForward = ordinal(month) < ordinal(lastMonth);
-
   return (
-    <div className="mt-8 border-t border-line pt-6">
-      <h2 className="text-base font-semibold uppercase tracking-wide">Request to book</h2>
+    <div className={hideHeading ? "" : "mt-8 border-t border-line pt-6"}>
+      {!hideHeading && <h2 className="text-base font-semibold uppercase tracking-wide">Request to book</h2>}
       <p className="body-copy mt-1">
         Select an available start date, then an available end date.
         {durationLimits && ` This listing rents for ${durationLimits}.`}
-        {hasBookedDays && " Struck-through days are already booked."}
+        {hasHeldDays && " Struck-through days are taken — you can join the waitlist for them below."}
       </p>
 
-      <div className="mt-4 max-w-sm rounded-2xl border border-line select-none">
-        <div className="flex items-center justify-between border-b border-line px-3 py-2">
-          <button type="button" onClick={() => setPaged({ year: month.year, month: month.month - 1 })} disabled={!canGoBack} aria-label="Previous month" className="rounded-full px-2 py-1 text-sm text-ink-soft hover:bg-surface-muted disabled:opacity-30">‹</button>
-          <span className="text-sm font-medium">{label}</span>
-          <button type="button" onClick={() => setPaged({ year: month.year, month: month.month + 1 })} disabled={!canGoForward} aria-label="Next month" className="rounded-full px-2 py-1 text-sm text-ink-soft hover:bg-surface-muted disabled:opacity-30">›</button>
-        </div>
-        <div className="grid grid-cols-7 gap-1 p-3">
-          {WEEKDAY_LABELS.map((day) => <span key={day} className="pb-1 text-center text-[0.6875rem] text-ink-soft">{day.charAt(0)}</span>)}
-          {Array.from({ length: lead }, (_, index) => <span key={`lead-${index}`} />)}
-          {Array.from({ length }, (_, index) => {
-            const day = iso(new Date(month.year, month.month, index + 1));
-            const choosingEnd = Boolean(startDate && !endDate);
-            const selectable = choosingEnd ? endDates.includes(day) : startDates.includes(day);
-            const selected = day === startDate || day === endDate;
-            const inRange = Boolean(startDate && endDate && day > startDate && day < endDate);
-            // Only a day the listing itself refuses carries a reason. One
-            // that is merely unpickable right now - before the chosen start,
-            // or past the maximum length - stays plainly dimmed, since
-            // nothing is wrong with the date.
-            const reason = selectable ? undefined : reasonByDate.get(day);
-            const unavailableStyle =
-              reason === "BOOKED"
-                ? "cursor-not-allowed text-ink-soft line-through"
-                : "cursor-default text-ink-soft/30";
-            return (
-              <button
-                key={day}
-                type="button"
-                disabled={!selectable}
-                onClick={() => pick(day)}
-                aria-pressed={selected}
-                aria-label={reason ? `${formatDate(day)}, ${UNAVAILABLE_REASON_LABELS[reason].toLowerCase()}` : undefined}
-                title={reason ? UNAVAILABLE_REASON_LABELS[reason] : undefined}
-                className={`aspect-square rounded-lg text-sm transition-colors ${selected ? "bg-ink text-white" : inRange ? "bg-surface-muted text-ink" : selectable ? "hover:bg-surface-muted" : unavailableStyle}`}
-              >
-                {index + 1}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <AvailabilityCalendar
+        availableDates={availableDates}
+        anchorDate={anchorDate}
+        selectableDates={choosingEnd ? endDates : startDates}
+        reasonByDate={reasonByDate}
+        startDate={startDate}
+        endDate={endDate}
+        onPick={pick}
+      />
 
       <p className="mt-3 text-sm text-ink-soft">
         {startDate ? `From: ${formatDate(startDate)}` : "Choose a start date."}
@@ -227,37 +226,32 @@ export function BookingRequestForm({
       )}
 
       {quote && (
-        <dl className="mt-3 space-y-1 border-t border-line pt-3 text-sm">
-          {quote.lines.map((line) => (
-            <div key={`${line.unit}-${line.count}`} className="flex items-baseline justify-between gap-4">
-              <dt className="text-ink-soft">
-                {line.count} {line.unit}
-                {line.count === 1 ? "" : "s"} × {formatMoney(line.rateCents)}
-                {line.cappedFromDays && (
-                  <span className="text-xs">
-                    {" "}
-                    (for {line.cappedFromDays} days —{" "}
-                    {pricePerDayCents === null
-                      ? "this listing rents by the week"
-                      : "cheaper than the daily rate"}
-                    )
-                  </span>
-                )}
-              </dt>
-              <dd>{formatMoney(line.amountCents)}</dd>
-            </div>
-          ))}
-          <div className="flex items-baseline justify-between gap-4 border-t border-line pt-1 font-semibold">
-            <dt>
-              Total · {quote.days} {quote.days === 1 ? "day" : "days"}
-            </dt>
-            <dd>{formatMoney(quote.totalCents)}</dd>
-          </div>
-        </dl>
+        <>
+          <DamageProtectionField
+            offer={quote.damage_protection}
+            onChange={toggleProtection}
+            disabled={isPending}
+          />
+          <BookingQuoteSummary quote={quote} />
+        </>
       )}
-      {error && <p role="alert" className="mt-3 text-sm text-accent-dark">{error}</p>}
+      {error && (
+        <p role="alert" className="mt-3 text-sm text-accent-dark">
+          {errorCode === "INSUFFICIENT_BALANCE" && shortfallCents !== undefined
+            ? `Insufficient wallet balance — you're ${formatMoney(shortfallCents)} short.`
+            : error}
+        </p>
+      )}
+      {errorCode === "INSUFFICIENT_BALANCE" && (
+        <Link href="/profile?view=wallet" className="mt-2 block w-fit text-sm font-medium underline underline-offset-4">
+          Top up your wallet
+        </Link>
+      )}
       {message && <p role="status" className="mt-3 text-sm text-ink-soft">{message}</p>}
-      <Button className="mt-4" disabled={isPending || !endDate} onClick={submit}>{isPending ? "Sending…" : "Request booking"}</Button>
+      <div className={`mt-4 flex flex-wrap items-center gap-3 ${hideHeading ? "justify-end" : ""}`}>
+        <Button disabled={isPending || !endDate || !quote} onClick={submit}>{isSending ? "Sending…" : "Request booking"}</Button>
+        {secondaryAction}
+      </div>
     </div>
   );
 }

@@ -23,6 +23,8 @@ export function SerialField({ error }: { error?: string }) {
   const [photo, setPhoto] = useState<Photo | "uploading">();
   const [serial, setSerial] = useState("");
   const [photoError, setPhotoError] = useState<string>();
+  // S2-32: no serial on the item, so the photo is of its distinguishing marks and nothing is read off it.
+  const [noSerial, setNoSerial] = useState(false);
 
   async function upload(file: File | undefined) {
     if (!file) return;
@@ -41,6 +43,10 @@ export function SerialField({ error }: { error?: string }) {
       return;
     }
     const previewUrl = URL.createObjectURL(file);
+    if (noSerial) {
+      setPhoto({ key, previewUrl, reading: { serial: null, confidence: 0, readable: false } });
+      return;
+    }
     setPhoto({ key, previewUrl, reading: "reading" });
     const reading = await readSerial(key);
     setPhoto({ key, previewUrl, reading });
@@ -53,17 +59,33 @@ export function SerialField({ error }: { error?: string }) {
   return (
     <div className="space-y-4">
       <p className="body-copy">
-        Photograph the label with the item&apos;s serial number. It becomes the item&apos;s permanent
-        identity and is never shown to renters.
+        {noSerial
+          ? "Photograph something that sets this item apart: scratches, stickers, engraving or wear. It becomes the item's permanent identity."
+          : "Photograph the label with the item's serial number. It becomes the item's permanent identity and is never shown to renters."}
       </p>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={noSerial}
+          disabled={photo === "uploading" || (photo !== undefined && photo.reading === "reading")}
+          onChange={(event) => {
+            // The photo means something different either way, so switching starts it over.
+            setNoSerial(event.target.checked);
+            setPhoto(undefined);
+            setSerial("");
+          }}
+        />
+        This item has no serial number
+      </label>
+      {noSerial && <input type="hidden" name="no_serial" value="true" />}
       <label className="block cursor-pointer">
-        <span className="text-sm font-medium">Serial number label</span>
+        <span className="text-sm font-medium">{noSerial ? "Distinguishing marks" : "Serial number label"}</span>
         <span className="mt-2 flex aspect-[4/3] max-w-sm items-center justify-center overflow-hidden border border-dashed border-line bg-surface-muted text-xs text-ink-soft">
           {photo === "uploading" ? (
             "Uploading…"
           ) : ready ? (
             // eslint-disable-next-line @next/next/no-img-element -- a local blob: preview
-            <img src={ready.previewUrl} alt="Serial number label" className="h-full w-full object-contain" />
+            <img src={ready.previewUrl} alt={noSerial ? "Distinguishing marks" : "Serial number label"} className="h-full w-full object-contain" />
           ) : (
             "Take or choose a photo"
           )}
@@ -84,7 +106,9 @@ export function SerialField({ error }: { error?: string }) {
 
       {ready?.reading === "reading" && <p className="body-copy">Reading the serial number…</p>}
 
-      {ready && reading && (
+      {ready && noSerial && <input type="hidden" name="serial_photo_key" value={ready.key} />}
+
+      {ready && reading && !noSerial && (
         <>
           {reading.readable ? (
             <FormNotice tone="success" message="Check this matches the label exactly and fix anything that's wrong." />
@@ -122,7 +146,7 @@ export function SerialForm({ listingId }: { listingId: string }) {
   return (
     <form action={formAction} className="space-y-6">
       <SerialField error={state?.error} />
-      <Button disabled={pending}>{pending ? "Saving…" : "Confirm serial number"}</Button>
+      <Button disabled={pending}>{pending ? "Saving…" : "Save identity"}</Button>
     </form>
   );
 }

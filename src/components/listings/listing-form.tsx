@@ -1,8 +1,8 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
-import type { ChangeEvent, ReactNode } from "react";
-import { Button, ButtonLink, Field, FormError, Modal, SelectField, TextareaField } from "@/components/ui";
+import type { ChangeEvent } from "react";
+import { Button, ButtonLink, Field, FormError, FormSection, Modal, SelectField, TextareaField } from "@/components/ui";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
 import { WeeklyAvailabilityField } from "@/components/listings/weekly-availability-field";
 import { PickupLocationField } from "@/components/listings/pickup-location-field";
@@ -10,10 +10,11 @@ import { RentalDurationField } from "@/components/listings/rental-duration-field
 import { PhotoUploadField } from "@/components/listings/photo-upload-field";
 import { PricePerBlockField } from "@/components/listings/price-per-block-field";
 import { PricingRecommendationPanel } from "@/components/listings/pricing-recommendation";
+import { ReplacementValueField } from "@/components/listings/replacement-value-field";
 import { BaselinePhotosField } from "@/components/passport/baseline-photos-field";
 import { SerialField } from "@/components/passport/serial-form";
 import type { ListingFormState } from "@/app/listings/actions";
-import { centsToDollars, dollarsToCents, formatMoney, todayIso } from "@/lib/format";
+import { todayIso } from "@/lib/format";
 import {
   CONDITIONS,
   CONDITION_LABELS,
@@ -26,24 +27,12 @@ import {
 } from "@/lib/listings";
 import { getCategoryAttributes } from "@/lib/category-attributes";
 
-/**
- * Everything read via plain `name`/`defaultValue` (as these all were until a
- * failed submission was found to wipe them). React resets a form's
- * *uncontrolled* fields once a form action finishes, success or failure —
- * the fix is to drive each of these from state instead. available_from/
- * available_until, min/max rental days, photos, and the collection area each
- * have their own dedicated state already (below, or inside
- * PricePerBlockField, RentalDurationField, WeeklyAvailabilityField,
- * BlackoutRulesField, PhotoUploadField, PickupLocationField) and so don't
- * belong here too.
- */
 type FieldValues = {
   name: string;
   brand: string;
   description: string;
   category: string;
   condition: string;
-  deposit: string;
 };
 
 const EMPTY_FIELDS: FieldValues = {
@@ -52,7 +41,6 @@ const EMPTY_FIELDS: FieldValues = {
   description: "",
   category: "",
   condition: "",
-  deposit: "",
 };
 
 function fieldsFrom(listing: Listing): FieldValues {
@@ -62,36 +50,9 @@ function fieldsFrom(listing: Listing): FieldValues {
     description: listing.description,
     category: listing.category,
     condition: listing.condition,
-    deposit: centsToDollars(listing.deposit_cents),
   };
 }
 
-/**
- * The stored price as the one-block field shows it. A listing may carry both
- * rates (the API allows it), but this form prices by exactly one block, so
- * the daily rate is shown when present and the weekly one otherwise.
- */
-function priceFrom(listing: Listing): { block: "DAY" | "WEEK"; rate: string } {
-  return listing.price_per_day_cents !== null
-    ? { block: "DAY", rate: centsToDollars(listing.price_per_day_cents) }
-    : { block: "WEEK", rate: centsToDollars(listing.price_per_week_cents ?? 0) };
-}
-
-/**
- * The owner's listing form, for creating a listing and for editing one.
- *
- * The two differ only in where their values start and which action they
- * submit to; the fields, including the availability section, are the same.
- * The profile's default weekly schedule is shown but never edited here - a
- * listing either follows it or sets its own - so editing a listing cannot
- * quietly change every other listing that follows the default.
- *
- * Validation is the backend's: FastAPI returns one message per invalid field
- * and the action hands them back keyed by field name, which is what puts each
- * message under the control it belongs to. The browser's own `required` and
- * `min` attributes are kept as a first pass, so the common mistakes are caught
- * without a round trip, but nothing here is trusted to have caught them.
- */
 export function ListingForm({
   action,
   listing,
@@ -99,55 +60,37 @@ export function ListingForm({
   profileAvailableDays,
   profileDefaultLocation,
   depositCapBps,
+  protectionEligibilityCapCents,
+  protectionCoverageCapCents,
   categories,
 }: {
   action: (prev: ListingFormState, formData: FormData) => Promise<ListingFormState>;
-  /** Present when editing; every field then starts from this listing's stored values. */
   listing?: Listing;
-  /**
-   * Also present when editing: the listing's stored one-off blackouts, and
-   * the confirmed bookings whose days the calendar must refuse. Kept off
-   * `listing` because the API serves them from a separate endpoint.
-   */
   availability?: { blackouts: BlackoutDate[]; bookedRanges: DateRange[] };
   profileAvailableDays: number[];
   profileDefaultLocation: LocationArea | null;
-  /** Basis points (10000 = 100%) a deposit may not exceed of the weekly-equivalent rate - drives the live recommendation under the deposit field. */
   depositCapBps: number;
+  protectionEligibilityCapCents: number;
+  protectionCoverageCapCents: number;
   categories: ListingCategoryOption[];
 }) {
   const editing = listing !== undefined;
   const [state, formAction, pending] = useActionState<ListingFormState, FormData>(action, undefined);
   const errors = state?.fieldErrors ?? {};
 
-  // The three availability controls constrain one another: nothing may be
-  // listed or blacked out before today, and the window's own end cannot
-  // precede its start. Holding the two dates here is what lets the calendar
-  // below offer only the days the listing is actually open for.
   const today = todayIso();
   const [availableFrom, setAvailableFrom] = useState(listing?.available_from ?? "");
   const [availableUntil, setAvailableUntil] = useState(listing?.available_until ?? "");
-  // S1-10 Scenario 3: a window that has already opened is history. The API
-  // rejects a change to it, so the input is disabled - and a disabled input is
-  // not submitted, which is what keeps the unchanged value out of the request.
   const windowAlreadyOpen = editing && listing.available_from < today;
 
-  // A custom schedule starts from the owner's current default. This makes
-  // switching modes predictable instead of silently reverting to Mon-Fri. On
-  // edit it starts from whatever the listing already has.
   const [customAvailability, setCustomAvailability] = useState(listing?.has_custom_availability ?? false);
   const [customDays, setCustomDays] = useState<number[]>(
     listing?.custom_available_days ?? profileAvailableDays,
   );
   const weeklyDays = customAvailability ? customDays : profileAvailableDays;
   
-  // Blackouts are picked from today onward even when the window opened
-  // earlier: a blackout in the past has nothing left to block.
   const calendarFrom = availableFrom && availableFrom < today ? today : availableFrom;
 
-  // Same "starts from the current default" reasoning as customDays above: a
-  // custom pickup location should not open on a blank box. On edit, a stored
-  // location that differs from the profile default *is* a custom one.
   const [customLocation, setCustomLocation] = useState(
     editing && listing.location_area !== profileDefaultLocation,
   );
@@ -164,6 +107,18 @@ export function ListingForm({
   );
   const [attributeLoadError, setAttributeLoadError] = useState<string | null>(null);
 
+  // Pricing state for PricePerBlockField and PricingRecommendationPanel
+  const initialPrice = listing
+    ? listing.price_per_day_cents !== null
+      ? { block: "DAY" as const, rate: (listing.price_per_day_cents / 100).toFixed(2) }
+      : listing.price_per_week_cents !== null
+      ? { block: "WEEK" as const, rate: (listing.price_per_week_cents / 100).toFixed(2) }
+      : null
+    : null;
+
+  const [priceBlock, setPriceBlock] = useState<"DAY" | "WEEK" | null>(initialPrice?.block ?? "DAY");
+  const [priceRate, setPriceRate] = useState<string>(initialPrice?.rate ?? "");
+
   useEffect(() => {
     let cancelled = false;
     if (!fields.category) {
@@ -174,6 +129,7 @@ export function ListingForm({
       .catch(() => { if (!cancelled) setAttributeLoadError("Category specifications could not be loaded. Please try again."); });
     return () => { cancelled = true; };
   }, [fields.category]);
+
   const updateField =
     <K extends keyof FieldValues>(key: K) =>
     (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -185,18 +141,6 @@ export function ListingForm({
       setFields((current) => ({ ...current, [key]: event.target.value }));
     };
 
-  // Mirrors PricePerBlockField's own internal state via its onRateChange
-  // callback, purely so the deposit field below can show a live cap
-  // recommendation - the price itself is still submitted by that field's own
-  // named input, not from this copy.
-  const initialPrice = editing ? priceFrom(listing) : null;
-  const [priceBlock, setPriceBlock] = useState<"DAY" | "WEEK" | null>(initialPrice?.block ?? null);
-  const [priceRate, setPriceRate] = useState(initialPrice?.rate ?? "");
-  const depositHint = depositCapHint(depositCapBps, priceBlock, priceRate);
-
-  // Each save produces a fresh state object, so remembering which one the
-  // owner dismissed is enough to show the modal once per save and not again
-  // on every re-render after it.
   const [dismissedNotice, setDismissedNotice] = useState<ListingFormState>(undefined);
   const saved = state?.success;
   const showSavedModal = saved !== undefined && state !== dismissedNotice;
@@ -320,9 +264,6 @@ export function ListingForm({
       </FormSection>
 
       <FormSection title="Photos">
-        {/* Create takes the four condition photos, which double as the
-            listing's photos. Edit changes only the listing's photos: the
-            passport baseline is on record and can't be retaken here. */}
         {editing ? (
           <PhotoUploadField
             error={errors.photo_keys}
@@ -333,7 +274,6 @@ export function ListingForm({
         )}
       </FormSection>
 
-      {/* The item's identity, fixed once its passport is created. */}
       {!editing && (
         <FormSection title="Serial number">
           <SerialField error={errors.serial} />
@@ -341,9 +281,6 @@ export function ListingForm({
       )}
 
       <FormSection title="Price" id="price">
-        {/* Only one of the two is ever submitted, so at most one of these two
-            backend error slots is ever populated - whichever it is applies to
-            the one shared box. */}
         <PricePerBlockField
           error={errors.price_per_day_cents ?? errors.price_per_week_cents}
           initialBlock={initialPrice?.block}
@@ -365,21 +302,11 @@ export function ListingForm({
           }}
         />
 
-        <Field
-          label="Security deposit"
-          id="deposit"
-          name="deposit"
-          type="number"
-          min="0"
-          step="0.01"
-          inputMode="decimal"
-          placeholder="0.00"
-          required
-          hint={depositHint}
-          error={errors.deposit_cents}
-          className="max-w-xs"
-          value={fields.deposit}
-          onChange={updateField("deposit")}
+        <ReplacementValueField
+          error={errors.replacement_value_cents}
+          initialCents={listing?.replacement_value_cents}
+          eligibilityCapCents={protectionEligibilityCapCents}
+          coverageCapCents={protectionCoverageCapCents}
         />
       </FormSection>
 
@@ -395,8 +322,6 @@ export function ListingForm({
             onChange={(event) => {
               const next = event.target.value;
               setAvailableFrom(next);
-              // A window that now ends before it starts is not a state worth
-              // keeping around for the owner to discover at submit time.
               if (availableUntil && next && availableUntil < next) setAvailableUntil("");
             }}
             required={!windowAlreadyOpen}
@@ -459,7 +384,7 @@ export function ListingForm({
         <Modal title="Changes saved" onClose={() => setDismissedNotice(state)}>
           <p className="body-copy mt-4">
             Changes saved successfully. 
-          <br/>
+            <br/>
             Note: Changes apply to new bookings only. Anyone who has
             already booked keeps the terms they agreed to.
           </p>
@@ -477,42 +402,5 @@ export function ListingForm({
         </Modal>
       )}
     </form>
-  );
-}
-
-/**
- * The deposit field's hint text: the static explanation always, plus a live
- * "recommended up to $X" once a rate is entered.
- *
- * Mirrors CreateListingRequest._deposit_within_cap's formula exactly (a
- * week rate used directly, or a day rate x7) so the number shown here is
- * never a value the backend would then reject - a proactive echo of that
- * rule, not a second one that could drift from it.
- */
-function depositCapHint(depositCapBps: number, block: "DAY" | "WEEK" | null, rate: string): string {
-  const base = "Held, not charged. Enter 0 for none.";
-  const rateCents = dollarsToCents(rate);
-  if (block === null || rateCents === null || Number.isNaN(rateCents) || rateCents <= 0) {
-    return base;
-  }
-  const weeklyEquivalentCents = block === "WEEK" ? rateCents : rateCents * 7;
-  const capCents = Math.floor((weeklyEquivalentCents * depositCapBps) / 10_000);
-  return `${base} Recommended: up to ${formatMoney(capCents)} (${depositCapBps / 100}% of the weekly rate).`;
-}
-
-/**
- * One step of the form as its own surface, matching how a listing card gets
- * its own bordered white panel against the page — the same "distinct
- * things get distinct boxes" language, applied here to keep a long form
- * legible as a sequence of steps rather than one continuous scroll.
- */
-function FormSection({ title, children, id }: { title: string; children: ReactNode; id?: string }) {
-  return (
-    <section id={id} className="overflow-hidden card">
-      <div className="border-b border-line px-6 py-4 sm:px-8">
-        <h2 className="heading text-lg">{title}</h2>
-      </div>
-      <div className="space-y-6 p-6 sm:p-8">{children}</div>
-    </section>
   );
 }

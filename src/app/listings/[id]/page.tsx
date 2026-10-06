@@ -7,9 +7,12 @@ import { getBookingAvailability, getListing, getListingCategoryAttributes, getPa
 import { getCategoryDemand } from "@/lib/api/analytics";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney } from "@/lib/format";
-import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS } from "@/lib/listings";
+import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS, passportBadge } from "@/lib/listings";
 import { BookingRequestForm } from "@/components/bookings/booking-request-form";
 import { ListingViewTelemetry } from "@/components/analytics/listing-view-telemetry";
+import { WaitlistPanel } from "@/components/bookings/waitlist-panel";
+import { MessageButton } from "@/components/messages/message-button";
+import { getMyWaitlist } from "@/lib/api/waitlist";
 
 function fallbackAttributeLabel(key: string) {
   return key.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -30,19 +33,30 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
     notFound();
   }
   const { data: { user } } = await (await createClient()).auth.getUser();
-  const bookingAvailability =
-    listing.status === "ACTIVE" && user && user.id !== listing.owner_id
-      ? await getBookingAvailability(listing.id)
-      : null;
+
+  const canBook = listing.status === "ACTIVE" && user && user.id !== listing.owner_id;
+  const bookingAvailability = canBook ? await getBookingAvailability(listing.id) : null;
+
+  // S2-15: the renter's own queue places on this listing, so the panel can
+  // show "you are waiting" rather than offering to join again. Supplementary -
+  // a hiccup here must not cost them the booking form.
+  const waitlistEntries = canBook
+    ? await getMyWaitlist(true)
+        .then((entries) => entries.filter((entry) => entry.listing_id === listing.id))
+        .catch(() => [])
+    : [];
+
   const attributeDefinitions = await getListingCategoryAttributes(listing.category).catch(() => []);
   const definitionsByKey = new Map(attributeDefinitions.map((definition) => [definition.attribute_key, definition]));
   const specificationEntries = Object.entries(listing.attributes)
     .map(([key, value]) => ({ key, label: definitionsByKey.get(key)?.label ?? fallbackAttributeLabel(key), value: attributeText(value) }))
     .filter((entry): entry is { key: string; label: string; value: string } => entry.value !== null)
     .sort((left, right) => (definitionsByKey.get(left.key)?.display_order ?? Number.MAX_SAFE_INTEGER) - (definitionsByKey.get(right.key)?.display_order ?? Number.MAX_SAFE_INTEGER));
+
   // S2-07: a live listing's condition record, for renters to judge it by.
   // Supplementary, so a failure only hides the section.
   const passport = listing.status === "ACTIVE" ? await getPassport(listing.id).catch(() => null) : null;
+  const badge = passportBadge(passport?.serial_status);
   const categoryDemand = listing.status === "ACTIVE" ? await getCategoryDemand(listing.category).catch(() => null) : null;
 
   return (
@@ -122,8 +136,16 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               unavailableDates={bookingAvailability?.unavailable_dates ?? []}
               minRentalDays={listing.min_rental_days}
               maxRentalDays={listing.max_rental_days}
-              pricePerDayCents={listing.price_per_day_cents}
-              pricePerWeekCents={listing.price_per_week_cents}
+              secondaryAction={
+                <MessageButton target={{ kind: "listing", listingId: listing.id }} label="Message owner" />
+              }
+            />
+          )}
+          {canBook && (
+            <WaitlistPanel
+              listingId={listing.id}
+              unavailableDates={bookingAvailability?.unavailable_dates ?? []}
+              entries={waitlistEntries}
             />
           )}
           {listing.status === "PENDING_REMOVAL" && user && user.id !== listing.owner_id && (
@@ -143,7 +165,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
         <section className="mt-16 border-t border-line pt-10">
           <div className="flex flex-wrap items-center gap-3">
             <h2 className="heading text-lg">Product Passport</h2>
-            {passport.serial_status === "VERIFIED" && <Badge variant="dark">Serial verified</Badge>}
+            {badge && <Badge variant={passport?.serial_status === "VERIFIED" ? "dark" : "neutral"}>{badge}</Badge>}
           </div>
           <p className="body-copy mt-1">
             This item&apos;s permanent condition record. Nothing here can be edited or deleted, so what you see is

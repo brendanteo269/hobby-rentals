@@ -2,7 +2,8 @@
 
 import { useTransition } from "react";
 import { emitActivityEvent } from "@/app/analytics/actions";
-import { Button, Input, Select } from "@/components/ui";
+import { Button, Input } from "@/components/ui";
+import { FilterSelect } from "@/components/browse/filter-select";
 import type { BrowseFilters } from "@/lib/browse-params";
 import {
   CATEGORIES,
@@ -120,38 +121,14 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
         <p className="body-copy min-w-48 flex-1 pb-2.5">
           Give both dates to hide listings that are already booked or blacked out then.
         </p>
+        {/* A checkbox, unlike the selects, so it shows its applied state and unticking it clears it. */}
+        <label className="flex items-center gap-2 pb-2.5 text-sm font-medium">
+          <input type="checkbox" name="verified" value="1" defaultChecked={filters.verified} />
+          Serial verified only
+        </label>
         <Button type="submit">Apply</Button>
       </div>
       {highDemandLabels.length > 0 && <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4"><span className="inline-flex items-center rounded-full bg-accent-dark px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">🔥 High demand</span><p className="text-sm text-ink-soft">Popular categories right now: {highDemandLabels.join(", ")}</p></div>}
     </form>
-  );
-}
-
-/**
- * One filter dropdown. Left uncontrolled and blank on every render: the
- * applied values are shown as removable chips above the results, so repeating
- * them as a selection here would offer two ways to change one thing.
- */
-function FilterSelect({
-  id,
-  label,
-  placeholder,
-  children,
-}: {
-  id: string;
-  label: string;
-  placeholder: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="min-w-44">
-      <label htmlFor={id} className="block text-sm font-medium">
-        {label}
-      </label>
-      <Select id={id} name={id} defaultValue="" className="mt-2">
-        <option value="">{placeholder}</option>
-        {children}
-      </Select>
-    </div>
   );
 }

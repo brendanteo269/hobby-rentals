@@ -22,17 +22,25 @@ This project uses [`next/font`](https://nextjs.org/docs/app/building-your-applic
 
 ## Auth and local Supabase
 
-Registration requires email confirmation. That is configured as code in
-`supabase/config.toml` (`[auth.email] enable_confirmations = true`) and applied
-by `supabase start`; with it off, `signUp()` returns a live session
+This repo has no migrations of its own. **Every migration for the shared
+Supabase project, including this app's (profiles, onboarding, login attempts,
+admin), lives in `hobby-rentals-server/supabase/migrations`**, and so does the
+`config.toml` that sets the auth behaviour below. Two directories pushing to one
+database is how versions collided and how migrations got applied without the
+CLI ever recording them. Add new migrations there with `supabase migration new`,
+and run the local stack from that repo:
+
+```bash
+cd ../hobby-rentals-server
+supabase start          # applies every migration and the auth config
+```
+
+Registration requires email confirmation (`[auth.email] enable_confirmations =
+true` in that `config.toml`); with it off, `signUp()` returns a live session
 immediately, no mail is sent, and the signup flow cannot be exercised at all.
 **A deployed project is configured from the Supabase dashboard, not from that
 file — the settings there have to be mirrored, or production behaves
 differently from local.**
-
-```bash
-supabase start          # applies supabase/migrations and the auth config
-```
 
 Confirmation mail is captured locally by Mailpit at <http://127.0.0.1:54324>;
 nothing is delivered. A deployed project needs real SMTP configured, or no one
@@ -40,10 +48,10 @@ can complete registration.
 
 Login is rate limited per account — five failed attempts inside fifteen
 minutes locks the address for fifteen minutes. The policy lives in the
-`login_attempts` migration so the numbers cannot drift from the counter that
-enforces them; `src/lib/login-attempts.ts` only translates it for the form.
-This sits on top of Supabase's own per-IP limit, which does not stop credential
-stuffing spread across many addresses.
+`login_attempts` migration (in the server repo) so the numbers cannot drift
+from the counter that enforces them; `src/lib/login-attempts.ts` only
+translates it for the form. This sits on top of Supabase's own per-IP limit,
+which does not stop credential stuffing spread across many addresses.
 
 ## Checks
 

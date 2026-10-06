@@ -4,7 +4,7 @@ import { SerialForm } from "@/components/passport/serial-form";
 import { getListing } from "@/lib/api/listings";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Verify serial number — HobbyRentals" };
+export const metadata = { title: "Identify this item — HobbyRentals" };
 
 export default async function PassportSerialPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -21,10 +21,10 @@ export default async function PassportSerialPage({ params }: { params: Promise<{
     <Container className="py-16">
       <div className="mx-auto max-w-2xl">
         <p className="eyebrow">Product Passport · {listing.name}</p>
-        <h1 className="heading mt-3 text-3xl">Verify its serial number</h1>
+        <h1 className="heading mt-3 text-3xl">Identify this item</h1>
         <p className="body-copy mt-3">
-          This listing was created before serial numbers were required. Once saved, the serial can&apos;t
-          be changed.
+          This listing was created before serial numbers were required. Record its serial, or a photo of its
+          distinguishing marks if it has none. Once saved, this can&apos;t be changed.
         </p>
         <div className="mt-10">
           <SerialForm listingId={id} />

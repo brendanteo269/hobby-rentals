@@ -67,7 +67,7 @@ export function ButtonLink<T extends string>({
   );
 }
 
-const inputBase =
+export const inputBase =
   "w-full border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-ink placeholder:text-ink-soft/70 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-ink-soft";
 
 /** Bare text input carrying the shared field styling. `pill` is for search-bar-style contexts (hero, filter bars); form fields stay `rounded-lg`. */
@@ -285,6 +285,23 @@ export function Chip({
   );
 }
 
+/**
+ * One step of a long form as its own surface, matching how a listing card
+ * gets its own bordered white panel against the page — the same "distinct
+ * things get distinct boxes" language, applied here to keep a long form
+ * legible as a sequence of steps rather than one continuous scroll.
+ */
+export function FormSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="overflow-hidden card">
+      <div className="border-b border-line px-6 py-4 sm:px-8">
+        <h2 className="heading text-lg">{title}</h2>
+      </div>
+      <div className="space-y-6 p-6 sm:p-8">{children}</div>
+    </section>
+  );
+}
+
 /** Shown where a list would be, when the list is empty. */
 export function EmptyState({
   title,
@@ -395,10 +412,10 @@ export function ImageSlot({
   }
 
   const position =
-    align === "end" ? "items-end justify-end p-4" : "items-center justify-center px-4";
+    align === "end" ? "items-end justify-end p-4" : "items-center justify-center px-1.5";
   return (
-    <div className={`flex bg-surface-muted ${position} ${className}`}>
-      <span className="text-center text-xs text-ink-soft">{label}</span>
+    <div className={`flex overflow-hidden bg-surface-muted ${position} ${className}`}>
+      <span className="line-clamp-3 text-center text-xs text-ink-soft">{label}</span>
     </div>
   );
 }

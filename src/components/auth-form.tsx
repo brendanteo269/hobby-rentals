@@ -17,6 +17,13 @@ type Props = {
    * that resolve to copy.
    */
   notice?: { message: string; tone: NoticeTone };
+  /**
+   * Where to go after logging in — the page that sent a signed-out member
+   * here, such as an email's notification link. Already checked with
+   * safeNextPath by the page; the action checks it again, since a form field
+   * is as writable as the URL it came from.
+   */
+  next?: string | null;
 };
 
 const COPY = {
@@ -42,7 +49,7 @@ const COPY = {
 
 const EMPTY: AuthValues = { email: "", display_name: "", terms: false };
 
-export function AuthForm({ mode, action, notice }: Props) {
+export function AuthForm({ mode, action, notice, next }: Props) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const copy = COPY[mode];
 
@@ -71,6 +78,7 @@ export function AuthForm({ mode, action, notice }: Props) {
 
       {/* key: see useSubmissionAttempt. */}
       <form key={attempt} action={formAction} className="mt-8 space-y-5">
+        {next && <input type="hidden" name="next" value={next} />}
         {mode === "signup" && (
           <Field
             label="Display name"

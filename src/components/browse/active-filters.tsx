@@ -1,5 +1,4 @@
-import Link from "next/link";
-import type { Route } from "next";
+import { FilterChips, dateRangeLabel, type FilterChip } from "@/components/browse/filter-chips";
 import { browseHref, hasActiveFilters, type BrowseFilters } from "@/lib/browse-params";
 import {
   CATEGORY_LABELS,
@@ -9,7 +8,6 @@ import {
   type ListingCondition,
   type LocationArea,
 } from "@/lib/listings";
-import { formatDate } from "@/lib/format";
 
 /**
  * Every filter currently narrowing the results, each one removable.
@@ -21,7 +19,7 @@ import { formatDate } from "@/lib/format";
 export function ActiveFilters({ filters }: { filters: BrowseFilters }) {
   if (!hasActiveFilters(filters)) return null;
 
-  const chips: { key: string; label: string; href: string }[] = [];
+  const chips: FilterChip[] = [];
 
   const without = (changes: Partial<BrowseFilters>) =>
     browseHref({ ...filters, ...changes, page: 1 });
@@ -55,6 +53,10 @@ export function ActiveFilters({ filters }: { filters: BrowseFilters }) {
     }),
   );
 
+  if (filters.verified) {
+    chips.push({ key: "verified", label: "Serial verified", href: without({ verified: false }) });
+  }
+
   // The two dates only filter as a pair, so they are removed as one chip —
   // clearing just the end date would silently stop the whole date filter.
   if (filters.start_date || filters.end_date) {
@@ -65,42 +67,5 @@ export function ActiveFilters({ filters }: { filters: BrowseFilters }) {
     });
   }
 
-  return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="eyebrow">Filters</span>
-      <ul className="flex flex-wrap items-center gap-2">
-        {chips.map((chip) => (
-          <li key={chip.key}>
-            <FilterChip label={chip.label} href={chip.href} />
-          </li>
-        ))}
-      </ul>
-      <Link
-        href={"/browse" as Route}
-        className="text-sm text-ink-soft underline underline-offset-4 transition-colors hover:text-ink"
-      >
-        Clear all
-      </Link>
-    </div>
-  );
-}
-
-function FilterChip({ label, href }: { label: string; href: string }) {
-  return (
-    <Link
-      href={href as Route}
-      className="group inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-3 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide text-accent-dark transition-colors hover:bg-accent-soft/70"
-    >
-      {label}
-      <span aria-hidden="true" className="text-accent-dark/70 group-hover:text-accent-dark">
-        ×
-      </span>
-      <span className="sr-only">Remove this filter</span>
-    </Link>
-  );
-}
-
-function dateRangeLabel(start: string, end: string): string {
-  if (start && end) return `${formatDate(start)} – ${formatDate(end)}`;
-  return start ? `From ${formatDate(start)}` : `Until ${formatDate(end)}`;
+  return <FilterChips chips={chips} clearHref="/browse" />;
 }

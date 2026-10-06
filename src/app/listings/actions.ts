@@ -201,6 +201,9 @@ function parseListingFields(
       price_per_day_cents: pricePerDay,
       price_per_week_cents: pricePerWeek,
       deposit_cents: deposit!,
+      // S2-09: blank means the owner has not declared one, which is a real
+      // answer - protection is simply not offered for the listing.
+      replacement_value_cents: cents(formData, "replacement_value"),
       min_rental_days: count(formData, "min_rental_days"),
       max_rental_days: count(formData, "max_rental_days"),
       // Blank when the edit form disabled the input because the window has
@@ -255,10 +258,6 @@ export async function submitListing(
   try {
     created = await createListing(request);
   } catch (caught) {
-    // The serial is already another listing's: nothing was created.
-    if (caught instanceof ListingApiError && caught.status === 409) {
-      return { error: "Please correct the highlighted fields.", fieldErrors: { serial: caught.message } };
-    }
     if (caught instanceof ListingApiError) {
       return { error: caught.message, fieldErrors: caught.fieldErrors };
     }

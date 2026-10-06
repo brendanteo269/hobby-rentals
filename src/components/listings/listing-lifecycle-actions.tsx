@@ -9,7 +9,7 @@ import { archiveMyListing, removeMyListing, restoreMyListing, type ListingAction
 
 /**
  * Row-level archive/restore/remove controls for one listing on the owner's
- * "My listings" dashboard (S1-12). Holds the listing's current lifecycle
+ * "My listings" dashboard. Holds the listing's current lifecycle
  * state locally, seeded from the server-rendered row, so an action's result
  * (a new status, or the scheduled removal date from Scenario 3) shows
  * immediately without waiting on the page's next full render.

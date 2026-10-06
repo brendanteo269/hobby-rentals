@@ -48,6 +48,8 @@ export type BrowseListingsParams = {
   location_area?: LocationArea[];
   start_date?: string;
   end_date?: string;
+  /** S2-30: serial-verified listings only. */
+  verified_only?: boolean;
   page?: number;
   page_size?: number;
 };
@@ -67,6 +69,7 @@ function browseQuery(params: BrowseListingsParams): string {
   appendAll("location_area", params.location_area);
   if (params.start_date) search.set("start_date", params.start_date);
   if (params.end_date) search.set("end_date", params.end_date);
+  if (params.verified_only) search.set("verified_only", "true");
   if (params.page && params.page > 1) search.set("page", String(params.page));
   if (params.page_size) search.set("page_size", String(params.page_size));
 
@@ -80,9 +83,10 @@ export function browseListings(params: BrowseListingsParams = {}) {
 }
 
 /**
- * Creates the listing as a DRAFT, its passport carrying the serial.
- * publishListing takes it live once its baseline is on record too. A 409
- * means the serial is already registered to another listing.
+ * Creates the listing as a DRAFT, its passport carrying the serial (or a
+ * marks photo for an item without one). publishListing takes it live once
+ * its baseline is on record too. A serial already on another owner's
+ * listing is recorded as DUPLICATE for admin review, not refused.
  */
 export function createListing(data: CreateListingRequest) {
   return backendRequest<Listing>("/listings", {
@@ -94,6 +98,10 @@ export function createListing(data: CreateListingRequest) {
 export type ListingLimits = {
   /** Basis points (10000 = 100%) a deposit may not exceed of the listing's weekly-equivalent rate. */
   deposit_cap_bps: number;
+  /** S2-09: above this replacement value, damage protection is not offered. */
+  damage_protection_max_replacement_value_cents: number;
+  /** The most the scheme pays, before the per-listing cap. */
+  damage_protection_coverage_cap_cents: number;
 };
 
 /** Server-enforced listing limits, so the create-listing form can show an owner the deposit cap before they submit, not just reject it after. */
@@ -153,21 +161,14 @@ export function getListingHistory(listingId: string) {
   return backendRequest<ListingHistory>(`/listings/${encodeURIComponent(listingId)}/history`);
 }
 
-/** S1-12 Scenario 1: pulls a listing out of the marketplace, restorable. */
 export function archiveListing(listingId: string) {
   return backendRequest<Listing>(`/listings/${encodeURIComponent(listingId)}/archive`, { method: "POST" });
 }
 
-/** S1-12 Scenario 1: republishes an archived listing. */
 export function restoreListing(listingId: string) {
   return backendRequest<Listing>(`/listings/${encodeURIComponent(listingId)}/restore`, { method: "POST" });
 }
 
-/**
- * S1-12 Scenarios 2 & 3: "Remove Listing". Returns REMOVED immediately if
- * there was nothing upcoming, or PENDING_REMOVAL with scheduled_removal_at
- * set if a confirmed booking is still ahead of it.
- */
 export function removeListing(listingId: string) {
   return backendRequest<Listing>(`/listings/${encodeURIComponent(listingId)}/remove`, { method: "POST" });
 }
@@ -250,10 +251,18 @@ export function extractSerial(photoKey: string) {
 
 /**
  * For listings created before serials were required; new ones send theirs
- * with createListing. A 409 means it's already registered to another listing.
+ * with createListing. A 409 means an identity is already on record.
  */
 export function confirmSerial(listingId: string, body: SerialClaim) {
   return backendRequest(`/listings/${encodeURIComponent(listingId)}/passport/serial/confirm`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** S2-31: an owner-reported change between rentals. Keys come from presignListingPhoto(_, "passport"). */
+export function recordConditionUpdate(listingId: string, body: { photo_keys: string[]; note: string }) {
+  return backendRequest(`/listings/${encodeURIComponent(listingId)}/passport/condition-update`, {
     method: "POST",
     body: JSON.stringify(body),
   });
