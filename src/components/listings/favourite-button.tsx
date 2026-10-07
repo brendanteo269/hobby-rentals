@@ -5,12 +5,15 @@ import { useState } from "react";
 import { setFavourite } from "@/app/listings/[id]/favourite-actions";
 import { useToast } from "@/components/toast";
 
-export function FavouriteButton({ listingId, initiallySaved, initialCount, onRemoved, hideCount = false }: {
+type ToggleResult = { ok: true; favourite: { saved: boolean; favourite_count: number } } | { ok: false; error: string };
+
+export function FavouriteButton({ listingId, initiallySaved, initialCount, onRemoved, hideCount = false, toggleAction = setFavourite }: {
   listingId: string;
   initiallySaved: boolean;
   initialCount: number;
   onRemoved?: () => void;
   hideCount?: boolean;
+  toggleAction?: (id: string, saved: boolean) => Promise<ToggleResult>;
 }) {
   const [saved, setSaved] = useState(initiallySaved);
   const [count, setCount] = useState(initialCount);
@@ -26,7 +29,7 @@ export function FavouriteButton({ listingId, initiallySaved, initialCount, onRem
     setCount(Math.max(0, previousCount + (nextSaved ? 1 : -1)));
     setPending(true);
 
-    const result = await setFavourite(listingId, nextSaved);
+    const result = await toggleAction(listingId, nextSaved);
     setPending(false);
     if (!result.ok) {
       setSaved(wasSaved);

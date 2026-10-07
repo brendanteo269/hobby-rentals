@@ -73,6 +73,10 @@ export type Bundle = {
   updated_at: string;
 };
 
+export type BundleFavouriteState = { favourite_count: number; is_favourited: boolean };
+export type FavouriteBundle = Bundle & { saved_at: string };
+export type BundleFavouriteMutation = { saved: boolean; favourite_count: number };
+
 /**
  * A bundle's calendar. Same contract as a listing's, with one addition: a
  * blocked date names the component responsible, since "which item is
