@@ -136,19 +136,19 @@ export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
  */
 export const BOOKING_STATUS_NEXT_STEP: Record<BookingStatus, string> = {
   PENDING: "The owner will accept or decline. You can withdraw until then.",
-  CONFIRMED: "Collect the item on your start date.",
+  CONFIRMED: "Collect the item on your start date. You can cancel until then; the refund depends on how close to the start you cancel.",
   DECLINED: "Your hold has been released. You can request other dates.",
-  CANCELLED: "Your hold has been released.",
+  CANCELLED: "Your deposit, and any refund under the cancellation policy, is back in your wallet.",
   EXPIRED: "The owner did not respond in time. Your hold has been released.",
   ACTIVE: "Return the item by your end date.",
   COMPLETED: "This rental is finished.",
 };
 
-/** The same for a bundle booking, which is decided whole and cannot be withdrawn. */
+/** The same for a bundle booking, which is decided, withdrawn and cancelled whole. */
 export const BUNDLE_STATUS_NEXT_STEP: Record<BookingStatus, string> = {
   ...BOOKING_STATUS_NEXT_STEP,
-  PENDING: "The owner will accept or decline the whole bundle.",
-  CONFIRMED: "Collect the items on your start date.",
+  PENDING: "The owner will accept or decline the whole bundle. You can withdraw until then.",
+  CONFIRMED: "Collect the items on your start date. You can cancel the whole bundle until then.",
   ACTIVE: "Return the items by your end date.",
 };
 

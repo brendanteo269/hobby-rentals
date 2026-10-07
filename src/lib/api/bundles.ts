@@ -22,6 +22,7 @@ import type {
   UpdateBundleRequest,
 } from "@/lib/bundles";
 import type { BookingStatus, DeclineReason } from "@/lib/bookings";
+import type { CancellationPreview, CancellationRecord } from "@/lib/cancellations";
 
 export { BackendApiError as BundleApiError } from "@/lib/api/client";
 
@@ -178,4 +179,19 @@ export async function getFeaturedBundles(limit = 8): Promise<FeaturedBundleCard[
   const response = await fetch(`${apiBase}/bundles/featured?limit=${limit}`, { cache: "no-store" });
   if (!response.ok) throw new Error("Featured bundles are temporarily unavailable.");
   return response.json() as Promise<FeaturedBundleCard[]>;
+}
+
+/** What cancelling the whole bundle booking now would refund; changes nothing. */
+export function getBundleCancellationPreview(bundleBookingId: string) {
+  return backendRequest<CancellationPreview>(
+    `/bundles/bookings/${encodeURIComponent(bundleBookingId)}/cancellation`,
+  );
+}
+
+/** The renter cancels the whole bundle booking - every item with it - under the policy. */
+export function cancelBundleBooking(bundleBookingId: string, idempotency_key: string, expected_refund_cents: number) {
+  return backendRequest<BundleBooking & { cancellation: CancellationRecord }>(
+    `/bundles/bookings/${encodeURIComponent(bundleBookingId)}/cancel`,
+    { method: "POST", body: JSON.stringify({ idempotency_key, expected_refund_cents }) },
+  );
 }

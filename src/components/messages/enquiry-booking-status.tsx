@@ -5,7 +5,7 @@ import { Badge, Button } from "@/components/ui";
 import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_LABELS, RETRYABLE_BOOKING_STATUSES, type Booking } from "@/lib/bookings";
 import { formatDate } from "@/lib/format";
 import type { UnavailableDate } from "@/lib/listings";
-import { WithdrawRequestButton } from "@/components/bookings/withdraw-request-button";
+import { CancelBookingButton } from "@/components/bookings/cancel-booking-button";
 import { BookingRequestModal } from "./booking-request-modal";
 
 const HELPER_TEXT: Partial<Record<Booking["status"], string>> = {
@@ -67,7 +67,7 @@ export function EnquiryBookingStatus({
               </p>
               <p className="mt-0.5 text-xs text-ink-soft">{HELPER_TEXT[booking.status]}</p>
             </div>
-            {booking.status === "PENDING" && <WithdrawRequestButton bookingId={booking.id} />}
+            <CancelBookingButton kind="booking" id={booking.id} status={booking.status} />
           </div>
         ) : (
           <p className="text-sm text-ink-soft">Ready to lock in your dates?</p>

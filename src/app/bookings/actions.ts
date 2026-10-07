@@ -2,21 +2,25 @@
 
 import { revalidatePath } from "next/cache";
 import {
+  cancelBooking,
   createBooking,
   declineBooking,
+  getBookingCancellationPreview,
   getBookingQuote,
   updateBookingStatus,
-  withdrawBooking,
 } from "@/lib/api/bookings";
 import {
+  cancelBundleBooking,
   createBundleBooking,
   declineBundleBooking,
+  getBundleCancellationPreview,
   getBundleQuote,
   updateBundleBookingStatus,
 } from "@/lib/api/bundles";
 import { BackendApiError } from "@/lib/api/client";
 import type { Booking, BookingQuote, BookingStatus, DeclineReason } from "@/lib/bookings";
 import type { BundleBooking, BundleQuote } from "@/lib/bundles";
+import type { CancellableKind, CancellationPreview, CancellationRecord } from "@/lib/cancellations";
 
 export type BookingActionResult =
   | { error: string; code?: string; shortfallCents?: number }
@@ -131,6 +135,51 @@ export async function declineBundleRequest(bundleBookingId: string, reason: Decl
   return runBundle(() => declineBundleBooking(bundleBookingId, reason, note));
 }
 
-export async function withdrawRequest(bookingId: string) {
-  return run(() => withdrawBooking(bookingId));
+/**
+ * The renter cancelling - a single booking or a whole bundle booking, pending
+ * or confirmed. Withdrawing a request is the same action: the policy refunds
+ * a pending request in full.
+ */
+export type CancellationPreviewResult = { error: string } | { preview: CancellationPreview };
+
+export type CancellationResult =
+  | { cancellation: CancellationRecord }
+  /** `preview` comes with QUOTE_CHANGED: the refund as it now stands. */
+  | { error: string; code?: string; preview?: CancellationPreview };
+
+export async function previewCancellation(kind: CancellableKind, id: string): Promise<CancellationPreviewResult> {
+  try {
+    const preview = kind === "bundle" ? await getBundleCancellationPreview(id) : await getBookingCancellationPreview(id);
+    return { preview };
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
+}
+
+/**
+ * Not revalidated here: the dialog stays up to say what came back to the
+ * wallet, and refreshes the page when the renter closes it. Revalidating now
+ * would re-render the booking as cancelled and unmount the dialog mid-sentence.
+ */
+export async function cancelRental(
+  kind: CancellableKind,
+  id: string,
+  idempotencyKey: string,
+  expectedRefundCents: number,
+): Promise<CancellationResult> {
+  try {
+    const result =
+      kind === "bundle"
+        ? await cancelBundleBooking(id, idempotencyKey, expectedRefundCents)
+        : await cancelBooking(id, idempotencyKey, expectedRefundCents);
+    return { cancellation: result.cancellation };
+  } catch (error) {
+    if (!(error instanceof BackendApiError)) throw error;
+    if (error.code === "QUOTE_CHANGED") {
+      const fresh = await previewCancellation(kind, id);
+      return { error: error.message, code: error.code, preview: "preview" in fresh ? fresh.preview : undefined };
+    }
+    return { error: error.message, code: error.code };
+  }
 }

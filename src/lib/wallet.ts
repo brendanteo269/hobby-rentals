@@ -1,6 +1,22 @@
 import { createClient } from "@/lib/supabase/client";
 
-export type TransactionType = "TOPUP" | "ESCROW_HOLD" | "ESCROW_RELEASE" | "WITHDRAWAL" | "REFUND" | "ADMIN_CREDIT" | "ADMIN_DEBIT" | "OWNER_PROTECTION_PREMIUM";
+/**
+ * OWNER_PROTECTION_PREMIUM is an owner buying HobbyShield cover.
+ * CANCELLATION_FEE is the non-refundable part of a booking the renter
+ * cancelled leaving their held balance; CANCELLATION_PAYOUT is the same amount
+ * reaching the owner.
+ */
+export type TransactionType =
+  | "TOPUP"
+  | "ESCROW_HOLD"
+  | "ESCROW_RELEASE"
+  | "WITHDRAWAL"
+  | "REFUND"
+  | "ADMIN_CREDIT"
+  | "ADMIN_DEBIT"
+  | "OWNER_PROTECTION_PREMIUM"
+  | "CANCELLATION_FEE"
+  | "CANCELLATION_PAYOUT";
 export type TransactionStatus = "COMPLETED" | "PENDING" | "REFUNDED";
 export type TransactionFilter = "all" | "topups" | "escrow" | "releases" | "refunds" | "withdrawals" | "adjustments";
 
@@ -12,6 +28,25 @@ export type WalletTransaction = {
   date: string;
   status: TransactionStatus;
   paymentIntentId?: string;
+  /** The booking or bundle booking the money was for; null for a top-up or withdrawal. */
+  bookingReference: BookingReference | null;
+};
+
+export type BookingReference = {
+  bookingId: string | null;
+  bundleBookingId: string | null;
+  /** The listing's or the bundle's name. */
+  name: string | null;
+  startDate: string;
+  endDate: string;
+};
+
+type BookingReferenceResponse = {
+  booking_id: string | null;
+  bundle_booking_id: string | null;
+  name: string | null;
+  start_date: string;
+  end_date: string;
 };
 
 export type WalletState = {
@@ -28,14 +63,40 @@ export const MIN_WITHDRAWAL_CENTS = 1000;
 type WalletApiResponse = {
   available_balance_cents: number;
   held_balance_cents: number;
-  transactions: Array<{ id: string; type: TransactionType; description: string; amount_cents: number; created_at: string; status: TransactionStatus; stripe_payment_intent_id?: string }>;
+  transactions: Array<{
+    id: string;
+    type: TransactionType;
+    description: string;
+    amount_cents: number;
+    created_at: string;
+    status: TransactionStatus;
+    stripe_payment_intent_id?: string;
+    booking_reference?: BookingReferenceResponse | null;
+  }>;
 };
 
 export function mapWalletResponse(data: WalletApiResponse): WalletState {
   return {
     availableCents: data.available_balance_cents,
     heldCents: data.held_balance_cents,
-    transactions: data.transactions.map((tx) => ({ id: tx.id, type: tx.type, description: tx.description, amountCents: tx.amount_cents, date: tx.created_at, status: tx.status, paymentIntentId: tx.stripe_payment_intent_id })),
+    transactions: data.transactions.map((tx) => ({
+      id: tx.id,
+      type: tx.type,
+      description: tx.description,
+      amountCents: tx.amount_cents,
+      date: tx.created_at,
+      status: tx.status,
+      paymentIntentId: tx.stripe_payment_intent_id,
+      bookingReference: tx.booking_reference
+        ? {
+            bookingId: tx.booking_reference.booking_id,
+            bundleBookingId: tx.booking_reference.bundle_booking_id,
+            name: tx.booking_reference.name,
+            startDate: tx.booking_reference.start_date,
+            endDate: tx.booking_reference.end_date,
+          }
+        : null,
+    })),
   };
 }
 
@@ -59,8 +120,11 @@ export function filterTransactions(transactions: WalletTransaction[], filter: Tr
   if (filter === "all") return transactions;
   if (filter === "topups") return transactions.filter((tx) => tx.type === "TOPUP");
   if (filter === "escrow") return transactions.filter((tx) => tx.type === "ESCROW_HOLD");
-  if (filter === "releases") return transactions.filter((tx) => tx.type === "ESCROW_RELEASE");
-  if (filter === "refunds") return transactions.filter((tx) => tx.type === "REFUND");
+  if (filter === "releases") {
+    return transactions.filter((tx) => tx.type === "ESCROW_RELEASE" || tx.type === "CANCELLATION_PAYOUT");
+  }
+  // A cancellation's refund and its non-refundable part read together.
+  if (filter === "refunds") return transactions.filter((tx) => tx.type === "REFUND" || tx.type === "CANCELLATION_FEE");
   if (filter === "adjustments") {
     return transactions.filter((tx) => tx.type === "ADMIN_CREDIT" || tx.type === "ADMIN_DEBIT");
   }
