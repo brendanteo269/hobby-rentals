@@ -13,6 +13,7 @@ export async function setBundleFavourite(bundleId: string, saved: boolean): Prom
   try {
     const favourite = saved ? await saveBundleFavourite(bundleId) : await removeBundleFavourite(bundleId);
     revalidatePath(`/bundles/${bundleId}`);
+    revalidatePath("/bundles");
     revalidatePath("/favourites");
     return { ok: true, favourite };
   } catch (error) {

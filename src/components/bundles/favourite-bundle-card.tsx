@@ -6,10 +6,12 @@ import { ImageSlot } from "@/components/ui";
 import { formatMoney } from "@/lib/format";
 import { BUNDLE_STATUS_LABELS, type FavouriteBundle } from "@/lib/bundles";
 import { BundleFavouriteButton } from "./bundle-favourite-button";
+import { BundleCard } from "./bundle-card";
 
 export function FavouriteBundleCard({ bundle }: { bundle: FavouriteBundle }) {
   const router = useRouter();
   const active = bundle.status === "ACTIVE";
+  if (active) return <BundleCard bundle={{ ...bundle, is_favourited: true }} onFavouriteRemoved={() => router.refresh()} />;
   const primaryPhoto = bundle.items[0]?.photo_urls[0];
   const content = (
     <>

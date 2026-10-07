@@ -54,10 +54,13 @@ export function ListingCard({ listing, highDemand = false, className = "", onFav
           <h3 className="heading text-sm leading-snug">{listing.name}</h3>
         </Link>
 
-        <div className="mt-3 flex items-center justify-between gap-2 border-t border-line pt-2">
+        <div className="mt-3 border-t border-line pt-2">
           <Link href={`/listings/${listing.id}`} className="min-w-0">
             <RateLine listing={listing} />
           </Link>
+        </div>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <p className="body-copy">{formatMoney(listing.deposit_cents)} deposit</p>
           {listing.favourite_count !== undefined && listing.is_favourited !== undefined && (
             <FavouriteButton
               listingId={listing.id}
@@ -67,7 +70,6 @@ export function ListingCard({ listing, highDemand = false, className = "", onFav
             />
           )}
         </div>
-        <p className="body-copy mt-1">{formatMoney(listing.deposit_cents)} deposit</p>
       </div>
     </li>
   );

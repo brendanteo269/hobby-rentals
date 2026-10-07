@@ -71,6 +71,8 @@ export type Bundle = {
   items: BundleComponent[];
   created_at: string;
   updated_at: string;
+  favourite_count: number;
+  is_favourited: boolean;
 };
 
 export type BundleFavouriteState = { favourite_count: number; is_favourited: boolean };

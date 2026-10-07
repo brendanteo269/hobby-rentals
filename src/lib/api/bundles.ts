@@ -17,7 +17,6 @@ import type {
   BundleBooking,
   BundleEvent,
   BundleFavouriteMutation,
-  BundleFavouriteState,
   FavouriteBundle,
   BundleQuote,
   CreateBundleRequest,
@@ -79,7 +78,7 @@ export function getMyBundles() {
 
 /** The API 404s if this caller can't see it (not ACTIVE and not theirs). */
 export function getBundle(bundleId: string) {
-  return backendRequest<Bundle & BundleFavouriteState>(`/bundles/${encodeURIComponent(bundleId)}`);
+  return backendRequest<Bundle>(`/bundles/${encodeURIComponent(bundleId)}`);
 }
 
 export function getFavouriteBundles() {

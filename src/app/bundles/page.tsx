@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { ButtonLink, Container, EmptyState, ImageSlot } from "@/components/ui";
+import { ButtonLink, Container, EmptyState } from "@/components/ui";
 import { Pagination } from "@/components/pagination";
 import { BundleFilters } from "@/components/bundles/bundle-filters";
 import { ActiveBundleFilters } from "@/components/bundles/active-bundle-filters";
@@ -11,9 +10,9 @@ import {
   parseBundleFilters,
   type BundleBrowseFilters,
 } from "@/lib/bundle-browse-params";
-import { formatMoney } from "@/lib/format";
-import type { BrowseBundlesResponse, Bundle } from "@/lib/bundles";
+import type { BrowseBundlesResponse } from "@/lib/bundles";
 import type { SearchParams } from "@/lib/browse-params";
+import { BundleCard } from "@/components/bundles/bundle-card";
 
 export const metadata = { title: "Gear bundles — HobbyRentals" };
 
@@ -136,31 +135,5 @@ function NoResults({ filters, error }: { filters: BundleBrowseFilters; error: st
       body="No owner has published a gear bundle yet. Browse individual listings in the meantime."
       action={<ButtonLink href="/browse" variant="outline">Browse listings</ButtonLink>}
     />
-  );
-}
-
-function BundleCard({ bundle }: { bundle: Bundle }) {
-  const cover = bundle.items.find((item) => item.photo_urls.length > 0);
-
-  return (
-    <li className="card overflow-hidden">
-      <Link href={`/bundles/${bundle.id}`} className="block">
-        <ImageSlot label={bundle.name} src={cover?.photo_urls[0]} className="aspect-[4/3] w-full" />
-        <div className="p-5">
-          <p className="eyebrow">
-            {bundle.items.length} {bundle.items.length === 1 ? "item" : "items"}
-          </p>
-          <h2 className="mt-1 text-base font-semibold uppercase tracking-wide">{bundle.name}</h2>
-          <p className="body-copy mt-1 line-clamp-2">
-            {bundle.items.map((item) => item.name).join(" · ")}
-          </p>
-          <p className="mt-3 text-sm">
-            {bundle.price_per_day_cents !== null && `${formatMoney(bundle.price_per_day_cents)} / day`}
-            {bundle.price_per_day_cents !== null && bundle.price_per_week_cents !== null && " · "}
-            {bundle.price_per_week_cents !== null && `${formatMoney(bundle.price_per_week_cents)} / week`}
-          </p>
-        </div>
-      </Link>
-    </li>
   );
 }
