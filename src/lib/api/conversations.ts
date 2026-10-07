@@ -1,7 +1,7 @@
 import "server-only";
 
 import { backendRequest } from "@/lib/api/client";
-import type { Conversation, ConversationLimits, Message } from "@/lib/conversations";
+import type { Conversation, ConversationLimits, Message, MessagePage } from "@/lib/conversations";
 
 /** Mirrors the FastAPI routes in app/routers/conversations.py. */
 
@@ -15,8 +15,14 @@ export function getConversation(conversationId: string) {
   return backendRequest<Conversation>(`/conversations/${encodeURIComponent(conversationId)}`);
 }
 
-export function getMessages(conversationId: string) {
-  return backendRequest<Message[]>(`/conversations/${encodeURIComponent(conversationId)}/messages`);
+/**
+ * The most recent page of a thread's messages, or - passing `before`, an
+ * earlier message's created_at - the page right before it. Oldest first
+ * within the page, same as the thread itself always renders.
+ */
+export function getMessages(conversationId: string, before?: string) {
+  const query = before ? `?before=${encodeURIComponent(before)}` : "";
+  return backendRequest<MessagePage>(`/conversations/${encodeURIComponent(conversationId)}/messages${query}`);
 }
 
 /** S2-17: server-enforced attachment type/size limits, for the composer to validate against before uploading. */
@@ -44,12 +50,6 @@ export function sendMessage(conversationId: string, text: string, attachmentKeys
   return backendRequest<Message>(`/conversations/${encodeURIComponent(conversationId)}/messages`, {
     method: "POST",
     body: JSON.stringify({ text, attachment_keys: attachmentKeys }),
-  });
-}
-
-export function withdrawMessage(messageId: string) {
-  return backendRequest<Message>(`/messages/${encodeURIComponent(messageId)}/withdraw`, {
-    method: "PATCH",
   });
 }
 

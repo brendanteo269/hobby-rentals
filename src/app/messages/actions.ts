@@ -1,13 +1,14 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { sendBookingMessage, sendListingMessage, sendMessage, withdrawMessage } from "@/lib/api/conversations";
+import { getMessages, sendBookingMessage, sendListingMessage, sendMessage } from "@/lib/api/conversations";
 import { acceptMeetup, proposeMeetup } from "@/lib/api/meetups";
 import { BackendApiError } from "@/lib/api/client";
-import type { Conversation, Message } from "@/lib/conversations";
+import type { Conversation, Message, MessagePage } from "@/lib/conversations";
 
 export type ConversationActionResult = { error: string } | { conversation: Conversation };
 export type MessageActionResult = { error: string } | { message: Message };
+export type MessagePageActionResult = { error: string } | MessagePage;
 
 async function runConversation(action: () => Promise<Conversation>): Promise<ConversationActionResult> {
   try {
@@ -54,8 +55,14 @@ export async function replyToConversation(conversationId: string, text: string, 
   return runMessage(() => sendMessage(conversationId, text, attachmentKeys));
 }
 
-export async function withdrawOwnMessage(messageId: string) {
-  return runMessage(() => withdrawMessage(messageId));
+/** S2-16: the page of messages just before `before` (the oldest one already loaded), for a "load earlier messages" control. */
+export async function loadEarlierMessages(conversationId: string, before: string): Promise<MessagePageActionResult> {
+  try {
+    return await getMessages(conversationId, before);
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
 }
 
 /** S2-19: propose (or re-propose) a meetup for a confirmed booking. */

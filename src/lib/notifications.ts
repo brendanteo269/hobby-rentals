@@ -40,12 +40,14 @@ export type NotificationType =
   // S2-23: an administrator deactivated or reactivated the listing - the
   // one lifecycle change the owner did not initiate themselves.
   | "LISTING_DEACTIVATED"
-  | "LISTING_REACTIVATED";
+  | "LISTING_REACTIVATED"
+  // S2-16: the other party sent a plain text/attachment message.
+  | "MESSAGE_RECEIVED";
 
 export type AppNotification = {
   id: string;
   type: NotificationType;
-  category: "BOOKING" | "WAITLIST" | "MEETUP" | "LISTING";
+  category: "BOOKING" | "WAITLIST" | "MEETUP" | "LISTING" | "MESSAGE";
   title: string;
   body: string;
   /** What the member can expect to happen next. */
@@ -107,6 +109,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   MEETUP_ACCEPTED: "Meetup confirmed",
   LISTING_DEACTIVATED: "Listing deactivated",
   LISTING_REACTIVATED: "Listing reactivated",
+  MESSAGE_RECEIVED: "New message",
 };
 
 export const NOTIFICATION_TYPES = Object.keys(NOTIFICATION_TYPE_LABELS) as NotificationType[];

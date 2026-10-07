@@ -23,7 +23,6 @@ function proposalMessage(id: string, overrides: Partial<NonNullable<Message["mee
       accepted_at: null,
       ...overrides,
     },
-    withdrawn_at: null,
     created_at: `2026-10-0${id}T00:00:00+00:00`,
   };
 }
@@ -31,7 +30,7 @@ function proposalMessage(id: string, overrides: Partial<NonNullable<Message["mee
 function textMessage(id: string): Message {
   return {
     id, conversation_id: "convo-1", sender_id: RENTER_ID, body: "hi", attachment_urls: [],
-    meetup_event_type: null, meetup_proposal: null, withdrawn_at: null, created_at: `2026-10-0${id}T00:00:00+00:00`,
+    meetup_event_type: null, meetup_proposal: null, created_at: `2026-10-0${id}T00:00:00+00:00`,
   };
 }
 

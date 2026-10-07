@@ -8,9 +8,8 @@ import { MeetupProposalCard } from "./meetup-proposal-card";
 import { PersonAvatar } from "./person-avatar";
 
 /**
- * A thread's messages, oldest first. Read-only: a message is never edited,
- * and a withdrawn one still occupies its place, showing a placeholder
- * instead of its body rather than disappearing.
+ * A thread's messages, oldest first. Read-only and permanent: a message is
+ * never edited, hidden, or withdrawn once sent.
  *
  * A client component only so it can scroll to the newest message after
  * mount (and whenever one arrives) - otherwise a thread longer than the pane
@@ -21,6 +20,9 @@ export function MessageThread({
   messages,
   currentUserId,
   otherPartyName,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadEarlier,
   pendingMeetupProposalId = null,
   confirmedMeetupProposalId = null,
   onMeetupAccepted,
@@ -30,6 +32,10 @@ export function MessageThread({
   currentUserId: string;
   /** Shown next to the other party's own bubbles - the viewer's own need no name/avatar, their side and colour already say whose they are. */
   otherPartyName: string | null;
+  /** S2-16: whether an earlier page of this thread exists - shows the "Load earlier messages" control at the top. */
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadEarlier?: () => void;
   /** S2-19: id of the one proposal still awaiting a response - only its card gets Accept/Reject controls; an older, superseded proposal is just history. */
   pendingMeetupProposalId?: string | null;
   /** S2-19 Scenario 5: id of the currently-confirmed proposal, so its card can flag itself as having a reschedule pending once a newer proposal exists. */
@@ -40,10 +46,19 @@ export function MessageThread({
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  // Only the newest message arriving should pull the view down to it -
+  // loading an *earlier* page also changes messages.length, but must leave
+  // the viewer's scroll position alone (ConversationThreadPanel handles
+  // keeping it anchored on its own scroll container for that case).
+  const lastMessageIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ block: "end" });
-  }, [messages.length]);
+    const lastId = messages.at(-1)?.id ?? null;
+    if (lastId !== lastMessageIdRef.current) {
+      bottomRef.current?.scrollIntoView({ block: "end" });
+    }
+    lastMessageIdRef.current = lastId;
+  }, [messages]);
 
   if (messages.length === 0) {
     return <p className="body-copy p-6 text-center">No messages yet. Say hello.</p>;
@@ -51,6 +66,18 @@ export function MessageThread({
 
   return (
     <div>
+      {hasMore && (
+        <div className="flex justify-center p-3">
+          <button
+            type="button"
+            onClick={onLoadEarlier}
+            disabled={isLoadingMore}
+            className="text-xs font-medium text-ink-soft underline underline-offset-4 disabled:opacity-50"
+          >
+            {isLoadingMore ? "Loading…" : "Load earlier messages"}
+          </button>
+        </div>
+      )}
       <ol className="flex flex-col gap-4 p-5 sm:p-6">
         {messages.map((message) => {
           const mine = message.sender_id === currentUserId;
@@ -86,33 +113,27 @@ export function MessageThread({
               <div
                 className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${hasAttachments ? "w-full max-w-[85%] sm:max-w-sm" : "max-w-[70%]"} ${mine ? "bg-ink text-white" : "bg-surface-muted text-ink"}`}
               >
-                {message.withdrawn_at ? (
-                  <p className="italic opacity-70">Message withdrawn</p>
-                ) : (
-                  <>
-                    {hasAttachments && (
-                      // Full-width, meetup-card-sized photos rather than a
-                      // grid of small thumbnails - a shared photo is the
-                      // point of the message, not an aside next to the text.
-                      <ul className={`flex flex-col gap-2 ${message.body ? "mb-2" : ""}`}>
-                        {message.attachment_urls.map((url) => (
-                          <li key={url}>
-                            <button
-                              type="button"
-                              onClick={() => setLightboxUrl(url)}
-                              aria-label="View attachment full size"
-                              className="block h-48 w-full overflow-hidden rounded-xl sm:h-56"
-                            >
-                              {/* eslint-disable-next-line @next/next/no-img-element -- S3 attachment URL, not an optimizable remote image */}
-                              <img src={url} alt="" className="h-full w-full object-cover" />
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    {message.body && <p className="whitespace-pre-line">{message.body}</p>}
-                  </>
+                {hasAttachments && (
+                  // Full-width, meetup-card-sized photos rather than a
+                  // grid of small thumbnails - a shared photo is the
+                  // point of the message, not an aside next to the text.
+                  <ul className={`flex flex-col gap-2 ${message.body ? "mb-2" : ""}`}>
+                    {message.attachment_urls.map((url) => (
+                      <li key={url}>
+                        <button
+                          type="button"
+                          onClick={() => setLightboxUrl(url)}
+                          aria-label="View attachment full size"
+                          className="block h-48 w-full overflow-hidden rounded-xl sm:h-56"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element -- S3 attachment URL, not an optimizable remote image */}
+                          <img src={url} alt="" className="h-full w-full object-cover" />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 )}
+                {message.body && <p className="whitespace-pre-line">{message.body}</p>}
                 <p className={`mt-1.5 text-[0.6875rem] ${mine ? "text-white/70" : "text-ink-soft"}`}>
                   <time dateTime={message.created_at}>{formatChatTimestamp(message.created_at)}</time>
                 </p>
