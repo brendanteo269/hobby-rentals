@@ -16,6 +16,7 @@ export const AUDIT_ACTIONS = {
   listing_viewed: "Listing viewed",
   listing_deactivated: "Listing deactivated",
   listing_reactivated: "Listing reactivated",
+  booking_viewed: "Booking viewed",
 } as const;
 
 export type AuditAction = keyof typeof AUDIT_ACTIONS;
@@ -134,6 +135,49 @@ export async function getListingAuditTrail(
   };
 }
 
+/**
+ * The audit trail for one booking, newest first, paginated at AUDIT_PAGE_SIZE.
+ *
+ * Recorded against the renter (same reasoning as getListingAuditTrail: no
+ * target_booking_id column exists), with the booking id riding along in
+ * detail instead. Scoped to both for the same reason - a renter's other
+ * bookings, or other admin actions on their account, must not show up as if
+ * they happened to this one.
+ */
+export async function getBookingAuditTrail(
+  bookingId: string,
+  renterId: string,
+  page = 1,
+): Promise<AuditTrailResult> {
+  const supabase = createAdminClient();
+  const offset = (page - 1) * AUDIT_PAGE_SIZE;
+
+  const { data, error, count } = await supabase
+    .from("admin_audit_log")
+    .select("id, action, actor_label, detail, created_at", { count: "exact" })
+    .eq("target_user_id", renterId)
+    .eq("detail->>booking_id", bookingId)
+    .order("created_at", { ascending: false })
+    .range(offset, offset + AUDIT_PAGE_SIZE - 1);
+
+  if (error) {
+    console.error("Failed to load booking audit trail:", error.message);
+    return { entries: [], total: 0 };
+  }
+
+  return {
+    entries: ((data ?? []) as AuditRow[]).map((row) => ({
+      id: row.id,
+      action: row.action as AuditAction,
+      label: labelFor(row.action),
+      actorLabel: row.actor_label,
+      detail: row.detail ?? {},
+      created_at: row.created_at,
+    })),
+    total: count ?? 0,
+  };
+}
+
 /** Skip logging another "viewed" entry this soon after the listing's last audit entry. */
 const VIEW_DEDUPE_WINDOW_MS = 10_000;
 
@@ -165,6 +209,26 @@ export async function recordListingViewed(listingId: string, ownerId: string): P
   if (lastEntryAt !== null && Date.now() - lastEntryAt < VIEW_DEDUPE_WINDOW_MS) return;
 
   await recordAdminAction("listing_viewed", ownerId, { listing_id: listingId });
+}
+
+/** Records "booking_viewed", unless this booking's own audit trail already has an entry this recent (same reasoning as recordListingViewed). */
+export async function recordBookingViewed(bookingId: string, renterId: string): Promise<void> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("admin_audit_log")
+    .select("created_at")
+    .eq("target_user_id", renterId)
+    .eq("detail->>booking_id", bookingId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) console.error("Failed to check booking audit trail:", error.message);
+
+  const lastEntryAt = data ? new Date(data.created_at).getTime() : null;
+  if (lastEntryAt !== null && Date.now() - lastEntryAt < VIEW_DEDUPE_WINDOW_MS) return;
+
+  await recordAdminAction("booking_viewed", renterId, { booking_id: bookingId });
 }
 
 /**
