@@ -7,6 +7,7 @@ import { Button, FormNotice, Modal } from "@/components/ui";
 import { cancelRental, previewCancellation } from "@/app/bookings/actions";
 import type { BookingStatus } from "@/lib/bookings";
 import {
+  RENTER_CANCEL_OFFERED_STATUSES,
   cancellationLines,
   hasTerms,
   type CancellableKind,
@@ -24,6 +25,11 @@ import { profilePath } from "@/lib/routes";
  * is the same flow under its own name ("Withdraw"), refunded in full. On an
  * ACTIVE booking the preview explains that the return process applies
  * instead, and offers nothing to confirm.
+ *
+ * Rendered for every booking, not only cancellable ones, and shows its button
+ * only where cancelling is offered. Confirming re-renders the list with the
+ * booking cancelled; if this unmounted with the button, the dialog would vanish
+ * before it could say what came back to the wallet.
  */
 export function CancelBookingButton({
   kind,
@@ -39,22 +45,26 @@ export function CancelBookingButton({
   const [preview, setPreview] = useState<CancellationPreview | null>(null);
   const [done, setDone] = useState<CancellationRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  const [loading, startLoading] = useTransition();
+  const [confirming, startConfirming] = useTransition();
+  // The status the dialog was opened on: the list may refresh underneath it.
+  const [openedOn, setOpenedOn] = useState<BookingStatus>(status);
   // One key per attempt, reused if the renter presses confirm again after a
   // network error, so a retry can never refund twice.
   const attemptKey = useRef<string>("");
 
-  const withdrawing = status === "PENDING";
+  const withdrawing = (open ? openedOn : status) === "PENDING";
   const noun = kind === "bundle" ? "bundle booking" : "booking";
   const label = withdrawing ? "Withdraw request" : `Cancel ${kind === "bundle" ? "bundle" : "booking"}`;
 
   function openDialog() {
     attemptKey.current = crypto.randomUUID();
+    setOpenedOn(status);
     setOpen(true);
     setPreview(null);
     setDone(null);
     setError(null);
-    startTransition(async () => {
+    startLoading(async () => {
       const result = await previewCancellation(kind, id);
       if ("error" in result) setError(result.error);
       else setPreview(result.preview);
@@ -69,7 +79,7 @@ export function CancelBookingButton({
 
   function confirm(expectedRefundCents: number) {
     setError(null);
-    startTransition(async () => {
+    startConfirming(async () => {
       const result = await cancelRental(kind, id, attemptKey.current, expectedRefundCents);
       if ("cancellation" in result) {
         setDone(result.cancellation);
@@ -86,9 +96,11 @@ export function CancelBookingButton({
 
   return (
     <>
-      <Button variant="outline" className="px-3 py-1.5 text-xs" onClick={openDialog}>
-        {label}
-      </Button>
+      {RENTER_CANCEL_OFFERED_STATUSES.includes(status) && (
+        <Button variant="outline" className="px-3 py-1.5 text-xs" onClick={openDialog}>
+          {label}
+        </Button>
+      )}
       {open && (
         <Modal title={done ? "Cancelled" : withdrawing ? "Withdraw your request?" : `Cancel this ${noun}?`} onClose={close}>
           <div className="mt-4 space-y-4 text-sm">
@@ -96,7 +108,7 @@ export function CancelBookingButton({
               <Cancelled record={done} onClose={close} />
             ) : !preview ? (
               <>
-                {pending && <p className="text-ink-soft">Working out your refund…</p>}
+                {loading && <p className="text-ink-soft">Working out your refund…</p>}
                 <FormNotice message={error ?? undefined} />
               </>
             ) : !hasTerms(preview) ? (
@@ -121,11 +133,11 @@ export function CancelBookingButton({
                 </p>
                 <FormNotice message={error ?? undefined} />
                 <div className="flex justify-end gap-2">
-                  <Button variant="outline" disabled={pending} onClick={close}>
+                  <Button variant="outline" disabled={confirming} onClick={close}>
                     {withdrawing ? "Keep request" : "Keep booking"}
                   </Button>
-                  <Button disabled={pending} onClick={() => confirm(preview.refund_cents)}>
-                    {pending ? "Cancelling…" : withdrawing ? "Yes, withdraw" : "Yes, cancel"}
+                  <Button disabled={loading || confirming} onClick={() => confirm(preview.refund_cents)}>
+                    {confirming ? "Cancelling…" : withdrawing ? "Yes, withdraw" : "Yes, cancel"}
                   </Button>
                 </div>
               </>

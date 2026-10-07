@@ -19,7 +19,6 @@ import {
   PAYMENT_STATUS_LABELS,
 } from "@/lib/bookings";
 import { CancelBookingButton } from "@/components/bookings/cancel-booking-button";
-import { RENTER_CANCEL_OFFERED_STATUSES } from "@/lib/cancellations";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
 import { formatDate, formatDateTime } from "@/lib/format";
 
@@ -140,9 +139,7 @@ export function RenterView({
               </div>
               <div className="flex flex-col items-end gap-2">
                 <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
-                {RENTER_CANCEL_OFFERED_STATUSES.includes(booking.status) && (
-                  <CancelBookingButton kind="bundle" id={booking.id} status={booking.status} />
-                )}
+                <CancelBookingButton kind="bundle" id={booking.id} status={booking.status} />
               </div>
             </li>
           ))}
@@ -170,9 +167,7 @@ export function RenterView({
               </div>
               <div className="flex flex-col items-end gap-2">
                 <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
-                {RENTER_CANCEL_OFFERED_STATUSES.includes(booking.status) && (
-                  <CancelBookingButton kind="booking" id={booking.id} status={booking.status} />
-                )}
+                <CancelBookingButton kind="booking" id={booking.id} status={booking.status} />
                 {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
                   <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
                 )}
