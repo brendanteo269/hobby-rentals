@@ -14,8 +14,6 @@ export async function getListingFormContext(): Promise<{
   profileAvailableDays: number[];
   profileDefaultLocation: LocationArea | null;
   depositCapBps: number;
-  protectionEligibilityCapCents: number;
-  protectionCoverageCapCents: number;
   categories: ListingCategoryOption[];
 }> {
   const [{ available_days: profileAvailableDays }, profile, limits, categories] =
@@ -33,8 +31,6 @@ export async function getListingFormContext(): Promise<{
     profileAvailableDays,
     profileDefaultLocation,
     depositCapBps: limits.deposit_cap_bps,
-    protectionEligibilityCapCents: limits.damage_protection_max_replacement_value_cents,
-    protectionCoverageCapCents: limits.damage_protection_coverage_cap_cents,
     categories,
   };
 }

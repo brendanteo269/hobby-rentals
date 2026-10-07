@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import { Field } from "@/components/ui";
-import { centsToDollars, formatMoney } from "@/lib/format";
+import { centsToDollars } from "@/lib/format";
 
 /**
- * S2-09: what the owner says it would cost to replace this item.
+ * S2-06: what the owner says it would cost to replace this item.
  *
- * Not a price the renter ever pays. It decides two things: whether damage
- * protection can be offered on this listing at all, and - where it can - the
- * most the scheme will pay towards damage.
+ * It is optional for a listing, but required before the owner can buy
+ * HobbyShield. It also remains an input to renter damage-protection eligibility.
  *
  * Deliberately not part of PriceFields, which the bundle form also uses: a
  * bundle is a group of listings and has no replacement value of its own.
@@ -21,16 +20,10 @@ import { centsToDollars, formatMoney } from "@/lib/format";
 export function ReplacementValueField({
   error,
   initialCents,
-  eligibilityCapCents,
-  coverageCapCents,
 }: {
   error?: string;
   /** The stored value when editing; omitted on create. */
   initialCents?: number | null;
-  /** Above this, the item is outside the scheme entirely. */
-  eligibilityCapCents: number;
-  /** The scheme's own ceiling, which a cheaper item lowers. */
-  coverageCapCents: number;
 }) {
   const [value, setValue] = useState(initialCents != null ? centsToDollars(initialCents) : "");
 
@@ -46,10 +39,9 @@ export function ReplacementValueField({
       placeholder="0.00"
       className="max-w-xs"
       hint={
-        `Optional. What it would cost you to replace this item. Renters can add damage protection ` +
-        `on items worth up to ${formatMoney(eligibilityCapCents)}, covering up to ` +
-        `${formatMoney(coverageCapCents)} or the replacement value, whichever is lower. ` +
-        `Leave blank and protection is not offered.`
+        "Required to buy HobbyShield Protection Plan. Enter what it would cost you to replace this item: " +
+        "HobbyShield uses it to calculate your 30-day premium (3.5%, minimum S$10), coverage cap and 10% owner excess. " +
+        "It also supports renter damage-protection eligibility. "
       }
       error={error}
       value={value}

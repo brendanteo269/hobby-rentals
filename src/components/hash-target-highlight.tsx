@@ -16,7 +16,7 @@ const ATTRIBUTE = "data-hash-target";
  * another booking on the same page re-renders this without remounting it,
  * and the History API fires no event to listen for.
  */
-export function HashTargetHighlight() {
+export function HashTargetHighlight({ autoClearMs }: { autoClearMs?: number } = {}) {
   useEffect(() => {
     const id = decodeURIComponent(window.location.hash.slice(1));
     const target = id ? document.getElementById(id) : null;
@@ -24,6 +24,25 @@ export function HashTargetHighlight() {
       if (marked !== target) marked.removeAttribute(ATTRIBUTE);
     }
     target?.setAttribute(ATTRIBUTE, "");
-  });
+    if (!target) return;
+
+    // A deep link is guidance, not a permanent validation state. Once the
+    // member starts correcting the named area (or after a short pause), clear
+    // both its accent and the fragment so a later re-render cannot revive it.
+    const clear = () => {
+      target.removeAttribute(ATTRIBUTE);
+      if (window.location.hash === `#${encodeURIComponent(id)}`) {
+        window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+      }
+    };
+    target.addEventListener("focusin", clear, { once: true });
+    target.addEventListener("input", clear, { once: true });
+    const timer = autoClearMs ? window.setTimeout(clear, autoClearMs) : undefined;
+    return () => {
+      target.removeEventListener("focusin", clear);
+      target.removeEventListener("input", clear);
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [autoClearMs]);
   return null;
 }
