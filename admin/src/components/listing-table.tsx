@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge, EmptyState } from "./ui";
 import { ROUTES } from "@/lib/routes";
-import { formatDate, shortId } from "@/lib/format";
+import { formatDateTime, shortId } from "@/lib/format";
 import { listingStatusLabel, listingStatusTone, type AdminListingSummary, type CategoryOption } from "@/lib/listings";
 
 /**
@@ -68,7 +68,7 @@ export function ListingTable({
               <td className="px-6 py-4">
                 <Badge>{categoryLabel(listing.category)}</Badge>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-ink-soft">{formatDate(listing.created_at)}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-ink-soft">{formatDateTime(listing.created_at)}</td>
             </tr>
           ))}
         </tbody>

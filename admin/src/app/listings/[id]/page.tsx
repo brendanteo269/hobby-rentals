@@ -7,7 +7,7 @@ import {
   recordListingViewed,
 } from "@/lib/audit";
 import { ROUTES } from "@/lib/routes";
-import { formatDate, formatMoney, shortId } from "@/lib/format";
+import { formatDate, formatDateTime, formatMoney, shortId } from "@/lib/format";
 import { listingPhotoUrl } from "@/lib/env";
 import {
   getCategoryOptions,
@@ -185,6 +185,8 @@ export default async function ListingDetailPage({
                     <Badge>{listingLocationLabel(listing.location_area)}</Badge>
                   ),
                 },
+                { term: "Created", value: formatDateTime(listing.created_at) },
+                { term: "Last updated", value: formatDateTime(listing.updated_at) },
               ]}
             />
           </Panel>
