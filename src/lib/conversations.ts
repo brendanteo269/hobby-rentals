@@ -55,19 +55,26 @@ export type Message = {
   conversation_id: string;
   sender_id: string;
   body: string;
-  /** S2-17: already-uploaded image URLs, resolved server-side from the stored S3 keys. Empty for a withdrawn message, same as body. */
+  /** S2-17: already-uploaded image URLs, resolved server-side from the stored S3 keys. */
   attachment_urls: string[];
   /** S2-19: set when this message announced a meetup proposal or its acceptance - see MeetupProposal. */
   meetup_event_type: "PROPOSED" | "ACCEPTED" | null;
   meetup_proposal: MeetupProposal | null;
-  withdrawn_at: string | null;
   created_at: string;
 };
 
-/** What GET /conversations/limits returns - the composer validates a picked file against these before uploading it. */
+/** What GET /conversations/limits returns - the composer validates a picked file/message against these before sending. */
 export type ConversationLimits = {
   allowed_attachment_content_types: string[];
   max_attachment_bytes: number;
+  max_message_length: number;
+};
+
+/** A page of a thread's messages, oldest first within the page - see GET /conversations/{id}/messages. */
+export type MessagePage = {
+  messages: Message[];
+  /** Whether an earlier page exists for a "load earlier messages" control to fetch. */
+  has_more: boolean;
 };
 
 /** A message may carry at most this many image attachments - matches MessageRequest.attachment_keys' server-side cap. */

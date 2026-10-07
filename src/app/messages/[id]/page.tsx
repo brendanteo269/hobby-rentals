@@ -41,13 +41,13 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
   } = await (await createClient()).auth.getUser();
   if (!user) notFound();
 
-  let conversation, messages, conversations, attachmentLimits, relevantBooking;
+  let conversation, messagePage, conversations, attachmentLimits, relevantBooking;
   try {
     // Fetched first, and awaited on its own: GET /conversations/{id} marks
     // the thread read as a side effect, and the list fetch right after needs
     // that to have already happened so its own unread dot is correct.
     conversation = await getConversation(id);
-    [messages, conversations, attachmentLimits, relevantBooking] = await Promise.all([
+    [messagePage, conversations, attachmentLimits, relevantBooking] = await Promise.all([
       getMessages(id),
       getMyConversations(),
       getConversationLimits(),
@@ -108,7 +108,8 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
         <ConversationThreadPanel
           key={id}
           conversationId={id}
-          initialMessages={messages}
+          initialMessages={messagePage.messages}
+          initialHasMore={messagePage.has_more}
           currentUserId={user.id}
           otherPartyName={conversation.other_party_name}
           attachmentLimits={attachmentLimits}

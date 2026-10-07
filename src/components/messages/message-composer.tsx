@@ -262,6 +262,7 @@ export function MessageComposer({
           rows={1}
           value={text}
           onChange={(event) => setText(event.target.value)}
+          maxLength={attachmentLimits?.max_message_length}
           onKeyDown={(event) => {
             // Enter sends, like every chat app; Shift+Enter still inserts a
             // newline for a multi-line message.
