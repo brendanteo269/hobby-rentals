@@ -31,12 +31,14 @@ export function ListingTable({
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-3xl border-collapse text-sm">
+      <table className="w-full min-w-5xl border-collapse text-sm">
         <thead>
           <tr className="border-b border-line text-left">
             <th scope="col" className="eyebrow px-6 py-3 font-normal">Listing</th>
+            <th scope="col" className="eyebrow px-6 py-3 font-normal">Listing ID</th>
             <th scope="col" className="eyebrow px-6 py-3 font-normal">Status</th>
             <th scope="col" className="eyebrow px-6 py-3 font-normal">Owner</th>
+            <th scope="col" className="eyebrow px-6 py-3 font-normal">Owner email</th>
             <th scope="col" className="eyebrow px-6 py-3 font-normal">Category</th>
             <th scope="col" className="eyebrow px-6 py-3 font-normal">Created</th>
           </tr>
@@ -45,20 +47,24 @@ export function ListingTable({
           {listings.map((listing) => (
             <tr key={listing.id} className="border-b border-line last:border-0 hover:bg-sand">
               <td className="px-6 py-4">
-                <Link href={ROUTES.listing(listing.id)} className="block">
-                  <span className="font-medium underline-offset-4 hover:underline">{listing.name}</span>
-                  <span className="mt-0.5 block text-xs text-ink-soft">{shortId(listing.id)}</span>
+                <Link href={ROUTES.listing(listing.id)} className="font-medium underline-offset-4 hover:underline">
+                  {listing.name}
+                </Link>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-ink-soft">
+                <Link href={ROUTES.listing(listing.id)} className="hover:underline">
+                  {shortId(listing.id)}
                 </Link>
               </td>
               <td className="px-6 py-4">
                 <Badge tone={listingStatusTone(listing.status)}>{listingStatusLabel(listing.status)}</Badge>
               </td>
               <td className="px-6 py-4">
-                <Link href={ROUTES.user(listing.owner_id)} className="block underline-offset-4 hover:underline">
-                  <span>{listing.owner_display_name ?? "No name"}</span>
-                  <span className="mt-0.5 block text-xs text-ink-soft">{listing.owner_email ?? "No email"}</span>
+                <Link href={ROUTES.user(listing.owner_id)} className="underline-offset-4 hover:underline">
+                  {listing.owner_display_name ?? "No name"}
                 </Link>
               </td>
+              <td className="px-6 py-4 text-ink-soft">{listing.owner_email ?? "No email"}</td>
               <td className="px-6 py-4">
                 <Badge>{categoryLabel(listing.category)}</Badge>
               </td>
