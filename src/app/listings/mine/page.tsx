@@ -6,7 +6,9 @@ import { BundleRow } from "@/components/bundles/bundle-row";
 import { getListingHistory, getMyListings, type ListingHistory } from "@/lib/api/listings";
 import { getBundleEvents, getMyBundles, getOwnerBundleBookings } from "@/lib/api/bundles";
 import { getOwnerBookings } from "@/lib/api/bookings";
+import { getMyHobbyShieldPolicies } from "@/lib/api/owner-protection";
 import { formatMoney } from "@/lib/format";
+import { daysUntilExpiry, policyIsCurrent, type HobbyShieldPolicy } from "@/lib/owner-protection";
 import {
   CATEGORY_LABELS,
   LISTING_STATUS_LABELS,
@@ -39,11 +41,12 @@ export default async function MyListingsPage({ searchParams }: { searchParams: P
   await requireOwner();
   const { status } = await searchParams;
   const filter = status && status in LISTING_STATUS_LABELS ? (status as ListingStatus) : undefined;
-  const [allListings, bookings, bundles, bundleBookings] = await Promise.all([
+  const [allListings, bookings, bundles, bundleBookings, protectionPolicies] = await Promise.all([
     getMyListings(),
     getOwnerBookings(),
     getMyBundles(),
     getOwnerBundleBookings(),
+    getMyHobbyShieldPolicies(),
   ]);
   const listings = filter ? allListings.filter((listing) => listing.status === filter) : allListings;
   // History is supplementary: an audit-service/network hiccup must not make
@@ -106,7 +109,7 @@ export default async function MyListingsPage({ searchParams }: { searchParams: P
           ) : (
             <ul className="space-y-4">
               {listings.map((listing) => (
-                <ListingRow key={listing.id} listing={listing} bookings={bookings.filter((booking) => booking.listing_id === listing.id)} history={historyByListing.get(listing.id)} />
+                <ListingRow key={listing.id} listing={listing} bookings={bookings.filter((booking) => booking.listing_id === listing.id)} history={historyByListing.get(listing.id)} policy={protectionPolicies.find((item) => item.listing_id === listing.id)} />
               ))}
             </ul>
           )}
@@ -165,7 +168,24 @@ const STATUS_BADGE_VARIANT: Record<Listing["status"], "neutral" | "accent" | "da
   DEACTIVATED: "accent",
 };
 
-function ListingRow({ listing, bookings, history }: { listing: OwnerListing; bookings: Booking[]; history?: ListingHistory }) {
+function ListingRow({ listing, bookings, history, policy }: { listing: OwnerListing; bookings: Booking[]; history?: ListingHistory; policy?: HobbyShieldPolicy }) {
+  const hobbyShieldActive = policy && policyIsCurrent(policy);
+  const expiresIn = hobbyShieldActive ? daysUntilExpiry(policy) : 0;
+  // An unanswered request is still under the owner's control. Coverage must
+  // not be bought or renewed once a renter has a confirmed reservation or is
+  // actively using the item; it becomes available again after every booking
+  // leaves those states (COMPLETED/SETTLED or another terminal state).
+  const hobbyShieldLockedByRental = bookings.some((booking) => booking.status === "CONFIRMED" || booking.status === "ACTIVE");
+  const hobbyShieldBlockedByPassport = listing.passport_missing.length > 0;
+  const passportHref = listing.passport_missing.includes("baseline")
+    ? (`/listings/${listing.id}/passport/baseline` as const)
+    : (`/listings/${listing.id}/passport` as const);
+  // A missing declared value is the one eligibility gap the owner can fix
+  // immediately, so send them straight to that field instead of a dead-end
+  // protection page that only repeats the explanation.
+  const hobbyShieldHref = listing.replacement_value_cents == null
+    ? (`/listings/${listing.id}/edit#price` as const)
+    : (`/listings/${listing.id}/protection` as const);
   return (
     <li className="border border-line bg-white p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -190,10 +210,25 @@ function ListingRow({ listing, bookings, history }: { listing: OwnerListing; boo
             </Link>
           )}
           <Badge variant={STATUS_BADGE_VARIANT[listing.status]}>{LISTING_STATUS_LABELS[listing.status]}</Badge>
+          {policy && <Badge variant={hobbyShieldActive ? "dark" : "neutral"}>{hobbyShieldActive ? "HobbyShield Active" : "HobbyShield Expired"}</Badge>}
         </div>
       </div>
 
       {listing.status !== "REMOVED" && <ListingLifecycleActions listing={listing} />}
+      {listing.status !== "REMOVED" && (
+        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
+          {hobbyShieldActive ? (
+            <ButtonLink href={hobbyShieldHref} variant="outline" className="px-4 py-2 text-xs">View HobbyShield</ButtonLink>
+          ) : hobbyShieldBlockedByPassport ? (
+            <p className="text-ink-soft">Complete this item&apos;s Product Passport before buying HobbyShield. <ButtonLink href={passportHref} variant="outline" className="ml-2 px-3 py-1.5 text-xs">Complete passport</ButtonLink></p>
+          ) : hobbyShieldLockedByRental ? (
+            <p className="text-ink-soft">HobbyShield is unavailable while this listing has a confirmed or active rental. It can be purchased after all rentals are completed or settled.</p>
+          ) : (
+            <ButtonLink href={hobbyShieldHref} variant="accent" className="px-4 py-2 text-xs">Get HobbyShield</ButtonLink>
+          )}
+          {hobbyShieldActive && expiresIn > 0 && expiresIn <= 3 && <p className="text-amber-800">Expires in {expiresIn} {expiresIn === 1 ? "day" : "days"} · Renewal available upon expiration.</p>}
+        </div>
+      )}
       <OwnerBookingList bookings={bookings} />
       {history && history.lifecycle_events.length > 0 && (
         <details className="mt-4 border-t border-line pt-3 text-xs">

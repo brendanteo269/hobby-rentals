@@ -74,9 +74,14 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           </div>
           <h1 className="heading mt-2 text-3xl">{listing.name}</h1>
           {user && user.id === listing.owner_id && (
-            <ButtonLink href={`/listings/${listing.id}/passport`} variant="outline" className="mt-4 px-4 py-2 text-xs">
-              View Product Passport
-            </ButtonLink>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <ButtonLink href={`/listings/${listing.id}/passport`} variant="outline" className="px-4 py-2 text-xs">
+                View Product Passport
+              </ButtonLink>
+              <ButtonLink href={listing.replacement_value_cents == null ? `/listings/${listing.id}/edit#price` : `/listings/${listing.id}/protection`} variant="accent" className="px-4 py-2 text-xs">
+                HobbyShield
+              </ButtonLink>
+            </div>
           )}
 
           <div className="mt-4 border-t border-line pt-4">

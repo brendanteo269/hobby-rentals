@@ -293,7 +293,7 @@ export function Chip({
  */
 export function FormSection({ title, children, id }: { title: string; children: ReactNode; id?: string }) {
   return (
-    <section id={id} className="overflow-hidden card">
+    <section id={id} className="scroll-mt-8 overflow-hidden card transition-[border-color,box-shadow] data-[hash-target]:border-accent data-[hash-target]:ring-2 data-[hash-target]:ring-accent/30">
       <div className="border-b border-line px-6 py-4 sm:px-8">
         <h2 className="heading text-lg">{title}</h2>
       </div>

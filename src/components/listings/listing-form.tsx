@@ -11,10 +11,11 @@ import { PhotoUploadField } from "@/components/listings/photo-upload-field";
 import { PricePerBlockField } from "@/components/listings/price-per-block-field";
 import { PricingRecommendationPanel } from "@/components/listings/pricing-recommendation";
 import { ReplacementValueField } from "@/components/listings/replacement-value-field";
+import { HashTargetHighlight } from "@/components/hash-target-highlight";
 import { BaselinePhotosField } from "@/components/passport/baseline-photos-field";
 import { SerialField } from "@/components/passport/serial-form";
 import type { ListingFormState } from "@/app/listings/actions";
-import { todayIso } from "@/lib/format";
+import { centsToDollars, todayIso } from "@/lib/format";
 import {
   CONDITIONS,
   CONDITION_LABELS,
@@ -60,8 +61,6 @@ export function ListingForm({
   profileAvailableDays,
   profileDefaultLocation,
   depositCapBps,
-  protectionEligibilityCapCents,
-  protectionCoverageCapCents,
   categories,
 }: {
   action: (prev: ListingFormState, formData: FormData) => Promise<ListingFormState>;
@@ -70,8 +69,6 @@ export function ListingForm({
   profileAvailableDays: number[];
   profileDefaultLocation: LocationArea | null;
   depositCapBps: number;
-  protectionEligibilityCapCents: number;
-  protectionCoverageCapCents: number;
   categories: ListingCategoryOption[];
 }) {
   const editing = listing !== undefined;
@@ -118,6 +115,11 @@ export function ListingForm({
 
   const [priceBlock, setPriceBlock] = useState<"DAY" | "WEEK" | null>(initialPrice?.block ?? "DAY");
   const [priceRate, setPriceRate] = useState<string>(initialPrice?.rate ?? "");
+  // The server action always validates a deposit (0 is the supported way to
+  // offer none), so the edit form must submit the stored value as well as the
+  // rental rate. Without this control, every edit fails locally before its
+  // changed fields can reach the API.
+  const [deposit, setDeposit] = useState(listing ? centsToDollars(listing.deposit_cents) : "");
 
   useEffect(() => {
     let cancelled = false;
@@ -144,9 +146,11 @@ export function ListingForm({
   const [dismissedNotice, setDismissedNotice] = useState<ListingFormState>(undefined);
   const saved = state?.success;
   const showSavedModal = saved !== undefined && state !== dismissedNotice;
+  const errorMessages = Object.values(errors);
 
   return (
     <form action={formAction} className="space-y-6">
+      <HashTargetHighlight autoClearMs={8_000} />
       <FormSection title="The item">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
@@ -290,6 +294,22 @@ export function ListingForm({
             setPriceRate(rate);
           }}
         />
+        <Field
+          label="Security deposit"
+          id="deposit"
+          name="deposit"
+          type="number"
+          min="0"
+          step="0.01"
+          inputMode="decimal"
+          placeholder="0.00"
+          required
+          hint="Held as security during a rental, not charged. Enter 0 if no deposit is required."
+          error={errors.deposit_cents}
+          className="max-w-xs"
+          value={deposit}
+          onChange={(event) => setDeposit(event.target.value)}
+        />
         <PricingRecommendationPanel
           key={`${fields.category}:${fields.brand}:${fields.condition}:${priceBlock ?? ""}:${JSON.stringify(attributeDefinitions.filter((definition) => definition.is_pricing_factor).map((definition) => [definition.attribute_key, attributeValues[definition.attribute_key] ?? null]))}`}
           category={fields.category}
@@ -305,8 +325,6 @@ export function ListingForm({
         <ReplacementValueField
           error={errors.replacement_value_cents}
           initialCents={listing?.replacement_value_cents}
-          eligibilityCapCents={protectionEligibilityCapCents}
-          coverageCapCents={protectionCoverageCapCents}
         />
       </FormSection>
 
@@ -370,6 +388,14 @@ export function ListingForm({
 
       <div className="rounded-2xl border border-line bg-surface-muted p-6 sm:p-8">
         <FormError message={state?.error} />
+        {errorMessages.length > 0 && (
+          <div role="alert" className="mb-4 border-l-2 border-accent bg-accent-soft px-4 py-3 text-sm text-accent-dark">
+            <p className="font-medium">Please fix the following before saving:</p>
+            <ul className="mt-1 list-disc space-y-1 pl-5">
+              {errorMessages.map((message, index) => <li key={`${message}-${index}`}>{message}</li>)}
+            </ul>
+          </div>
+        )}
         <Button type="submit" disabled={pending} className="w-full sm:w-auto">
           {editing ? (pending ? "Saving…" : "Save changes") : pending ? "Publishing…" : "Publish listing"}
         </Button>
