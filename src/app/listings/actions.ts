@@ -153,10 +153,12 @@ type ListingFields = Omit<Required<UpdateListingRequest>, "available_from" | "at
  * a message per field, and a second set of rules in this file would be one
  * more place to drift from the backend's. This only checks what it must to
  * build a well-typed request — the enums, which the API would reject with a
- * message written for a developer, not an owner.
+ * message written for a developer, not an owner. A draft may have no photos
+ * yet (requirePhotos false): its baseline supplies them later.
  */
 function parseListingFields(
   formData: FormData,
+  requirePhotos = true,
 ): { fieldErrors: Record<string, string> } | { fieldErrors?: undefined; fields: ListingFields } {
   const category = text(formData, "category");
   const condition = text(formData, "condition");
@@ -170,7 +172,7 @@ function parseListingFields(
   // PhotoUploadField already uploads each photo as it's picked, so by submit
   // time this is just a count check — not worth a round trip to FastAPI when
   // the answer is already sitting in the hidden field.
-  if (photos.length === 0) fieldErrors.photo_keys = "Add at least one photo.";
+  if (requirePhotos && photos.length === 0) fieldErrors.photo_keys = "Add at least one photo.";
 
   // PricePerBlockField mounts a box under whichever one name the owner
   // picked — never both, never neither once they have chosen — so exactly
@@ -221,23 +223,28 @@ function parseListingFields(
  * all from the one form. The API needs the listing to exist before a baseline
  * can be attached, so this is three calls; if either of the last two fails,
  * the listing is kept as a draft and the owner is sent to finish its passport.
+ *
+ * "Save as draft" (the submit button's intent=draft) skips the passport
+ * requirements: whatever of the baseline and serial is complete is saved,
+ * the rest is finished from the passport page, and nothing is published.
  */
 export async function submitListing(
   _prev: ListingFormState,
   formData: FormData,
 ): Promise<ListingFormState> {
-  const parsed = parseListingFields(formData);
+  const draft = formData.get("intent") === "draft";
+  const parsed = parseListingFields(formData, !draft);
   const baseline = parseBaselinePhotos(formData);
   const serial = parseSerialClaim(formData);
-  if (parsed.fieldErrors || !baseline || !serial) {
+  if (parsed.fieldErrors || (!draft && (!baseline || !serial))) {
     return {
       error: "Please correct the highlighted fields.",
       // The four condition photos are also the listing's photo_keys, so a
       // missing one is reported once, against the field the owner can see.
       fieldErrors: {
         ...Object.fromEntries(Object.entries(parsed.fieldErrors ?? {}).filter(([name]) => name !== "photo_keys")),
-        ...(baseline ? {} : { baseline_photos: BASELINE_INCOMPLETE }),
-        ...(serial ? {} : { serial: SERIAL_INCOMPLETE }),
+        ...(draft || baseline ? {} : { baseline_photos: BASELINE_INCOMPLETE }),
+        ...(draft || serial ? {} : { serial: SERIAL_INCOMPLETE }),
       },
     };
   }
@@ -251,7 +258,7 @@ export async function submitListing(
     custom_available_days: hiddenList(formData, "custom_available_days", isNumber),
     initial_blackouts: hiddenList(formData, "initial_blackouts", isBlackout),
     attributes: hiddenAttributes(formData),
-    serial,
+    ...(serial && { serial }),
   };
 
   let created: Listing;
@@ -264,10 +271,10 @@ export async function submitListing(
     throw caught;
   }
 
-  let published = true;
+  let published = !draft;
   try {
-    await recordBaseline(created.id, baseline);
-    await publishListing(created.id);
+    if (baseline) await recordBaseline(created.id, baseline);
+    if (!draft) await publishListing(created.id);
   } catch (caught) {
     if (!(caught instanceof ListingApiError)) throw caught;
     published = false;
@@ -275,8 +282,15 @@ export async function submitListing(
 
   revalidatePath("/listings/mine");
   // Outside the try: redirect signals by throwing, and catching it here would
-  // report a successful creation as a failure.
-  redirect(published ? `/listings/${created.id}` : `/listings/${created.id}/passport/baseline`);
+  // report a successful creation as a failure. A draft goes to its passport,
+  // which lists what is still missing; a failed publish to the baseline step.
+  redirect(
+    published
+      ? `/listings/${created.id}`
+      : draft
+        ? `/listings/${created.id}/passport`
+        : `/listings/${created.id}/passport/baseline`,
+  );
 }
 
 /**

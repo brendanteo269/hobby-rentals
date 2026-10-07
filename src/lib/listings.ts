@@ -341,12 +341,12 @@ export type CreateListingRequest = {
   has_custom_availability?: boolean;
   custom_available_days?: number[] | null;
   initial_blackouts?: BlackoutDate[];
-  /** At least one is required (FastAPI 422s on an empty list). */
+  /** May be empty for a saved draft; recording its baseline later sets them. */
   photo_keys: string[];
 /** Values validated against the selected category's current schema on create. */
   attributes?: Record<string, unknown>;
-  /** The item's identity; its passport is created with it. */
-  serial: SerialClaim;
+  /** The item's identity; its passport is created with it. Omitted for a draft saved without one. */
+  serial?: SerialClaim;
 };
 
 export type CategoryAttributeDefinition = {

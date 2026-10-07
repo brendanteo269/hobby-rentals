@@ -23,8 +23,8 @@ export default async function PassportSerialPage({ params }: { params: Promise<{
         <p className="eyebrow">Product Passport · {listing.name}</p>
         <h1 className="heading mt-3 text-3xl">Identify this item</h1>
         <p className="body-copy mt-3">
-          This listing was created before serial numbers were required. Record its serial, or a photo of its
-          distinguishing marks if it has none. Once saved, this can&apos;t be changed.
+          Record the item&apos;s serial number, or a photo of its distinguishing marks if it has none. It
+          can&apos;t go live without one, and once saved, this can&apos;t be changed.
         </p>
         <div className="mt-10">
           <SerialForm listingId={id} />
