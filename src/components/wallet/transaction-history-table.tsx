@@ -1,8 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { filterTransactions, formatWalletAmount, type TransactionFilter, type TransactionType, type WalletTransaction } from "@/lib/wallet";
-import { formatDateTime } from "@/lib/format";
+import {
+  filterTransactions,
+  formatWalletAmount,
+  type BookingReference,
+  type TransactionFilter,
+  type TransactionType,
+  type WalletTransaction,
+} from "@/lib/wallet";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { Pagination } from "@/components/pagination";
 import { Chip } from "@/components/ui";
 
@@ -27,7 +34,19 @@ const typeLabels: Record<TransactionType, string> = {
   ADMIN_CREDIT: "ADJUSTMENT",
   ADMIN_DEBIT: "ADJUSTMENT",
   OWNER_PROTECTION_PREMIUM: "HOBBYSHIELD",
+  CANCELLATION_FEE: "CANCELLATION",
+  CANCELLATION_PAYOUT: "CANCELLATION",
 };
+
+/** Which booking a row was for, so a refund can be matched to what was cancelled. */
+function BookingReferenceLine({ reference }: { reference: BookingReference }) {
+  return (
+    <p className="mt-1 text-xs text-ink-soft">
+      {reference.bundleBookingId ? "Bundle" : "Booking"}: {reference.name ?? "a rental"} · {formatDate(reference.startDate)} –{" "}
+      {formatDate(reference.endDate)}
+    </p>
+  );
+}
 
 // A description past this length is long enough to likely wrap past two lines
 // in the column's ~290px text width; below it, it renders as plain text with
@@ -109,6 +128,7 @@ export function TransactionHistoryTable({ transactions }: { transactions: Wallet
                   </td>
                   <td className="max-w-xs px-4 py-4">
                     <TransactionDescription description={tx.description} />
+                    {tx.bookingReference && <BookingReferenceLine reference={tx.bookingReference} />}
                   </td>
                   <td className="whitespace-nowrap px-4 py-4 text-ink-soft">{formatDateTime(tx.date)}</td>
                   <td

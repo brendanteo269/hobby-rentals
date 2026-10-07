@@ -18,7 +18,8 @@ import {
   MESSAGEABLE_BOOKING_STATUSES,
   PAYMENT_STATUS_LABELS,
 } from "@/lib/bookings";
-import { WithdrawRequestButton } from "@/components/bookings/withdraw-request-button";
+import { CancelBookingButton } from "@/components/bookings/cancel-booking-button";
+import { RENTER_CANCEL_OFFERED_STATUSES } from "@/lib/cancellations";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
 import { formatDate, formatDateTime } from "@/lib/format";
 
@@ -137,7 +138,12 @@ export function RenterView({
                 </p>
                 <p className="mt-1 text-sm text-ink">{BUNDLE_STATUS_NEXT_STEP[booking.status]}</p>
               </div>
-              <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
+              <div className="flex flex-col items-end gap-2">
+                <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
+                {RENTER_CANCEL_OFFERED_STATUSES.includes(booking.status) && (
+                  <CancelBookingButton kind="bundle" id={booking.id} status={booking.status} />
+                )}
+              </div>
             </li>
           ))}
           {bookings.map((booking) => (
@@ -164,7 +170,9 @@ export function RenterView({
               </div>
               <div className="flex flex-col items-end gap-2">
                 <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
-                {booking.status === "PENDING" && <WithdrawRequestButton bookingId={booking.id} />}
+                {RENTER_CANCEL_OFFERED_STATUSES.includes(booking.status) && (
+                  <CancelBookingButton kind="booking" id={booking.id} status={booking.status} />
+                )}
                 {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
                   <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
                 )}

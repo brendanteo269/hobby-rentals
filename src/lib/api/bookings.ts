@@ -9,6 +9,7 @@ import type {
   BookingStatus,
   DeclineReason,
 } from "@/lib/bookings";
+import type { CancellationPreview, CancellationRecord } from "@/lib/cancellations";
 
 // Re-exported so existing callers keep importing the quote from here.
 export type { BookingQuote } from "@/lib/bookings";
@@ -81,7 +82,19 @@ export function updateBookingStatus(bookingId: string, nextStatus: BookingStatus
   });
 }
 
-/** The renter withdraws their own pending request, releasing its hold. */
-export function withdrawBooking(bookingId: string) {
-  return backendRequest<Booking>(`/bookings/${encodeURIComponent(bookingId)}/withdraw`, { method: "POST" });
+/** What cancelling the renter's booking now would refund under the policy; changes nothing. */
+export function getBookingCancellationPreview(bookingId: string) {
+  return backendRequest<CancellationPreview>(`/bookings/${encodeURIComponent(bookingId)}/cancellation`);
+}
+
+/**
+ * The renter cancels their pending or confirmed booking. `expected_refund_cents`
+ * is the refund they were shown: if the tier has moved on since, the backend
+ * refuses with QUOTE_CHANGED rather than pay a different amount.
+ */
+export function cancelBooking(bookingId: string, idempotency_key: string, expected_refund_cents: number) {
+  return backendRequest<Booking & { cancellation: CancellationRecord }>(
+    `/bookings/${encodeURIComponent(bookingId)}/cancel`,
+    { method: "POST", body: JSON.stringify({ idempotency_key, expected_refund_cents }) },
+  );
 }
