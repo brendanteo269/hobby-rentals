@@ -282,6 +282,22 @@ export function recordConditionUpdate(listingId: string, body: { photo_keys: str
   });
 }
 
+/** S2-36: a private receipt photo (passports/ key) and an optional note. */
+export function recordPurchaseProof(listingId: string, body: { photo_key: string; note?: string }) {
+  return backendRequest(`/listings/${encodeURIComponent(listingId)}/passport/proof-of-purchase`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+/** S2-37: marks the item stolen and archives the listing. 409 unless its serial is verified. */
+export function reportStolen(listingId: string, note: string) {
+  return backendRequest(`/listings/${encodeURIComponent(listingId)}/passport/report-stolen`, {
+    method: "POST",
+    body: JSON.stringify({ note }),
+  });
+}
+
 /** DRAFT -> ACTIVE. A 422 means the passport is incomplete. */
 export function publishListing(listingId: string) {
   return backendRequest<Listing>(`/listings/${encodeURIComponent(listingId)}/publish`, { method: "POST" });

@@ -13,6 +13,7 @@ export const AUDIT_ACTIONS = {
   wallet_credit_applied: "Manual credit applied",
   wallet_debit_applied: "Manual debit applied",
   passport_viewed: "Product Passport viewed",
+  passport_reviewed: "Product Passport reviewed",
   listing_viewed: "Listing viewed",
   listing_deactivated: "Listing deactivated",
   listing_reactivated: "Listing reactivated",

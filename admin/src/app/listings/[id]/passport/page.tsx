@@ -6,13 +6,15 @@ import { ROUTES } from "@/lib/routes";
 import { formatDateTime, shortId } from "@/lib/format";
 import { ENTRY_LABELS, getAdminPassport, PHOTO_LABELS, SERIAL_STATUS, type PassportEntry } from "@/lib/passports";
 import { Badge, Container, DescriptionList, EmptyState, Panel } from "@/components/ui";
+import { PassportReviewForm } from "@/components/passport-review-form";
 
 export const metadata = { title: "Product Passport — HobbyRentals Admin" };
 
 /**
- * S2-24: a listing's Product Passport for review. Read-only on purpose - the
- * ledger is append-only in the database (a trigger rejects any update or
- * delete, secret key included), so there is nothing here that could edit it.
+ * S2-24: a listing's Product Passport for review. Nothing here edits the
+ * ledger - it is append-only in the database (a trigger rejects any update
+ * or delete, secret key included). The one write is S2-35's review of a
+ * DUPLICATE, which appends a decision through the API.
  */
 export default async function ListingPassportPage({ params }: { params: Promise<{ id: string }> }) {
   await requirePortalSession();
@@ -79,6 +81,10 @@ export default async function ListingPassportPage({ params }: { params: Promise<
           />
         </Panel>
 
+        {passport.serial_status === "DUPLICATE" && (
+          <PassportReviewForm listingId={id} ownerId={passport.listing.owner_id} />
+        )}
+
         <Panel title="History" description="Newest first. Entries are permanent and cannot be edited or deleted.">
           {passport.entries.length === 0 ? (
             <div className="-mx-6 -my-5">
@@ -106,10 +112,23 @@ function Entry({ entry }: { entry: PassportEntry }) {
       </p>
       <p className="mt-0.5 text-xs text-ink-soft">
         <time dateTime={entry.created_at}>{formatDateTime(entry.created_at)}</time> · by{" "}
-        <Link href={ROUTES.user(entry.created_by)} className="underline underline-offset-4">
-          {shortId(entry.created_by)}
-        </Link>
+        {entry.created_by ? (
+          <Link href={ROUTES.user(entry.created_by)} className="underline underline-offset-4">
+            {shortId(entry.created_by)}
+          </Link>
+        ) : (
+          "the admin portal"
+        )}
       </p>
+
+      {entry.entry_type === "ADMIN_REVIEW" && (
+        <p className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+          <Badge tone={data.decision === "APPROVED" ? "positive" : "critical"}>
+            {data.decision === "APPROVED" ? "Approved" : "Rejected"}
+          </Badge>
+          {typeof data.reason === "string" && <span className="whitespace-pre-line">{data.reason}</span>}
+        </p>
+      )}
 
       {typeof data.note === "string" && <p className="mt-2 text-sm whitespace-pre-line">{data.note}</p>}
 
@@ -120,6 +139,11 @@ function Entry({ entry }: { entry: PassportEntry }) {
             listing {shortId(data.duplicate_of)}
           </Link>
           , owned by another member.
+          {data.stolen_match === true && (
+            <>
+              {" "}<Badge tone="critical">Matches an item reported stolen</Badge>
+            </>
+          )}
         </p>
       )}
 
