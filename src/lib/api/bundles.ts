@@ -16,6 +16,8 @@ import type {
   BundleAvailability,
   BundleBooking,
   BundleEvent,
+  BundleFavouriteMutation,
+  FavouriteBundle,
   BundleQuote,
   CreateBundleRequest,
   FeaturedBundleCard,
@@ -77,6 +79,18 @@ export function getMyBundles() {
 /** The API 404s if this caller can't see it (not ACTIVE and not theirs). */
 export function getBundle(bundleId: string) {
   return backendRequest<Bundle>(`/bundles/${encodeURIComponent(bundleId)}`);
+}
+
+export function getFavouriteBundles() {
+  return backendRequest<FavouriteBundle[]>("/bundles/favourites");
+}
+
+export function saveBundleFavourite(bundleId: string) {
+  return backendRequest<BundleFavouriteMutation>(`/bundles/${encodeURIComponent(bundleId)}/favourite`, { method: "PUT" });
+}
+
+export function removeBundleFavourite(bundleId: string) {
+  return backendRequest<BundleFavouriteMutation>(`/bundles/${encodeURIComponent(bundleId)}/favourite`, { method: "DELETE" });
 }
 
 /** Creates the bundle already published (Scenario 1). Every listing must be the caller's own and ACTIVE. */

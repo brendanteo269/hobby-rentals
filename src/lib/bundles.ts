@@ -71,7 +71,13 @@ export type Bundle = {
   items: BundleComponent[];
   created_at: string;
   updated_at: string;
+  favourite_count: number;
+  is_favourited: boolean;
 };
+
+export type BundleFavouriteState = { favourite_count: number; is_favourited: boolean };
+export type FavouriteBundle = Bundle & { saved_at: string };
+export type BundleFavouriteMutation = { saved: boolean; favourite_count: number };
 
 /**
  * A bundle's calendar. Same contract as a listing's, with one addition: a
