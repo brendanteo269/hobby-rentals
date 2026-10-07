@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Badge, EmptyState } from "./ui";
 import { ROUTES } from "@/lib/routes";
-import { formatDate, formatMoney, shortId } from "@/lib/format";
+import { formatDate, formatDateTime, formatMoney, shortId } from "@/lib/format";
 import { bookingStatusLabel, bookingStatusTone, type AdminBookingSummary } from "@/lib/bookings";
 
 /**
@@ -24,7 +24,7 @@ export function BookingTable({ bookings }: { bookings: AdminBookingSummary[] }) 
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-6xl border-collapse text-sm">
+      <table className="w-full min-w-7xl border-collapse text-sm">
         <thead>
           <tr className="border-b border-line text-left">
             <th scope="col" className="eyebrow px-6 py-3 font-normal">Booking</th>
@@ -36,6 +36,7 @@ export function BookingTable({ bookings }: { bookings: AdminBookingSummary[] }) 
             <th scope="col" className="eyebrow px-6 py-3 font-normal">Start date</th>
             <th scope="col" className="eyebrow px-6 py-3 font-normal">End date</th>
             <th scope="col" className="eyebrow px-6 py-3 font-normal">Amount</th>
+            <th scope="col" className="eyebrow px-6 py-3 font-normal">Created</th>
           </tr>
         </thead>
         <tbody>
@@ -68,6 +69,7 @@ export function BookingTable({ bookings }: { bookings: AdminBookingSummary[] }) 
               <td className="px-6 py-4 whitespace-nowrap text-ink-soft">{formatDate(booking.start_date)}</td>
               <td className="px-6 py-4 whitespace-nowrap text-ink-soft">{formatDate(booking.end_date)}</td>
               <td className="px-6 py-4 whitespace-nowrap">{formatMoney(booking.total_amount_cents)}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-ink-soft">{formatDateTime(booking.created_at)}</td>
             </tr>
           ))}
         </tbody>
