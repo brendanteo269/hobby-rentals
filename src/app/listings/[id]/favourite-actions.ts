@@ -18,6 +18,7 @@ export async function setFavourite(listingId: string, saved: boolean): Promise<F
   try {
     const favourite = saved ? await saveFavourite(listingId) : await removeFavourite(listingId);
     revalidatePath(`/listings/${listingId}`);
+    revalidatePath("/browse");
     revalidatePath("/favourites");
     return { ok: true, favourite };
   } catch (error) {

@@ -106,6 +106,10 @@ export type ListingCard = {
   location_area: LocationArea;
   /** The passport's serial status, for the card's badge (S2-30). */
   serial_status: SerialStatus | null;
+  /** Present for signed-in browse/favourites responses; public cards use 0. */
+  favourite_count?: number;
+  /** Present for signed-in browse/favourites responses. */
+  is_favourited?: boolean;
 };
 
 export type BrowseListingsResponse = {
