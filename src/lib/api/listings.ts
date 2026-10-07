@@ -20,6 +20,8 @@ import type {
   ListingCondition,
   ListingCategoryOption,
   CategoryAttributeDefinition,
+  FavouriteListing,
+  FavouriteMutation,
   LocationArea,
   Passport,
   PopularListingsResponse,
@@ -144,6 +146,19 @@ export function getMyListings() {
 /** A single listing, any status - the API 404s if this caller can't see it (not ACTIVE and not theirs). */
 export function getListing(listingId: string) {
   return backendRequest<Listing>(`/listings/${encodeURIComponent(listingId)}`);
+}
+
+/** Saved listings include unavailable rows so a member can see and remove them. */
+export function getFavourites() {
+  return backendRequest<FavouriteListing[]>("/listings/favourites");
+}
+
+export function saveFavourite(listingId: string) {
+  return backendRequest<FavouriteMutation>(`/listings/${encodeURIComponent(listingId)}/favourite`, { method: "PUT" });
+}
+
+export function removeFavourite(listingId: string) {
+  return backendRequest<FavouriteMutation>(`/listings/${encodeURIComponent(listingId)}/favourite`, { method: "DELETE" });
 }
 
 /**
