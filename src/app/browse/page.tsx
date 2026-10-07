@@ -35,7 +35,9 @@ export default async function BrowsePage({
       <h1 className="heading mt-3 text-3xl">Browse listings</h1>
 
       <div className="mt-8">
-        <ListingFilters filters={filters} highDemandCategories={[...highDemandCategories]} />
+        {/* Keyed on the applied filters: its inputs are uncontrolled (defaultValue/defaultChecked), so
+            without a remount, removing a filter chip would leave the old value in the form for the next Apply. */}
+        <ListingFilters key={JSON.stringify(filters)} filters={filters} highDemandCategories={[...highDemandCategories]} />
       </div>
 
       <div className="mt-6">

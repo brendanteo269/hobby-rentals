@@ -396,13 +396,21 @@ export function ListingForm({
             </ul>
           </div>
         )}
-        <Button type="submit" disabled={pending} className="w-full sm:w-auto">
-          {editing ? (pending ? "Saving…" : "Save changes") : pending ? "Publishing…" : "Publish listing"}
-        </Button>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Button type="submit" disabled={pending} className="w-full sm:w-auto">
+            {editing ? (pending ? "Saving…" : "Save changes") : pending ? "Publishing…" : "Publish listing"}
+          </Button>
+          {!editing && (
+            // The clicked button's name/value tells the action which one it was.
+            <Button type="submit" name="intent" value="draft" variant="outline" disabled={pending} className="w-full sm:w-auto">
+              Save as draft
+            </Button>
+          )}
+        </div>
         <p className="body-copy mt-4">
           {editing
             ? "Changes apply to new bookings only. Anyone who has already booked keeps the terms they agreed to."
-            : "Publishing puts this in the marketplace and in your rental inventory straight away."}
+            : "Publishing puts this in the marketplace and in your rental inventory straight away. A draft stays hidden until you add its condition photos and serial number from its Product Passport."}
         </p>
       </div>
 
