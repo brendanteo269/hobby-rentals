@@ -185,8 +185,10 @@ export const BASELINE_INCOMPLETE = "Add a photo for each of the four angles.";
  * VERIFIED: a unique serial. NO_SERIAL: the item has none, so a
  * distinguishing-marks photo identifies it. DUPLICATE: the serial is already
  * on another owner's listing of the same brand, so it's flagged for admins.
+ * REJECTED: an admin rejected that duplicate; the listing can't go live (S2-35).
+ * STOLEN: the owner reported it stolen; the listing is archived for good (S2-37).
  */
-export type SerialStatus = "PENDING" | "VERIFIED" | "NO_SERIAL" | "DUPLICATE";
+export type SerialStatus = "PENDING" | "VERIFIED" | "NO_SERIAL" | "DUPLICATE" | "REJECTED" | "STOLEN";
 
 /**
  * S2-30: two tiers. A unique serial earns the stronger one, an item with no
@@ -203,7 +205,8 @@ export type PassportEntry = {
   id: string;
   /** BASELINE | SERIAL_VERIFICATION | CONDITION_UPDATE now; HANDOVER, RETURN, DAMAGE, RESOLUTION later. */
   entry_type: string;
-  created_by: string;
+  /** Null for an ADMIN_REVIEW (S2-35): admins have no member account. */
+  created_by: string | null;
   created_at: string;
   /** Angle (or "serial") -> a URL the browser can show directly. */
   photo_urls: Record<string, string>;
@@ -267,6 +270,9 @@ export const PASSPORT_ENTRY_LABELS: Record<string, string> = {
   // Recorded, not verified: a duplicate is recorded too. The badge says how far it's trusted.
   SERIAL_VERIFICATION: "Serial number recorded",
   CONDITION_UPDATE: "Condition update",
+  ADMIN_REVIEW: "Reviewed by HobbyRentals",
+  PURCHASE_PROOF: "Proof of purchase (only you and HobbyRentals can see this)",
+  STOLEN_REPORT: "Reported stolen",
 };
 
 /** An entry's heading. An item without a serial records its marks photo under the same entry type. */
@@ -285,6 +291,7 @@ export const PASSPORT_PHOTO_LABELS: Record<string, string> = {
   ...Object.fromEntries(BASELINE_ANGLES.map(({ key, label }) => [key, label])),
   serial: "Serial number",
   marks: "Distinguishing marks",
+  receipt: "Receipt",
   ...Object.fromEntries(
     Array.from({ length: MAX_CONDITION_UPDATE_PHOTOS }, (_, i) => [`photo_${i + 1}`, `Photo ${i + 1}`]),
   ),

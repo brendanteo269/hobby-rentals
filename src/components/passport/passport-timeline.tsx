@@ -21,6 +21,13 @@ export function PassportTimeline({ entries }: { entries: PassportEntry[] }) {
             <time dateTime={entry.created_at}>{formatDateTime(entry.created_at)}</time>
           </p>
           {typeof entry.data.note === "string" && <p className="body-copy mt-2 whitespace-pre-line">{entry.data.note}</p>}
+          {/* S2-35: only the owner is sent these; renters never get ADMIN_REVIEW entries. */}
+          {entry.entry_type === "ADMIN_REVIEW" && (
+            <p className="body-copy mt-2 whitespace-pre-line">
+              {entry.data.decision === "APPROVED" ? "Serial approved" : "Serial rejected"}
+              {typeof entry.data.reason === "string" && `: ${entry.data.reason}`}
+            </p>
+          )}
 
           {Object.keys(entry.photo_urls).length > 0 && (
             <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">

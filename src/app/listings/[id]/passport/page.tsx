@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { ButtonLink, Container, FormNotice } from "@/components/ui";
 import { PassportTimeline } from "@/components/passport/passport-timeline";
 import { ConditionUpdateForm } from "@/components/passport/condition-update-form";
+import { PurchaseProofForm } from "@/components/passport/purchase-proof-form";
+import { StolenReportForm } from "@/components/passport/stolen-report-form";
 import type { SerialStatus } from "@/lib/listings";
 import { getListing, getPassport } from "@/lib/api/listings";
 import { createClient } from "@/lib/supabase/server";
@@ -69,6 +71,18 @@ export default async function PassportPage({ params }: { params: Promise<{ id: s
           </div>
         )}
 
+        {passport.serial_status === "REJECTED" && (
+          <div className="mt-6">
+            <FormNotice message="An admin couldn't confirm this item's serial number, so this listing has been taken off the marketplace and can't go live again. Their reason is in the history below. Contact support if you think this is a mistake." />
+          </div>
+        )}
+
+        {passport.serial_status === "STOLEN" && (
+          <div className="mt-6">
+            <FormNotice message="You reported this item stolen, so its listing is archived and can't go live again. If anyone lists an item with the same brand and serial number, it's flagged to HobbyRentals for review." />
+          </div>
+        )}
+
         {missingBaseline && (
           <div className="mt-6 space-y-3">
             <FormNotice message="This item has no baseline condition photos yet. Renters can't rely on its condition record until it does." />
@@ -91,6 +105,19 @@ export default async function PassportPage({ params }: { params: Promise<{ id: s
           </section>
         )}
 
+        {!removed && (
+          <section className="mt-10">
+            <h2 className="heading text-lg">Add proof of purchase</h2>
+            <p className="body-copy mt-1">
+              A photo of the receipt or invoice backs up that the item is yours, for example if its serial number is
+              ever disputed. Only you and HobbyRentals can see it.
+            </p>
+            <div className="mt-6">
+              <PurchaseProofForm listingId={id} />
+            </div>
+          </section>
+        )}
+
         <section className="mt-10">
           <h2 className="heading text-lg">History</h2>
           <p className="body-copy mt-1">Every record is permanent. Nothing here can be edited or deleted.</p>
@@ -98,6 +125,19 @@ export default async function PassportPage({ params }: { params: Promise<{ id: s
             <PassportTimeline entries={passport.entries} />
           </div>
         </section>
+
+        {passport.serial_status === "VERIFIED" && !removed && (
+          <section className="mt-10 border-t border-line pt-10">
+            <h2 className="heading text-lg">Report this item stolen</h2>
+            <p className="body-copy mt-1">
+              The listing is archived and can&apos;t go live again. If anyone else lists an item with this brand and
+              serial number, HobbyRentals is alerted to review it. This can&apos;t be undone.
+            </p>
+            <div className="mt-6">
+              <StolenReportForm listingId={id} />
+            </div>
+          </section>
+        )}
       </div>
     </Container>
   );
@@ -107,5 +147,7 @@ function serialSummary(status: SerialStatus, serial: string | null): string {
   if (status === "VERIFIED") return serial ?? "Verified";
   if (status === "DUPLICATE") return `${serial} (already registered elsewhere)`;
   if (status === "NO_SERIAL") return "No serial: identified by distinguishing marks";
+  if (status === "REJECTED") return `${serial} (rejected by an admin)`;
+  if (status === "STOLEN") return `${serial} (reported stolen)`;
   return "Serial Verification Pending";
 }

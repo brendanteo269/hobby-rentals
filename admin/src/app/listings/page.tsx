@@ -2,16 +2,16 @@ import Link from "next/link";
 import { requirePortalSession } from "@/lib/admin";
 import { ROUTES } from "@/lib/routes";
 import { formatDate, shortId } from "@/lib/format";
-import { LISTINGS_LIMIT, searchListings } from "@/lib/passports";
+import { LISTINGS_LIMIT, listFlaggedPassports, searchListings } from "@/lib/passports";
 import { Badge, Button, Container, EmptyState, Input, Panel } from "@/components/ui";
 
 export const metadata = { title: "Listings — HobbyRentals Admin" };
 
-/** Finds a listing to review its Product Passport (S2-24). */
+/** Finds a listing to review its Product Passport (S2-24), with flagged passports first (S2-35). */
 export default async function ListingsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
   await requirePortalSession();
   const { q = "" } = await searchParams;
-  const { listings, error } = await searchListings(q);
+  const [{ listings, error }, queue] = await Promise.all([searchListings(q), listFlaggedPassports()]);
 
   const description = error
     ? error
@@ -25,6 +25,42 @@ export default async function ListingsPage({ searchParams }: { searchParams: Pro
     <Container className="py-12">
       <p className="eyebrow">Admin</p>
       <h1 className="display-caps mt-3 text-3xl">Listings</h1>
+
+      <div className="mt-8">
+        <Panel
+          title="Needs review"
+          description={
+            queue.error ??
+            (queue.passports.length === 0
+              ? "Nothing waiting. Passports flagged for a duplicate serial show up here."
+              : `${queue.passports.length} passport${queue.passports.length === 1 ? "" : "s"} flagged for a duplicate serial, oldest first.`)
+          }
+        >
+          {queue.passports.length > 0 && (
+            <ul className="-mx-6 -my-5 divide-y divide-line">
+              {queue.passports.map((p) => (
+                <li key={p.listing_id}>
+                  <Link
+                    href={ROUTES.listingPassport(p.listing_id)}
+                    className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 hover:bg-sand"
+                  >
+                    <span>
+                      <span className="font-medium">{p.listing.name}</span>
+                      <span className="mt-0.5 block text-xs text-ink-soft">
+                        Serial <span className="font-mono">{p.serial_number}</span> · owner {shortId(p.listing.owner_id)}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <Badge>{p.listing.status}</Badge>
+                      <Badge tone="critical">Duplicate serial</Badge>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      </div>
 
       {/* A plain GET form, like UserSearch: the query lives in the URL. */}
       <form method="get" role="search" className="mt-8 flex flex-wrap items-end gap-3">
