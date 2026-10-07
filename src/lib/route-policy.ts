@@ -15,9 +15,15 @@ import { ONBOARDING_PATH } from "@/lib/routes";
  *
  * S1-01 restricts lending and booking *actions*, not browsing, so `/browse`
  * and a listing's detail page stay open — an unverified member can look
- * around, they just cannot transact.
+ * around, they just cannot transact. S2-16 messaging follows the same rule:
+ * `/messages/new` starts a thread, which the backend's VerifiedUser
+ * dependency requires, so it's gated here too rather than only discovered at
+ * submit time. Replying within an already-open thread needs the same
+ * verification and has no route of its own to gate this way - that half is
+ * backend-enforced only, same residual gap as any action reachable without a
+ * dedicated path.
  */
-const VERIFIED_ONLY_PREFIXES = ["/listings/new"];
+const VERIFIED_ONLY_PREFIXES = ["/listings/new", "/messages/new"];
 
 /** Suffixes under /listings/<id>/ that are owner actions rather than reads. */
 const VERIFIED_ONLY_LISTING_ACTIONS = ["/availability"];
@@ -43,9 +49,19 @@ export function requiresVerifiedEmail(pathname: string): boolean {
  * /onboarding is included so first-run setup cannot be reached anonymously.
  * /browse, /listings and /bundles read from the FastAPI backend, which
  * rejects an anonymous caller — guarding them here turns a redirect out of
- * a half-rendered page into a clean trip to the login screen.
+ * a half-rendered page into a clean trip to the login screen. /notifications
+ * is where email links land, so a signed-out reader is sent through the login
+ * screen with `next` set and comes back to the event.
  */
-export const PROTECTED_PREFIXES = ["/profile", "/onboarding", "/browse", "/listings", "/bundles"];
+export const PROTECTED_PREFIXES = [
+  "/profile",
+  "/onboarding",
+  "/browse",
+  "/listings",
+  "/bundles",
+  "/notifications",
+  "/messages",
+];
 
 export function requiresSignIn(pathname: string): boolean {
   return PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));

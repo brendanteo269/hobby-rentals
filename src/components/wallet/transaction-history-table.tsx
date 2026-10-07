@@ -26,6 +26,7 @@ const typeLabels: Record<TransactionType, string> = {
   REFUND: "REFUND",
   ADMIN_CREDIT: "ADJUSTMENT",
   ADMIN_DEBIT: "ADJUSTMENT",
+  OWNER_PROTECTION_PREMIUM: "HOBBYSHIELD",
 };
 
 // A description past this length is long enough to likely wrap past two lines

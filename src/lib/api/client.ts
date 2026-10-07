@@ -119,7 +119,7 @@ export async function backendRequest<T>(
   const res = await fetch(`${apiBase}${path}`, {
     ...options,
     headers,
-    cache: "no-store",
+    cache: options.cache ?? "no-store",
     // Never forward the user's token to a redirect destination.
     redirect: "error",
   });

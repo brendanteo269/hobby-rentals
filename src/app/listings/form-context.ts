@@ -16,7 +16,7 @@ export async function getListingFormContext(): Promise<{
   depositCapBps: number;
   categories: ListingCategoryOption[];
 }> {
-  const [{ available_days: profileAvailableDays }, profile, { deposit_cap_bps: depositCapBps }, categories] =
+  const [{ available_days: profileAvailableDays }, profile, limits, categories] =
     await Promise.all([getProfileAvailability(), getOwnProfile(), getListingLimits(), getListingCategories()]);
 
   // The stored value is a plain text column, so a guard rather than a cast:
@@ -27,5 +27,10 @@ export async function getListingFormContext(): Promise<{
       ? profile.default_pickup_location
       : null;
 
-  return { profileAvailableDays, profileDefaultLocation, depositCapBps, categories };
+  return {
+    profileAvailableDays,
+    profileDefaultLocation,
+    depositCapBps: limits.deposit_cap_bps,
+    categories,
+  };
 }

@@ -20,7 +20,13 @@ export default async function ListingPassportPage({ params }: { params: Promise<
   await requirePortalSession();
   const { id } = await params;
 
-  const passport = await getAdminPassport(id);
+  // A listing that's never had any passport activity isn't just a 404 from
+  // the API - some failures there (no product_passports row yet, a backend
+  // hiccup) surface as a thrown error rather than a clean not-found. Either
+  // way there's nothing to show here, so this page treats both the same:
+  // the listing itself not existing shows exactly like one that exists but
+  // has no passport yet.
+  const passport = await getAdminPassport(id).catch(() => null);
   if (!passport) notFound();
 
   // The serial is sensitive, so looking is itself recorded, against the owner.

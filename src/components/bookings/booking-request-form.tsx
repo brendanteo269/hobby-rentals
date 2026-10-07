@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
 import {
@@ -9,8 +10,10 @@ import {
   nextDate,
 } from "@/components/bookings/availability-calendar";
 import { BookingQuoteSummary } from "@/components/bookings/booking-quote-summary";
+import { DamageProtectionField } from "@/components/bookings/damage-protection-field";
 import { quoteBooking, requestBooking } from "@/app/bookings/actions";
 import type { BookingQuote } from "@/lib/api/bookings";
+import type { Booking } from "@/lib/bookings";
 import { formatDate, formatMoney } from "@/lib/format";
 import {
   rentalDurationLimits,
@@ -25,6 +28,12 @@ type Props = {
   unavailableDates: UnavailableDate[];
   minRentalDays: number | null;
   maxRentalDays: number | null;
+  /** Rendered beside the submit button, e.g. a "Message owner" link - this form's own concern is booking, not what else belongs next to it. */
+  secondaryAction?: ReactNode;
+  /** Called with the created (or replayed) booking right after a successful request, alongside the form's own inline confirmation - lets an embedding caller (BookingRequestModal) react without a page refetch. */
+  onSuccess?: (booking: Booking) => void;
+  /** Drops the form's own "Request to book" heading and top divider - set when a caller already supplies its own heading, e.g. a Modal's title. */
+  hideHeading?: boolean;
 };
 
 export function BookingRequestForm({
@@ -33,14 +42,20 @@ export function BookingRequestForm({
   unavailableDates,
   minRentalDays,
   maxRentalDays,
+  secondaryAction,
+  onSuccess,
+  hideHeading,
 }: Props) {
   const availableSet = useMemo(() => new Set(availableDates), [availableDates]);
   const reasonByDate = useMemo(
     () => new Map(unavailableDates.map((entry) => [entry.date, entry.reason])),
     [unavailableDates],
   );
-  const hasBookedDays = useMemo(
-    () => unavailableDates.some((entry) => entry.reason === "BOOKED"),
+  // Days somebody else holds - a booking, or a live waitlist offer - which
+  // the calendar strikes through and the waitlist panel below offers to
+  // queue for.
+  const hasHeldDays = useMemo(
+    () => unavailableDates.some((entry) => entry.reason === "BOOKED" || entry.reason === "WAITLIST_HOLD"),
     [unavailableDates],
   );
   const durationLimits = rentalDurationLimits({
@@ -59,12 +74,21 @@ export function BookingRequestForm({
   const [errorCode, setErrorCode] = useState<string | undefined>();
   const [shortfallCents, setShortfallCents] = useState<number | undefined>();
   const [quote, setQuote] = useState<BookingQuote | null>(null);
+  // S2-09. Kept here rather than read off the quote so the renter's choice
+  // survives re-picking dates, and so toggling it can re-price immediately.
+  const [damageProtection, setDamageProtection] = useState(false);
   // Generated once per quoted date range and reused across retries of
   // submitting it (e.g. a request that times out but actually succeeds
   // server-side), so a double-submit places only one wallet hold. A new
   // range gets its own key the next time a quote comes back.
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  // Two transitions, not one: re-pricing and submitting are different waits,
+  // and sharing a flag made the submit button read "Sending…" while it was
+  // only fetching a quote - telling the renter their request was on its way
+  // when nothing had been sent.
+  const [isPricing, startPricing] = useTransition();
+  const [isSending, startSending] = useTransition();
+  const isPending = isPricing || isSending;
   const endDates = useMemo(() => {
     if (!startDate) return [];
     const maximum = maxRentalDays ?? Infinity;
@@ -88,11 +112,16 @@ export function BookingRequestForm({
   const anchorDate = startDates[0];
   const choosingEnd = Boolean(startDate && !endDate);
 
-  function pick(day: string) {
+  /** Clears whatever the last attempt said, so a new one starts clean. */
+  function clearOutcome() {
     setMessage(null);
     setError(null);
     setErrorCode(undefined);
     setShortfallCents(undefined);
+  }
+
+  function pick(day: string) {
+    clearOutcome();
     if (!startDate || endDate) {
       setStartDate(day);
       setEndDate("");
@@ -102,8 +131,8 @@ export function BookingRequestForm({
       setEndDate(day);
       setQuote(null);
       setIdempotencyKey(null);
-      startTransition(async () => {
-        const result = await quoteBooking(listingId, startDate, day);
+      startPricing(async () => {
+        const result = await quoteBooking(listingId, startDate, day, damageProtection);
         if ("error" in result) setError(result.error);
         else {
           setQuote(result.quote);
@@ -113,39 +142,64 @@ export function BookingRequestForm({
     }
   }
 
+  /**
+   * S2-09 Scenario 2: the total is recalculated before confirmation, by the
+   * server rather than here - a fee the renter is shown must be the fee they
+   * are charged. A new key with it, since the amount to hold has changed.
+   */
+  function toggleProtection(selected: boolean) {
+    setDamageProtection(selected);
+    if (!startDate || !endDate) return;
+    clearOutcome();
+    setIdempotencyKey(null);
+    startPricing(async () => {
+      const result = await quoteBooking(listingId, startDate, endDate, selected);
+      if ("error" in result) setError(result.error);
+      else {
+        setQuote(result.quote);
+        setIdempotencyKey(crypto.randomUUID());
+      }
+    });
+  }
+
   function submit() {
     if (!startDate || !endDate || !idempotencyKey) return;
-    setMessage(null);
-    setError(null);
-    setErrorCode(undefined);
-    setShortfallCents(undefined);
-    startTransition(async () => {
-      const result = await requestBooking(listingId, startDate, endDate, idempotencyKey);
+    clearOutcome();
+    startSending(async () => {
+      const result = await requestBooking(listingId, startDate, endDate, idempotencyKey, damageProtection);
       if ("error" in result) {
         setError(result.error);
         setErrorCode(result.code);
         setShortfallCents(result.shortfallCents);
       }
-      else setMessage(`Request sent for ${formatDate(startDate)} – ${formatDate(endDate)}.`);
+      else {
+        const held = result.booking.total_amount_cents;
+        setMessage(
+          `Request sent for ${formatDate(startDate)} – ${formatDate(endDate)}.` +
+            (held ? ` ${formatMoney(held)} is on hold in your wallet until the owner responds.` : ""),
+        );
+        onSuccess?.(result.booking);
+      }
     });
   }
 
   if (!anchorDate) {
     return (
-      <div className="mt-8 border-t border-line pt-6">
-        <h2 className="text-base font-semibold uppercase tracking-wide">Request to book</h2>
+      <div className={hideHeading ? "" : "mt-8 border-t border-line pt-6"}>
+        {!hideHeading && <h2 className="text-base font-semibold uppercase tracking-wide">Request to book</h2>}
         <p className="mt-4 text-sm text-ink-soft">There are no bookable dates available in the next year.</p>
+        {secondaryAction && <div className="mt-4">{secondaryAction}</div>}
       </div>
     );
   }
 
   return (
-    <div className="mt-8 border-t border-line pt-6">
-      <h2 className="text-base font-semibold uppercase tracking-wide">Request to book</h2>
+    <div className={hideHeading ? "" : "mt-8 border-t border-line pt-6"}>
+      {!hideHeading && <h2 className="text-base font-semibold uppercase tracking-wide">Request to book</h2>}
       <p className="body-copy mt-1">
         Select an available start date, then an available end date.
         {durationLimits && ` This listing rents for ${durationLimits}.`}
-        {hasBookedDays && " Struck-through days are already booked."}
+        {hasHeldDays && " Struck-through days are taken — you can join the waitlist for them below."}
       </p>
 
       <AvailabilityCalendar
@@ -171,7 +225,16 @@ export function BookingRequestForm({
         </p>
       )}
 
-      {quote && <BookingQuoteSummary quote={quote} />}
+      {quote && (
+        <>
+          <DamageProtectionField
+            offer={quote.damage_protection}
+            onChange={toggleProtection}
+            disabled={isPending}
+          />
+          <BookingQuoteSummary quote={quote} />
+        </>
+      )}
       {error && (
         <p role="alert" className="mt-3 text-sm text-accent-dark">
           {errorCode === "INSUFFICIENT_BALANCE" && shortfallCents !== undefined
@@ -185,7 +248,10 @@ export function BookingRequestForm({
         </Link>
       )}
       {message && <p role="status" className="mt-3 text-sm text-ink-soft">{message}</p>}
-      <Button className="mt-4" disabled={isPending || !endDate || !quote} onClick={submit}>{isPending ? "Sending…" : "Request booking"}</Button>
+      <div className={`mt-4 flex flex-wrap items-center gap-3 ${hideHeading ? "justify-end" : ""}`}>
+        <Button disabled={isPending || !endDate || !quote} onClick={submit}>{isSending ? "Sending…" : "Request booking"}</Button>
+        {secondaryAction}
+      </div>
     </div>
   );
 }

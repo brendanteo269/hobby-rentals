@@ -19,8 +19,10 @@ import type {
   ListingCategory,
   ListingCondition,
   ListingCategoryOption,
+  CategoryAttributeDefinition,
   LocationArea,
   Passport,
+  PopularListingsResponse,
   PhotoKind,
   PresignPhotoResponse,
   SerialClaim,
@@ -82,6 +84,19 @@ export function browseListings(params: BrowseListingsParams = {}) {
 }
 
 /**
+ * The landing page is public, so it cannot use backendRequest (which rightly
+ * redirects anonymous callers to login). This endpoint exposes only public
+ * card data. It is intentionally not cached so a just-fixed API failure or
+ * inventory threshold change cannot leave the landing page on a stale state.
+ */
+export async function getPopularListings() {
+  const apiBase = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
+  const response = await fetch(`${apiBase}/listings/popular`, { cache: "no-store" });
+  if (!response.ok) throw new Error("Popular listings are temporarily unavailable.");
+  return response.json() as Promise<PopularListingsResponse>;
+}
+
+/**
  * Creates the listing as a DRAFT, its passport carrying the serial (or a
  * marks photo for an item without one). publishListing takes it live once
  * its baseline is on record too. A serial already on another owner's
@@ -97,6 +112,10 @@ export function createListing(data: CreateListingRequest) {
 export type ListingLimits = {
   /** Basis points (10000 = 100%) a deposit may not exceed of the listing's weekly-equivalent rate. */
   deposit_cap_bps: number;
+  /** S2-09: above this replacement value, damage protection is not offered. */
+  damage_protection_max_replacement_value_cents: number;
+  /** The most the scheme pays, before the per-listing cap. */
+  damage_protection_coverage_cap_cents: number;
 };
 
 /** Server-enforced listing limits, so the create-listing form can show an owner the deposit cap before they submit, not just reject it after. */
@@ -106,6 +125,11 @@ export function getListingLimits() {
 
 export function getListingCategories() {
   return backendRequest<ListingCategoryOption[]>("/categories");
+}
+
+/** Category labels and rules for rendering a listing's saved specifications. */
+export function getListingCategoryAttributes(category: ListingCategory) {
+  return backendRequest<CategoryAttributeDefinition[]>(`/categories/${encodeURIComponent(category)}/attributes`);
 }
 
 /**

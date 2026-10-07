@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 
-export type TransactionType = "TOPUP" | "ESCROW_HOLD" | "ESCROW_RELEASE" | "WITHDRAWAL" | "REFUND" | "ADMIN_CREDIT" | "ADMIN_DEBIT";
+export type TransactionType = "TOPUP" | "ESCROW_HOLD" | "ESCROW_RELEASE" | "WITHDRAWAL" | "REFUND" | "ADMIN_CREDIT" | "ADMIN_DEBIT" | "OWNER_PROTECTION_PREMIUM";
 export type TransactionStatus = "COMPLETED" | "PENDING" | "REFUNDED";
 export type TransactionFilter = "all" | "topups" | "escrow" | "releases" | "refunds" | "withdrawals" | "adjustments";
 

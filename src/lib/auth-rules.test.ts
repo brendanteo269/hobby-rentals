@@ -23,8 +23,10 @@ import {
   isProfileView,
   loginPath,
   profilePath,
+  safeNextPath,
 } from "@/lib/routes";
 import {
+  requiresSignIn,
   requiresOnboarding,
   requiresVerifiedEmail,
   resolveLinkType,
@@ -120,8 +122,8 @@ describe("route builders", () => {
 });
 
 describe("requiresVerifiedEmail", () => {
-  it.each(["/listings/new", "/listings/abc-123/availability"])(
-    "gates the lending action %s",
+  it.each(["/listings/new", "/listings/abc-123/availability", "/messages/new"])(
+    "gates the lending/messaging action %s",
     (path) => {
       expect(requiresVerifiedEmail(path)).toBe(true);
     },
@@ -133,6 +135,8 @@ describe("requiresVerifiedEmail", () => {
     ["/listings/abc-123", "a listing detail page is a read"],
     ["/profile", "the member's own profile"],
     ["/onboarding", "first-run setup must stay reachable"],
+    ["/messages", "the inbox is a read"],
+    ["/messages/abc-123", "reading an open thread is not starting one"],
     ["/", "the marketing home page"],
   ])("leaves %s open (%s)", (path) => {
     expect(requiresVerifiedEmail(path)).toBe(false);
@@ -144,7 +148,7 @@ describe("requiresVerifiedEmail", () => {
 });
 
 describe("requiresOnboarding", () => {
-  it.each(["/profile", "/browse", "/listings", "/listings/new", "/listings/abc/availability"])(
+  it.each(["/profile", "/browse", "/listings", "/listings/new", "/listings/abc/availability", "/messages"])(
     "gates %s",
     (path) => {
       expect(requiresOnboarding(path)).toBe(true);
@@ -313,5 +317,36 @@ describe("resolveLinkType", () => {
     expect(resolveLinkType(null, ["recovery"])).toBe("recovery");
     // Two candidates and nothing to choose between them: refuse rather than guess.
     expect(resolveLinkType(null, ["signup", "email"])).toBeNull();
+  });
+});
+
+describe("safeNextPath", () => {
+  it("accepts a path on this site, query and fragment included", () => {
+    expect(safeNextPath("/notifications/abc")).toBe("/notifications/abc");
+    expect(safeNextPath("/profile?view=renter#booking-1")).toBe("/profile?view=renter#booking-1");
+  });
+
+  it("refuses anything a browser would read as another host", () => {
+    // Each of these, handed to redirect(), leaves the site: the open redirect
+    // an email link's `next` would otherwise be.
+    expect(safeNextPath("//evil.example")).toBeNull();
+    expect(safeNextPath("/\\evil.example")).toBeNull();
+    expect(safeNextPath("https://evil.example")).toBeNull();
+    expect(safeNextPath("javascript:alert(1)")).toBeNull();
+    // Browsers strip tabs and newlines from URLs, which turns "/<tab>/evil" into "//evil".
+    expect(safeNextPath("/\t/evil.example")).toBeNull();
+  });
+
+  it("refuses an absent or relative value", () => {
+    expect(safeNextPath(null)).toBeNull();
+    expect(safeNextPath("")).toBeNull();
+    expect(safeNextPath("profile")).toBeNull();
+  });
+});
+
+describe("notifications are behind the sign-in wall", () => {
+  it("sends a signed-out email reader to log in first", () => {
+    expect(requiresSignIn("/notifications")).toBe(true);
+    expect(requiresSignIn("/notifications/abc")).toBe(true);
   });
 });

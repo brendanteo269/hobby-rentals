@@ -5,12 +5,22 @@ import { EnableOwningForm } from "@/components/enable-owning-form";
 import { saveProfileAvailability } from "@/app/profile/actions";
 import { ProfileAvailabilityCard } from "@/components/profile-availability-card";
 import { RateLine } from "@/components/browse/listing-card";
+import { MessageButton } from "@/components/messages/message-button";
 import { CATEGORY_LABELS, LISTING_STATUS_LABELS, type Listing } from "@/lib/listings";
 import { profilePath, type ProfileView } from "@/lib/routes";
 import type { Booking } from "@/lib/bookings";
 import type { BundleBooking } from "@/lib/bundles";
-import { BOOKING_STATUS_LABELS } from "@/lib/bookings";
-import { formatDate } from "@/lib/format";
+import { hasLiveOffer, WAITLIST_STATUS_LABELS, type WaitlistEntry } from "@/lib/waitlist";
+import {
+  BOOKING_STATUS_LABELS,
+  BOOKING_STATUS_NEXT_STEP,
+  BUNDLE_STATUS_NEXT_STEP,
+  MESSAGEABLE_BOOKING_STATUSES,
+  PAYMENT_STATUS_LABELS,
+} from "@/lib/bookings";
+import { WithdrawRequestButton } from "@/components/bookings/withdraw-request-button";
+import { HashTargetHighlight } from "@/components/hash-target-highlight";
+import { formatDate, formatDateTime } from "@/lib/format";
 
 export type { ProfileView } from "@/lib/routes";
 
@@ -83,14 +93,17 @@ export function RenterView({
   enabled,
   bookings = [],
   bundleBookings = [],
+  waitlist = [],
 }: {
   enabled: boolean;
   bookings?: Booking[];
   /** S2-20: a request for a whole set, shown beside the single-item ones. */
   bundleBookings?: BundleBooking[];
+  /** S2-15: dates the renter is queueing for, which are not bookings yet. */
+  waitlist?: WaitlistEntry[];
 }) {
   if (!enabled) return <NotEnabled side="renter" />;
-  if (bookings.length > 0 || bundleBookings.length > 0) {
+  if (bookings.length > 0 || bundleBookings.length > 0 || waitlist.length > 0) {
     return (
       <div>
         <div className="flex items-baseline justify-between gap-4">
@@ -100,9 +113,16 @@ export function RenterView({
           </div>
           <ButtonLink href="/browse" variant="outline" className="px-4 py-2 text-xs">Browse more</ButtonLink>
         </div>
+        <HashTargetHighlight />
         <ul className="mt-6 space-y-3">
           {bundleBookings.map((booking) => (
-            <li key={booking.id} className="flex flex-wrap items-center justify-between gap-3 border border-line bg-white p-4">
+            // The id is what a bundle notification's link scrolls to
+            // (renter_bundle_booking_path in the backend's catalog).
+            <li
+              key={booking.id}
+              id={`bundle-booking-${booking.id}`}
+              className="flex scroll-mt-24 flex-wrap items-center justify-between gap-3 border border-line bg-white p-4 data-[hash-target]:border-ink data-[hash-target]:ring-1 data-[hash-target]:ring-ink"
+            >
               <div>
                 <Link href={`/bundles/${booking.bundle_id}`} className="font-medium hover:underline">
                   {booking.bundle_name ?? "View bundle"}
@@ -115,20 +135,79 @@ export function RenterView({
                 <p className="mt-1 text-xs text-ink-soft">
                   {booking.items.length} items · {booking.items.map((item) => item.listing_name ?? "an item").join(", ")}
                 </p>
+                <p className="mt-1 text-sm text-ink">{BUNDLE_STATUS_NEXT_STEP[booking.status]}</p>
               </div>
               <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
             </li>
           ))}
           {bookings.map((booking) => (
-            <li key={booking.id} className="flex flex-wrap items-center justify-between gap-3 border border-line bg-white p-4">
+            // The id is what a notification's link scrolls to
+            // (renter_booking_path in the backend's catalog).
+            <li
+              key={booking.id}
+              id={`booking-${booking.id}`}
+              className="flex scroll-mt-24 flex-wrap items-center justify-between gap-3 border border-line bg-white p-4 data-[hash-target]:border-ink data-[hash-target]:ring-1 data-[hash-target]:ring-ink"
+            >
               <div>
                 <Link href={`/listings/${booking.listing_id}`} className="font-medium hover:underline">View listing</Link>
-                <p className="mt-1 text-sm text-ink-soft">{formatDate(booking.start_date)} – {formatDate(booking.end_date)}</p>
+                <p className="mt-1 text-sm text-ink-soft">
+                  {formatDate(booking.start_date)} – {formatDate(booking.end_date)}
+                  {booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}
+                </p>
+                <p className="mt-1 text-sm text-ink">{BOOKING_STATUS_NEXT_STEP[booking.status]}</p>
+                {booking.confirmed_meetup_location && (
+                  <p className="mt-1 text-sm text-ink-soft">
+                    Meetup: {booking.confirmed_meetup_location}
+                    {booking.confirmed_meetup_time && `, ${formatDateTime(booking.confirmed_meetup_time)}`}
+                  </p>
+                )}
               </div>
-              <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
+              <div className="flex flex-col items-end gap-2">
+                <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
+                {booking.status === "PENDING" && <WithdrawRequestButton bookingId={booking.id} />}
+                {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
+                  <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
+                )}
+              </div>
             </li>
           ))}
         </ul>
+
+        {/* S2-15: queue places are not bookings - nothing is held and no
+            dates are reserved - so they sit in their own section rather than
+            among the rentals above. */}
+        {waitlist.length > 0 && (
+          <div className="mt-10">
+            <p className="eyebrow">Waiting on</p>
+            <ul className="mt-4 space-y-3">
+              {waitlist.map((entry) => (
+                <li
+                  key={entry.id}
+                  className={`flex flex-wrap items-center justify-between gap-3 border p-4 ${
+                    hasLiveOffer(entry) ? "border-accent bg-accent-soft" : "border-line bg-white"
+                  }`}
+                >
+                  <div>
+                    <Link href={`/listings/${entry.listing_id}`} className="font-medium hover:underline">
+                      {entry.listing_name ?? "View listing"}
+                    </Link>
+                    <p className="mt-1 text-sm text-ink-soft">
+                      {formatDate(entry.start_date)} – {formatDate(entry.end_date)}
+                    </p>
+                    {hasLiveOffer(entry) && (
+                      <p className="mt-1 text-xs text-accent-dark">
+                        Yours to book until {formatDateTime(entry.offer_expires_at!)}.
+                      </p>
+                    )}
+                  </div>
+                  <Badge variant={hasLiveOffer(entry) ? "accent" : "neutral"}>
+                    {WAITLIST_STATUS_LABELS[entry.status]}
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
     );
   }

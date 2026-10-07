@@ -1,31 +1,62 @@
+import type { Route } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { requirePortalSession } from "@/lib/admin";
+import { getCategoryOptions, searchListings, PAGE_SIZE } from "@/lib/listings";
 import { ROUTES } from "@/lib/routes";
-import { formatDate, shortId } from "@/lib/format";
-import { LISTINGS_LIMIT, listFlaggedPassports, searchListings } from "@/lib/passports";
-import { Badge, Button, Container, EmptyState, Input, Panel } from "@/components/ui";
+import { shortId } from "@/lib/format";
+import { listFlaggedPassports } from "@/lib/passports";
+import { Badge, Container, Panel } from "@/components/ui";
+import { ListingSearch } from "@/components/listing-search";
+import { ListingTable } from "@/components/listing-table";
+import { Pagination } from "@/components/pagination";
 
 export const metadata = { title: "Listings — HobbyRentals Admin" };
 
-/** Finds a listing to review its Product Passport (S2-24), with flagged passports first (S2-35). */
-export default async function ListingsPage({ searchParams }: { searchParams: Promise<{ q?: string }> }) {
+export default async function ListingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; category?: string | string[]; status?: string | string[]; page?: string }>;
+}) {
+  // The proxy already turned away anyone without the portal password.
+  // Repeated here because a page that reads listing/owner data should not
+  // depend on middleware having run - a matcher change is one edit away from
+  // silently exposing it.
   await requirePortalSession();
-  const { q = "" } = await searchParams;
-  const [{ listings, error }, queue] = await Promise.all([searchListings(q), listFlaggedPassports()]);
+
+  const { q = "", category, status, page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam) || 1);
+
+  // Empty means "any" for both - no status/category filter leaves every
+  // listing (any status, any category) in the result set.
+  const categories = Array.isArray(category) ? category : category ? [category] : [];
+  const statuses = Array.isArray(status) ? status : status ? [status] : [];
+
+  const [{ listings, total, error }, categoryOptions, queue] = await Promise.all([
+    searchListings(q, categories, statuses, page),
+    getCategoryOptions(),
+    listFlaggedPassports(),
+  ]);
+
+  const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  // A page past the end of the result set (a bookmarked or shared link whose
+  // matches have since shrunk) would otherwise render as a false "no
+  // listings match this search" - send it back to the real last page instead.
+  if (page > lastPage) redirect(hrefForListingsPage(q, categories, statuses, lastPage) as Route);
 
   const description = error
     ? error
-    : listings.length === 0
+    : total === 0
       ? "No listings match this search."
-      : listings.length === LISTINGS_LIMIT
-        ? `Showing the newest ${LISTINGS_LIMIT}. Narrow the search to see others.`
-        : `${listings.length} listing${listings.length === 1 ? "" : "s"}${q ? " matching this search" : ""}.`;
+      : `${total} listing${total === 1 ? "" : "s"}${q || categories.length > 0 || statuses.length > 0 ? " matching this search" : ""}.`;
 
   return (
     <Container className="py-12">
       <p className="eyebrow">Admin</p>
       <h1 className="display-caps mt-3 text-3xl">Listings</h1>
 
+      {/* S2-35: flagged passports waiting on an admin decision. */}
       <div className="mt-8">
         <Panel
           title="Needs review"
@@ -62,65 +93,33 @@ export default async function ListingsPage({ searchParams }: { searchParams: Pro
         </Panel>
       </div>
 
-      {/* A plain GET form, like UserSearch: the query lives in the URL. */}
-      <form method="get" role="search" className="mt-8 flex flex-wrap items-end gap-3">
-        <div className="min-w-64 flex-1">
-          <label htmlFor="q" className="block text-sm font-medium">
-            Find a listing
-          </label>
-          <Input id="q" name="q" type="search" defaultValue={q} placeholder="Listing name or ID" autoComplete="off" className="mt-2" />
-        </div>
-        <Button type="submit">Search</Button>
-        {q && (
-          <Link href={ROUTES.listings} className="px-1 pb-3 text-sm text-ink-soft underline underline-offset-4 hover:text-ink">
-            Clear
-          </Link>
-        )}
-      </form>
+      <div className="mt-8">
+        <ListingSearch query={q} categories={categories} statuses={statuses} categoryOptions={categoryOptions} />
+      </div>
 
       <div className="mt-8">
         <Panel title="Listings" description={description}>
           <div className="-mx-6 -my-5">
-            {listings.length === 0 ? (
-              <EmptyState title="No matching listings" body="Search by listing name or ID. Partial names are fine." />
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-3xl border-collapse text-sm">
-                  <thead>
-                    <tr className="border-b border-line text-left">
-                      <th scope="col" className="eyebrow px-6 py-3 font-normal">Listing</th>
-                      <th scope="col" className="eyebrow px-6 py-3 font-normal">Status</th>
-                      <th scope="col" className="eyebrow px-6 py-3 font-normal">Owner</th>
-                      <th scope="col" className="eyebrow px-6 py-3 font-normal">Created</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {listings.map((listing) => (
-                      <tr key={listing.id} className="border-b border-line last:border-0 hover:bg-sand">
-                        <td className="px-6 py-4">
-                          <Link href={ROUTES.listingPassport(listing.id)} className="block">
-                            <span className="font-medium underline-offset-4 hover:underline">{listing.name}</span>
-                            <span className="mt-0.5 block text-xs text-ink-soft">{shortId(listing.id)}</span>
-                          </Link>
-                        </td>
-                        <td className="px-6 py-4">
-                          <Badge>{listing.status}</Badge>
-                        </td>
-                        <td className="px-6 py-4">
-                          <Link href={ROUTES.user(listing.owner_id)} className="underline-offset-4 hover:underline">
-                            {shortId(listing.owner_id)}
-                          </Link>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-ink-soft">{formatDate(listing.created_at)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+            <ListingTable listings={listings} categories={categoryOptions} />
           </div>
         </Panel>
       </div>
+
+      <Pagination
+        page={page}
+        lastPage={lastPage}
+        hrefForPage={(p) => hrefForListingsPage(q, categories, statuses, p)}
+      />
     </Container>
   );
+}
+
+function hrefForListingsPage(q: string, categories: string[], statuses: string[], page: number): string {
+  const params = new URLSearchParams();
+  if (q) params.set("q", q);
+  categories.forEach((c) => params.append("category", c));
+  statuses.forEach((s) => params.append("status", s));
+  if (page > 1) params.set("page", String(page));
+  const search = params.toString();
+  return search ? `${ROUTES.listings}?${search}` : ROUTES.listings;
 }

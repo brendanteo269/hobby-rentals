@@ -52,7 +52,7 @@ export type LocationArea =
   | "WOODLANDS"
   | "YISHUN";
 
-export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "PENDING_REMOVAL" | "REMOVED";
+export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "PENDING_REMOVAL" | "REMOVED" | "DEACTIVATED";
 
 /** An inclusive span of calendar days, both ends as ISO dates (YYYY-MM-DD). */
 export type DateRange = { start_date: string; end_date: string };
@@ -61,13 +61,13 @@ export type DateRange = { start_date: string; end_date: string };
  * Why a date inside a listing's window cannot be booked. Mirrors
  * booking_service.UnavailableReason.
  *
- * BOOKED is the one a renter might act on — that date could free up if the
- * booking is cancelled — so it is labelled distinctly from the two the owner
- * chose. A date *outside* the window carries no reason and appears in
+ * BOOKED and WAITLIST_HOLD are the ones a renter might act on — those dates
+ * could free up, and can be queued for — so they are labelled distinctly
+ * from the two the owner chose. A date *outside* the window carries no reason and appears in
  * neither list: there is nothing to explain about a day the listing never
  * covered.
  */
-export type UnavailableReason = "BOOKED" | "BLACKOUT" | "OFF_SCHEDULE";
+export type UnavailableReason = "BOOKED" | "BLACKOUT" | "OFF_SCHEDULE" | "WAITLIST_HOLD";
 
 export type UnavailableDate = { date: string; reason: UnavailableReason };
 
@@ -75,6 +75,9 @@ export const UNAVAILABLE_REASON_LABELS: Record<UnavailableReason, string> = {
   BOOKED: "Booked",
   BLACKOUT: "Unavailable",
   OFF_SCHEDULE: "Not offered on this day",
+  // S2-15: free of bookings, but inside someone else's 24-hour waitlist
+  // window. Like BOOKED, it may open up shortly, and can be queued behind.
+  WAITLIST_HOLD: "Reserved for someone on the waitlist",
 };
 
 /**
@@ -113,6 +116,17 @@ export type BrowseListingsResponse = {
   page_size: number;
 };
 
+/** Public landing-page card enriched with the category-level demand badge. */
+export type PopularListingCard = ListingCard & {
+  is_high_demand: boolean;
+};
+
+export type PopularListingsResponse = {
+  results: PopularListingCard[];
+  /** Count before the endpoint limits the carousel to eight cards. */
+  active_inventory_count: number;
+};
+
 /** A listing in full, as returned when one is created. */
 export type Listing = {
   id: string;
@@ -126,6 +140,8 @@ export type Listing = {
   price_per_day_cents: number | null;
   price_per_week_cents: number | null;
   deposit_cents: number;
+  /** S2-09: what the owner says it would cost to replace. Null when undeclared. */
+  replacement_value_cents: number | null;
   min_rental_days: number | null;
   max_rental_days: number | null;
   available_from: string;
@@ -197,7 +213,6 @@ export type SerialStatus = "PENDING" | "VERIFIED" | "NO_SERIAL" | "DUPLICATE" | 
  */
 export function passportBadge(status: SerialStatus | null | undefined): string | null {
   if (status === "VERIFIED") return "Serial verified";
-  if (status === "NO_SERIAL") return "Photo verified";
   return null;
 }
 
@@ -310,6 +325,7 @@ export type CreateListingRequest = {
   condition: ListingCondition;
   location_area: LocationArea;
   deposit_cents: number;
+  replacement_value_cents?: number | null;
   /**
    * Price per rental block is a choice, not two mandatory fields: at least
    * one of these two must be set (FastAPI 422s otherwise), but neither is
@@ -340,6 +356,7 @@ export type CategoryAttributeDefinition = {
   label: string;
   data_type: "text" | "number" | "select";
   is_required: boolean;
+  is_pricing_factor: boolean;
   options: string[];
   min_val: number | null;
   max_val: number | null;
@@ -364,6 +381,7 @@ export type UpdateListingRequest = Partial<
     | "condition"
     | "location_area"
     | "deposit_cents"
+    | "replacement_value_cents"
     | "price_per_day_cents"
     | "price_per_week_cents"
     | "min_rental_days"
@@ -371,6 +389,7 @@ export type UpdateListingRequest = Partial<
     | "available_from"
     | "available_until"
     | "photo_keys"
+    | "attributes"
   >
 >;
 
@@ -452,6 +471,7 @@ export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   ARCHIVED: "Archived",
   PENDING_REMOVAL: "Removal scheduled",
   REMOVED: "Removed",
+  DEACTIVATED: "Deactivated",
 };
 
 export const CATEGORIES = Object.keys(CATEGORY_LABELS) as ListingCategory[];

@@ -19,7 +19,7 @@ import type {
   LocationArea,
   UnavailableReason,
 } from "@/lib/listings";
-import type { BookingQuote, BookingStatus } from "@/lib/bookings";
+import type { BookingQuote, BookingStatus, DeclineReason } from "@/lib/bookings";
 
 export type BundleStatus = "ACTIVE" | "UNPUBLISHED" | "REMOVED";
 
@@ -183,6 +183,8 @@ export type BundleBooking = {
   bundle_id: string;
   bundle_name: string | null;
   renter_id: string;
+  /** Who asked. Null when that member has not set a display name. */
+  renter_name: string | null;
   owner_id: string;
   start_date: string;
   end_date: string;
@@ -195,7 +197,36 @@ export type BundleBooking = {
   platform_fee_cents: number | null;
   deposit_cents: number | null;
   total_amount_cents: number | null;
+  /** When an unanswered request lapses. */
+  respond_by?: string | null;
+  decline_reason?: DeclineReason | null;
+  decline_note?: string | null;
   items: BundleBookingComponent[];
   created_at: string;
   updated_at: string;
+};
+
+
+/**
+ * S2-30: one bundle on the landing page's showcase.
+ *
+ * Card data only — this is the one bundle read an anonymous visitor makes, so
+ * it carries nothing the marketplace does not already show publicly.
+ */
+export type FeaturedBundleItem = {
+  id: string;
+  name: string;
+  category: ListingCategory;
+  photo_url: string | null;
+};
+
+export type FeaturedBundleCard = {
+  id: string;
+  name: string;
+  description: string | null;
+  items: FeaturedBundleItem[];
+  item_count: number;
+  price_per_day_cents: number | null;
+  price_per_week_cents: number | null;
+  primary_photo_url: string | null;
 };

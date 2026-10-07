@@ -67,7 +67,7 @@ export function ButtonLink<T extends string>({
   );
 }
 
-const inputBase =
+export const inputBase =
   "w-full border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-ink placeholder:text-ink-soft/70 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-ink-soft";
 
 /** Bare text input carrying the shared field styling. `pill` is for search-bar-style contexts (hero, filter bars); form fields stay `rounded-lg`. */
@@ -291,9 +291,9 @@ export function Chip({
  * things get distinct boxes" language, applied here to keep a long form
  * legible as a sequence of steps rather than one continuous scroll.
  */
-export function FormSection({ title, children }: { title: string; children: ReactNode }) {
+export function FormSection({ title, children, id }: { title: string; children: ReactNode; id?: string }) {
   return (
-    <section className="overflow-hidden card">
+    <section id={id} className="scroll-mt-8 overflow-hidden card transition-[border-color,box-shadow] data-[hash-target]:border-accent data-[hash-target]:ring-2 data-[hash-target]:ring-accent/30">
       <div className="border-b border-line px-6 py-4 sm:px-8">
         <h2 className="heading text-lg">{title}</h2>
       </div>
@@ -412,10 +412,10 @@ export function ImageSlot({
   }
 
   const position =
-    align === "end" ? "items-end justify-end p-4" : "items-center justify-center px-4";
+    align === "end" ? "items-end justify-end p-4" : "items-center justify-center px-1.5";
   return (
-    <div className={`flex bg-surface-muted ${position} ${className}`}>
-      <span className="text-center text-xs text-ink-soft">{label}</span>
+    <div className={`flex overflow-hidden bg-surface-muted ${position} ${className}`}>
+      <span className="line-clamp-3 text-center text-xs text-ink-soft">{label}</span>
     </div>
   );
 }

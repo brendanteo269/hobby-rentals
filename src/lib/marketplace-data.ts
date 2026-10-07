@@ -8,7 +8,6 @@
 
 const unsplash = (id: string) => `https://images.unsplash.com/photo-${id}?w=800&h=800&fit=crop&q=80`;
 
-export type Category = { name: string; count: string };
 export type Listing = {
   title: string;
   price: string;
@@ -19,14 +18,6 @@ export type Listing = {
   slot: string;
   photoUrl: string;
 };
-
-export const CATEGORIES: Category[] = [
-  { name: "Cameras & drones", count: "140+ available" },
-  { name: "Camping & hiking", count: "220+ available" },
-  { name: "Water sports", count: "90+ available" },
-  { name: "Music & studio audio", count: "150+ available" },
-  { name: "Power tools & DIY", count: "110+ available" },
-];
 
 export const LISTINGS: Listing[] = [
   {

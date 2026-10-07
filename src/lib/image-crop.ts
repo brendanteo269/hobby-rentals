@@ -15,7 +15,7 @@ export type CropTransform = { x: number; y: number; scale: number };
 export const CENTERED_CROP: CropTransform = { x: 0, y: 0, scale: 1 };
 
 /**
- * Draws the region of `bitmap` selected by `crop` onto a fresh square
+ * Draws the square region of `bitmap` selected by `crop` onto a fresh
  * canvas and encodes it as `mimeType`.
  *
  * Always at native resolution: the source rectangle shrinks as scale grows

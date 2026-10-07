@@ -18,9 +18,10 @@ import type {
   BundleEvent,
   BundleQuote,
   CreateBundleRequest,
+  FeaturedBundleCard,
   UpdateBundleRequest,
 } from "@/lib/bundles";
-import type { BookingStatus } from "@/lib/bookings";
+import type { BookingStatus, DeclineReason } from "@/lib/bookings";
 
 export { BackendApiError as BundleApiError } from "@/lib/api/client";
 
@@ -144,10 +145,37 @@ export function getOwnerBundleBookings() {
   return backendRequest<BundleBooking[]>("/bundles/bookings/owner");
 }
 
-/** The owner's accept/decline, applied to the set and every item in it at once. */
+/** The owner declines a bundle request, saying why; every item goes with it and the hold is released. */
+export function declineBundleBooking(bundleBookingId: string, reason: DeclineReason, note: string | null) {
+  return backendRequest<BundleBooking>(
+    `/bundles/bookings/${encodeURIComponent(bundleBookingId)}/decline`,
+    { method: "POST", body: JSON.stringify({ reason, note }) },
+  );
+}
+
+/** The owner accepting, or cancelling once confirmed, applied to the set and every item in it at once. */
 export function updateBundleBookingStatus(bundleBookingId: string, nextStatus: BookingStatus) {
   return backendRequest<BundleBooking>(
     `/bundles/bookings/${encodeURIComponent(bundleBookingId)}/status`,
     { method: "PATCH", body: JSON.stringify({ status: nextStatus }) },
   );
+}
+
+
+/**
+ * S2-30: bundles for the landing page's showcase.
+ *
+ * The landing page is public, so this cannot use backendRequest, which rightly
+ * redirects an anonymous caller to login. Same arrangement as
+ * getPopularListings, against an endpoint that exposes only card data.
+ * Uncached, so a bundle that has just become unavailable stops being
+ * showcased on the next load rather than on the next deploy.
+ */
+export async function getFeaturedBundles(limit = 8): Promise<FeaturedBundleCard[]> {
+  const apiBase = (
+    process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+  ).replace(/\/+$/, "");
+  const response = await fetch(`${apiBase}/bundles/featured?limit=${limit}`, { cache: "no-store" });
+  if (!response.ok) throw new Error("Featured bundles are temporarily unavailable.");
+  return response.json() as Promise<FeaturedBundleCard[]>;
 }

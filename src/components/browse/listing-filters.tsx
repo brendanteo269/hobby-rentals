@@ -1,3 +1,7 @@
+"use client";
+
+import { useTransition } from "react";
+import { emitActivityEvent } from "@/app/analytics/actions";
 import { Button, Input } from "@/components/ui";
 import { FilterSelect } from "@/components/browse/filter-select";
 import type { BrowseFilters } from "@/lib/browse-params";
@@ -24,9 +28,15 @@ import {
  * results remove them one at a time; a member builds a multi-value filter by
  * choosing again, which the form appends rather than replaces.
  */
-export function ListingFilters({ filters }: { filters: BrowseFilters }) {
+export function ListingFilters({ filters, highDemandCategories = [] }: { filters: BrowseFilters; highDemandCategories?: string[] }) {
+  const [, startTransition] = useTransition();
+  const highDemandLabels = highDemandCategories.map((category) => CATEGORY_LABELS[category]).filter(Boolean);
+  function trackCategorySearch(formData: FormData) {
+    const category = String(formData.get("category") ?? "");
+    if (category) startTransition(async () => { await emitActivityEvent({ event_type: "category_search", category }); });
+  }
   return (
-    <form method="get" action="/browse" role="search" className="card p-5">
+    <form method="get" action="/browse" role="search" className="card p-5" onSubmit={(event) => trackCategorySearch(new FormData(event.currentTarget))}>
       {/* Filters already applied ride along as hidden fields, so submitting
           the keyword box narrows the current view instead of resetting it. */}
       {filters.category.map((value) => (
@@ -118,6 +128,7 @@ export function ListingFilters({ filters }: { filters: BrowseFilters }) {
         </label>
         <Button type="submit">Apply</Button>
       </div>
+      {highDemandLabels.length > 0 && <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4"><span className="inline-flex items-center rounded-full bg-accent-dark px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">🔥 High demand</span><p className="text-sm text-ink-soft">Popular categories right now: {highDemandLabels.join(", ")}</p></div>}
     </form>
   );
 }

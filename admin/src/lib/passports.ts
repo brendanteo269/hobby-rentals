@@ -1,13 +1,7 @@
-import { createAdminClient } from "@/lib/supabase/admin";
 import { adminApiKey, apiUrl } from "@/lib/env";
+import { createAdminClient } from "@/lib/supabase/admin";
 
-export type ListingRow = {
-  id: string;
-  name: string;
-  owner_id: string;
-  status: string;
-  created_at: string;
-};
+const QUEUE_LIMIT = 50;
 
 export type PassportEntry = {
   id: string;
@@ -36,29 +30,6 @@ export type AdminPassport = {
   entries: PassportEntry[];
 };
 
-export const LISTINGS_LIMIT = 50;
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-/** Listings by name (partial) or exact id, newest first, any status. */
-export async function searchListings(query: string): Promise<{ listings: ListingRow[]; error: string | null }> {
-  // ponytail: first LISTINGS_LIMIT matches only; paginate like searchUsers once there are more.
-  let request = createAdminClient()
-    .from("listings")
-    .select("id, name, owner_id, status, created_at")
-    .order("created_at", { ascending: false })
-    .limit(LISTINGS_LIMIT);
-  const q = query.trim();
-  if (q) request = UUID.test(q) ? request.eq("id", q) : request.ilike("name", `%${q.replace(/[%_\\]/g, "\\$&")}%`);
-
-  const { data, error } = await request;
-  if (error) {
-    console.error("Listing search failed:", error.message);
-    return { listings: [], error: "Could not load listings." };
-  }
-  return { listings: data ?? [], error: null };
-}
-
 /**
  * Through the API rather than Supabase: the serial label photo is private in
  * S3, and the API is what can sign a URL for it. Null when there's no such listing.
@@ -85,7 +56,7 @@ export type FlaggedPassport = {
  * wait is at the top. Only DUPLICATE is flagged today.
  */
 export async function listFlaggedPassports(): Promise<{ passports: FlaggedPassport[]; error: string | null }> {
-  // ponytail: first LISTINGS_LIMIT only; paginate if the queue ever gets that long.
+  // ponytail: first QUEUE_LIMIT only; paginate if the queue ever gets that long.
   const { data, error } = await createAdminClient()
     .from("product_passports")
     .select("listing_id, serial_number, listing:listings!inner(name, owner_id, status)")
@@ -93,7 +64,7 @@ export async function listFlaggedPassports(): Promise<{ passports: FlaggedPasspo
     // A removed listing has nothing left to decide.
     .neq("listing.status", "REMOVED")
     .order("created_at", { ascending: true })
-    .limit(LISTINGS_LIMIT);
+    .limit(QUEUE_LIMIT);
   if (error) {
     console.error("Review queue failed:", error.message);
     return { passports: [], error: "Could not load the review queue." };
