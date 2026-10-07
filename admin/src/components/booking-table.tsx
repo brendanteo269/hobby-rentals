@@ -24,14 +24,17 @@ export function BookingTable({ bookings }: { bookings: AdminBookingSummary[] }) 
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full min-w-4xl border-collapse text-sm">
+      <table className="w-full min-w-6xl border-collapse text-sm">
         <thead>
           <tr className="border-b border-line text-left">
             <th scope="col" className="eyebrow px-6 py-3 font-normal">Booking</th>
+            <th scope="col" className="eyebrow px-6 py-3 font-normal">Booking ID</th>
             <th scope="col" className="eyebrow px-6 py-3 font-normal">Status</th>
             <th scope="col" className="eyebrow px-6 py-3 font-normal">Renter</th>
+            <th scope="col" className="eyebrow px-6 py-3 font-normal">Renter email</th>
             <th scope="col" className="eyebrow px-6 py-3 font-normal">Owner</th>
-            <th scope="col" className="eyebrow px-6 py-3 font-normal">Rental period</th>
+            <th scope="col" className="eyebrow px-6 py-3 font-normal">Start date</th>
+            <th scope="col" className="eyebrow px-6 py-3 font-normal">End date</th>
             <th scope="col" className="eyebrow px-6 py-3 font-normal">Amount</th>
           </tr>
         </thead>
@@ -39,29 +42,31 @@ export function BookingTable({ bookings }: { bookings: AdminBookingSummary[] }) 
           {bookings.map((booking) => (
             <tr key={booking.id} className="border-b border-line last:border-0 hover:bg-sand">
               <td className="px-6 py-4">
-                <Link href={ROUTES.booking(booking.id)} className="block">
-                  <span className="font-medium underline-offset-4 hover:underline">{booking.listing_name}</span>
-                  <span className="mt-0.5 block text-xs text-ink-soft">{shortId(booking.id)}</span>
+                <Link href={ROUTES.booking(booking.id)} className="font-medium underline-offset-4 hover:underline">
+                  {booking.listing_name}
+                </Link>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-ink-soft">
+                <Link href={ROUTES.booking(booking.id)} className="hover:underline">
+                  {shortId(booking.id)}
                 </Link>
               </td>
               <td className="px-6 py-4">
                 <Badge tone={bookingStatusTone(booking.status)}>{bookingStatusLabel(booking.status)}</Badge>
               </td>
               <td className="px-6 py-4">
-                <Link href={ROUTES.user(booking.renter_id)} className="block underline-offset-4 hover:underline">
-                  <span>{booking.renter_display_name ?? "No name"}</span>
-                  <span className="mt-0.5 block text-xs text-ink-soft">{booking.renter_email ?? "No email"}</span>
+                <Link href={ROUTES.user(booking.renter_id)} className="underline-offset-4 hover:underline">
+                  {booking.renter_display_name ?? "No name"}
                 </Link>
               </td>
+              <td className="px-6 py-4 text-ink-soft">{booking.renter_email ?? "No email"}</td>
               <td className="px-6 py-4">
-                <Link href={ROUTES.user(booking.owner_id)} className="block underline-offset-4 hover:underline">
-                  <span>{booking.owner_display_name ?? "No name"}</span>
-                  <span className="mt-0.5 block text-xs text-ink-soft">{booking.owner_email ?? "No email"}</span>
+                <Link href={ROUTES.user(booking.owner_id)} className="underline-offset-4 hover:underline">
+                  {booking.owner_display_name ?? "No name"}
                 </Link>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-ink-soft">
-                {formatDate(booking.start_date)} – {formatDate(booking.end_date)}
-              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-ink-soft">{formatDate(booking.start_date)}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-ink-soft">{formatDate(booking.end_date)}</td>
               <td className="px-6 py-4 whitespace-nowrap">{formatMoney(booking.total_amount_cents)}</td>
             </tr>
           ))}

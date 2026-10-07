@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { requirePortalSession } from "@/lib/admin";
 import { AUDIT_PAGE_SIZE, getBookingAuditTrail, recordBookingViewed } from "@/lib/audit";
@@ -33,6 +34,35 @@ const ESCROW_COMPONENT_LABELS: Record<string, string> = {
   PROTECTION: "Damage protection",
 };
 
+/** The happy path every booking is headed toward unless it's declined, cancelled, or expires first. */
+const HAPPY_PATH_STATUSES = ["PENDING", "CONFIRMED", "ACTIVE", "COMPLETED"];
+
+/** A booking that reaches one of these is done - there's no "expected next stage" to grey in after it. */
+const TERMINAL_EXCEPTION_STATUSES = new Set(["DECLINED", "CANCELLED", "EXPIRED"]);
+
+/** One labelled amount in the Pricing breakdown - same shape as the member app's BookingQuoteSummary Row, so the admin sees the same receipt the renter did. */
+function ReceiptRow({
+  label,
+  children,
+  divider = false,
+  strong = false,
+}: {
+  label: ReactNode;
+  children: ReactNode;
+  /** Rule above the row, separating the working from the figures it feeds. */
+  divider?: boolean;
+  strong?: boolean;
+}) {
+  return (
+    <div
+      className={`flex items-baseline justify-between gap-4 ${divider || strong ? "border-t border-line pt-1" : ""} ${strong ? "font-semibold" : ""}`}
+    >
+      <dt className={strong ? undefined : "text-ink-soft"}>{label}</dt>
+      <dd>{children}</dd>
+    </div>
+  );
+}
+
 /**
  * S2-27: read-only booking detail - status timeline, renter/owner
  * references, rental period and amount, security deposit, escrow hold/
@@ -64,6 +94,12 @@ export default async function BookingDetailPage({
   const { entries: auditEntries, total: auditTotal } = await getBookingAuditTrail(id, booking.renter_id, auditPage);
   const auditLastPage = Math.max(1, Math.ceil(auditTotal / AUDIT_PAGE_SIZE));
 
+  const reachedStatuses = booking.statusEvents.map((event) => event.to_status);
+  const lastReachedStatus = reachedStatuses[reachedStatuses.length - 1] ?? booking.status;
+  const pendingStages = TERMINAL_EXCEPTION_STATUSES.has(lastReachedStatus)
+    ? []
+    : HAPPY_PATH_STATUSES.filter((status) => !reachedStatuses.includes(status));
+
   return (
     <Container className="py-12">
       <Link href={ROUTES.bookings} className="text-sm text-ink-soft underline underline-offset-4 hover:text-ink">
@@ -84,70 +120,55 @@ export default async function BookingDetailPage({
 
       <div className="mt-10 grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
-          <Panel title="Participants">
-            <DescriptionList
-              items={[
-                {
-                  term: "Listing",
-                  value: (
-                    <Link href={ROUTES.listing(booking.listing_id)} className="underline underline-offset-4">
-                      {booking.listing_name}
-                    </Link>
-                  ),
-                },
-                {
-                  term: "Renter",
-                  value: (
+          <Panel title="Renter and owner information">
+            <div className="space-y-5">
+              <div>
+                <p className="eyebrow">Listing</p>
+                <p className="mt-1.5 text-sm">
+                  <Link href={ROUTES.listing(booking.listing_id)} className="underline underline-offset-4">
+                    {booking.listing_name}
+                  </Link>
+                </p>
+              </div>
+
+              <div className="grid gap-x-8 gap-y-1.5 sm:grid-cols-2">
+                <div>
+                  <p className="eyebrow">Renter</p>
+                  <p className="mt-1.5 text-sm">
                     <Link href={ROUTES.user(booking.renter_id)} className="underline underline-offset-4">
                       {booking.renter_display_name ?? "No name"}
                     </Link>
-                  ),
-                },
-                { term: "Renter email", value: booking.renter_email ?? "—" },
-                {
-                  term: "Owner",
-                  value: (
+                  </p>
+                </div>
+                <div>
+                  <p className="eyebrow">Renter email</p>
+                  <p className="mt-1.5 text-sm">{booking.renter_email ?? "—"}</p>
+                </div>
+              </div>
+
+              <div className="grid gap-x-8 gap-y-1.5 sm:grid-cols-2">
+                <div>
+                  <p className="eyebrow">Owner</p>
+                  <p className="mt-1.5 text-sm">
                     <Link href={ROUTES.user(booking.owner_id)} className="underline underline-offset-4">
                       {booking.owner_display_name ?? "No name"}
                     </Link>
-                  ),
-                },
-                { term: "Owner email", value: booking.owner_email ?? "—" },
-              ]}
-            />
+                  </p>
+                </div>
+                <div>
+                  <p className="eyebrow">Owner email</p>
+                  <p className="mt-1.5 text-sm">{booking.owner_email ?? "—"}</p>
+                </div>
+              </div>
+            </div>
           </Panel>
 
-          <Panel title="Rental period & pricing">
+          <Panel title="Rental period">
             <DescriptionList
               items={[
-                { term: "Rental period", value: `${formatDate(booking.start_date)} – ${formatDate(booking.end_date)}` },
+                { term: "Start date", value: formatDate(booking.start_date) },
+                { term: "End date", value: formatDate(booking.end_date) },
                 { term: "Rental days", value: booking.rental_days ?? "—" },
-                {
-                  term: "Rate",
-                  value:
-                    booking.price_per_day_cents !== null
-                      ? `${formatMoney(booking.price_per_day_cents)} / day`
-                      : "—",
-                },
-                {
-                  term: "Rental subtotal",
-                  value: booking.rental_subtotal_cents !== null ? formatMoney(booking.rental_subtotal_cents) : "—",
-                },
-                {
-                  term: "Platform fee",
-                  value:
-                    booking.platform_fee_cents !== null
-                      ? `${formatMoney(booking.platform_fee_cents)}${booking.platform_fee_bps !== null ? ` (${(booking.platform_fee_bps / 100).toFixed(2)}%)` : ""}`
-                      : "—",
-                },
-                {
-                  term: "Security deposit",
-                  value: booking.deposit_cents !== null ? formatMoney(booking.deposit_cents) : "—",
-                },
-                {
-                  term: "Total amount",
-                  value: booking.total_amount_cents !== null ? formatMoney(booking.total_amount_cents) : "—",
-                },
                 ...(booking.status === "DECLINED"
                   ? [
                       { term: "Decline reason", value: booking.decline_reason ?? "—" },
@@ -161,10 +182,86 @@ export default async function BookingDetailPage({
             />
           </Panel>
 
-          <Panel
-            title="Damage protection"
-            description="The story's 'insurance status' - this platform has no insurer; protection is self-funded from the fees renters pay for it."
-          >
+          <Panel title="Status timeline">
+            {booking.statusEvents.length === 0 ? (
+              <div className="-mx-6 -my-5">
+                <EmptyState title="No status history" body="No status changes have been recorded for this booking." />
+              </div>
+            ) : (
+              <ol className="flex items-start overflow-x-auto pb-1">
+                {booking.statusEvents.map((event, index, events) => (
+                  <li key={event.id} className="flex flex-1 items-center last:flex-none">
+                    <div className="flex w-36 shrink-0 flex-col items-center text-center">
+                      <span className="size-2.5 shrink-0 rounded-full bg-ink" />
+                      <p className="mt-2 text-sm font-medium">{bookingStatusLabel(event.to_status)}</p>
+                      <p className="mt-0.5 text-xs text-ink-soft">{formatDateTime(event.created_at)}</p>
+                      <p className="text-xs text-ink-soft">{ACTOR_ROLE_LABELS[event.actor_role] ?? event.actor_role}</p>
+                      {event.reason && <p className="mt-1 text-xs text-ink-soft">{event.reason}</p>}
+                    </div>
+                    {(index < events.length - 1 || pendingStages.length > 0) && (
+                      <span aria-hidden="true" className="mx-1 h-px flex-1 bg-line" />
+                    )}
+                  </li>
+                ))}
+
+                {/* The rest of the happy path this booking hasn't reached yet - greyed
+                    out so an admin can see what's still expected to happen, distinct
+                    from what already has. Omitted once the booking has taken a DECLINED/
+                    CANCELLED/EXPIRED exit, since there's no "next stage" after that. */}
+                {pendingStages.map((status, index) => (
+                  <li key={status} className="flex flex-1 items-center last:flex-none">
+                    <div className="flex w-36 shrink-0 flex-col items-center text-center opacity-40">
+                      <span className="size-2.5 shrink-0 rounded-full border border-line bg-cream" />
+                      <p className="mt-2 text-sm font-medium">{bookingStatusLabel(status)}</p>
+                      <p className="mt-0.5 text-xs text-ink-soft">Not yet reached</p>
+                    </div>
+                    {index < pendingStages.length - 1 && (
+                      <span aria-hidden="true" className="mx-1 h-px flex-1 bg-line opacity-40" />
+                    )}
+                  </li>
+                ))}
+              </ol>
+            )}
+          </Panel>
+
+          <Panel title="Pricing">
+            <dl className="space-y-1 text-sm">
+              {booking.price_per_day_cents !== null && (
+                <ReceiptRow label="Daily rate">{formatMoney(booking.price_per_day_cents)}</ReceiptRow>
+              )}
+              {booking.price_per_week_cents !== null && (
+                <ReceiptRow label="Weekly rate">{formatMoney(booking.price_per_week_cents)}</ReceiptRow>
+              )}
+              <ReceiptRow divider label="Rental subtotal">
+                {booking.rental_subtotal_cents !== null ? formatMoney(booking.rental_subtotal_cents) : "—"}
+              </ReceiptRow>
+              <ReceiptRow
+                label={
+                  <>
+                    Platform fee
+                    {booking.platform_fee_bps !== null && ` (${(booking.platform_fee_bps / 100).toFixed(2)}%)`}
+                  </>
+                }
+              >
+                {booking.platform_fee_cents !== null ? formatMoney(booking.platform_fee_cents) : "—"}
+              </ReceiptRow>
+              {booking.damage_protection_selected && (
+                <ReceiptRow label="Damage protection">
+                  {booking.damage_protection_fee_cents !== null
+                    ? formatMoney(booking.damage_protection_fee_cents)
+                    : "—"}
+                </ReceiptRow>
+              )}
+              <ReceiptRow label="Security deposit">
+                {booking.deposit_cents !== null ? formatMoney(booking.deposit_cents) : "—"}
+              </ReceiptRow>
+              <ReceiptRow divider strong label="Total">
+                {booking.total_amount_cents !== null ? formatMoney(booking.total_amount_cents) : "—"}
+              </ReceiptRow>
+            </dl>
+          </Panel>
+
+          <Panel title="Damage protection">
             {booking.damage_protection_selected ? (
               <DescriptionList
                 items={[
@@ -194,15 +291,6 @@ export default async function BookingDetailPage({
             )}
           </Panel>
 
-          <Panel
-            title="Claim status"
-            description="No claims have been filed against this booking."
-          >
-            <p className="body-copy">
-              This platform has no damage-claim workflow yet, so there is nothing to report beyond that absence.
-            </p>
-          </Panel>
-
           <Panel title="Escrow ledger" description="Wallet holds and releases tied to this booking.">
             {booking.escrowEntries.length === 0 ? (
               <div className="-mx-6 -my-5">
@@ -223,29 +311,6 @@ export default async function BookingDetailPage({
                   </li>
                 ))}
               </ul>
-            )}
-          </Panel>
-
-          <Panel title="Status timeline">
-            {booking.statusEvents.length === 0 ? (
-              <div className="-mx-6 -my-5">
-                <EmptyState title="No status history" body="No status changes have been recorded for this booking." />
-              </div>
-            ) : (
-              <ol className="space-y-3">
-                {booking.statusEvents.map((event) => (
-                  <li key={event.id} className="border-l-2 border-line pl-4">
-                    <p className="text-sm font-medium">
-                      {event.from_status ? `${bookingStatusLabel(event.from_status)} → ` : ""}
-                      {bookingStatusLabel(event.to_status)}
-                    </p>
-                    <p className="mt-0.5 text-xs text-ink-soft">
-                      {ACTOR_ROLE_LABELS[event.actor_role] ?? event.actor_role} · {formatDateTime(event.created_at)}
-                    </p>
-                    {event.reason && <p className="mt-1 text-xs text-ink-soft">{event.reason}</p>}
-                  </li>
-                ))}
-              </ol>
             )}
           </Panel>
         </div>
