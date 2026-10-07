@@ -176,6 +176,10 @@ function ListingRow({ listing, bookings, history, policy }: { listing: OwnerList
   // actively using the item; it becomes available again after every booking
   // leaves those states (COMPLETED/SETTLED or another terminal state).
   const hobbyShieldLockedByRental = bookings.some((booking) => booking.status === "CONFIRMED" || booking.status === "ACTIVE");
+  const hobbyShieldBlockedByPassport = listing.passport_missing.length > 0;
+  const passportHref = listing.passport_missing.includes("baseline")
+    ? (`/listings/${listing.id}/passport/baseline` as const)
+    : (`/listings/${listing.id}/passport` as const);
   // A missing declared value is the one eligibility gap the owner can fix
   // immediately, so send them straight to that field instead of a dead-end
   // protection page that only repeats the explanation.
@@ -215,6 +219,8 @@ function ListingRow({ listing, bookings, history, policy }: { listing: OwnerList
         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
           {hobbyShieldActive ? (
             <ButtonLink href={hobbyShieldHref} variant="outline" className="px-4 py-2 text-xs">View HobbyShield</ButtonLink>
+          ) : hobbyShieldBlockedByPassport ? (
+            <p className="text-ink-soft">Complete this item&apos;s Product Passport before buying HobbyShield. <ButtonLink href={passportHref} variant="outline" className="ml-2 px-3 py-1.5 text-xs">Complete passport</ButtonLink></p>
           ) : hobbyShieldLockedByRental ? (
             <p className="text-ink-soft">HobbyShield is unavailable while this listing has a confirmed or active rental. It can be purchased after all rentals are completed or settled.</p>
           ) : (

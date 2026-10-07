@@ -18,6 +18,8 @@ export type HobbyShieldPolicy = {
 export type HobbyShieldQuote = {
   eligible: boolean;
   reason: string | null;
+  wallet_available_cents: number | null;
+  wallet_shortfall_cents: number | null;
   policy: null | {
     premium_cents: number;
     coverage_cap_cents: number;

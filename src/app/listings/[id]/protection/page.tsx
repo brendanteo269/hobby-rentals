@@ -42,6 +42,16 @@ export default async function ProtectionPage({ params }: { params: Promise<{ id:
             <FormNotice message="Set a replacement value before purchasing HobbyShield." />
             <ButtonLink href={`/listings/${id}/edit#price`} className="mt-4 px-4 py-2 text-xs">Set replacement value</ButtonLink>
           </section>
+        ) : quote.reason === "Record baseline condition photos before purchasing HobbyShield." ? (
+          <section className="mt-8">
+            <FormNotice message="Complete the Product Passport baseline before purchasing HobbyShield." />
+            <ButtonLink href={`/listings/${id}/passport/baseline`} className="mt-4 px-4 py-2 text-xs">Add baseline condition photos</ButtonLink>
+          </section>
+        ) : quote.reason === "Complete the Product Passport identity record before purchasing HobbyShield." ? (
+          <section className="mt-8">
+            <FormNotice message="Complete the Product Passport identity record before purchasing HobbyShield." />
+            <ButtonLink href={`/listings/${id}/passport`} className="mt-4 px-4 py-2 text-xs">Complete Product Passport</ButtonLink>
+          </section>
         ) : <OwnerProtectionCard listingId={id} quote={quote} />}
       </div>
     </Container>
