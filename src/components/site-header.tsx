@@ -7,15 +7,15 @@ import { SiteNav } from "./site-nav";
 import { AccountMenu } from "./account-menu";
 import { signOut } from "@/app/auth/actions";
 import { NotificationBell } from "./notifications/notification-bell";
-import { getUnreadNotificationCount } from "@/lib/api/notifications";
+import { getNotificationCounts } from "@/lib/api/notifications";
 
 /**
  * The unread count for the bell, or null when it cannot be had. The header is
  * on every page, so a notifications outage must cost the badge, not the page.
  */
-async function unreadCount(): Promise<number | null> {
+async function notificationCounts(): Promise<{ count: number; action_required: number } | null> {
   try {
-    return await getUnreadNotificationCount();
+    return await getNotificationCounts();
   } catch (error) {
     // A redirect (the session ended) is Next's control flow, not a failure.
     unstable_rethrow(error);
@@ -29,7 +29,7 @@ export async function SiteHeader() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const count = user ? await unreadCount() : null;
+  const counts = user ? await notificationCounts() : null;
 
   return (
     <header className="border-b border-line bg-white">
@@ -59,7 +59,10 @@ export async function SiteHeader() {
               <ButtonLink href="/listings/new" className="hidden sm:flex">
                 + New Listing
               </ButtonLink>
-              <NotificationBell unreadCount={count} />
+              <NotificationBell
+                unreadCount={counts?.count ?? null}
+                actionRequiredCount={counts?.action_required ?? null}
+              />
               <AccountMenu initial={(user.email ?? "?").charAt(0)} signOutAction={signOut} />
             </>
           ) : (

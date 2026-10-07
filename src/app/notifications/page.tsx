@@ -6,6 +6,7 @@ import { NotificationFiltersBar } from "@/components/notifications/notification-
 import { NotificationList } from "@/components/notifications/notification-list";
 import { BackendApiError } from "@/lib/api/client";
 import { getNotifications } from "@/lib/api/notifications";
+import { getMyListings } from "@/lib/api/listings";
 import {
   DEFAULT_FILTERS,
   notificationsHref,
@@ -21,6 +22,9 @@ function isFiltered(filters: NotificationFilters): boolean {
   return (
     filters.read !== DEFAULT_FILTERS.read ||
     filters.types.length > 0 ||
+    filters.listingIds.length > 0 ||
+    filters.actionable !== DEFAULT_FILTERS.actionable ||
+    filters.sort !== DEFAULT_FILTERS.sort ||
     filters.archived !== DEFAULT_FILTERS.archived
   );
 }
@@ -35,6 +39,7 @@ export default async function NotificationsPage({
   searchParams: Promise<SearchParams>;
 }) {
   const filters = parseNotificationFilters(await searchParams);
+  const listingsPromise = getMyListings();
 
   let page: NotificationPage;
   try {
@@ -49,6 +54,7 @@ export default async function NotificationsPage({
       throw error;
     }
   }
+  const listings = await listingsPromise;
 
   return (
     <Container className="py-16">
@@ -56,7 +62,7 @@ export default async function NotificationsPage({
       <h1 className="heading mt-3 text-3xl">Notifications</h1>
       <p className="body-copy mt-2">Every change to your bookings, and what to expect next.</p>
 
-      <NotificationFiltersBar filters={filters} />
+      <NotificationFiltersBar filters={filters} listings={listings} />
 
       {page.items.length === 0 ? (
         <div className="mt-8">
@@ -73,7 +79,7 @@ export default async function NotificationsPage({
         <NotificationList
           items={page.items.map(toNotificationView)}
           showingArchived={filters.archived}
-          types={filters.types}
+          filters={filters}
         />
       )}
 
@@ -91,7 +97,7 @@ export default async function NotificationsPage({
               href={notificationsHref({ ...filters, cursor: page.next_cursor }) as Route}
               className="underline underline-offset-4"
             >
-              {filters.sort === "newest" ? "Older notifications" : "Newer notifications"}
+              {filters.sort === "newest" ? "Older notifications" : filters.sort === "oldest" ? "Newer notifications" : "Later deadlines"}
             </Link>
           )}
         </nav>

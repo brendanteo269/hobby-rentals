@@ -19,6 +19,13 @@ export type NotificationType =
   | "BOOKING_CANCELLED"
   // The owner's side of a request lapsing before they answered it.
   | "BOOKING_REQUEST_EXPIRED_OWNER"
+  | "BOOKING_REQUESTED_OWNER"
+  | "BOOKING_REQUEST_EXPIRING_OWNER"
+  | "BOOKING_WITHDRAWN_OWNER"
+  | "BOOKING_HANDOVER_DUE_OWNER"
+  | "BOOKING_RETURN_DUE_OWNER"
+  | "BOOKING_RETURN_OVERDUE_OWNER"
+  | "BOOKING_PAYOUT_RELEASED_OWNER"
   // A bundle booking notifies once per change, as one order.
   | "BUNDLE_REQUESTED"
   | "BUNDLE_ACCEPTED"
@@ -29,11 +36,15 @@ export type NotificationType =
   | "BUNDLE_COMPLETED"
   | "BUNDLE_CANCELLED"
   | "BUNDLE_REQUEST_EXPIRED_OWNER"
+  | "BUNDLE_REQUESTED_OWNER"
+  | "BUNDLE_REQUEST_EXPIRING_OWNER"
+  | "BUNDLE_WITHDRAWN_OWNER"
   // S2-15. A waitlist offer's call to action expires on a clock rather than
   // on a booking's status, so these carry an expires_at that matters.
   | "WAITLIST_JOINED"
   | "WAITLIST_OFFERED"
   | "WAITLIST_OFFER_EXPIRED"
+  | "WAITLIST_JOINED_OWNER"
   // S2-19: handover meetup coordination on a confirmed booking.
   | "MEETUP_PROPOSED"
   | "MEETUP_ACCEPTED"
@@ -56,10 +67,13 @@ export type AppNotification = {
   booking_id: string | null;
   /** Set instead of booking_id when the notification is about a bundle. */
   bundle_booking_id: string | null;
+  listing_id: string | null;
   created_at: string;
   read: boolean;
   archived: boolean;
   expires_at: string | null;
+  /** Relative to the server clock, so countdowns do not trust the browser clock. */
+  expires_in_seconds: number | null;
   /** The call to action no longer applies; show it as closed. */
   expired: boolean;
 };
@@ -93,6 +107,13 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   BOOKING_COMPLETED: "Rental completed",
   BOOKING_CANCELLED: "Cancelled",
   BOOKING_REQUEST_EXPIRED_OWNER: "Request expired unanswered",
+  BOOKING_REQUESTED_OWNER: "New booking request",
+  BOOKING_REQUEST_EXPIRING_OWNER: "Request expiring soon",
+  BOOKING_WITHDRAWN_OWNER: "Request withdrawn by renter",
+  BOOKING_HANDOVER_DUE_OWNER: "Handover due",
+  BOOKING_RETURN_DUE_OWNER: "Return due",
+  BOOKING_RETURN_OVERDUE_OWNER: "Return overdue",
+  BOOKING_PAYOUT_RELEASED_OWNER: "Payout released",
   BUNDLE_REQUESTED: "Bundle request sent",
   BUNDLE_ACCEPTED: "Bundle accepted",
   BUNDLE_DECLINED: "Bundle declined",
@@ -102,9 +123,13 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   BUNDLE_COMPLETED: "Bundle rental completed",
   BUNDLE_CANCELLED: "Bundle cancelled",
   BUNDLE_REQUEST_EXPIRED_OWNER: "Bundle request expired unanswered",
+  BUNDLE_REQUESTED_OWNER: "New bundle request",
+  BUNDLE_REQUEST_EXPIRING_OWNER: "Bundle request expiring soon",
+  BUNDLE_WITHDRAWN_OWNER: "Bundle request withdrawn",
   WAITLIST_JOINED: "Waitlist joined",
   WAITLIST_OFFERED: "Waitlist dates free",
   WAITLIST_OFFER_EXPIRED: "Waitlist offer closed",
+  WAITLIST_JOINED_OWNER: "New waitlist interest",
   MEETUP_PROPOSED: "Meetup proposed",
   MEETUP_ACCEPTED: "Meetup confirmed",
   LISTING_DEACTIVATED: "Listing deactivated",
