@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, ButtonLink, Container, ImageSlot } from "@/components/ui";
 import { BundleBookingPanel } from "@/components/bundles/bundle-booking-panel";
+import { BundleViewTelemetry } from "@/components/analytics/bundle-view-telemetry";
 import { getBundle, getBundleAvailability } from "@/lib/api/bundles";
 import { formatMoney } from "@/lib/format";
 import { BUNDLE_STATUS_LABELS, type BundleAvailability } from "@/lib/bundles";
@@ -39,6 +40,9 @@ export default async function BundlePage({ params }: { params: Promise<{ id: str
 
   return (
     <Container className="py-16">
+      {/* Only a renter's view is interest; an owner checking their own set is
+          not demand, exactly as the listing page treats it. */}
+      {published && user && user.id !== bundle.owner_id && <BundleViewTelemetry bundleId={bundle.id} />}
       <div className="mx-auto max-w-3xl">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
