@@ -22,12 +22,12 @@ describe("parseSerialClaim", () => {
   });
 });
 
-describe("passportBadge (S2-30)", () => {
-  it("reserves the card pill for a unique serial", () => {
+describe("passportBadge (S2-32)", () => {
+  it("shows Verified, No serial or Pending, and masks a duplicate as Pending", () => {
     expect(passportBadge("VERIFIED")).toBe("Serial verified");
-    expect(passportBadge("NO_SERIAL")).toBeNull();
-    expect(passportBadge("DUPLICATE")).toBeNull();
-    expect(passportBadge("PENDING")).toBeNull();
+    expect(passportBadge("NO_SERIAL")).toBe("No serial");
+    expect(passportBadge("PENDING")).toBe("Serial pending");
+    expect(passportBadge("DUPLICATE")).toBe("Serial pending");
     expect(passportBadge(null)).toBeNull();
   });
 });

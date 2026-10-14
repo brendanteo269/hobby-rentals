@@ -224,12 +224,14 @@ export const BASELINE_INCOMPLETE = "Add a photo for each of the four angles.";
 export type SerialStatus = "PENDING" | "VERIFIED" | "NO_SERIAL" | "DUPLICATE" | "REJECTED" | "STOLEN";
 
 /**
- * S2-30: two tiers. A unique serial earns the stronger one, an item with no
- * serial the weaker. A flagged duplicate earns neither until an admin looks
- * at it (renters are sent it as PENDING anyway, so they can't tell it apart).
+ * S2-32 sc1: every card shows its passport status: Verified, No serial or
+ * Pending. A flagged duplicate reads as Pending until an admin looks at it
+ * (renters are sent it as PENDING anyway, so they can't tell it apart).
  */
 export function passportBadge(status: SerialStatus | null | undefined): string | null {
   if (status === "VERIFIED") return "Serial verified";
+  if (status === "NO_SERIAL") return "No serial";
+  if (status === "PENDING" || status === "DUPLICATE") return "Serial pending";
   return null;
 }
 
