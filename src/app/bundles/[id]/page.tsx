@@ -2,11 +2,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, ButtonLink, Container, ImageSlot } from "@/components/ui";
 import { BundleBookingPanel } from "@/components/bundles/bundle-booking-panel";
+import { BundleViewTelemetry } from "@/components/analytics/bundle-view-telemetry";
 import { getBundle, getBundleAvailability } from "@/lib/api/bundles";
 import { formatMoney } from "@/lib/format";
 import { BUNDLE_STATUS_LABELS, type BundleAvailability } from "@/lib/bundles";
 import { CATEGORY_LABELS, LISTING_STATUS_LABELS, rentalDurationLimits } from "@/lib/listings";
 import { createClient } from "@/lib/supabase/server";
+import { BundleFavouriteButton } from "@/components/bundles/bundle-favourite-button";
 
 export const metadata = { title: "Bundle — HobbyRentals" };
 
@@ -38,6 +40,9 @@ export default async function BundlePage({ params }: { params: Promise<{ id: str
 
   return (
     <Container className="py-16">
+      {/* Only a renter's view is interest; an owner checking their own set is
+          not demand, exactly as the listing page treats it. */}
+      {published && user && user.id !== bundle.owner_id && <BundleViewTelemetry bundleId={bundle.id} />}
       <div className="mx-auto max-w-3xl">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -46,7 +51,8 @@ export default async function BundlePage({ params }: { params: Promise<{ id: str
             </p>
             <h1 className="heading mt-3 text-3xl">{bundle.name}</h1>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <BundleFavouriteButton bundleId={bundle.id} initiallySaved={bundle.is_favourited} initialCount={bundle.favourite_count} />
             {!published && <Badge variant="accent">{BUNDLE_STATUS_LABELS[bundle.status]}</Badge>}
             {isOwner && bundle.status !== "REMOVED" && (
               <ButtonLink variant="outline" href={`/listings/mine/bundles/${bundle.id}/edit`} className="px-3 py-1.5 text-xs">

@@ -20,7 +20,13 @@ const REFRESH_MS = 60_000;
  * it current by refreshing the page's server components every minute while
  * the tab is visible, and whenever the tab regains focus.
  */
-export function NotificationBell({ unreadCount }: { unreadCount: number | null }) {
+export function NotificationBell({
+  unreadCount,
+  actionRequiredCount,
+}: {
+  unreadCount: number | null;
+  actionRequiredCount: number | null;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationView[] | null>(null);
@@ -58,7 +64,9 @@ export function NotificationBell({ unreadCount }: { unreadCount: number | null }
     });
   }
 
-  const label = unreadCount ? `Notifications, ${unreadCount} unread` : "Notifications";
+  const label = unreadCount
+    ? `Notifications, ${unreadCount} unread${actionRequiredCount ? `, ${actionRequiredCount} need action` : ""}`
+    : "Notifications";
 
   return (
     <div ref={rootRef} className="relative">
@@ -84,6 +92,15 @@ export function NotificationBell({ unreadCount }: { unreadCount: number | null }
       {open && (
         <div className="absolute right-0 top-full z-50 mt-2 w-80 overflow-hidden rounded-xl border border-line bg-white shadow-lg">
           <p className="border-b border-line px-4 py-3 text-sm font-semibold">Notifications</p>
+          {!!actionRequiredCount && (
+            <Link
+              href="/notifications?actionable=1&sort=deadline"
+              onClick={close}
+              className="block border-b border-line bg-accent/5 px-4 py-2 text-sm font-medium text-accent-dark hover:bg-accent/10"
+            >
+              {actionRequiredCount} {actionRequiredCount === 1 ? "notification needs" : "notifications need"} action
+            </Link>
+          )}
           {error && <p role="alert" className="px-4 py-3 text-sm text-accent-dark">{error}</p>}
           {!error && items === null && loading && <p className="px-4 py-3 text-sm text-ink-soft">Loading…</p>}
           {!error && items?.length === 0 && <p className="px-4 py-3 text-sm text-ink-soft">You are all caught up.</p>}

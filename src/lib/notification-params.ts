@@ -11,11 +11,13 @@ import { isNotificationType, type NotificationType } from "@/lib/notifications";
 import { NOTIFICATIONS_PATH } from "@/lib/routes";
 
 export type ReadFilter = "all" | "unread" | "read";
-export type SortOrder = "newest" | "oldest";
+export type SortOrder = "newest" | "oldest" | "deadline";
 
 export type NotificationFilters = {
   read: ReadFilter;
   types: NotificationType[];
+  listingIds: string[];
+  actionable: boolean;
   sort: SortOrder;
   archived: boolean;
   /** Opaque keyset cursor from the previous page; "" for the first page. */
@@ -28,13 +30,16 @@ export type SearchParams = Record<string, string | string[] | undefined>;
 export const DEFAULT_FILTERS: NotificationFilters = {
   read: "all",
   types: [],
+  listingIds: [],
+  actionable: false,
   sort: "newest",
   archived: false,
   cursor: "",
 };
 
 const READ_FILTERS: readonly ReadFilter[] = ["all", "unread", "read"];
-const SORT_ORDERS: readonly SortOrder[] = ["newest", "oldest"];
+const SORT_ORDERS: readonly SortOrder[] = ["newest", "oldest", "deadline"];
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function toList(value: string | string[] | undefined): string[] {
   if (value === undefined) return [];
@@ -56,6 +61,8 @@ export function parseNotificationFilters(params: SearchParams): NotificationFilt
   return {
     read: READ_FILTERS.includes(read) ? read : DEFAULT_FILTERS.read,
     types: [...new Set(toList(params.type).filter(isNotificationType))],
+    listingIds: [...new Set(toList(params.listing).filter((value) => UUID.test(value)))],
+    actionable: first(params.actionable) === "1",
     sort: SORT_ORDERS.includes(sort) ? sort : DEFAULT_FILTERS.sort,
     archived: first(params.archived) === "1",
     cursor: first(params.cursor),
@@ -68,6 +75,8 @@ export function notificationQuery(filters: Partial<NotificationFilters>): URLSea
   const query = new URLSearchParams();
   if (merged.read !== DEFAULT_FILTERS.read) query.set("read", merged.read);
   for (const type of merged.types) query.append("type", type);
+  for (const listingId of merged.listingIds) query.append("listing", listingId);
+  if (merged.actionable) query.set("actionable", "1");
   if (merged.sort !== DEFAULT_FILTERS.sort) query.set("sort", merged.sort);
   if (merged.archived) query.set("archived", "1");
   if (merged.cursor) query.set("cursor", merged.cursor);
@@ -88,6 +97,8 @@ export function notificationsHref(filters: Partial<NotificationFilters>): string
 export function notificationApiQuery(filters: NotificationFilters, limit: number): URLSearchParams {
   const query = new URLSearchParams({ read: filters.read, sort: filters.sort, limit: String(limit) });
   for (const type of filters.types) query.append("type", type);
+  for (const listingId of filters.listingIds) query.append("listing_id", listingId);
+  if (filters.actionable) query.set("actionable", "true");
   if (filters.archived) query.set("include_archived", "true");
   if (filters.cursor) query.set("cursor", filters.cursor);
   return query;

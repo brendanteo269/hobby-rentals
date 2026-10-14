@@ -13,6 +13,7 @@ import { ListingViewTelemetry } from "@/components/analytics/listing-view-teleme
 import { WaitlistPanel } from "@/components/bookings/waitlist-panel";
 import { MessageButton } from "@/components/messages/message-button";
 import { getMyWaitlist } from "@/lib/api/waitlist";
+import { FavouriteButton } from "@/components/listings/favourite-button";
 
 function fallbackAttributeLabel(key: string) {
   return key.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -72,7 +73,10 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             </p>
             {categoryDemand?.is_high_demand && <Badge variant="accent">🔥 High demand</Badge>}
           </div>
-          <h1 className="heading mt-2 text-3xl">{listing.name}</h1>
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+            <h1 className="heading text-3xl">{listing.name}</h1>
+            <FavouriteButton listingId={listing.id} initiallySaved={listing.is_favourited} initialCount={listing.favourite_count} />
+          </div>
           {user && user.id === listing.owner_id && (
             <div className="mt-4 flex flex-wrap gap-2">
               <ButtonLink href={`/listings/${listing.id}/passport`} variant="outline" className="px-4 py-2 text-xs">

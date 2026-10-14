@@ -148,7 +148,7 @@ describe("requiresVerifiedEmail", () => {
 });
 
 describe("requiresOnboarding", () => {
-  it.each(["/profile", "/browse", "/listings", "/listings/new", "/listings/abc/availability", "/messages"])(
+  it.each(["/profile", "/browse", "/favourites", "/listings", "/listings/new", "/listings/abc/availability", "/messages"])(
     "gates %s",
     (path) => {
       expect(requiresOnboarding(path)).toBe(true);

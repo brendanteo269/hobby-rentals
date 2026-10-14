@@ -106,6 +106,10 @@ export type ListingCard = {
   location_area: LocationArea;
   /** The passport's serial status, for the card's badge (S2-30). */
   serial_status: SerialStatus | null;
+  /** Present for signed-in browse/favourites responses; public cards use 0. */
+  favourite_count?: number;
+  /** Present for signed-in browse/favourites responses. */
+  is_favourited?: boolean;
 };
 
 export type BrowseListingsResponse = {
@@ -158,7 +162,20 @@ export type Listing = {
   scheduled_removal_at: string | null;
   created_at: string;
   updated_at: string;
+  /** S2-38: total saves/likes, loaded only on the detail endpoint. */
+  favourite_count: number;
+  /** Whether the signed-in detail-page viewer saved this listing. */
+  is_favourited: boolean;
 };
+
+/** A listing in the member's saved-items page. Unavailable rows stay visible
+ * for transparent cleanup, but never carry a booking action. */
+export type FavouriteListing = ListingCard & {
+  status: ListingStatus;
+  saved_at: string;
+};
+
+export type FavouriteMutation = { saved: boolean; favourite_count: number };
 
 export const ALLOWED_PHOTO_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 

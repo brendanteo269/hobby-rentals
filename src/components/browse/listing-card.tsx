@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { formatMoney } from "@/lib/format";
 import { Badge } from "@/components/ui";
@@ -8,6 +10,7 @@ import {
   type ListingCard as ListingCardData,
 } from "@/lib/listings";
 import { ListingCardCarousel } from "./listing-card-carousel";
+import { FavouriteButton } from "@/components/listings/favourite-button";
 
 /**
  * One real listing in the browse grid.
@@ -24,7 +27,7 @@ import { ListingCardCarousel } from "./listing-card-carousel";
  * everything - the carousel's prev/next/dot buttons can't be nested inside
  * an <a>, so the photo needs its own link rather than sharing the outer one.
  */
-export function ListingCard({ listing, highDemand = false, className = "" }: { listing: ListingCardData; highDemand?: boolean; className?: string }) {
+export function ListingCard({ listing, highDemand = false, className = "", onFavouriteRemoved }: { listing: ListingCardData; highDemand?: boolean; className?: string; onFavouriteRemoved?: () => void }) {
   const badge = passportBadge(listing.serial_status);
   return (
     <li className={`group overflow-hidden card transition-colors hover:border-ink-soft ${className}`}>
@@ -35,8 +38,8 @@ export function ListingCard({ listing, highDemand = false, className = "" }: { l
         locationLabel={LOCATION_LABELS[listing.location_area]}
       />
 
-      <Link href={`/listings/${listing.id}`} className="block p-4">
-<div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <p className="eyebrow">{CATEGORY_LABELS[listing.category]}</p>
             {highDemand && <Badge variant="accent">🔥 High demand</Badge>}
@@ -47,13 +50,27 @@ export function ListingCard({ listing, highDemand = false, className = "" }: { l
             </Badge>
           )}
         </div>
-        <h3 className="heading mt-1.5 text-sm leading-snug">{listing.name}</h3>
+        <Link href={`/listings/${listing.id}`} className="mt-1.5 block">
+          <h3 className="heading text-sm leading-snug">{listing.name}</h3>
+        </Link>
 
-        <div className="mt-3 flex items-baseline gap-2 border-t border-line pt-3">
-          <RateLine listing={listing} />
+        <div className="mt-3 border-t border-line pt-2">
+          <Link href={`/listings/${listing.id}`} className="min-w-0">
+            <RateLine listing={listing} />
+          </Link>
         </div>
-        <p className="body-copy mt-1">{formatMoney(listing.deposit_cents)} deposit</p>
-      </Link>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <p className="body-copy">{formatMoney(listing.deposit_cents)} deposit</p>
+          {listing.favourite_count !== undefined && listing.is_favourited !== undefined && (
+            <FavouriteButton
+              listingId={listing.id}
+              initiallySaved={listing.is_favourited}
+              initialCount={listing.favourite_count}
+              onRemoved={onFavouriteRemoved}
+            />
+          )}
+        </div>
+      </div>
     </li>
   );
 }

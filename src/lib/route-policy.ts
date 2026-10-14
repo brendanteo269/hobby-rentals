@@ -57,6 +57,7 @@ export const PROTECTED_PREFIXES = [
   "/profile",
   "/onboarding",
   "/browse",
+  "/favourites",
   "/listings",
   "/bundles",
   "/notifications",

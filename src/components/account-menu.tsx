@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { Route } from "next";
 import { useCallback, useRef, useState } from "react";
 import { useDismiss } from "./use-dismiss";
 
@@ -44,6 +45,14 @@ export function AccountMenu({
             className="block px-4 py-2 text-sm text-ink transition-colors hover:bg-surface-muted"
           >
             Profile
+          </Link>
+          <Link
+            href={"/favourites" as Route}
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="block px-4 py-2 text-sm text-ink transition-colors hover:bg-surface-muted"
+          >
+            Favourites
           </Link>
           <form action={signOutAction}>
             <button

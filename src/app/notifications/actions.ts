@@ -6,16 +6,17 @@ import { redirect } from "next/navigation";
 import { BackendApiError } from "@/lib/api/client";
 import {
   getNotifications,
+  archiveAllNotifications,
   markAllNotificationsRead,
   openNotification,
   updateNotifications,
 } from "@/lib/api/notifications";
 import { NOTIFICATIONS_PATH, notificationPath, safeNextPath } from "@/lib/routes";
 import { DEFAULT_FILTERS } from "@/lib/notification-params";
+import type { NotificationFilters } from "@/lib/notification-params";
 import {
   toNotificationView,
   type BulkAction,
-  type NotificationType,
   type NotificationView,
   type OpenedNotification,
 } from "@/lib/notifications";
@@ -44,8 +45,13 @@ export async function changeNotifications(ids: string[], action: BulkAction) {
 }
 
 /** Marks everything unread as read, within the types the member is filtering to. */
-export async function markAllRead(types: NotificationType[]) {
-  return run(() => markAllNotificationsRead(types));
+export async function markAllRead(filters: NotificationFilters) {
+  return run(() => markAllNotificationsRead(filters));
+}
+
+/** Archives everything represented by the current filtered view. */
+export async function archiveAll(filters: NotificationFilters) {
+  return run(() => archiveAllNotifications(filters));
 }
 
 /**

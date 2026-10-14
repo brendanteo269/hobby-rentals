@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { Badge, Button } from "@/components/ui";
-import { changeNotifications, markAllRead, type NotificationActionResult } from "@/app/notifications/actions";
-import type { BulkAction, NotificationType, NotificationView } from "@/lib/notifications";
+import { archiveAll, changeNotifications, markAllRead, type NotificationActionResult } from "@/app/notifications/actions";
+import type { BulkAction, NotificationView } from "@/lib/notifications";
+import type { NotificationFilters } from "@/lib/notification-params";
+import { RequestCountdown } from "@/components/bookings/request-countdown";
 import { NotificationSummary } from "./notification-summary";
 import { OpenNotificationLink } from "./open-notification-link";
 
@@ -18,13 +20,13 @@ import { OpenNotificationLink } from "./open-notification-link";
 export function NotificationList({
   items,
   showingArchived,
-  types,
+  filters,
 }: {
   items: NotificationView[];
   /** Whether archived rows are in view, which turns Archive into Unarchive. */
   showingArchived: boolean;
-  /** The type filter in force, so "mark all as read" means "all of these". */
-  types: NotificationType[];
+  /** The filters in force, so whole-view actions match exactly what is shown. */
+  filters: NotificationFilters;
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -89,11 +91,16 @@ export function NotificationList({
             )}
           </div>
         ) : (
-          hasUnread && (
-            <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={pending} onClick={() => apply(() => markAllRead(types))}>
-              Mark all as read
+          <div className="flex flex-wrap gap-2">
+            {hasUnread && (
+              <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={pending} onClick={() => apply(() => markAllRead(filters))}>
+                Mark all as read
+              </Button>
+            )}
+            <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={pending} onClick={() => apply(() => archiveAll(filters))}>
+              Archive all filtered
             </Button>
-          )
+          </div>
         )}
       </div>
 
@@ -119,6 +126,9 @@ export function NotificationList({
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 {showingArchived && item.archived && <Badge>Archived</Badge>}
+                {!item.expired && item.expires_in_seconds !== null && (
+                  <Badge><RequestCountdown expiresInSeconds={item.expires_in_seconds} /></Badge>
+                )}
                 {item.expired && <Badge>Closed</Badge>}
                 <OpenNotificationLink id={item.id} className="text-sm font-medium underline underline-offset-4">
                   {item.expired ? "See options" : item.cta_label}
