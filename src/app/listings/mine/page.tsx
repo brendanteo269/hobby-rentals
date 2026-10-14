@@ -221,6 +221,8 @@ function ListingRow({ listing, bookings, history, policy }: { listing: OwnerList
             <ButtonLink href={hobbyShieldHref} variant="outline" className="px-4 py-2 text-xs">View HobbyShield</ButtonLink>
           ) : hobbyShieldBlockedByPassport ? (
             <p className="text-ink-soft">Complete this item&apos;s Product Passport before buying HobbyShield. <ButtonLink href={passportHref} variant="outline" className="ml-2 px-3 py-1.5 text-xs">Complete passport</ButtonLink></p>
+          ) : listing.status !== "ACTIVE" ? (
+            <p className="text-ink-soft">Only published listings can get HobbyShield.</p>
           ) : hobbyShieldLockedByRental ? (
             <p className="text-ink-soft">HobbyShield is unavailable while this listing has a confirmed or active rental. It can be purchased after all rentals are completed or settled.</p>
           ) : (
