@@ -2,19 +2,16 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import type { Route } from "next";
 import { emitActivityEvent } from "@/app/analytics/actions";
 import { Button, Input } from "@/components/ui";
 import { FilterSelect } from "@/components/browse/filter-select";
 import { RadiusSearch } from "@/components/browse/radius-search";
-import { browseHref, type BrowseFilters } from "@/lib/browse-params";
+import type { BrowseFilters } from "@/lib/browse-params";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
   CONDITIONS,
   CONDITION_LABELS,
-  LOCATION_AREAS,
-  LOCATION_LABELS,
 } from "@/lib/listings";
 
 /**
@@ -39,10 +36,6 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
     const category = String(formData.get("category") ?? "");
     if (category) startTransition(async () => { await emitActivityEvent({ event_type: "category_search", category }); });
   }
-  function chooseArea(value: string) {
-    if (!value) return;
-    router.replace(browseHref({ ...filters, location_area: [value as typeof LOCATION_AREAS[number]], origin_lat: null, origin_lng: null, radius_km: null, sort: "newest", page: 1 }) as Route, { scroll: false });
-  }
   return (
     <form method="get" action="/browse" role="search" className="card p-5" onSubmit={(event) => trackCategorySearch(new FormData(event.currentTarget))}>
       {/* Filters already applied ride along as hidden fields, so submitting
@@ -53,20 +46,9 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
       {filters.condition.map((value) => (
         <input key={value} type="hidden" name="condition" value={value} />
       ))}
-      {filters.location_area.map((value) => (
-        <input key={value} type="hidden" name="location_area" value={value} />
-      ))}
       {filters.brand.map((value) => (
         <input key={value} type="hidden" name="brand" value={value} />
       ))}
-      {filters.origin_lat !== null && filters.origin_lng !== null && filters.radius_km !== null && (
-        <>
-          <input type="hidden" name="origin_lat" value={filters.origin_lat} />
-          <input type="hidden" name="origin_lng" value={filters.origin_lng} />
-          <input type="hidden" name="radius_km" value={filters.radius_km} />
-          {filters.sort === "nearest" && <input type="hidden" name="sort" value="nearest" />}
-        </>
-      )}
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-56 flex-1">
@@ -100,12 +82,8 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
           ))}
         </FilterSelect>
       </div>
-      <div className="mt-4 flex flex-col gap-4 border-t border-line pt-4 lg:flex-row lg:items-start">
-        <RadiusSearch filters={filters} />
-        <div className="hidden pt-8 text-xs text-ink-soft lg:block">— or browse by planning area —</div>
-        <FilterSelect id="location_area" label="Planning area" placeholder="Anywhere" onChange={(event) => chooseArea(event.target.value)}>
-          {LOCATION_AREAS.map((value) => <option key={value} value={value}>{LOCATION_LABELS[value]}</option>)}
-        </FilterSelect>
+      <div className="mt-4 border-t border-line pt-4">
+        <RadiusSearch key={`${filters.origin_lat}:${filters.origin_lng}:${filters.radius_km}:${filters.location_area.join(",")}`} filters={filters} />
       </div>
 
       <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-line pt-4">
@@ -139,7 +117,7 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
           Serial verified only
         </label>
         <Button type="submit">Apply</Button>
-        <Button type="button" variant="outline" onClick={() => router.replace("/browse", { scroll: false })}>Reset</Button>
+        <Button type="button" variant="outline" onClick={() => { window.dispatchEvent(new Event("browse-location-reset")); router.replace("/browse", { scroll: false }); }}>Reset</Button>
       </div>
       {highDemandLabels.length > 0 && <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4"><span className="inline-flex items-center rounded-full bg-accent-dark px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">🔥 High demand</span><p className="text-sm text-ink-soft">Popular categories right now: {highDemandLabels.join(", ")}</p></div>}
     </form>

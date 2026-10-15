@@ -1,78 +1,103 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import type { Route } from "next";
-import { Crosshair, MapPin, X } from "lucide-react";
-import { Input } from "@/components/ui";
-import { useToast } from "@/components/toast";
-import { browseHref, type BrowseFilters } from "@/lib/browse-params";
+import { useEffect, useRef, useState } from "react";
+import { Check, ChevronDown, Crosshair, MapPin } from "lucide-react";
+import { Input, Select } from "@/components/ui";
+import { LOCATION_AREAS, LOCATION_LABELS, type LocationArea } from "@/lib/listings";
+import type { BrowseFilters } from "@/lib/browse-params";
 
-type PostalResult = { latitude: number; longitude: number };
+type LocationState = { mode: "near" | "area" | null; postalCode?: string; lat?: number; lng?: number; radiusKm: number; planningArea?: LocationArea; label?: string };
+type PostalResult = { latitude: number; longitude: number; address?: string };
+const STORAGE_KEY = "hobby-rentals:browse-location";
 const rounded = (value: number) => Number(value.toFixed(4));
 
-/** Browser-only origin controls; catalogue reads remain server-rendered. */
-export function RadiusSearch({ filters }: { filters: BrowseFilters }) {
-  const router = useRouter();
-  const toast = useToast();
-  const [postal, setPostal] = useState("");
-  const [resolving, setResolving] = useState(false);
-  const [radius, setRadius] = useState(filters.radius_km ?? 5);
-  const active = filters.origin_lat !== null && filters.origin_lng !== null && filters.radius_km !== null;
+function fromFilters(filters: BrowseFilters): LocationState {
+  if (filters.origin_lat !== null && filters.origin_lng !== null && filters.radius_km !== null) return { mode: "near", lat: filters.origin_lat, lng: filters.origin_lng, radiusKm: filters.radius_km, label: "Current location" };
+  if (filters.location_area[0]) return { mode: "area", planningArea: filters.location_area[0], radiusKm: 5 };
+  return { mode: null, radiusKm: 5 };
+}
+function initialLocation(filters: BrowseFilters): LocationState {
+  const current = fromFilters(filters);
+  if (current.mode || typeof window === "undefined") return current;
+  try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "null") as LocationState | null;
+    if (saved?.mode === "near" && Number.isFinite(saved.lat) && Number.isFinite(saved.lng)) return saved;
+    if (saved?.mode === "area" && saved.planningArea && LOCATION_AREAS.includes(saved.planningArea)) return saved;
+  } catch { /* Storage is optional. */ }
+  return current;
+}
 
-  function replace(changes: Partial<BrowseFilters>) {
-    router.replace(browseHref({ ...filters, ...changes, page: 1 }) as Route, { scroll: false });
-  }
-  function establish(lat: number, lng: number) {
-    setRadius(5);
-    replace({ origin_lat: rounded(lat), origin_lng: rounded(lng), radius_km: 5, location_area: [], sort: "newest" });
-  }
-  function clear() {
-    setPostal("");
-    setRadius(5);
-    replace({ origin_lat: null, origin_lng: null, radius_km: null, sort: "newest" });
-  }
-  function useCurrentLocation() {
-    if (!navigator.geolocation) return toast.show("Location is not supported by this browser.", "error");
+/** One compact, accessible location picker. Hidden fields keep the parent GET form contract unchanged. */
+export function RadiusSearch({ filters }: { filters: BrowseFilters }) {
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [location, setLocation] = useState<LocationState>(() => initialLocation(filters));
+  const [open, setOpen] = useState(false);
+  const [tab, setTab] = useState<"near" | "area">(location.mode === "area" ? "area" : "near");
+  const [postal, setPostal] = useState(location.postalCode ?? "");
+  const [postalError, setPostalError] = useState("");
+  const [gpsError, setGpsError] = useState("");
+  const [loadingGps, setLoadingGps] = useState(false);
+  const [resolving, setResolving] = useState(false);
+
+  useEffect(() => {
+    const reset = () => clear();
+    window.addEventListener("browse-location-reset", reset);
+    return () => window.removeEventListener("browse-location-reset", reset);
+  });
+
+  useEffect(() => {
+    function closeOnOutside(event: MouseEvent) { if (open && panelRef.current && !panelRef.current.contains(event.target as Node) && !triggerRef.current?.contains(event.target as Node)) close(); }
+    document.addEventListener("mousedown", closeOnOutside);
+    return () => document.removeEventListener("mousedown", closeOnOutside);
+  });
+  function persist(next: LocationState) { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch {} }
+  function close() { setOpen(false); requestAnimationFrame(() => triggerRef.current?.focus()); }
+  function clear() { const next = { mode: null, radiusKm: 5 } satisfies LocationState; setLocation(next); setPostal(""); setPostalError(""); try { localStorage.removeItem(STORAGE_KEY); } catch {} }
+  function setNear(next: Omit<LocationState, "mode" | "radiusKm">) { const value: LocationState = { mode: "near", radiusKm: location.mode === "near" ? location.radiusKm : 5, ...next }; setLocation(value); persist(value); }
+  function setArea(area: LocationArea | "") { const value: LocationState = area ? { mode: "area", planningArea: area, radiusKm: 5 } : { mode: null, radiusKm: 5 }; setLocation(value); persist(value); }
+  function switchTab(next: "near" | "area") { setTab(next); if ((next === "near" && location.mode === "area") || (next === "area" && location.mode === "near")) clear(); }
+  function useGps() {
+    if (!navigator.geolocation) { setGpsError("Location access is blocked. Enter a postal code instead."); return; }
+    setLoadingGps(true); setGpsError("");
     navigator.geolocation.getCurrentPosition(
-      (position) => establish(position.coords.latitude, position.coords.longitude),
-      () => toast.show("We could not access your location. Allow permission or use a postal code.", "error"),
+      (position) => { setNear({ lat: rounded(position.coords.latitude), lng: rounded(position.coords.longitude), label: "Current location" }); setLoadingGps(false); },
+      () => { setGpsError("Location access is blocked. Enter a postal code instead."); setLoadingGps(false); },
       { enableHighAccuracy: false, timeout: 10_000, maximumAge: 60_000 },
     );
   }
-  async function resolvePostal() {
-    if (!/^\d{6}$/.test(postal)) return;
-    setResolving(true);
+  async function resolve(value: string) {
+    if (!/^\d{6}$/.test(value)) return;
+    setResolving(true); setPostalError("");
     try {
-      const response = await fetch(`/api/onemap/search?postal=${postal}`);
+      const response = await fetch(`/api/onemap/search?postal=${value}`);
       const body = await response.json() as { results?: PostalResult[]; error?: string };
-      if (!response.ok || !body.results?.[0]) {
-        toast.show(body.error ?? "No location was found for that postal code.", "error");
-        return;
-      }
-      establish(body.results[0].latitude, body.results[0].longitude);
-    } catch {
-      toast.show("Postal-code lookup is temporarily unavailable. Please try again later.", "error");
-    } finally { setResolving(false); }
+      if (!response.ok || !body.results?.[0]) { setPostalError(body.error ?? "Enter a valid Singapore postal code."); return; }
+      const result = body.results[0]; setNear({ postalCode: value, lat: rounded(result.latitude), lng: rounded(result.longitude), label: result.address || value });
+    } catch { setPostalError("Postal-code lookup is temporarily unavailable."); } finally { setResolving(false); }
   }
-  function commitRadius() {
-    if (active && radius !== filters.radius_km) replace({ radius_km: radius });
+  function keydown(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape") { event.preventDefault(); close(); }
+    if (event.key === "ArrowLeft" || event.key === "ArrowRight") { const next = tab === "near" ? "area" : "near"; switchTab(next); document.getElementById(`location-tab-${next}`)?.focus(); }
+    if (event.key === "Tab" && panelRef.current) { const focusable = [...panelRef.current.querySelectorAll<HTMLElement>('button:not([disabled]), input, select')]; const index = focusable.indexOf(document.activeElement as HTMLElement); if (event.shiftKey && index === 0) { event.preventDefault(); focusable.at(-1)?.focus(); } else if (!event.shiftKey && index === focusable.length - 1) { event.preventDefault(); focusable[0]?.focus(); } }
   }
+  const near = location.mode === "near";
+  const label = near ? `${location.postalCode || location.label || "Current location"} · within ${location.radiusKm} km` : location.mode === "area" ? LOCATION_LABELS[location.planningArea!] : "Anywhere";
 
-  return (
-    <section aria-label="Search near you" className="min-w-0 flex-1">
-      <label htmlFor="postal" className="block text-sm font-medium">Search near you</label>
-      <div className="mt-2 flex min-w-0 overflow-hidden rounded-lg border border-line bg-white focus-within:border-ink">
-        <span className="flex items-center pl-3 text-ink-soft"><MapPin className="size-4" aria-hidden="true" /></span>
-        <Input id="postal" value={postal} onChange={(event) => setPostal(event.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" placeholder="6-digit postal code" className="min-w-0 border-0 focus:border-0" />
-        <button type="button" disabled={!/^\d{6}$/.test(postal) || resolving} onClick={resolvePostal} className="border-l border-line px-3 text-sm font-medium disabled:text-ink-soft">{resolving ? "…" : "Set"}</button>
-        <button type="button" onClick={useCurrentLocation} className="flex items-center gap-1 border-l border-line px-3 text-sm font-medium hover:bg-surface-muted"><Crosshair className="size-4" aria-hidden="true" />GPS</button>
-        {active && <button type="button" onClick={clear} aria-label="Clear location" className="border-l border-line px-3 text-ink-soft hover:text-ink"><X className="size-4" aria-hidden="true" /></button>}
+  return <div className="relative w-full sm:w-[440px]">
+    <label className="block text-sm font-medium">Location</label>
+    <button ref={triggerRef} type="button" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)} className={`mt-2 flex h-12 w-full items-center justify-between rounded-lg border bg-white px-3 text-sm ${location.mode ? "border-2 border-accent bg-accent-soft font-semibold text-accent-dark" : "border-line"}`}>
+      <span className="flex min-w-0 items-center gap-2 truncate"><MapPin className="size-4 shrink-0" aria-hidden="true" />{label}</span><ChevronDown className="size-4 shrink-0" aria-hidden="true" />
+    </button>
+    {!location.mode && <p className="mt-2 text-xs text-ink-soft sm:absolute sm:left-[456px] sm:top-7 sm:w-52">Set a location to sort by closest.</p>}
+    {open && <><div className="fixed inset-0 z-40 bg-ink/25 sm:hidden" onClick={close} /><div ref={panelRef} role="dialog" aria-modal="true" aria-label="Choose location" onKeyDown={keydown} className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border border-[#e7e5e4] bg-white p-5 shadow-[0_12px_32px_rgba(28,25,23,.16)] sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-[76px] sm:w-[440px] sm:rounded-2xl">
+      <div role="tablist" aria-label="Location method" className="grid grid-cols-2 rounded-lg bg-surface-muted p-1">
+        {(["near", "area"] as const).map((item) => <button key={item} id={`location-tab-${item}`} role="tab" aria-selected={tab === item} tabIndex={tab === item ? 0 : -1} onClick={() => switchTab(item)} className={`min-h-11 rounded-md text-sm ${tab === item ? "bg-white font-semibold shadow-sm" : "text-ink-soft"}`}>{item === "near" ? "Near me" : "Planning area"}</button>)}
       </div>
-      <div className={`mt-3 max-w-sm ${active ? "" : "pointer-events-none opacity-40"}`}>
-        <label htmlFor="radius" className="block text-sm font-medium">Radius: {radius} km</label>
-        <input id="radius" type="range" min="1" max="20" value={radius} disabled={!active} onChange={(event) => setRadius(Number(event.target.value))} onPointerUp={commitRadius} onTouchEnd={commitRadius} onKeyUp={commitRadius} className="mt-2 w-full accent-ink" />
-      </div>
-    </section>
-  );
+      {tab === "near" ? <div className="mt-4 space-y-4"><button type="button" onClick={useGps} disabled={loadingGps} className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-line text-sm font-medium"><Crosshair className="size-4" />{loadingGps ? "Finding location…" : "Use my current location"}</button>{gpsError && <p role="alert" className="text-xs text-accent-dark">{gpsError}</p>}<div className="flex items-center gap-3 text-xs text-ink-soft"><span className="h-px flex-1 bg-line" />or<span className="h-px flex-1 bg-line" /></div><div><label htmlFor="location-postal" className="block text-sm font-medium">Postal code</label><div className="relative mt-2"><Input id="location-postal" value={postal} maxLength={6} inputMode="numeric" onChange={(event) => { const value = event.target.value.replace(/\D/g, ""); setPostal(value); if (value.length === 6) void resolve(value); else setPostalError(""); }} /><span className="absolute right-3 top-3 max-w-40 truncate text-xs text-ink-soft">{resolving ? "Checking…" : near && location.postalCode === postal ? <span className="flex items-center gap-1"><Check className="size-4 shrink-0 text-success" aria-label="Postal code confirmed" />{location.label}</span> : ""}</span></div>{postalError && <p role="alert" className="mt-1 text-xs text-accent-dark">{postalError}</p>}</div>{near && <div><p className="text-sm font-medium">Radius</p><div className="mt-2 grid grid-cols-5 gap-2">{[1, 2, 5, 10, 20].map((km) => <button key={km} type="button" onClick={() => { const next = { ...location, radiusKm: km }; setLocation(next); persist(next); }} className={`min-h-11 rounded-full border text-sm ${location.radiusKm === km ? "border-accent bg-accent text-white font-bold" : "border-line font-medium"}`}>{km} km</button>)}</div></div>}</div> : <div className="mt-4"><label htmlFor="planning-area" className="block text-sm font-medium">Planning area</label><Select id="planning-area" value={location.planningArea ?? ""} onChange={(event) => setArea(event.target.value as LocationArea | "")} className="mt-2"><option value="">Anywhere</option>{LOCATION_AREAS.map((area) => <option key={area} value={area}>{LOCATION_LABELS[area]}</option>)}</Select></div>}
+      <div className="mt-5 flex items-center justify-between"><button type="button" onClick={clear} className="min-h-11 px-2 text-sm font-medium text-ink-soft">Clear</button><button type="button" onClick={close} className="min-h-11 rounded-full bg-accent px-5 text-sm font-medium text-white">Done</button></div>
+    </div></>}
+    {near && <><input type="hidden" name="origin_lat" value={location.lat} /><input type="hidden" name="origin_lng" value={location.lng} /><input type="hidden" name="radius_km" value={location.radiusKm} /><input type="hidden" name="sort" value="nearest" /></>}
+    {location.mode === "area" && <input type="hidden" name="location_area" value={location.planningArea} />}
+  </div>;
 }
