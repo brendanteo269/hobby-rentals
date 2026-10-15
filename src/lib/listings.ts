@@ -110,6 +110,8 @@ export type ListingCard = {
   favourite_count?: number;
   /** Present for signed-in browse/favourites responses. */
   is_favourited?: boolean;
+  /** Approximate distance to the listing area's documented anchor. */
+  distance_km?: number | null;
 };
 
 export type BrowseListingsResponse = {

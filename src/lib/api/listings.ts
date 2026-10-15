@@ -53,6 +53,10 @@ export type BrowseListingsParams = {
   end_date?: string;
   /** S2-30: serial-verified listings only. */
   verified_only?: boolean;
+  origin_lat?: number;
+  origin_lng?: number;
+  radius_km?: number;
+  sort?: "newest" | "nearest";
   page?: number;
   page_size?: number;
 };
@@ -73,6 +77,12 @@ function browseQuery(params: BrowseListingsParams): string {
   if (params.start_date) search.set("start_date", params.start_date);
   if (params.end_date) search.set("end_date", params.end_date);
   if (params.verified_only) search.set("verified_only", "true");
+  if (params.origin_lat !== undefined && params.origin_lng !== undefined && params.radius_km !== undefined) {
+    search.set("origin_lat", String(params.origin_lat));
+    search.set("origin_lng", String(params.origin_lng));
+    search.set("radius_km", String(params.radius_km));
+    if (params.sort === "nearest") search.set("sort", "nearest");
+  }
   if (params.page && params.page > 1) search.set("page", String(params.page));
   if (params.page_size) search.set("page_size", String(params.page_size));
 

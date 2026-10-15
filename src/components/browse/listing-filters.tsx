@@ -1,10 +1,13 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import { emitActivityEvent } from "@/app/analytics/actions";
 import { Button, Input } from "@/components/ui";
 import { FilterSelect } from "@/components/browse/filter-select";
-import type { BrowseFilters } from "@/lib/browse-params";
+import { RadiusSearch } from "@/components/browse/radius-search";
+import { browseHref, type BrowseFilters } from "@/lib/browse-params";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
@@ -29,11 +32,16 @@ import {
  * choosing again, which the form appends rather than replaces.
  */
 export function ListingFilters({ filters, highDemandCategories = [] }: { filters: BrowseFilters; highDemandCategories?: string[] }) {
+  const router = useRouter();
   const [, startTransition] = useTransition();
   const highDemandLabels = highDemandCategories.map((category) => CATEGORY_LABELS[category]).filter(Boolean);
   function trackCategorySearch(formData: FormData) {
     const category = String(formData.get("category") ?? "");
     if (category) startTransition(async () => { await emitActivityEvent({ event_type: "category_search", category }); });
+  }
+  function chooseArea(value: string) {
+    if (!value) return;
+    router.replace(browseHref({ ...filters, location_area: [value as typeof LOCATION_AREAS[number]], origin_lat: null, origin_lng: null, radius_km: null, sort: "newest", page: 1 }) as Route, { scroll: false });
   }
   return (
     <form method="get" action="/browse" role="search" className="card p-5" onSubmit={(event) => trackCategorySearch(new FormData(event.currentTarget))}>
@@ -51,6 +59,14 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
       {filters.brand.map((value) => (
         <input key={value} type="hidden" name="brand" value={value} />
       ))}
+      {filters.origin_lat !== null && filters.origin_lng !== null && filters.radius_km !== null && (
+        <>
+          <input type="hidden" name="origin_lat" value={filters.origin_lat} />
+          <input type="hidden" name="origin_lng" value={filters.origin_lng} />
+          <input type="hidden" name="radius_km" value={filters.radius_km} />
+          {filters.sort === "nearest" && <input type="hidden" name="sort" value="nearest" />}
+        </>
+      )}
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-56 flex-1">
@@ -76,20 +92,19 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
           ))}
         </FilterSelect>
 
-        <FilterSelect id="location_area" label="Area" placeholder="Anywhere">
-          {LOCATION_AREAS.map((value) => (
-            <option key={value} value={value}>
-              {LOCATION_LABELS[value]}
-            </option>
-          ))}
-        </FilterSelect>
-
         <FilterSelect id="condition" label="Condition" placeholder="Any condition">
           {CONDITIONS.map((value) => (
             <option key={value} value={value}>
               {CONDITION_LABELS[value]}
             </option>
           ))}
+        </FilterSelect>
+      </div>
+      <div className="mt-4 flex flex-col gap-4 border-t border-line pt-4 lg:flex-row lg:items-start">
+        <RadiusSearch filters={filters} />
+        <div className="hidden pt-8 text-xs text-ink-soft lg:block">— or browse by planning area —</div>
+        <FilterSelect id="location_area" label="Planning area" placeholder="Anywhere" onChange={(event) => chooseArea(event.target.value)}>
+          {LOCATION_AREAS.map((value) => <option key={value} value={value}>{LOCATION_LABELS[value]}</option>)}
         </FilterSelect>
       </div>
 
@@ -118,15 +133,13 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
             className="mt-2"
           />
         </div>
-        <p className="body-copy min-w-48 flex-1 pb-2.5">
-          Give both dates to hide listings that are already booked or blacked out then.
-        </p>
         {/* A checkbox, unlike the selects, so it shows its applied state and unticking it clears it. */}
         <label className="flex items-center gap-2 pb-2.5 text-sm font-medium">
           <input type="checkbox" name="verified" value="1" defaultChecked={filters.verified} />
           Serial verified only
         </label>
         <Button type="submit">Apply</Button>
+        <Button type="button" variant="outline" onClick={() => router.replace("/browse", { scroll: false })}>Reset</Button>
       </div>
       {highDemandLabels.length > 0 && <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4"><span className="inline-flex items-center rounded-full bg-accent-dark px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">🔥 High demand</span><p className="text-sm text-ink-soft">Popular categories right now: {highDemandLabels.join(", ")}</p></div>}
     </form>

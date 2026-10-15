@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { Select } from "@/components/ui";
 
 /**
@@ -14,11 +14,15 @@ export function FilterSelect({
   id,
   label,
   placeholder,
+  disabled = false,
+  onChange,
   children,
 }: {
   id: string;
   label: string;
   placeholder: string;
+  disabled?: boolean;
+  onChange?: ComponentProps<"select">["onChange"];
   children: ReactNode;
 }) {
   return (
@@ -26,7 +30,7 @@ export function FilterSelect({
       <label htmlFor={id} className="block text-sm font-medium">
         {label}
       </label>
-      <Select id={id} name={id} defaultValue="" className="mt-2">
+      <Select id={id} name={id} defaultValue="" disabled={disabled} onChange={onChange} className="mt-2">
         <option value="">{placeholder}</option>
         {children}
       </Select>
