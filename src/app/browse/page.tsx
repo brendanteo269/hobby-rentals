@@ -3,6 +3,7 @@ import { Pagination } from "@/components/pagination";
 import { ListingFilters } from "@/components/browse/listing-filters";
 import { ActiveFilters } from "@/components/browse/active-filters";
 import { ListingCard } from "@/components/browse/listing-card";
+import { ResultsSort } from "@/components/browse/results-sort";
 import { browseListings, ListingApiError } from "@/lib/api/listings";
 import {
   PAGE_SIZE,
@@ -44,9 +45,10 @@ export default async function BrowsePage({
         <ActiveFilters filters={filters} />
       </div>
 
-      <p className="body-copy mt-6" aria-live="polite">
-        {resultSummary(total, error)}
-      </p>
+      <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+        <ResultsSort filters={filters} />
+        <p className="body-copy" aria-live="polite">{resultSummary(total, error)}</p>
+      </div>
 
       <div className="mt-6">
         {data && data.results.length > 0 ? (
@@ -90,6 +92,10 @@ async function loadListings(
       start_date: filters.start_date || undefined,
       end_date: filters.end_date || undefined,
       verified_only: filters.verified,
+      origin_lat: filters.origin_lat ?? undefined,
+      origin_lng: filters.origin_lng ?? undefined,
+      radius_km: filters.radius_km ?? undefined,
+      sort: filters.sort,
       page: filters.page,
       page_size: PAGE_SIZE,
     });

@@ -49,6 +49,9 @@ export function ListingCard({ listing, highDemand = false, className = "", onFav
               {badge}
             </Badge>
           )}
+          {listing.distance_km !== null && listing.distance_km !== undefined && (
+            <Badge variant="neutral" className="shrink-0 whitespace-nowrap">~{listing.distance_km.toFixed(1)} km away</Badge>
+          )}
         </div>
         <Link href={`/listings/${listing.id}`} className="mt-1.5 block">
           <h3 className="heading text-sm leading-snug">{listing.name}</h3>

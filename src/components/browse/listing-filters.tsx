@@ -1,17 +1,17 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { emitActivityEvent } from "@/app/analytics/actions";
 import { Button, Input } from "@/components/ui";
 import { FilterSelect } from "@/components/browse/filter-select";
+import { RadiusSearch } from "@/components/browse/radius-search";
 import type { BrowseFilters } from "@/lib/browse-params";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
   CONDITIONS,
   CONDITION_LABELS,
-  LOCATION_AREAS,
-  LOCATION_LABELS,
 } from "@/lib/listings";
 
 /**
@@ -29,6 +29,7 @@ import {
  * choosing again, which the form appends rather than replaces.
  */
 export function ListingFilters({ filters, highDemandCategories = [] }: { filters: BrowseFilters; highDemandCategories?: string[] }) {
+  const router = useRouter();
   const [, startTransition] = useTransition();
   const highDemandLabels = highDemandCategories.map((category) => CATEGORY_LABELS[category]).filter(Boolean);
   function trackCategorySearch(formData: FormData) {
@@ -44,9 +45,6 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
       ))}
       {filters.condition.map((value) => (
         <input key={value} type="hidden" name="condition" value={value} />
-      ))}
-      {filters.location_area.map((value) => (
-        <input key={value} type="hidden" name="location_area" value={value} />
       ))}
       {filters.brand.map((value) => (
         <input key={value} type="hidden" name="brand" value={value} />
@@ -76,14 +74,6 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
           ))}
         </FilterSelect>
 
-        <FilterSelect id="location_area" label="Area" placeholder="Anywhere">
-          {LOCATION_AREAS.map((value) => (
-            <option key={value} value={value}>
-              {LOCATION_LABELS[value]}
-            </option>
-          ))}
-        </FilterSelect>
-
         <FilterSelect id="condition" label="Condition" placeholder="Any condition">
           {CONDITIONS.map((value) => (
             <option key={value} value={value}>
@@ -91,6 +81,9 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
             </option>
           ))}
         </FilterSelect>
+      </div>
+      <div className="mt-4 border-t border-line pt-4">
+        <RadiusSearch key={`${filters.origin_lat}:${filters.origin_lng}:${filters.radius_km}:${filters.location_area.join(",")}`} filters={filters} />
       </div>
 
       <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-line pt-4">
@@ -118,15 +111,13 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
             className="mt-2"
           />
         </div>
-        <p className="body-copy min-w-48 flex-1 pb-2.5">
-          Give both dates to hide listings that are already booked or blacked out then.
-        </p>
         {/* A checkbox, unlike the selects, so it shows its applied state and unticking it clears it. */}
         <label className="flex items-center gap-2 pb-2.5 text-sm font-medium">
           <input type="checkbox" name="verified" value="1" defaultChecked={filters.verified} />
           Serial verified only
         </label>
         <Button type="submit">Apply</Button>
+        <Button type="button" variant="outline" onClick={() => { window.dispatchEvent(new Event("browse-location-reset")); router.replace("/browse", { scroll: false }); }}>Reset</Button>
       </div>
       {highDemandLabels.length > 0 && <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-line pt-4"><span className="inline-flex items-center rounded-full bg-accent-dark px-3 py-1 text-xs font-semibold uppercase tracking-wide text-white">🔥 High demand</span><p className="text-sm text-ink-soft">Popular categories right now: {highDemandLabels.join(", ")}</p></div>}
     </form>

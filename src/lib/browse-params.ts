@@ -18,6 +18,7 @@ import {
 } from "@/lib/listings";
 
 export const PAGE_SIZE = 12;
+export type BrowseSort = "newest" | "nearest";
 
 export type BrowseFilters = {
   q: string;
@@ -30,6 +31,10 @@ export type BrowseFilters = {
   end_date: string;
   /** S2-30: serial-verified listings only. */
   verified: boolean;
+  origin_lat: number | null;
+  origin_lng: number | null;
+  radius_km: number | null;
+  sort: BrowseSort;
   page: number;
 };
 
@@ -55,6 +60,12 @@ export function first(value: string | string[] | undefined): string {
   return (Array.isArray(value) ? value[0] : value)?.trim() ?? "";
 }
 
+function coordinate(value: string): number | null {
+  if (value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 /**
  * Reads filters from the URL, dropping anything unrecognised.
  *
@@ -62,15 +73,23 @@ export function first(value: string | string[] | undefined): string {
  * the backend never has to answer for a value this app does not offer.
  */
 export function parseBrowseFilters(params: SearchParams): BrowseFilters {
+  const originLat = coordinate(first(params.origin_lat));
+  const originLng = coordinate(first(params.origin_lng));
+  const radius = coordinate(first(params.radius_km));
+  const hasValidOrigin = originLat !== null && originLng !== null && radius !== null && originLat >= -90 && originLat <= 90 && originLng >= -180 && originLng <= 180 && radius >= 1 && radius <= 20;
   return {
     q: first(params.q),
     category: toList(params.category).filter(isCategory),
     condition: toList(params.condition).filter(isCondition),
     brand: toList(params.brand).map((brand) => brand.trim()).filter(Boolean),
-    location_area: toList(params.location_area).filter(isLocationArea),
+    location_area: hasValidOrigin ? [] : toList(params.location_area).filter(isLocationArea),
     start_date: first(params.start_date),
     end_date: first(params.end_date),
     verified: ["1", "true"].includes(first(params.verified)),
+    origin_lat: hasValidOrigin ? originLat : null,
+    origin_lng: hasValidOrigin ? originLng : null,
+    radius_km: hasValidOrigin ? radius : null,
+    sort: hasValidOrigin && first(params.sort) === "nearest" ? "nearest" : "newest",
     page: Math.max(1, Number(first(params.page)) || 1),
   };
 }
@@ -86,6 +105,7 @@ export function hasActiveFilters(filters: BrowseFilters): boolean {
     filters.start_date !== "" ||
     filters.end_date !== "" ||
     filters.verified
+    || filters.origin_lat !== null
   );
 }
 
@@ -106,6 +126,12 @@ export function browseHref(filters: BrowseFilters): string {
   if (filters.start_date) search.set("start_date", filters.start_date);
   if (filters.end_date) search.set("end_date", filters.end_date);
   if (filters.verified) search.set("verified", "1");
+  if (filters.origin_lat !== null && filters.origin_lng !== null && filters.radius_km !== null) {
+    search.set("origin_lat", String(filters.origin_lat));
+    search.set("origin_lng", String(filters.origin_lng));
+    search.set("radius_km", String(filters.radius_km));
+    if (filters.sort === "nearest") search.set("sort", "nearest");
+  }
   if (filters.page > 1) search.set("page", String(filters.page));
 
   const query = search.toString();

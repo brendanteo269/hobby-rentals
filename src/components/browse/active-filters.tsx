@@ -45,6 +45,14 @@ export function ActiveFilters({ filters }: { filters: BrowseFilters }) {
   pushAll<LocationArea>("location_area", filters.location_area, LOCATION_LABELS);
   pushAll<ListingCondition>("condition", filters.condition, CONDITION_LABELS);
 
+  if (filters.origin_lat !== null && filters.origin_lng !== null && filters.radius_km !== null) {
+    chips.push({
+      key: "near-me",
+      label: `Near me · ${filters.radius_km} km`,
+      href: without({ origin_lat: null, origin_lng: null, radius_km: null, sort: "newest" }),
+    });
+  }
+
   filters.brand.forEach((brand) =>
     chips.push({
       key: `brand:${brand}`,

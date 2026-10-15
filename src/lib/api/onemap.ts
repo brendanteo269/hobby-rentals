@@ -91,7 +91,10 @@ export async function searchByPostalCode(postal: string): Promise<OnemapAddress[
 
   const body = (await response.json()) as { results?: OnemapSearchResult[] };
   return (body.results ?? [])
-    .filter((result) => result.ADDRESS && result.POSTAL && result.LATITUDE && result.LONGITUDE)
+    // OneMap's elastic endpoint can return fuzzy matches. A completed postal
+    // search is an exact lookup, so never establish an origin from another
+    // address merely because its result happened to be nearby in the list.
+    .filter((result) => result.ADDRESS && result.POSTAL === postal && result.LATITUDE && result.LONGITUDE)
     .map((result) => ({
       address: result.ADDRESS!,
       postal: result.POSTAL!,

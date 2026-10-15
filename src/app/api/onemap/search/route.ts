@@ -16,7 +16,10 @@ export async function GET(request: Request) {
     const results = await searchByPostalCode(postal);
     return NextResponse.json({ results });
   } catch (caught) {
-    const message = caught instanceof Error ? caught.message : "Address lookup failed.";
-    return NextResponse.json({ error: message }, { status: 502 });
+    // Environment/provider errors can contain operational details (including
+    // missing credential names). They are useful in server logs, never to a
+    // renter trying a postal code.
+    console.error("OneMap postal lookup failed", caught);
+    return NextResponse.json({ error: "Postal-code lookup is temporarily unavailable. Please try again later." }, { status: 502 });
   }
 }
