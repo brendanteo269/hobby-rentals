@@ -44,8 +44,8 @@ export default async function BrowsePage({
       </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <p className="body-copy" aria-live="polite">{resultSummary(total, error)}</p>
         <ResultsSort filters={filters} />
+        <p className="body-copy" aria-live="polite">{resultSummary(total, error)}</p>
       </div>
 
       <div className="mt-6">
