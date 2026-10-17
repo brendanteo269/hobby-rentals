@@ -20,6 +20,7 @@ import type {
   UnavailableReason,
 } from "@/lib/listings";
 import type { BookingQuote, BookingStatus, DeclineReason } from "@/lib/bookings";
+import type { CancellationOutcome } from "@/lib/cancellations";
 
 export type BundleStatus = "ACTIVE" | "UNPUBLISHED" | "REMOVED";
 
@@ -208,6 +209,8 @@ export type BundleBooking = {
   decline_reason?: DeclineReason | null;
   decline_note?: string | null;
   items: BundleBookingComponent[];
+  /** How a cancelled bundle booking was settled. Set on the lists only. */
+  cancellation_outcome?: CancellationOutcome | null;
   created_at: string;
   updated_at: string;
 };

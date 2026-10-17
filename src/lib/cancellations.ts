@@ -1,4 +1,5 @@
 import type { BookingStatus } from "@/lib/bookings";
+import { formatMoney } from "@/lib/format";
 
 /**
  * A renter cancelling a booking or a whole bundle booking, and what that
@@ -54,6 +55,55 @@ export type CancellationRecord = CancellationTerms & {
   refund_transaction_id: string | null;
   cancelled_at: string;
 };
+
+/**
+ * How a cancelled booking was settled, as the bookings lists carry it. The
+ * policy breakdown is set for a renter's cancellation only; an owner's or the
+ * platform's released everything.
+ */
+export type CancellationOutcome = {
+  cancelled_by: "RENTER" | "OWNER" | "SYSTEM";
+  cancelled_at: string;
+  /** Everything that went back to the renter's wallet. */
+  released_to_wallet_cents: number;
+  refund_cents: number | null;
+  non_refundable_cents: number | null;
+  deposit_released_cents: number | null;
+  protection_released_cents: number | null;
+  tier_label: string | null;
+};
+
+/**
+ * One line saying who cancelled and where the money went, worded for whoever
+ * is reading: the renter sees what came back to their wallet, the owner what
+ * (if anything) was paid to them.
+ */
+export function cancellationOutcomeLine(outcome: CancellationOutcome, viewer: "renter" | "owner"): string {
+  const released = outcome.released_to_wallet_cents;
+  const kept = outcome.non_refundable_cents ?? 0;
+  if (outcome.cancelled_by === "RENTER") {
+    if (viewer === "owner") {
+      return kept > 0
+        ? `The renter cancelled. ${formatMoney(kept)} was paid to you under the cancellation policy.`
+        : "The renter cancelled. Nothing was payable to you under the cancellation policy.";
+    }
+    const back = `You cancelled. ${formatMoney(released)} came back to your wallet`;
+    return kept > 0 ? `${back}; ${formatMoney(kept)} was not refundable under the policy.` : `${back}.`;
+  }
+  const who = outcome.cancelled_by === "OWNER" ? (viewer === "owner" ? "You" : "The owner") : "The platform";
+  const whose = viewer === "owner" ? "The renter's" : "Your";
+  return released > 0
+    ? `${who} cancelled. ${whose} hold of ${formatMoney(released)} was released in full.`
+    : `${who} cancelled. Nothing was held, so nothing needed releasing.`;
+}
+
+/**
+ * What an owner is told about a handed-over booking, where they might look
+ * for a way to cancel it. Matches the backend's BOOKING_ACTIVE refusal; the
+ * lists follow it with a link to SUPPORT_EMAIL.
+ */
+export const HANDED_OVER_NOTE =
+  "Handed over, so it can't be cancelled. Complete the return, or contact platform support if something has gone wrong:";
 
 export type CancellableKind = "booking" | "bundle";
 

@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { cancellationLines, hasTerms, type CancellationTerms } from "@/lib/cancellations";
+import {
+  cancellationLines,
+  cancellationOutcomeLine,
+  hasTerms,
+  type CancellationOutcome,
+  type CancellationTerms,
+} from "@/lib/cancellations";
+import { formatMoney } from "@/lib/format";
 
 const partial: CancellationTerms = {
   policy_version: "v1",
@@ -43,5 +50,54 @@ describe("hasTerms", () => {
 
   it("is true for a cancellable preview with amounts", () => {
     expect(hasTerms({ booking_id: "b", bundle_booking_id: null, cancellable: true, reason: null, message: null, ...partial })).toBe(true);
+  });
+});
+
+describe("cancellationOutcomeLine", () => {
+  const byRenter: CancellationOutcome = {
+    cancelled_by: "RENTER",
+    cancelled_at: "2026-10-17T10:00:00Z",
+    released_to_wallet_cents: 3550,
+    refund_cents: 1050,
+    non_refundable_cents: 1051,
+    deposit_released_cents: 2500,
+    protection_released_cents: 0,
+    tier_label: "Cancelled 2 to 7 days before the start",
+  };
+  const byOwner: CancellationOutcome = {
+    ...byRenter,
+    cancelled_by: "OWNER",
+    released_to_wallet_cents: 4600,
+    refund_cents: null,
+    non_refundable_cents: null,
+    deposit_released_cents: null,
+    protection_released_cents: null,
+    tier_label: null,
+  };
+
+  it("tells the renter what came back and what the policy kept", () => {
+    expect(cancellationOutcomeLine(byRenter, "renter")).toBe(
+      `You cancelled. ${formatMoney(3550)} came back to your wallet; ${formatMoney(1051)} was not refundable under the policy.`,
+    );
+  });
+
+  it("tells the owner what a renter's cancellation paid them", () => {
+    expect(cancellationOutcomeLine(byRenter, "owner")).toBe(
+      `The renter cancelled. ${formatMoney(1051)} was paid to you under the cancellation policy.`,
+    );
+    expect(cancellationOutcomeLine({ ...byRenter, non_refundable_cents: 0 }, "owner")).toBe(
+      "The renter cancelled. Nothing was payable to you under the cancellation policy.",
+    );
+  });
+
+  it("reports an owner's cancellation as a full release to both sides", () => {
+    expect(cancellationOutcomeLine(byOwner, "renter")).toBe(`The owner cancelled. Your hold of ${formatMoney(4600)} was released in full.`);
+    expect(cancellationOutcomeLine(byOwner, "owner")).toBe(`You cancelled. The renter's hold of ${formatMoney(4600)} was released in full.`);
+  });
+
+  it("names the platform when nobody on the booking cancelled it", () => {
+    expect(cancellationOutcomeLine({ ...byOwner, cancelled_by: "SYSTEM", released_to_wallet_cents: 0 }, "renter")).toBe(
+      "The platform cancelled. Nothing was held, so nothing needed releasing.",
+    );
   });
 });

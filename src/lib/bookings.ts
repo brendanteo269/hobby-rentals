@@ -1,3 +1,4 @@
+import type { CancellationOutcome } from "@/lib/cancellations";
 import type { ExtensionRequest } from "@/lib/extensions";
 
 /**
@@ -59,6 +60,8 @@ export type Booking = {
   confirmed_meetup_time?: string | null;
   /** S3-17: the renter's extension request waiting on the owner, if any. */
   pending_extension?: ExtensionRequest | null;
+  /** How a cancelled booking was settled. Set on the bookings lists only. */
+  cancellation_outcome?: CancellationOutcome | null;
   created_at: string;
   updated_at: string;
 };

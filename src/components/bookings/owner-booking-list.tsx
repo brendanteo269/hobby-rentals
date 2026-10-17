@@ -13,7 +13,9 @@ import {
   type Booking,
   type BookingStatus,
 } from "@/lib/bookings";
+import { cancellationOutcomeLine, HANDED_OVER_NOTE } from "@/lib/cancellations";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
 
 // A request is answered from its review page, where the owner sees the renter
 // and the earnings and has to give a reason to decline.
@@ -70,6 +72,14 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
                   Meetup: {booking.confirmed_meetup_location}
                   {booking.confirmed_meetup_time && `, ${formatDateTime(booking.confirmed_meetup_time)}`}
                 </span>
+              )}
+              {booking.status === "ACTIVE" && (
+                <span className="block text-ink-soft">
+                  {HANDED_OVER_NOTE} <a href={SUPPORT_MAILTO} className="underline">{SUPPORT_EMAIL}</a>
+                </span>
+              )}
+              {booking.cancellation_outcome && (
+                <span className="block text-ink-soft">{cancellationOutcomeLine(booking.cancellation_outcome, "owner")}</span>
               )}
             </span>
             <span className="flex gap-2">
