@@ -184,8 +184,11 @@ export const ALLOWED_PHOTO_CONTENT_TYPES = ["image/jpeg", "image/png", "image/we
 export const MAX_LISTING_PHOTOS = 8;
 
 /** What POST /listings/photos/presign returns for one photo. */
-/** "passport" photos are condition evidence, stored apart from listing photos. */
-export type PhotoKind = "listing" | "passport";
+/**
+ * "passport" photos are condition evidence, stored apart from listing photos;
+ * "return" photos are a renter's return evidence, private in the same way.
+ */
+export type PhotoKind = "listing" | "passport" | "return";
 
 /** S2-04 Scenario 2: the four angles a baseline covers, in capture order. */
 export const BASELINE_ANGLES = [

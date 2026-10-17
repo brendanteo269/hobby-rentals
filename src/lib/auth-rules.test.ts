@@ -122,7 +122,7 @@ describe("route builders", () => {
 });
 
 describe("requiresVerifiedEmail", () => {
-  it.each(["/listings/new", "/listings/abc-123/availability", "/messages/new"])(
+  it.each(["/listings/new", "/listings/abc-123/availability", "/messages/new", "/bookings/abc-123/return"])(
     "gates the lending/messaging action %s",
     (path) => {
       expect(requiresVerifiedEmail(path)).toBe(true);
@@ -348,5 +348,9 @@ describe("notifications are behind the sign-in wall", () => {
   it("sends a signed-out email reader to log in first", () => {
     expect(requiresSignIn("/notifications")).toBe(true);
     expect(requiresSignIn("/notifications/abc")).toBe(true);
+  });
+
+  it("guards a booking's own pages, such as its return photos", () => {
+    expect(requiresSignIn("/bookings/abc-123/return")).toBe(true);
   });
 });
