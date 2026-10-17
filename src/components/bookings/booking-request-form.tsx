@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Button } from "@/components/ui";
+import { Button, Notice } from "@/components/ui";
 import {
   AvailabilityCalendar,
   consecutiveDatesFrom,
@@ -34,6 +34,13 @@ type Props = {
   onSuccess?: (booking: Booking) => void;
   /** Drops the form's own "Request to book" heading and top divider - set when a caller already supplies its own heading, e.g. a Modal's title. */
   hideHeading?: boolean;
+  /**
+   * S3-18: what the renter owes in overdue return fees, if anything. A
+   * paused account cannot book, so this is said before they pick dates
+   * rather than after they submit - and before they top up a wallet that
+   * was never the problem.
+   */
+  overdueDebtCents?: number;
 };
 
 export function BookingRequestForm({
@@ -45,7 +52,9 @@ export function BookingRequestForm({
   secondaryAction,
   onSuccess,
   hideHeading,
+  overdueDebtCents = 0,
 }: Props) {
+  const paused = overdueDebtCents > 0;
   const availableSet = useMemo(() => new Set(availableDates), [availableDates]);
   const reasonByDate = useMemo(
     () => new Map(unavailableDates.map((entry) => [entry.date, entry.reason])),
@@ -248,8 +257,18 @@ export function BookingRequestForm({
         </Link>
       )}
       {message && <p role="status" className="mt-3 text-sm text-ink-soft">{message}</p>}
+      {paused && (
+        <Notice className="mt-3">
+          <span className="font-medium">New bookings are paused on your account.</span>{" "}
+          You owe {formatMoney(overdueDebtCents)} in overdue return fees.{" "}
+          <Link href="/profile?view=renter" className="underline underline-offset-4">
+            Settle them to book again
+          </Link>
+          .
+        </Notice>
+      )}
       <div className={`mt-4 flex flex-wrap items-center gap-3 ${hideHeading ? "justify-end" : ""}`}>
-        <Button disabled={isPending || !endDate || !quote} onClick={submit}>{isSending ? "Sending…" : "Request booking"}</Button>
+        <Button disabled={paused || isPending || !endDate || !quote} onClick={submit}>{isSending ? "Sending…" : "Request booking"}</Button>
         {secondaryAction}
       </div>
     </div>

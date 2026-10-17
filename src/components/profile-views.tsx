@@ -19,6 +19,9 @@ import {
   PAYMENT_STATUS_LABELS,
 } from "@/lib/bookings";
 import { CancelBookingButton } from "@/components/bookings/cancel-booking-button";
+import { OverdueNotice } from "@/components/bookings/overdue-notice";
+import { SuspensionBanner } from "@/components/bookings/suspension-banner";
+import type { SuspensionStatus } from "@/lib/overdue";
 import { cancellationOutcomeLine } from "@/lib/cancellations";
 import { settlementLine } from "@/lib/settlement";
 import { ExtendBookingButton } from "@/components/bookings/extend-booking-button";
@@ -98,6 +101,7 @@ export function RenterView({
   bookings = [],
   bundleBookings = [],
   waitlist = [],
+  suspension,
 }: {
   enabled: boolean;
   bookings?: Booking[];
@@ -105,11 +109,14 @@ export function RenterView({
   bundleBookings?: BundleBooking[];
   /** S2-15: dates the renter is queueing for, which are not bookings yet. */
   waitlist?: WaitlistEntry[];
+  /** S3-18: unpaid late fees, which pause new bookings until settled. */
+  suspension?: SuspensionStatus;
 }) {
   if (!enabled) return <NotEnabled side="renter" />;
   if (bookings.length > 0 || bundleBookings.length > 0 || waitlist.length > 0) {
     return (
       <div>
+        {suspension && <SuspensionBanner status={suspension} />}
         <div className="flex items-baseline justify-between gap-4">
           <div>
             <p className="eyebrow">Your rentals</p>
@@ -182,6 +189,7 @@ export function RenterView({
                     {booking.confirmed_meetup_time && `, ${formatDateTime(booking.confirmed_meetup_time)}`}
                   </p>
                 )}
+                <OverdueNotice booking={booking} side="renter" />
                 {booking.pending_extension && (
                   <p className="mt-1 text-sm text-ink-soft">
                     Extension requested: {booking.pending_extension.additional_days} more{" "}

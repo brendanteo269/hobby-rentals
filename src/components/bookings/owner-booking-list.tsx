@@ -5,6 +5,7 @@ import { Button, ButtonLink } from "@/components/ui";
 import { changeBookingStatus, type BookingActionResult } from "@/app/bookings/actions";
 import { MessageButton } from "@/components/messages/message-button";
 import { ExtensionRequestDecision } from "@/components/bookings/extension-request-decision";
+import { OverdueNotice } from "@/components/bookings/overdue-notice";
 import { ReportDamageButton } from "@/components/bookings/report-damage-button";
 import {
   BOOKING_STATUS_LABELS,
@@ -98,6 +99,9 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
                 <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
               )}
             </span>
+            {/* S3-18: the late fee this rental has run up, on its own line so
+                it is not lost among the status text above. */}
+            <span className="w-full"><OverdueNotice booking={booking} side="owner" /></span>
             {/* S3-17: on its own line below the row's buttons - approving it
                 changes the booking's dates and charges the renter, which is a
                 bigger decision than the status buttons beside it. */}
