@@ -2,6 +2,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/ui";
 import { OwnerPortal, requireOwner } from "@/components/owner-portal";
 import { OwnerBookingList } from "@/components/bookings/owner-booking-list";
+import { HashTargetHighlight } from "@/components/hash-target-highlight";
 import { RequestCountdown } from "@/components/bookings/request-countdown";
 import { getOwnerBookingRequests, getOwnerBookings } from "@/lib/api/bookings";
 import { getMyListings } from "@/lib/api/listings";
@@ -28,6 +29,8 @@ export default async function OwnerBookingsPage() {
 
   return (
     <OwnerPortal active="Bookings" title="Bookings">
+      {/* An extension notification links to one booking in the list below. */}
+      <HashTargetHighlight />
       {!nothingYet && (
         <section className="mb-10" aria-labelledby="requests-heading">
           <h2 id="requests-heading" className="heading text-xl">Booking requests</h2>

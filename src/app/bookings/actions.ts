@@ -17,10 +17,17 @@ import {
   getBundleQuote,
   updateBundleBookingStatus,
 } from "@/lib/api/bundles";
+import {
+  approveExtension,
+  denyExtension,
+  getExtensionQuote,
+  requestExtension,
+} from "@/lib/api/extensions";
 import { BackendApiError } from "@/lib/api/client";
 import type { Booking, BookingQuote, BookingStatus, DeclineReason } from "@/lib/bookings";
 import type { BundleBooking, BundleQuote } from "@/lib/bundles";
 import type { CancellableKind, CancellationPreview, CancellationRecord } from "@/lib/cancellations";
+import type { ExtensionQuote, ExtensionRequest } from "@/lib/extensions";
 
 export type BookingActionResult =
   | { error: string; code?: string; shortfallCents?: number }
@@ -182,4 +189,51 @@ export async function cancelRental(
     }
     return { error: error.message, code: error.code };
   }
+}
+
+
+/**
+ * S3-17: rental extensions.
+ *
+ * The renter prices one, then submits it; the owner approves or denies. Only
+ * the owner's decision revalidates, because it is the only one that moves
+ * money and dates - a submitted request leaves the booking exactly as it was,
+ * and its dialog stays up to confirm what was asked.
+ */
+export type ExtensionQuoteResult = { error: string } | { quote: ExtensionQuote };
+export type ExtensionRequestResult = { error: string } | { request: ExtensionRequest };
+
+async function runExtension<T>(action: () => Promise<T>): Promise<{ error: string } | { value: T }> {
+  try {
+    return { value: await action() };
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
+}
+
+export async function quoteExtension(bookingId: string, additionalDays: number): Promise<ExtensionQuoteResult> {
+  const result = await runExtension(() => getExtensionQuote(bookingId, additionalDays));
+  return "error" in result ? result : { quote: result.value };
+}
+
+export async function submitExtensionRequest(
+  bookingId: string,
+  additionalDays: number,
+): Promise<ExtensionRequestResult> {
+  const result = await runExtension(() => requestExtension(bookingId, additionalDays));
+  return "error" in result ? result : { request: result.value };
+}
+
+/** Approving moves the booking's end date and holds the extra amount. */
+export async function approveExtensionRequest(requestId: string): Promise<BookingActionResult> {
+  return run(() => approveExtension(requestId));
+}
+
+export async function denyExtensionRequest(requestId: string): Promise<ExtensionRequestResult> {
+  const result = await runExtension(() => denyExtension(requestId));
+  if ("error" in result) return result;
+  // The renter is notified, so the header's unread count moves.
+  revalidatePath("/", "layout");
+  return { request: result.value };
 }

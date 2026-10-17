@@ -19,6 +19,8 @@ import {
   PAYMENT_STATUS_LABELS,
 } from "@/lib/bookings";
 import { CancelBookingButton } from "@/components/bookings/cancel-booking-button";
+import { ExtendBookingButton } from "@/components/bookings/extend-booking-button";
+import { canRequestExtension } from "@/lib/extensions";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
 import { formatDate, formatDateTime } from "@/lib/format";
 
@@ -152,7 +154,9 @@ export function RenterView({
               className="flex scroll-mt-24 flex-wrap items-center justify-between gap-3 border border-line bg-white p-4 data-[hash-target]:border-ink data-[hash-target]:ring-1 data-[hash-target]:ring-ink"
             >
               <div>
-                <Link href={`/listings/${booking.listing_id}`} className="font-medium hover:underline">View listing</Link>
+                <Link href={`/listings/${booking.listing_id}`} className="font-medium hover:underline">
+                  {booking.listing_name ?? "View listing"}
+                </Link>
                 <p className="mt-1 text-sm text-ink-soft">
                   {formatDate(booking.start_date)} – {formatDate(booking.end_date)}
                   {booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}
@@ -164,10 +168,20 @@ export function RenterView({
                     {booking.confirmed_meetup_time && `, ${formatDateTime(booking.confirmed_meetup_time)}`}
                   </p>
                 )}
+                {booking.pending_extension && (
+                  <p className="mt-1 text-sm text-ink-soft">
+                    Extension requested: {booking.pending_extension.additional_days} more{" "}
+                    {booking.pending_extension.additional_days === 1 ? "day" : "days"}, to{" "}
+                    {formatDate(booking.pending_extension.new_end_date)} — waiting on the owner.
+                  </p>
+                )}
               </div>
               <div className="flex flex-col items-end gap-2">
                 <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
                 <CancelBookingButton kind="booking" id={booking.id} status={booking.status} />
+                {canRequestExtension(booking) && (
+                  <ExtendBookingButton bookingId={booking.id} endDate={booking.end_date} />
+                )}
                 {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
                   <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
                 )}

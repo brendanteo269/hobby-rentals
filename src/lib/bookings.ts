@@ -1,3 +1,5 @@
+import type { ExtensionRequest } from "@/lib/extensions";
+
 /**
  * The backend's booking states. Which moves between them are allowed, and by
  * whom, is decided by the database (booking_transitions); the UI only offers
@@ -26,6 +28,8 @@ export type EscrowHold = {
 export type Booking = {
   id: string;
   listing_id: string;
+  /** What was rented. Set on the bookings lists only, as bundle_name is for a bundle. */
+  listing_name?: string | null;
   renter_id: string;
   /** Who asked. Null when that member has not set a display name. */
   renter_name?: string | null;
@@ -53,6 +57,8 @@ export type Booking = {
   /** S2-19: the latest accepted meetup arrangement for this booking, if any. */
   confirmed_meetup_location?: string | null;
   confirmed_meetup_time?: string | null;
+  /** S3-17: the renter's extension request waiting on the owner, if any. */
+  pending_extension?: ExtensionRequest | null;
   created_at: string;
   updated_at: string;
 };
