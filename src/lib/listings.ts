@@ -309,6 +309,8 @@ export const PASSPORT_ENTRY_LABELS: Record<string, string> = {
   ADMIN_REVIEW: "Reviewed by HobbyRentals",
   PURCHASE_PROOF: "Proof of purchase (only you and HobbyRentals can see this)",
   STOLEN_REPORT: "Reported stolen",
+  // S3-10: HobbyRentals deciding damage the owner reported after a rental.
+  DAMAGE_RESOLUTION: "Damage review after a rental",
 };
 
 /** An entry's heading. An item without a serial records its marks photo under the same entry type. */

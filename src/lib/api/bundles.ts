@@ -25,6 +25,7 @@ import type {
 } from "@/lib/bundles";
 import type { BookingStatus, DeclineReason } from "@/lib/bookings";
 import type { CancellationPreview, CancellationRecord } from "@/lib/cancellations";
+import type { RentalDispute } from "@/lib/settlement";
 
 export { BackendApiError as BundleApiError } from "@/lib/api/client";
 
@@ -169,6 +170,14 @@ export function declineBundleBooking(bundleBookingId: string, reason: DeclineRea
 }
 
 /** The owner accepting, or cancelling once confirmed, applied to the set and every item in it at once. */
+/** S3-10: the owner reports damage to one item of a returned bundle, holding the bundle's settlement. */
+export function reportBundleDamage(bundleBookingId: string, listingId: string, description: string, claimedCents: number) {
+  return backendRequest<RentalDispute>(`/bundles/bookings/${encodeURIComponent(bundleBookingId)}/disputes`, {
+    method: "POST",
+    body: JSON.stringify({ description, claimed_cents: claimedCents, listing_id: listingId }),
+  });
+}
+
 export function updateBundleBookingStatus(bundleBookingId: string, nextStatus: BookingStatus) {
   return backendRequest<BundleBooking>(
     `/bundles/bookings/${encodeURIComponent(bundleBookingId)}/status`,

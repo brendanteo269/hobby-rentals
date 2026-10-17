@@ -21,6 +21,7 @@ import type {
 } from "@/lib/listings";
 import type { BookingQuote, BookingStatus, DeclineReason } from "@/lib/bookings";
 import type { CancellationOutcome } from "@/lib/cancellations";
+import type { SettlementState } from "@/lib/settlement";
 
 export type BundleStatus = "ACTIVE" | "UNPUBLISHED" | "REMOVED";
 
@@ -211,6 +212,9 @@ export type BundleBooking = {
   items: BundleBookingComponent[];
   /** How a cancelled bundle booking was settled. Set on the lists only. */
   cancellation_outcome?: CancellationOutcome | null;
+  /** S3-10: as on a single booking. Set on the lists only. */
+  returned_at?: string | null;
+  settlement_state?: SettlementState | null;
   created_at: string;
   updated_at: string;
 };

@@ -18,6 +18,7 @@ export const AUDIT_ACTIONS = {
   listing_deactivated: "Listing deactivated",
   listing_reactivated: "Listing reactivated",
   booking_viewed: "Booking viewed",
+  dispute_resolved: "Damage dispute resolved",
 } as const;
 
 export type AuditAction = keyof typeof AUDIT_ACTIONS;

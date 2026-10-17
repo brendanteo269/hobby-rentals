@@ -26,6 +26,12 @@ const ACTOR_ROLE_LABELS: Record<string, string> = {
 const ESCROW_TYPE_LABELS: Record<string, string> = {
   ESCROW_HOLD: "Hold placed",
   ESCROW_RELEASE: "Released",
+  // S3-10 settlement.
+  RENTAL_CHARGE: "Rental charged",
+  RENTAL_PAYOUT: "Paid to owner",
+  DAMAGE_DEDUCTION: "Deducted for damage",
+  DAMAGE_PAYOUT: "Damage paid to owner",
+  OVERDUE_SETTLEMENT: "Overdue fee",
 };
 
 const ESCROW_COMPONENT_LABELS: Record<string, string> = {
