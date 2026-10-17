@@ -71,6 +71,18 @@ export function formatDateTime(iso: string): string {
   });
 }
 
+/** Exact policy timestamps are contractual, so they are always shown in SGT. */
+export function formatSingaporeDateTime(iso: string): string {
+  return `${new Date(iso).toLocaleString(LOCALE, {
+    timeZone: "Asia/Singapore",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  })} SGT`;
+}
+
 /**
  * A chat-style timestamp: a bare time today, "Yesterday" the day before, a
  * weekday name within the last week, and a short date beyond that. Never a

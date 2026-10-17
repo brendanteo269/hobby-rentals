@@ -7,7 +7,7 @@ import { getListingHistory, getMyListings, type ListingHistory } from "@/lib/api
 import { getBundleEvents, getMyBundles, getOwnerBundleBookings } from "@/lib/api/bundles";
 import { getOwnerBookings } from "@/lib/api/bookings";
 import { getMyHobbyShieldPolicies } from "@/lib/api/owner-protection";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, formatSingaporeDateTime } from "@/lib/format";
 import { daysUntilExpiry, policyIsCurrent, type HobbyShieldPolicy } from "@/lib/owner-protection";
 import {
   CATEGORY_LABELS,
@@ -109,7 +109,7 @@ export default async function MyListingsPage({ searchParams }: { searchParams: P
           ) : (
             <ul className="space-y-4">
               {listings.map((listing) => (
-                <ListingRow key={listing.id} listing={listing} bookings={bookings.filter((booking) => booking.listing_id === listing.id)} history={historyByListing.get(listing.id)} policy={protectionPolicies.find((item) => item.listing_id === listing.id)} />
+                <ListingRow key={listing.id} listing={listing} bookings={bookings.filter((booking) => booking.listing_id === listing.id)} history={historyByListing.get(listing.id)} policies={protectionPolicies.filter((item) => item.listing_id === listing.id)} />
               ))}
             </ul>
           )}
@@ -168,9 +168,11 @@ const STATUS_BADGE_VARIANT: Record<Listing["status"], "neutral" | "accent" | "da
   DEACTIVATED: "accent",
 };
 
-function ListingRow({ listing, bookings, history, policy }: { listing: OwnerListing; bookings: Booking[]; history?: ListingHistory; policy?: HobbyShieldPolicy }) {
-  const hobbyShieldActive = policy && policyIsCurrent(policy);
-  const expiresIn = hobbyShieldActive ? daysUntilExpiry(policy) : 0;
+function ListingRow({ listing, bookings, history, policies }: { listing: OwnerListing; bookings: Booking[]; history?: ListingHistory; policies: HobbyShieldPolicy[] }) {
+  const policy = policies.find((item) => policyIsCurrent(item));
+  const scheduled = policies.find((item) => item.status === "SCHEDULED");
+  const hobbyShieldActive = Boolean(policy);
+  const expiresIn = policy ? daysUntilExpiry(policy) : 0;
   // An unanswered request is still under the owner's control. Coverage must
   // not be bought or renewed once a renter has a confirmed reservation or is
   // actively using the item; it becomes available again after every booking
@@ -210,7 +212,7 @@ function ListingRow({ listing, bookings, history, policy }: { listing: OwnerList
             </Link>
           )}
           <Badge variant={STATUS_BADGE_VARIANT[listing.status]}>{LISTING_STATUS_LABELS[listing.status]}</Badge>
-          {policy && <Badge variant={hobbyShieldActive ? "dark" : "neutral"}>{hobbyShieldActive ? "HobbyShield Active" : "HobbyShield Expired"}</Badge>}
+          {policies.length > 0 && <Badge variant={hobbyShieldActive ? "dark" : scheduled ? "accent" : "neutral"}>{hobbyShieldActive ? "HobbyShield Active" : scheduled ? "HobbyShield Scheduled" : "HobbyShield Expired"}</Badge>}
         </div>
       </div>
 
@@ -218,6 +220,8 @@ function ListingRow({ listing, bookings, history, policy }: { listing: OwnerList
       {listing.status !== "REMOVED" && (
         <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
           {hobbyShieldActive ? (
+            <ButtonLink href={hobbyShieldHref} variant={scheduled ? "outline" : expiresIn >= 0 && expiresIn <= 7 ? "accent" : "outline"} className="px-4 py-2 text-xs">{scheduled ? "View HobbyShield" : expiresIn >= 0 && expiresIn <= 7 ? "Renew HobbyShield" : "View HobbyShield"}</ButtonLink>
+          ) : scheduled ? (
             <ButtonLink href={hobbyShieldHref} variant="outline" className="px-4 py-2 text-xs">View HobbyShield</ButtonLink>
           ) : hobbyShieldBlockedByPassport ? (
             <p className="text-ink-soft">Complete this item&apos;s Product Passport before buying HobbyShield. <ButtonLink href={passportHref} variant="outline" className="ml-2 px-3 py-1.5 text-xs">Complete passport</ButtonLink></p>
@@ -228,7 +232,8 @@ function ListingRow({ listing, bookings, history, policy }: { listing: OwnerList
           ) : (
             <ButtonLink href={hobbyShieldHref} variant="accent" className="px-4 py-2 text-xs">Get HobbyShield</ButtonLink>
           )}
-          {hobbyShieldActive && expiresIn > 0 && expiresIn <= 3 && <p className="text-amber-800">Expires in {expiresIn} {expiresIn === 1 ? "day" : "days"} · Renewal available upon expiration.</p>}
+          {hobbyShieldActive && policy && scheduled ? <p className="text-success">Coverage is continuous until {formatSingaporeDateTime(scheduled.effective_to)}.</p> : hobbyShieldActive && policy && <p className={expiresIn >= 0 && expiresIn <= 7 ? "text-amber-800" : "text-ink-soft"}>Expires {formatSingaporeDateTime(policy.effective_to)}{expiresIn >= 0 && expiresIn <= 7 ? " · Renew now to keep coverage continuous." : ""}</p>}
+          {!hobbyShieldActive && scheduled && <p className="text-success">Coverage starts {formatSingaporeDateTime(scheduled.effective_from)}.</p>}
         </div>
       )}
       <OwnerBookingList bookings={bookings} />
