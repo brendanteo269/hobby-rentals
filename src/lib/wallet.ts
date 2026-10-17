@@ -28,6 +28,7 @@ export type WalletTransaction = {
   date: string;
   status: TransactionStatus;
   paymentIntentId?: string;
+  hobbyShieldListingId?: string;
   /** The booking or bundle booking the money was for; null for a top-up or withdrawal. */
   bookingReference: BookingReference | null;
 };
@@ -71,6 +72,7 @@ type WalletApiResponse = {
     created_at: string;
     status: TransactionStatus;
     stripe_payment_intent_id?: string;
+    metadata?: { listing_id?: string };
     booking_reference?: BookingReferenceResponse | null;
   }>;
 };
@@ -87,6 +89,7 @@ export function mapWalletResponse(data: WalletApiResponse): WalletState {
       date: tx.created_at,
       status: tx.status,
       paymentIntentId: tx.stripe_payment_intent_id,
+      hobbyShieldListingId: tx.type === "OWNER_PROTECTION_PREMIUM" ? tx.metadata?.listing_id : undefined,
       bookingReference: tx.booking_reference
         ? {
             bookingId: tx.booking_reference.booking_id,

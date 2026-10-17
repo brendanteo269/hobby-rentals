@@ -12,6 +12,7 @@ import {
 import { formatDate, formatDateTime } from "@/lib/format";
 import { Pagination } from "@/components/pagination";
 import { Chip } from "@/components/ui";
+import Link from "next/link";
 
 const PAGE_SIZE = 10;
 
@@ -128,6 +129,7 @@ export function TransactionHistoryTable({ transactions }: { transactions: Wallet
                   </td>
                   <td className="max-w-xs px-4 py-4">
                     <TransactionDescription description={tx.description} />
+                    {tx.hobbyShieldListingId && <Link className="mt-1 block text-xs underline" href={`/listings/${tx.hobbyShieldListingId}/protection`}>View HobbyShield</Link>}
                     {tx.bookingReference && <BookingReferenceLine reference={tx.bookingReference} />}
                   </td>
                   <td className="whitespace-nowrap px-4 py-4 text-ink-soft">{formatDateTime(tx.date)}</td>

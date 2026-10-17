@@ -52,6 +52,10 @@ export type NotificationType =
   // one lifecycle change the owner did not initiate themselves.
   | "LISTING_DEACTIVATED"
   | "LISTING_REACTIVATED"
+  | "HOBBYSHIELD_EXPIRING_7_DAYS"
+  | "HOBBYSHIELD_EXPIRING_3_DAYS"
+  | "HOBBYSHIELD_EXPIRING_TODAY"
+  | "HOBBYSHIELD_EXPIRED"
   // S2-16: the other party sent a plain text/attachment message.
   | "MESSAGE_RECEIVED";
 
@@ -134,6 +138,10 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   MEETUP_ACCEPTED: "Meetup confirmed",
   LISTING_DEACTIVATED: "Listing deactivated",
   LISTING_REACTIVATED: "Listing reactivated",
+  HOBBYSHIELD_EXPIRING_7_DAYS: "HobbyShield expires in seven days",
+  HOBBYSHIELD_EXPIRING_3_DAYS: "HobbyShield expires in three days",
+  HOBBYSHIELD_EXPIRING_TODAY: "HobbyShield expires today",
+  HOBBYSHIELD_EXPIRED: "HobbyShield expired",
   MESSAGE_RECEIVED: "New message",
 };
 
