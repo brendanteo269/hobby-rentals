@@ -5,6 +5,7 @@ import { Button, ButtonLink } from "@/components/ui";
 import { changeBookingStatus, type BookingActionResult } from "@/app/bookings/actions";
 import { MessageButton } from "@/components/messages/message-button";
 import { ExtensionRequestDecision } from "@/components/bookings/extension-request-decision";
+import { ReportDamageButton } from "@/components/bookings/report-damage-button";
 import {
   BOOKING_STATUS_LABELS,
   MESSAGEABLE_BOOKING_STATUSES,
@@ -15,6 +16,7 @@ import {
 } from "@/lib/bookings";
 import { cancellationOutcomeLine, HANDED_OVER_NOTE } from "@/lib/cancellations";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { canReportDamage, settlementLine } from "@/lib/settlement";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
 
 // A request is answered from its review page, where the owner sees the renter
@@ -81,11 +83,17 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
               {booking.cancellation_outcome && (
                 <span className="block text-ink-soft">{cancellationOutcomeLine(booking.cancellation_outcome, "owner")}</span>
               )}
+              {booking.settlement_state && (
+                <span className="block text-ink-soft">{settlementLine(booking.settlement_state, "owner")}</span>
+              )}
             </span>
             <span className="flex gap-2">
               {next && <Button className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, next.status)}>{next.label}</Button>}
               {booking.status === "PENDING" && <ButtonLink href={requestReviewPath("BOOKING", booking.id)} className="px-3 py-1.5 text-xs">Review request</ButtonLink>}
               {booking.status === "CONFIRMED" && <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "CANCELLED")}>Cancel booking</Button>}
+              {canReportDamage(booking.settlement_state) && booking.settlement_state?.claim_window_ends_at && (
+                <ReportDamageButton kind="booking" id={booking.id} windowEndsAt={booking.settlement_state.claim_window_ends_at} />
+              )}
               {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
                 <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
               )}

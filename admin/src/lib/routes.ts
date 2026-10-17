@@ -24,6 +24,8 @@ export const ROUTES = {
   listingPassport: (id: string) => `/listings/${id}/passport` as Route,
   bookings: "/bookings",
   booking: (id: string) => `/bookings/${id}` as Route,
+  disputes: "/disputes",
+  dispute: (id: string) => `/disputes/${id}` as Route,
 } as const;
 
 /** Paths reachable without the portal password. Everything else is guarded. */

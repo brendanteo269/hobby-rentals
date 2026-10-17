@@ -241,7 +241,16 @@ export async function getBookingById(id: string): Promise<AdminBookingDetail | n
       .from("wallet_transactions")
       .select("id, type, escrow_component, amount_cents, status, created_at")
       .eq("booking_id", id)
-      .in("type", ["ESCROW_HOLD", "ESCROW_RELEASE"])
+      // S3-10: a settlement's charge, payout and any damage deduction are part of the same escrow story.
+      .in("type", [
+        "ESCROW_HOLD",
+        "ESCROW_RELEASE",
+        "RENTAL_CHARGE",
+        "RENTAL_PAYOUT",
+        "DAMAGE_DEDUCTION",
+        "DAMAGE_PAYOUT",
+        "OVERDUE_SETTLEMENT",
+      ])
       .order("created_at", { ascending: true }),
   ]);
 

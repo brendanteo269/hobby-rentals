@@ -7,6 +7,7 @@ import {
   declineBooking,
   getBookingCancellationPreview,
   getBookingQuote,
+  reportBookingDamage,
   updateBookingStatus,
 } from "@/lib/api/bookings";
 import {
@@ -15,6 +16,7 @@ import {
   declineBundleBooking,
   getBundleCancellationPreview,
   getBundleQuote,
+  reportBundleDamage,
   updateBundleBookingStatus,
 } from "@/lib/api/bundles";
 import {
@@ -28,6 +30,7 @@ import type { Booking, BookingQuote, BookingStatus, DeclineReason } from "@/lib/
 import type { BundleBooking, BundleQuote } from "@/lib/bundles";
 import type { CancellableKind, CancellationPreview, CancellationRecord } from "@/lib/cancellations";
 import type { ExtensionQuote, ExtensionRequest } from "@/lib/extensions";
+import type { RentalDispute } from "@/lib/settlement";
 
 export type BookingActionResult =
   | { error: string; code?: string; shortfallCents?: number }
@@ -236,4 +239,32 @@ export async function denyExtensionRequest(requestId: string): Promise<Extension
   // The renter is notified, so the header's unread count moves.
   revalidatePath("/", "layout");
   return { request: result.value };
+}
+
+
+export type ReportDamageResult = { error: string } | { dispute: RentalDispute };
+
+/**
+ * S3-10: the owner reports damage on a returned rental. For a bundle,
+ * listingId names the damaged item. The rental's money stays held until an
+ * admin decides.
+ */
+export async function reportDamage(
+  kind: "booking" | "bundle",
+  id: string,
+  description: string,
+  claimedCents: number,
+  listingId?: string,
+): Promise<ReportDamageResult> {
+  try {
+    const dispute =
+      kind === "bundle"
+        ? await reportBundleDamage(id, listingId ?? "", description, claimedCents)
+        : await reportBookingDamage(id, description, claimedCents);
+    revalidatePath("/", "layout");
+    return { dispute };
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
 }

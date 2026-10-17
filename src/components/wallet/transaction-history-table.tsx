@@ -37,6 +37,11 @@ const typeLabels: Record<TransactionType, string> = {
   OWNER_PROTECTION_PREMIUM: "HOBBYSHIELD",
   CANCELLATION_FEE: "CANCELLATION",
   CANCELLATION_PAYOUT: "CANCELLATION",
+  OVERDUE_SETTLEMENT: "OVERDUE FEE",
+  RENTAL_CHARGE: "RENTAL",
+  RENTAL_PAYOUT: "PAYOUT",
+  DAMAGE_DEDUCTION: "DAMAGE",
+  DAMAGE_PAYOUT: "DAMAGE",
 };
 
 /** Which booking a row was for, so a refund can be matched to what was cancelled. */

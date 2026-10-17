@@ -20,6 +20,7 @@ import {
 } from "@/lib/bookings";
 import { CancelBookingButton } from "@/components/bookings/cancel-booking-button";
 import { cancellationOutcomeLine } from "@/lib/cancellations";
+import { settlementLine } from "@/lib/settlement";
 import { ExtendBookingButton } from "@/components/bookings/extend-booking-button";
 import { canRequestExtension } from "@/lib/extensions";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
@@ -141,7 +142,9 @@ export function RenterView({
                 <p className="mt-1 text-sm text-ink">
                   {booking.cancellation_outcome
                     ? cancellationOutcomeLine(booking.cancellation_outcome, "renter")
-                    : BUNDLE_STATUS_NEXT_STEP[booking.status]}
+                    : booking.settlement_state
+                      ? settlementLine(booking.settlement_state, "renter")
+                      : BUNDLE_STATUS_NEXT_STEP[booking.status]}
                 </p>
               </div>
               <div className="flex flex-col items-end gap-2">
@@ -169,7 +172,9 @@ export function RenterView({
                 <p className="mt-1 text-sm text-ink">
                   {booking.cancellation_outcome
                     ? cancellationOutcomeLine(booking.cancellation_outcome, "renter")
-                    : BOOKING_STATUS_NEXT_STEP[booking.status]}
+                    : booking.settlement_state
+                      ? settlementLine(booking.settlement_state, "renter")
+                      : BOOKING_STATUS_NEXT_STEP[booking.status]}
                 </p>
                 {booking.confirmed_meetup_location && (
                   <p className="mt-1 text-sm text-ink-soft">
