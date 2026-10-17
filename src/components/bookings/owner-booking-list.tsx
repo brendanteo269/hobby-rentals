@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Button, ButtonLink } from "@/components/ui";
 import { changeBookingStatus, type BookingActionResult } from "@/app/bookings/actions";
 import { MessageButton } from "@/components/messages/message-button";
+import { ExtensionRequestDecision } from "@/components/bookings/extension-request-decision";
 import {
   BOOKING_STATUS_LABELS,
   MESSAGEABLE_BOOKING_STATUSES,
@@ -59,7 +60,9 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
       <ul className="mt-2 space-y-2">
         {items.map((booking) => {
           const next = NEXT_ACTION[booking.status];
-          return <li key={booking.id} className="flex flex-wrap items-center justify-between gap-2 bg-surface-muted px-3 py-2 text-sm">
+          // The id is what a notification's link scrolls to
+          // (owner_booking_list_path in the backend's catalog).
+          return <li key={booking.id} id={`booking-${booking.id}`} className="flex scroll-mt-24 flex-wrap items-center justify-between gap-2 bg-surface-muted px-3 py-2 text-sm data-[hash-target]:ring-1 data-[hash-target]:ring-ink">
             <span>
               <span className="font-medium">{requesterName(booking)}</span> <span className="text-ink-soft">· {formatDate(booking.start_date)} – {formatDate(booking.end_date)} · {BOOKING_STATUS_LABELS[booking.status]}{booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}</span>
               {booking.confirmed_meetup_location && (
@@ -77,6 +80,10 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
                 <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
               )}
             </span>
+            {/* S3-17: on its own line below the row's buttons - approving it
+                changes the booking's dates and charges the renter, which is a
+                bigger decision than the status buttons beside it. */}
+            {booking.pending_extension && <ExtensionRequestDecision request={booking.pending_extension} />}
           </li>;
         })}
       </ul>
