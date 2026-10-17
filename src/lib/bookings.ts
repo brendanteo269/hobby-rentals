@@ -59,6 +59,17 @@ export type Booking = {
   confirmed_meetup_time?: string | null;
   /** S3-17: the renter's extension request waiting on the owner, if any. */
   pending_extension?: ExtensionRequest | null;
+  /**
+   * S3-18: the first day this rental was late. Null once it is back - the
+   * charge then stands in overdue_fee_cents. Overdue is a flag on a booking
+   * that stays ACTIVE, so there is no "OVERDUE" status to look for.
+   */
+  overdue_since?: string | null;
+  overdue_daily_rate_cents?: number | null;
+  /** Accrued so far, or the final charge once returned. Shown to both parties. */
+  overdue_fee_cents?: number;
+  /** What the deposit could not cover, and so what the renter still owes. */
+  overdue_arrears_cents?: number;
   created_at: string;
   updated_at: string;
 };

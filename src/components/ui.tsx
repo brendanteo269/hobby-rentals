@@ -329,6 +329,34 @@ const noticeTones: Record<NoticeTone, string> = {
 };
 
 /**
+ * The house look for a standing message: a tinted panel with an accent rule
+ * down its left edge. One definition, so a notice written today matches the
+ * session-expired one written months ago.
+ */
+const NOTICE_SURFACE = "rounded-lg border-l-2 px-3 py-2 text-sm text-ink";
+
+/**
+ * A standing message that needs more than a sentence — a link, a button, a
+ * couple of lines. FormNotice is the one-string case and the one to reach for
+ * first; this is its sibling for when the message has structure.
+ */
+export function Notice({
+  tone = "error",
+  className = "",
+  children,
+}: {
+  tone?: NoticeTone;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <div role={tone === "error" ? "alert" : "status"} className={`${NOTICE_SURFACE} ${noticeTones[tone]} ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+/**
  * A standing message about the page as a whole — "your session expired", "your
  * email is confirmed".
  *
@@ -341,7 +369,7 @@ export function FormNotice({ message, tone = "error" }: { message?: string; tone
   return (
     <p
       role={tone === "error" ? "alert" : "status"}
-      className={`rounded-lg border-l-2 px-3 py-2 text-sm text-ink ${noticeTones[tone]}`}
+      className={`${NOTICE_SURFACE} ${noticeTones[tone]}`}
     >
       {message}
     </p>
