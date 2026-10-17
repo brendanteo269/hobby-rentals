@@ -97,6 +97,7 @@ export const ENTRY_LABELS: Record<string, string> = {
   ADMIN_REVIEW: "Admin review",
   PURCHASE_PROOF: "Proof of purchase",
   STOLEN_REPORT: "Reported stolen",
+  DAMAGE_RESOLUTION: "Damage dispute resolved",
 };
 
 export const SERIAL_STATUS: Record<AdminPassport["serial_status"], { label: string; tone: "positive" | "warning" | "critical" }> = {

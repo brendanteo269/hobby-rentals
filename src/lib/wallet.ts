@@ -5,6 +5,12 @@ import { createClient } from "@/lib/supabase/client";
  * CANCELLATION_FEE is the non-refundable part of a booking the renter
  * cancelled leaving their held balance; CANCELLATION_PAYOUT is the same amount
  * reaching the owner.
+ *
+ * S3-10 settlement: RENTAL_CHARGE is a returned rental's charges leaving the
+ * renter's held balance; RENTAL_PAYOUT is the owner's share, less the platform
+ * commission. DAMAGE_DEDUCTION is what the deposit paid towards damage, and
+ * DAMAGE_PAYOUT what reached the owner for it. OVERDUE_SETTLEMENT is an
+ * overdue return fee, paid from the deposit or later.
  */
 export type TransactionType =
   | "TOPUP"
@@ -16,8 +22,17 @@ export type TransactionType =
   | "ADMIN_DEBIT"
   | "OWNER_PROTECTION_PREMIUM"
   | "CANCELLATION_FEE"
-  | "CANCELLATION_PAYOUT";
-export type TransactionStatus = "COMPLETED" | "PENDING" | "REFUNDED";
+  | "CANCELLATION_PAYOUT"
+  | "OVERDUE_SETTLEMENT"
+  | "RENTAL_CHARGE"
+  | "RENTAL_PAYOUT"
+  | "DAMAGE_DEDUCTION"
+  | "DAMAGE_PAYOUT";
+/** SETTLED: a hold a rental's settlement consumed. */
+export type TransactionStatus = "COMPLETED" | "PENDING" | "REFUNDED" | "SETTLED";
+
+/** What reaches an owner from their rentals, for the earnings page and the wallet's Earnings filter. */
+export const EARNING_TYPES: TransactionType[] = ["RENTAL_PAYOUT", "DAMAGE_PAYOUT", "CANCELLATION_PAYOUT"];
 export type TransactionFilter = "all" | "topups" | "escrow" | "releases" | "refunds" | "withdrawals" | "adjustments";
 
 export type WalletTransaction = {
@@ -28,6 +43,7 @@ export type WalletTransaction = {
   date: string;
   status: TransactionStatus;
   paymentIntentId?: string;
+  hobbyShieldListingId?: string;
   /** The booking or bundle booking the money was for; null for a top-up or withdrawal. */
   bookingReference: BookingReference | null;
 };
@@ -71,6 +87,7 @@ type WalletApiResponse = {
     created_at: string;
     status: TransactionStatus;
     stripe_payment_intent_id?: string;
+    metadata?: { listing_id?: string };
     booking_reference?: BookingReferenceResponse | null;
   }>;
 };
@@ -87,6 +104,7 @@ export function mapWalletResponse(data: WalletApiResponse): WalletState {
       date: tx.created_at,
       status: tx.status,
       paymentIntentId: tx.stripe_payment_intent_id,
+      hobbyShieldListingId: tx.type === "OWNER_PROTECTION_PREMIUM" ? tx.metadata?.listing_id : undefined,
       bookingReference: tx.booking_reference
         ? {
             bookingId: tx.booking_reference.booking_id,
@@ -121,10 +139,20 @@ export function filterTransactions(transactions: WalletTransaction[], filter: Tr
   if (filter === "topups") return transactions.filter((tx) => tx.type === "TOPUP");
   if (filter === "escrow") return transactions.filter((tx) => tx.type === "ESCROW_HOLD");
   if (filter === "releases") {
-    return transactions.filter((tx) => tx.type === "ESCROW_RELEASE" || tx.type === "CANCELLATION_PAYOUT");
+    return transactions.filter(
+      (tx) =>
+        tx.type === "ESCROW_RELEASE" ||
+        EARNING_TYPES.includes(tx.type) ||
+        (tx.type === "OVERDUE_SETTLEMENT" && tx.amountCents > 0),
+    );
   }
-  // A cancellation's refund and its non-refundable part read together.
-  if (filter === "refunds") return transactions.filter((tx) => tx.type === "REFUND" || tx.type === "CANCELLATION_FEE");
+  // A cancellation's refund and its non-refundable part read together; so do
+  // a settled rental's charge and any deduction from its deposit.
+  if (filter === "refunds") {
+    return transactions.filter((tx) =>
+      ["REFUND", "CANCELLATION_FEE", "RENTAL_CHARGE", "DAMAGE_DEDUCTION"].includes(tx.type),
+    );
+  }
   if (filter === "adjustments") {
     return transactions.filter((tx) => tx.type === "ADMIN_CREDIT" || tx.type === "ADMIN_DEBIT");
   }

@@ -1,4 +1,4 @@
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, formatMoney } from "@/lib/format";
 import { PASSPORT_PHOTO_LABELS, passportEntryLabel, type PassportEntry } from "@/lib/listings";
 
 /**
@@ -26,6 +26,16 @@ export function PassportTimeline({ entries }: { entries: PassportEntry[] }) {
             <p className="body-copy mt-2 whitespace-pre-line">
               {entry.data.decision === "APPROVED" ? "Serial approved" : "Serial rejected"}
               {typeof entry.data.reason === "string" && `: ${entry.data.reason}`}
+            </p>
+          )}
+
+          {/* S3-10. Renters see only the finding; the owner also sees what they reported. */}
+          {entry.entry_type === "DAMAGE_RESOLUTION" && (
+            <p className="body-copy mt-2 whitespace-pre-line">
+              {entry.data.liable_party === "RENTER" && typeof entry.data.damage_cents === "number" && entry.data.damage_cents > 0
+                ? `Damage confirmed, valued at ${formatMoney(entry.data.damage_cents)}.`
+                : "The renter was not found liable for damage."}
+              {typeof entry.data.description === "string" && `\nReported: ${entry.data.description}`}
             </p>
           )}
 

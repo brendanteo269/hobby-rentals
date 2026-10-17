@@ -4,9 +4,13 @@ import { useState, useTransition } from "react";
 import { Button, ButtonLink } from "@/components/ui";
 import { changeBundleBookingStatus } from "@/app/bookings/actions";
 import { requesterName } from "@/components/bookings/owner-booking-list";
+import { ReportDamageButton } from "@/components/bookings/report-damage-button";
 import { BOOKING_STATUS_LABELS, requestReviewPath, type BookingStatus } from "@/lib/bookings";
 import type { BundleBooking } from "@/lib/bundles";
+import { cancellationOutcomeLine, HANDED_OVER_NOTE } from "@/lib/cancellations";
 import { formatDate, formatMoney } from "@/lib/format";
+import { canReportDamage, settlementLine } from "@/lib/settlement";
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
 
 /**
  * Same ladder the single-listing list offers, so an owner learns one flow. A
@@ -100,6 +104,14 @@ export function OwnerBundleBookingList({ bookings }: { bookings: BundleBooking[]
                       Cancel booking
                     </Button>
                   )}
+                  {canReportDamage(booking.settlement_state) && booking.settlement_state?.claim_window_ends_at && (
+                    <ReportDamageButton
+                      kind="bundle"
+                      id={booking.id}
+                      windowEndsAt={booking.settlement_state.claim_window_ends_at}
+                      items={booking.items}
+                    />
+                  )}
                 </span>
               </div>
               {/* Which items the decision covers - the whole point of a bundle
@@ -108,6 +120,17 @@ export function OwnerBundleBookingList({ bookings }: { bookings: BundleBooking[]
                 Covers all {booking.items.length} items:{" "}
                 {booking.items.map((item) => item.listing_name ?? "an item").join(", ")}
               </p>
+              {booking.status === "ACTIVE" && (
+                <p className="mt-1 text-xs text-ink-soft">
+                  {HANDED_OVER_NOTE} <a href={SUPPORT_MAILTO} className="underline">{SUPPORT_EMAIL}</a>
+                </p>
+              )}
+              {booking.cancellation_outcome && (
+                <p className="mt-1 text-xs text-ink-soft">{cancellationOutcomeLine(booking.cancellation_outcome, "owner")}</p>
+              )}
+              {booking.settlement_state && (
+                <p className="mt-1 text-xs text-ink-soft">{settlementLine(booking.settlement_state, "owner")}</p>
+              )}
             </li>
           );
         })}

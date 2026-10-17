@@ -10,6 +10,7 @@ import type {
   DeclineReason,
 } from "@/lib/bookings";
 import type { CancellationPreview, CancellationRecord } from "@/lib/cancellations";
+import type { RentalDispute } from "@/lib/settlement";
 
 // Re-exported so existing callers keep importing the quote from here.
 export type { BookingQuote } from "@/lib/bookings";
@@ -79,6 +80,14 @@ export function updateBookingStatus(bookingId: string, nextStatus: BookingStatus
   return backendRequest<Booking>(`/bookings/${encodeURIComponent(bookingId)}/status`, {
     method: "PATCH",
     body: JSON.stringify({ status: nextStatus }),
+  });
+}
+
+/** S3-10: the owner reports damage on a returned booking, holding its settlement. */
+export function reportBookingDamage(bookingId: string, description: string, claimedCents: number) {
+  return backendRequest<RentalDispute>(`/bookings/${encodeURIComponent(bookingId)}/disputes`, {
+    method: "POST",
+    body: JSON.stringify({ description, claimed_cents: claimedCents }),
   });
 }
 

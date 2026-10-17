@@ -26,6 +26,9 @@ export type NotificationType =
   | "BOOKING_RETURN_DUE_OWNER"
   | "BOOKING_RETURN_OVERDUE_OWNER"
   | "BOOKING_PAYOUT_RELEASED_OWNER"
+  // S3-10: a returned rental settled (to the renter), and damage the owner reported.
+  | "BOOKING_DEPOSIT_RETURNED"
+  | "BOOKING_DAMAGE_REPORTED"
   // A bundle booking notifies once per change, as one order.
   | "BUNDLE_REQUESTED"
   | "BUNDLE_ACCEPTED"
@@ -52,6 +55,10 @@ export type NotificationType =
   // one lifecycle change the owner did not initiate themselves.
   | "LISTING_DEACTIVATED"
   | "LISTING_REACTIVATED"
+  | "HOBBYSHIELD_EXPIRING_7_DAYS"
+  | "HOBBYSHIELD_EXPIRING_3_DAYS"
+  | "HOBBYSHIELD_EXPIRING_TODAY"
+  | "HOBBYSHIELD_EXPIRED"
   // S2-16: the other party sent a plain text/attachment message.
   | "MESSAGE_RECEIVED";
 
@@ -114,6 +121,8 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   BOOKING_RETURN_DUE_OWNER: "Return due",
   BOOKING_RETURN_OVERDUE_OWNER: "Return overdue",
   BOOKING_PAYOUT_RELEASED_OWNER: "Payout released",
+  BOOKING_DEPOSIT_RETURNED: "Rental settled",
+  BOOKING_DAMAGE_REPORTED: "Damage reported",
   BUNDLE_REQUESTED: "Bundle request sent",
   BUNDLE_ACCEPTED: "Bundle accepted",
   BUNDLE_DECLINED: "Bundle declined",
@@ -134,6 +143,10 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   MEETUP_ACCEPTED: "Meetup confirmed",
   LISTING_DEACTIVATED: "Listing deactivated",
   LISTING_REACTIVATED: "Listing reactivated",
+  HOBBYSHIELD_EXPIRING_7_DAYS: "HobbyShield expires in seven days",
+  HOBBYSHIELD_EXPIRING_3_DAYS: "HobbyShield expires in three days",
+  HOBBYSHIELD_EXPIRING_TODAY: "HobbyShield expires today",
+  HOBBYSHIELD_EXPIRED: "HobbyShield expired",
   MESSAGE_RECEIVED: "New message",
 };
 

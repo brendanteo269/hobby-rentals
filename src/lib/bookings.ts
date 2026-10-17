@@ -1,4 +1,6 @@
+import type { CancellationOutcome } from "@/lib/cancellations";
 import type { ExtensionRequest } from "@/lib/extensions";
+import type { SettlementState } from "@/lib/settlement";
 
 /**
  * The backend's booking states. Which moves between them are allowed, and by
@@ -70,6 +72,11 @@ export type Booking = {
   overdue_fee_cents?: number;
   /** What the deposit could not cover, and so what the renter still owes. */
   overdue_arrears_cents?: number;
+  /** How a cancelled booking was settled. Set on the bookings lists only. */
+  cancellation_outcome?: CancellationOutcome | null;
+  /** S3-10: when the item came back, and where its money stands. Set on the bookings lists only. */
+  returned_at?: string | null;
+  settlement_state?: SettlementState | null;
   created_at: string;
   updated_at: string;
 };

@@ -22,6 +22,8 @@ import { CancelBookingButton } from "@/components/bookings/cancel-booking-button
 import { OverdueNotice } from "@/components/bookings/overdue-notice";
 import { SuspensionBanner } from "@/components/bookings/suspension-banner";
 import type { SuspensionStatus } from "@/lib/overdue";
+import { cancellationOutcomeLine } from "@/lib/cancellations";
+import { settlementLine } from "@/lib/settlement";
 import { ExtendBookingButton } from "@/components/bookings/extend-booking-button";
 import { canRequestExtension } from "@/lib/extensions";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
@@ -144,7 +146,13 @@ export function RenterView({
                 <p className="mt-1 text-xs text-ink-soft">
                   {booking.items.length} items · {booking.items.map((item) => item.listing_name ?? "an item").join(", ")}
                 </p>
-                <p className="mt-1 text-sm text-ink">{BUNDLE_STATUS_NEXT_STEP[booking.status]}</p>
+                <p className="mt-1 text-sm text-ink">
+                  {booking.cancellation_outcome
+                    ? cancellationOutcomeLine(booking.cancellation_outcome, "renter")
+                    : booking.settlement_state
+                      ? settlementLine(booking.settlement_state, "renter")
+                      : BUNDLE_STATUS_NEXT_STEP[booking.status]}
+                </p>
               </div>
               <div className="flex flex-col items-end gap-2">
                 <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
@@ -168,7 +176,13 @@ export function RenterView({
                   {formatDate(booking.start_date)} – {formatDate(booking.end_date)}
                   {booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}
                 </p>
-                <p className="mt-1 text-sm text-ink">{BOOKING_STATUS_NEXT_STEP[booking.status]}</p>
+                <p className="mt-1 text-sm text-ink">
+                  {booking.cancellation_outcome
+                    ? cancellationOutcomeLine(booking.cancellation_outcome, "renter")
+                    : booking.settlement_state
+                      ? settlementLine(booking.settlement_state, "renter")
+                      : BOOKING_STATUS_NEXT_STEP[booking.status]}
+                </p>
                 {booking.confirmed_meetup_location && (
                   <p className="mt-1 text-sm text-ink-soft">
                     Meetup: {booking.confirmed_meetup_location}
