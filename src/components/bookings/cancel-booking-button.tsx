@@ -16,6 +16,7 @@ import {
 } from "@/lib/cancellations";
 import { formatMoney } from "@/lib/format";
 import { profilePath } from "@/lib/routes";
+import { SUPPORT_MAILTO } from "@/lib/support";
 
 /**
  * The renter's way out of a booking or a whole bundle booking.
@@ -154,7 +155,12 @@ function NotCancellable({ preview, onClose }: { preview: CancellationPreview; on
     <>
       {preview.reason === "BOOKING_ACTIVE" && <p className="font-medium text-ink">This rental has already started.</p>}
       <p className="text-ink-soft">{preview.message}</p>
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        {preview.reason === "BOOKING_ACTIVE" && (
+          <a href={SUPPORT_MAILTO} className="self-center text-sm underline">
+            Email support
+          </a>
+        )}
         <Button variant="outline" onClick={onClose}>Close</Button>
       </div>
     </>

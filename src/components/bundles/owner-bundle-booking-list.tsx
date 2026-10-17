@@ -6,7 +6,9 @@ import { changeBundleBookingStatus } from "@/app/bookings/actions";
 import { requesterName } from "@/components/bookings/owner-booking-list";
 import { BOOKING_STATUS_LABELS, requestReviewPath, type BookingStatus } from "@/lib/bookings";
 import type { BundleBooking } from "@/lib/bundles";
+import { cancellationOutcomeLine, HANDED_OVER_NOTE } from "@/lib/cancellations";
 import { formatDate, formatMoney } from "@/lib/format";
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
 
 /**
  * Same ladder the single-listing list offers, so an owner learns one flow. A
@@ -108,6 +110,14 @@ export function OwnerBundleBookingList({ bookings }: { bookings: BundleBooking[]
                 Covers all {booking.items.length} items:{" "}
                 {booking.items.map((item) => item.listing_name ?? "an item").join(", ")}
               </p>
+              {booking.status === "ACTIVE" && (
+                <p className="mt-1 text-xs text-ink-soft">
+                  {HANDED_OVER_NOTE} <a href={SUPPORT_MAILTO} className="underline">{SUPPORT_EMAIL}</a>
+                </p>
+              )}
+              {booking.cancellation_outcome && (
+                <p className="mt-1 text-xs text-ink-soft">{cancellationOutcomeLine(booking.cancellation_outcome, "owner")}</p>
+              )}
             </li>
           );
         })}
