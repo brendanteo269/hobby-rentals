@@ -29,6 +29,8 @@ export type NotificationType =
   // S3-10: a returned rental settled (to the renter), and damage the owner reported.
   | "BOOKING_DEPOSIT_RETURNED"
   | "BOOKING_DAMAGE_REPORTED"
+  | "BOOKING_REVIEW_REQUESTED"
+  | "BOOKING_REVIEW_RECEIVED"
   // A bundle booking notifies once per change, as one order.
   | "BUNDLE_REQUESTED"
   | "BUNDLE_ACCEPTED"
@@ -123,6 +125,8 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   BOOKING_PAYOUT_RELEASED_OWNER: "Payout released",
   BOOKING_DEPOSIT_RETURNED: "Rental settled",
   BOOKING_DAMAGE_REPORTED: "Damage reported",
+  BOOKING_REVIEW_REQUESTED: "Rate your rental",
+  BOOKING_REVIEW_RECEIVED: "Review received",
   BUNDLE_REQUESTED: "Bundle request sent",
   BUNDLE_ACCEPTED: "Bundle accepted",
   BUNDLE_DECLINED: "Bundle declined",

@@ -7,6 +7,7 @@ import { getMyListings } from "@/lib/api/listings";
 import { getMyBookings } from "@/lib/api/bookings";
 import { getMyBundleBookings } from "@/lib/api/bundles";
 import { getMyWaitlist } from "@/lib/api/waitlist";
+import { getReviewEligibility } from "@/lib/api/reviews";
 import { Badge, Container } from "@/components/ui";
 import { isLocationArea, LOCATION_LABELS } from "@/lib/listings";
 import { ViewTabs, RenterView, OwnerView } from "@/components/profile-views";
@@ -63,11 +64,12 @@ export default async function ProfilePage({
   });
   const isVerified = Boolean(user.email_confirmed_at);
   const availability = await getProfileAvailability();
-  const [myListings, myBookings, myBundleBookings, myWaitlist] = await Promise.all([
+  const [myListings, myBookings, myBundleBookings, myWaitlist, reviewEligibility] = await Promise.all([
     getMyListings(),
     getMyBookings(),
     getMyBundleBookings(),
     getMyWaitlist(true),
+    getReviewEligibility(),
   ]);
 
   return (
@@ -98,7 +100,7 @@ export default async function ProfilePage({
       <div className="mt-10">
         <ViewTabs active={active} />
         <div className="mt-8">
-          {active === "renter" && <RenterView enabled={profile.wants_to_rent} bookings={myBookings} bundleBookings={myBundleBookings} waitlist={myWaitlist} />}
+          {active === "renter" && <RenterView enabled={profile.wants_to_rent} bookings={myBookings} bundleBookings={myBundleBookings} waitlist={myWaitlist} reviewEligibility={reviewEligibility} />}
           {active === "owner" && (
             <OwnerView
               enabled={profile.wants_to_own}

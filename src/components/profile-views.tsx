@@ -25,6 +25,7 @@ import { ExtendBookingButton } from "@/components/bookings/extend-booking-button
 import { canRequestExtension } from "@/lib/extensions";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
 import { formatDate, formatDateTime } from "@/lib/format";
+import { reviewPath, type ReviewEligibility } from "@/lib/reviews";
 
 export type { ProfileView } from "@/lib/routes";
 
@@ -98,6 +99,7 @@ export function RenterView({
   bookings = [],
   bundleBookings = [],
   waitlist = [],
+  reviewEligibility = [],
 }: {
   enabled: boolean;
   bookings?: Booking[];
@@ -105,6 +107,7 @@ export function RenterView({
   bundleBookings?: BundleBooking[];
   /** S2-15: dates the renter is queueing for, which are not bookings yet. */
   waitlist?: WaitlistEntry[];
+  reviewEligibility?: ReviewEligibility[];
 }) {
   if (!enabled) return <NotEnabled side="renter" />;
   if (bookings.length > 0 || bundleBookings.length > 0 || waitlist.length > 0) {
@@ -150,6 +153,7 @@ export function RenterView({
               <div className="flex flex-col items-end gap-2">
                 <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
                 <CancelBookingButton kind="bundle" id={booking.id} status={booking.status} />
+                {reviewEligibility.find((item) => item.bundle_booking_id === booking.id) && <ButtonLink href={reviewPath(reviewEligibility.find((item) => item.bundle_booking_id === booking.id)!)} variant="accent" className="px-3 py-1.5 text-xs">Rate owner</ButtonLink>}
               </div>
             </li>
           ))}
@@ -193,6 +197,7 @@ export function RenterView({
               <div className="flex flex-col items-end gap-2">
                 <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
                 <CancelBookingButton kind="booking" id={booking.id} status={booking.status} />
+                {reviewEligibility.find((item) => item.booking_id === booking.id) && <ButtonLink href={reviewPath(reviewEligibility.find((item) => item.booking_id === booking.id)!)} variant="accent" className="px-3 py-1.5 text-xs">Rate owner</ButtonLink>}
                 {canRequestExtension(booking) && (
                   <ExtendBookingButton bookingId={booking.id} endDate={booking.end_date} />
                 )}

@@ -18,6 +18,7 @@ import { cancellationOutcomeLine, HANDED_OVER_NOTE } from "@/lib/cancellations";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { canReportDamage, settlementLine } from "@/lib/settlement";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
+import { reviewPath, type ReviewEligibility } from "@/lib/reviews";
 
 // A request is answered from its review page, where the owner sees the renter
 // and the earnings and has to give a reason to decline.
@@ -31,7 +32,7 @@ export function requesterName(booking: Pick<Booking, "renter_name">): string {
   return booking.renter_name || "A renter";
 }
 
-export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
+export function OwnerBookingList({ bookings, reviewEligibility = [] }: { bookings: Booking[]; reviewEligibility?: ReviewEligibility[] }) {
   // Only the rows this list has itself changed are held locally; the rest
   // come straight from props on every render. Seeding state from `bookings`
   // instead would freeze the list at whatever it held when the component
@@ -94,6 +95,7 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
               {canReportDamage(booking.settlement_state) && booking.settlement_state?.claim_window_ends_at && (
                 <ReportDamageButton kind="booking" id={booking.id} windowEndsAt={booking.settlement_state.claim_window_ends_at} />
               )}
+              {reviewEligibility.find((item) => item.booking_id === booking.id) && <ButtonLink href={reviewPath(reviewEligibility.find((item) => item.booking_id === booking.id)!)} variant="accent" className="px-3 py-1.5 text-xs">Rate renter</ButtonLink>}
               {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
                 <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
               )}
