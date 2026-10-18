@@ -58,6 +58,19 @@ export function EscrowOverrideForm({
         {/* The state this page was showing; the override is refused if it has changed since. */}
         <input type="hidden" name="expected_status" value="HELD" />
 
+        {/* Always say what is held, so the panel is never just a reason box and a button. */}
+        <div>
+          <p className="block text-sm font-medium">Currently held</p>
+          <ul className="mt-2 space-y-1 text-sm">
+            {heldParts.map((part) => (
+              <li key={part.component} className="flex items-baseline justify-between gap-4">
+                <span className="text-ink-soft">{ESCROW_COMPONENT_LABELS[part.component]}</span>
+                <span>{formatMoney(part.amount_cents)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
         {hasChoice && deposit && (
           <div>
             <label htmlFor="component" className="block text-sm font-medium">
@@ -90,7 +103,7 @@ export function EscrowOverrideForm({
         <FormMessage state={state?.error ? state : undefined} />
 
         <Button type="submit" disabled={pending}>
-          {pending ? "Releasing…" : "Release to renter"}
+          {pending ? "Releasing…" : hasChoice ? "Release to renter" : `Release ${formatMoney(heldTotal)} to renter`}
         </Button>
       </form>
     </Panel>
