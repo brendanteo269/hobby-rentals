@@ -39,6 +39,23 @@ export type Conversation = {
   updated_at: string;
 };
 
+/** The slice of a Conversation the new-message toast polls for - see GET /api/conversations/updates. */
+export type ConversationActivity = Pick<Conversation, "id" | "unread" | "updated_at" | "other_party_name">;
+
+/**
+ * Which conversations have new incoming activity since `seen` (id -> the
+ * updated_at last observed). A conversation counts only if it is unread and
+ * its updated_at moved; one never seen before counts too, once a baseline
+ * exists. The backend exposes unread as a flag, not a count, so each changed
+ * conversation is reported once per poll, however many messages landed.
+ */
+export function findNewActivity(
+  current: ConversationActivity[],
+  seen: ReadonlyMap<string, string>,
+): ConversationActivity[] {
+  return current.filter((c) => c.unread && seen.get(c.id) !== c.updated_at);
+}
+
 /** A meetup proposal's current fields (S2-19), refreshed to the proposal's latest state rather than frozen at the moment a given message announced it. */
 export type MeetupProposal = {
   id: string;

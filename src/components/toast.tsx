@@ -1,14 +1,18 @@
 "use client";
 
 import { createContext, useCallback, useContext, useState, type ReactNode } from "react";
-import { CheckCircle2, Loader2, X, XCircle } from "lucide-react";
+import { CheckCircle2, Loader2, MessageSquare, X, XCircle } from "lucide-react";
 
-type ToastVariant = "success" | "error" | "loading";
+type ToastVariant = "success" | "error" | "loading" | "info";
 type Toast = { id: number; message: string; variant: ToastVariant };
 
 type ToastApi = {
-  /** Shows a toast and returns its id. Loading toasts don't auto-dismiss — call `dismiss` yourself once the work finishes. */
-  show: (message: string, variant?: ToastVariant) => number;
+  /**
+   * Shows a toast and returns its id. Loading toasts and any toast shown with
+   * `persist` don't auto-dismiss — call `dismiss` yourself once the work
+   * finishes or the viewer has acted on it.
+   */
+  show: (message: string, variant?: ToastVariant, options?: { persist?: boolean }) => number;
   dismiss: (id: number) => void;
 };
 
@@ -31,12 +35,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const show = useCallback<ToastApi["show"]>(
-    (message, variant = "success") => {
+    (message, variant = "success", options) => {
       const id = nextId++;
       setToasts((current) => [...current, { id, message, variant }]);
       // A loading toast represents ongoing work with no fixed duration — it
       // stays until the caller dismisses it (or shows a fresh success/error).
-      if (variant !== "loading") window.setTimeout(() => dismiss(id), DISMISS_AFTER_MS);
+      if (variant !== "loading" && !options?.persist) window.setTimeout(() => dismiss(id), DISMISS_AFTER_MS);
       return id;
     },
     [dismiss],
@@ -78,6 +82,7 @@ const badgeStyles: Record<ToastVariant, { Icon: typeof CheckCircle2; className: 
   success: { Icon: CheckCircle2, className: "bg-success-soft text-success" },
   error: { Icon: XCircle, className: "bg-accent-soft text-accent" },
   loading: { Icon: Loader2, className: "bg-surface-muted text-ink-soft" },
+  info: { Icon: MessageSquare, className: "bg-surface-muted text-ink" },
 };
 
 /** Shows a transient confirmation, error, or loading toast from a client component. */

@@ -1,17 +1,21 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useToast } from "@/components/toast";
+import { usePolling } from "@/components/use-polling";
 import { MessageThread } from "./message-thread";
 import { MessageComposer } from "./message-composer";
 import { MeetupProposalModal } from "./meetup-proposal-modal";
 import { ConfirmedMeetupBar } from "./confirmed-meetup-bar";
 import { loadEarlierMessages } from "@/app/messages/actions";
 import { deriveMeetupState } from "@/lib/meetups";
-import type { ConversationLimits, Message } from "@/lib/conversations";
+import type { ConversationLimits, Message, MessagePage } from "@/lib/conversations";
+
+/** How often an open thread checks for new messages. */
+const THREAD_POLL_MS = 4_000;
 
 /**
  * Pairs MessageThread with its reply MessageComposer and owns the message
@@ -78,7 +82,35 @@ export function ConversationThreadPanel({
    */
   bookingStartDate?: string | null;
 }) {
-  const { show } = useToast();
+  const { show, dismiss } = useToast();
+  const pollInFlight = useRef(false);
+  // Set when the tab is hidden; cleared by the first successful poll after it
+  // returns. Only then are newly-found messages ones the viewer missed.
+  const wasAway = useRef(false);
+  const awayToastId = useRef<number | null>(null);
+
+  useEffect(() => {
+    const markAway = () => {
+      if (document.visibilityState === "hidden") wasAway.current = true;
+    };
+    document.addEventListener("visibilitychange", markAway);
+    return () => document.removeEventListener("visibilitychange", markAway);
+  }, []);
+
+  // Also clears it on unmount, so navigating to another thread doesn't leave
+  // a "new messages" toast about this one behind.
+  useEffect(() => {
+    const toastId = awayToastId;
+    return () => {
+      if (toastId.current !== null) dismiss(toastId.current);
+    };
+  }, [dismiss]);
+
+  function dismissAwayToast() {
+    if (awayToastId.current === null) return;
+    dismiss(awayToastId.current);
+    awayToastId.current = null;
+  }
   const [messages, setMessages] = useState(initialMessages);
   const [hasMore, setHasMore] = useState(initialHasMore);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -90,9 +122,48 @@ export function ConversationThreadPanel({
   // top, visually yanks the view down to whatever is newly under it.
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Deduped by id: a sent message can also come back from a poll that was
+  // already in flight when it was appended.
   function appendMessage(message: Message) {
-    setMessages((current) => [...current, message]);
+    setMessages((current) => (current.some((m) => m.id === message.id) ? current : [...current, message]));
   }
+
+  // Pulls in what the other party sent while this thread is open, so the
+  // viewer never has to refresh. See /api/messages/[id]/latest.
+  usePolling(async () => {
+    if (pollInFlight.current) return;
+    pollInFlight.current = true;
+    try {
+      const after = messages.at(-1)?.id ?? "";
+      const response = await fetch(`/api/messages/${encodeURIComponent(conversationId)}/latest?after=${encodeURIComponent(after)}`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const page = (await response.json()) as MessagePage;
+      const known = new Set(messages.map((m) => m.id));
+      const lastAt = messages.at(-1)?.created_at ?? "";
+      const incoming = page.messages.filter((m) => !known.has(m.id) && m.created_at > lastAt);
+      incoming.forEach(appendMessage);
+
+      // The tab was in the background, so polling was paused and these
+      // arrived unseen: leave a toast up until the viewer engages with the
+      // reply box (dismissAwayToast), not on a timer they may have missed.
+      const missed = incoming.filter((m) => m.sender_id !== currentUserId).length;
+      if (wasAway.current && missed > 0) {
+        if (awayToastId.current !== null) dismiss(awayToastId.current);
+        awayToastId.current = show(
+          `${missed} new ${missed === 1 ? "message" : "messages"} from ${otherPartyName ?? "the other party"}`,
+          "info",
+          { persist: true },
+        );
+      }
+      wasAway.current = false;
+    } catch {
+      // Retried on the next tick; a transient failure isn't worth interrupting the viewer.
+    } finally {
+      pollInFlight.current = false;
+    }
+  }, THREAD_POLL_MS);
 
   async function loadEarlier() {
     const oldest = messages[0];
@@ -147,7 +218,7 @@ export function ConversationThreadPanel({
 
       {footerBanner}
 
-      <div className="border-t border-line p-4">
+      <div className="border-t border-line p-4" onFocusCapture={dismissAwayToast}>
         {replaceComposerWith ?? (
           <MessageComposer
             target={{ kind: "reply", conversationId }}
