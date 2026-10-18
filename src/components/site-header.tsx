@@ -6,6 +6,7 @@ import { Container, ButtonLink } from "./ui";
 import { SiteNav } from "./site-nav";
 import { AccountMenu } from "./account-menu";
 import { signOut } from "@/app/auth/actions";
+import { NewMessageToaster } from "./messages/new-message-toaster";
 import { NotificationBell } from "./notifications/notification-bell";
 import { getNotificationCounts } from "@/lib/api/notifications";
 
@@ -59,6 +60,7 @@ export async function SiteHeader() {
               <ButtonLink href="/listings/new" className="hidden sm:flex">
                 + New Listing
               </ButtonLink>
+              <NewMessageToaster />
               <NotificationBell
                 unreadCount={counts?.count ?? null}
                 actionRequiredCount={counts?.action_required ?? null}
