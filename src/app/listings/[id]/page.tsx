@@ -17,6 +17,7 @@ import { FavouriteButton } from "@/components/listings/favourite-button";
 import { getListingReviews } from "@/lib/api/reviews";
 import Link from "next/link";
 import type { Route } from "next";
+import { PersonAvatar } from "@/components/messages/person-avatar";
 
 function fallbackAttributeLabel(key: string) {
   return key.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -98,7 +99,10 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           </div>
 
           <p className="body-copy mt-6 whitespace-pre-line">{listing.description}</p>
-          <p className="mt-5 text-sm text-ink-soft">Listed by <Link href={`/members/${listing.owner_id}` as Route} className="font-medium text-ink hover:underline">View owner profile</Link></p>
+          <Link href={`/members/${listing.owner_id}` as Route} className="mt-5 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
+            <PersonAvatar name={listing.owner_display_name ?? "Member"} size="sm" />
+            <span>Listed by <span className="font-medium underline-offset-2 hover:underline">{listing.owner_display_name ?? "Member"}</span></span>
+          </Link>
 
           <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-6 text-sm">
             <div>

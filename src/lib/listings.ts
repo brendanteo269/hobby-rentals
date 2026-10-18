@@ -137,6 +137,8 @@ export type PopularListingsResponse = {
 export type Listing = {
   id: string;
   owner_id: string;
+  /** Detail responses include only this public owner identity field. */
+  owner_display_name?: string | null;
   name: string;
   description: string;
   category: ListingCategory;
