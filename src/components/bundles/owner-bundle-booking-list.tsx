@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button, ButtonLink } from "@/components/ui";
 import { changeBundleBookingStatus } from "@/app/bookings/actions";
 import { requesterName } from "@/components/bookings/owner-booking-list";
@@ -30,14 +31,13 @@ const NEXT_ACTION: Partial<Record<BookingStatus, { status: BookingStatus; label:
  * with gear that does not do the job they asked for.
  */
 export function OwnerBundleBookingList({ bookings }: { bookings: BundleBooking[] }) {
-  // Only the rows this list has itself changed are held locally; the rest
-  // come straight from props. Seeding state from `bookings` would freeze the
-  // list at mount, hiding every request that arrived afterwards.
-  const [changed, setChanged] = useState<Record<string, BundleBooking>>({});
+  // Rows always come from props, refreshed after each change, as in
+  // OwnerBookingList: the action's response lacks what the lists add.
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const items = bookings.map((booking) => changed[booking.id] ?? booking);
+  const items = bookings;
 
   function update(bundleBookingId: string, nextStatus: BookingStatus) {
     startTransition(async () => {
@@ -47,7 +47,7 @@ export function OwnerBundleBookingList({ bookings }: { bookings: BundleBooking[]
         return;
       }
       setError(null);
-      setChanged((current) => ({ ...current, [result.booking.id]: result.booking }));
+      router.refresh();
     });
   }
 

@@ -1,11 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button, ButtonLink } from "@/components/ui";
 import { changeBookingStatus, type BookingActionResult } from "@/app/bookings/actions";
 import { MessageButton } from "@/components/messages/message-button";
 import { ExtensionRequestDecision } from "@/components/bookings/extension-request-decision";
+import { OverdueNotice } from "@/components/bookings/overdue-notice";
 import { ReportDamageButton } from "@/components/bookings/report-damage-button";
+import { ConfirmReturnButton } from "@/components/bookings/confirm-return-button";
 import {
   BOOKING_STATUS_LABELS,
   MESSAGEABLE_BOOKING_STATUSES,
@@ -17,14 +20,15 @@ import {
 import { cancellationOutcomeLine, HANDED_OVER_NOTE } from "@/lib/cancellations";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { canReportDamage, settlementLine } from "@/lib/settlement";
+import { canConfirmReturn, returnStatusLine } from "@/lib/returns";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
 import { reviewPath, type ReviewEligibility } from "@/lib/reviews";
 
 // A request is answered from its review page, where the owner sees the renter
-// and the earnings and has to give a reason to decline.
+// and the earnings and has to give a reason to decline. An active rental is
+// returned by both parties confirming (S3-04), not by a status change.
 const NEXT_ACTION: Partial<Record<BookingStatus, { status: BookingStatus; label: string }>> = {
   CONFIRMED: { status: "ACTIVE", label: "Start rental" },
-  ACTIVE: { status: "COMPLETED", label: "Mark returned" },
 };
 
 /** Who asked, for an owner reading a list of requests on one listing. */
@@ -33,16 +37,16 @@ export function requesterName(booking: Pick<Booking, "renter_name">): string {
 }
 
 export function OwnerBookingList({ bookings, reviewEligibility = [] }: { bookings: Booking[]; reviewEligibility?: ReviewEligibility[] }) {
-  // Only the rows this list has itself changed are held locally; the rest
-  // come straight from props on every render. Seeding state from `bookings`
-  // instead would freeze the list at whatever it held when the component
-  // first mounted, so a request that arrived afterwards - the next renter's,
-  // once a booking is cancelled - would never appear.
-  const [changed, setChanged] = useState<Record<string, Booking>>({});
+  // Rows always come from props. A status change refreshes the page rather
+  // than patching the row from the action's response: that response is the
+  // bare booking, without what the list adds to it (the renter's name, the
+  // settlement state that offers Report damage once an item is returned), so
+  // a patched row lost those until the page was reloaded.
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const items = bookings.map((booking) => changed[booking.id] ?? booking);
+  const items = bookings;
 
   function update(bookingId: string, nextStatus: BookingStatus) {
     startTransition(async () => {
@@ -52,7 +56,7 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
         return;
       }
       setError(null);
-      setChanged((current) => ({ ...current, [result.booking.id]: result.booking }));
+      router.refresh();
     });
   }
 
@@ -81,6 +85,9 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
                   {HANDED_OVER_NOTE} <a href={SUPPORT_MAILTO} className="underline">{SUPPORT_EMAIL}</a>
                 </span>
               )}
+              {booking.status === "ACTIVE" && booking.return_state && returnStatusLine(booking.return_state, "owner") && (
+                <span className="block text-ink-soft">{returnStatusLine(booking.return_state, "owner")}</span>
+              )}
               {booking.cancellation_outcome && (
                 <span className="block text-ink-soft">{cancellationOutcomeLine(booking.cancellation_outcome, "owner")}</span>
               )}
@@ -90,6 +97,7 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
             </span>
             <span className="flex gap-2">
               {next && <Button className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, next.status)}>{next.label}</Button>}
+              {canConfirmReturn(booking, "owner") && <ConfirmReturnButton bookingId={booking.id} />}
               {booking.status === "PENDING" && <ButtonLink href={requestReviewPath("BOOKING", booking.id)} className="px-3 py-1.5 text-xs">Review request</ButtonLink>}
               {booking.status === "CONFIRMED" && <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "CANCELLED")}>Cancel booking</Button>}
               {canReportDamage(booking.settlement_state) && booking.settlement_state?.claim_window_ends_at && (
@@ -100,6 +108,9 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
                 <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
               )}
             </span>
+            {/* S3-18: the late fee this rental has run up, on its own line so
+                it is not lost among the status text above. */}
+            <span className="w-full"><OverdueNotice booking={booking} side="owner" /></span>
             {/* S3-17: on its own line below the row's buttons - approving it
                 changes the booking's dates and charges the renter, which is a
                 bigger decision than the status buttons beside it. */}

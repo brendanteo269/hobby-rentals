@@ -4,6 +4,7 @@ import { ListingGallery } from "@/components/listings/listing-gallery";
 import { RateLine } from "@/components/browse/listing-card";
 import { PassportTimeline } from "@/components/passport/passport-timeline";
 import { getBookingAvailability, getListing, getListingCategoryAttributes, getPassport } from "@/lib/api/listings";
+import { getMySuspension } from "@/lib/api/overdue";
 import { getCategoryDemand } from "@/lib/api/analytics";
 import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney } from "@/lib/format";
@@ -51,6 +52,12 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
         .then((entries) => entries.filter((entry) => entry.listing_id === listing.id))
         .catch(() => [])
     : [];
+
+  // S3-18: overdue return fees pause new bookings, so the form says so before
+  // the renter picks dates. Supplementary like the waitlist above - a hiccup
+  // here must not cost them the form, and the database refuses the booking
+  // regardless of what this managed to show.
+  const suspension = canBook ? await getMySuspension().catch(() => undefined) : undefined;
 
   const attributeDefinitions = await getListingCategoryAttributes(listing.category).catch(() => []);
   const definitionsByKey = new Map(attributeDefinitions.map((definition) => [definition.attribute_key, definition]));
@@ -155,6 +162,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               unavailableDates={bookingAvailability?.unavailable_dates ?? []}
               minRentalDays={listing.min_rental_days}
               maxRentalDays={listing.max_rental_days}
+              overdueDebtCents={suspension?.debt_cents ?? 0}
               secondaryAction={
                 <MessageButton target={{ kind: "listing", listingId: listing.id }} label="Message owner" />
               }

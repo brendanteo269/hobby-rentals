@@ -186,8 +186,11 @@ export const ALLOWED_PHOTO_CONTENT_TYPES = ["image/jpeg", "image/png", "image/we
 export const MAX_LISTING_PHOTOS = 8;
 
 /** What POST /listings/photos/presign returns for one photo. */
-/** "passport" photos are condition evidence, stored apart from listing photos. */
-export type PhotoKind = "listing" | "passport";
+/**
+ * "passport" photos are condition evidence, stored apart from listing photos;
+ * "return" photos are a renter's return evidence, private in the same way.
+ */
+export type PhotoKind = "listing" | "passport" | "return";
 
 /** S2-04 Scenario 2: the four angles a baseline covers, in capture order. */
 export const BASELINE_ANGLES = [
@@ -313,6 +316,8 @@ export const PASSPORT_ENTRY_LABELS: Record<string, string> = {
   STOLEN_REPORT: "Reported stolen",
   // S3-10: HobbyRentals deciding damage the owner reported after a rental.
   DAMAGE_RESOLUTION: "Damage review after a rental",
+  // S3-04: both parties confirmed a rental came back; the photos are the renter's.
+  RETURN: "Returned after a rental",
 };
 
 /** An entry's heading. An item without a serial records its marks photo under the same entry type. */
@@ -329,6 +334,8 @@ export const MAX_CONDITION_UPDATE_PHOTOS = 4;
 /** Label for a photo slot name; falls back to the raw name for types added later. */
 export const PASSPORT_PHOTO_LABELS: Record<string, string> = {
   ...Object.fromEntries(BASELINE_ANGLES.map(({ key, label }) => [key, label])),
+  // S3-04: a RETURN entry's photos are the renter's four return angles.
+  top: "Top",
   serial: "Serial number",
   marks: "Distinguishing marks",
   receipt: "Receipt",

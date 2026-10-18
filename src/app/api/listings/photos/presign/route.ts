@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ListingApiError, presignListingPhoto } from "@/lib/api/listings";
+import type { PhotoKind } from "@/lib/listings";
 
 /**
  * Browser-facing proxy for FastAPI's POST /listings/photos/presign.
@@ -17,10 +18,8 @@ export async function POST(request: Request) {
       ? String((body as { content_type: unknown }).content_type)
       : "";
 
-  const kind =
-    body !== null && typeof body === "object" && "kind" in body && (body as { kind: unknown }).kind === "passport"
-      ? "passport"
-      : "listing";
+  const requestedKind = body !== null && typeof body === "object" && "kind" in body ? (body as { kind: unknown }).kind : undefined;
+  const kind: PhotoKind = requestedKind === "passport" || requestedKind === "return" ? requestedKind : "listing";
 
   if (!contentType) {
     return NextResponse.json({ error: "content_type is required." }, { status: 400 });

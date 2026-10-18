@@ -25,6 +25,8 @@ export type NotificationType =
   | "BOOKING_HANDOVER_DUE_OWNER"
   | "BOOKING_RETURN_DUE_OWNER"
   | "BOOKING_RETURN_OVERDUE_OWNER"
+  | "BOOKING_RETURN_CONFIRM_OWNER"
+  | "BOOKING_RETURN_CONFIRM_RENTER"
   | "BOOKING_PAYOUT_RELEASED_OWNER"
   // S3-10: a returned rental settled (to the renter), and damage the owner reported.
   | "BOOKING_DEPOSIT_RETURNED"
@@ -122,6 +124,8 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   BOOKING_HANDOVER_DUE_OWNER: "Handover due",
   BOOKING_RETURN_DUE_OWNER: "Return due",
   BOOKING_RETURN_OVERDUE_OWNER: "Return overdue",
+  BOOKING_RETURN_CONFIRM_OWNER: "Return to confirm",
+  BOOKING_RETURN_CONFIRM_RENTER: "Return to confirm",
   BOOKING_PAYOUT_RELEASED_OWNER: "Payout released",
   BOOKING_DEPOSIT_RETURNED: "Rental settled",
   BOOKING_DAMAGE_REPORTED: "Damage reported",

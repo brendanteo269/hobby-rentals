@@ -5,6 +5,7 @@ import { getOwnProfile } from "@/lib/profile";
 import { getProfileAvailability } from "@/lib/api/profile-availability";
 import { getMyListings } from "@/lib/api/listings";
 import { getMyBookings } from "@/lib/api/bookings";
+import { getMySuspension } from "@/lib/api/overdue";
 import { getMyBundleBookings } from "@/lib/api/bundles";
 import { getMyWaitlist } from "@/lib/api/waitlist";
 import { getReviewEligibility } from "@/lib/api/reviews";
@@ -66,12 +67,19 @@ export default async function ProfilePage({
   });
   const isVerified = Boolean(user.email_confirmed_at);
   const availability = await getProfileAvailability();
-  const [myListings, myBookings, myBundleBookings, myWaitlist, reviewEligibility] = await Promise.all([
+  const [myListings, myBookings, myBundleBookings, myWaitlist, reviewEligibility, suspension] = await Promise.all([
     getMyListings(),
     getMyBookings(),
     getMyBundleBookings(),
     getMyWaitlist(true),
     getReviewEligibility().catch(() => []),
+    // S3-18: unpaid late fees pause new bookings; the banner is how the
+    // renter learns that and settles up. Failures are swallowed on purpose:
+    // this is a banner beside the bookings, and losing it must never cost
+    // the renter sight of the bookings themselves. Nothing is let through by
+    // hiding it either - the database refuses a suspended renter's booking
+    // whatever this page managed to show.
+    getMySuspension().catch(() => undefined),
   ]);
 
   return (
@@ -102,7 +110,7 @@ export default async function ProfilePage({
       <div className="mt-10">
         <ViewTabs active={active} />
         <div className="mt-8">
-          {active === "renter" && <RenterView enabled={profile.wants_to_rent} bookings={myBookings} bundleBookings={myBundleBookings} waitlist={myWaitlist} reviewEligibility={reviewEligibility} />}
+          {active === "renter" && <RenterView enabled={profile.wants_to_rent} bookings={myBookings} bundleBookings={myBundleBookings} waitlist={myWaitlist} reviewEligibility={reviewEligibility} suspension={suspension} />}
           {active === "owner" && (
             <OwnerView
               enabled={profile.wants_to_own}

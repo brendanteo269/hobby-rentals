@@ -84,6 +84,8 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
             <dt className="text-ink-soft">Security deposit (refundable)</dt><dd className="text-right">{money(pricing.deposit_cents)}</dd>
             <dt className="text-ink-soft">Damage protection</dt>
             <dd className="text-right">{pricing.damage_protection.selected ? formatMoney(pricing.damage_protection.fee_cents) : "Not selected"}</dd>
+            <dt className="text-ink-soft">Platform commission ({pricing.platform_commission_bps / 100}%)</dt>
+            <dd className="text-right">−{money(pricing.platform_commission_cents)}</dd>
             <dt className="border-t border-line pt-2 font-semibold">Your earnings</dt>
             <dd className="border-t border-line pt-2 text-right font-semibold">{money(pricing.owner_net_earnings_cents)}</dd>
           </dl>

@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requirePortalSession } from "@/lib/admin";
 import { recordAdminAction } from "@/lib/audit";
 import { ROUTES } from "@/lib/routes";
-import { formatDateTime, shortId } from "@/lib/format";
+import { formatDateTime, formatMoney, shortId } from "@/lib/format";
 import { ENTRY_LABELS, getAdminPassport, PHOTO_LABELS, SERIAL_STATUS, type PassportEntry } from "@/lib/passports";
 import { Badge, Container, DescriptionList, EmptyState, Panel } from "@/components/ui";
 import { PassportReviewForm } from "@/components/passport-review-form";
@@ -131,6 +131,47 @@ function Entry({ entry }: { entry: PassportEntry }) {
       )}
 
       {typeof data.note === "string" && <p className="mt-2 text-sm whitespace-pre-line">{data.note}</p>}
+
+      {/* S3-10: what was claimed, what was found, and what the deposit paid. */}
+      {entry.entry_type === "DAMAGE_RESOLUTION" && (
+        <div className="mt-2 space-y-1 text-sm">
+          <p className="flex flex-wrap items-center gap-2">
+            <Badge tone={data.liable_party === "RENTER" ? "warning" : "positive"}>
+              {data.liable_party === "RENTER" ? "Renter liable" : "Not the renter"}
+            </Badge>
+            {typeof data.damage_cents === "number" && data.liable_party === "RENTER" && (
+              <span>Damage valued at {formatMoney(data.damage_cents)}</span>
+            )}
+          </p>
+          <p className="text-xs text-ink-soft">
+            {typeof data.claimed_cents === "number" && `Owner claimed ${formatMoney(data.claimed_cents)}`}
+            {typeof data.deducted_cents === "number" && ` · ${formatMoney(data.deducted_cents)} deducted from the deposit`}
+            {typeof data.protection_payout_cents === "number" && data.protection_payout_cents > 0 &&
+              ` · ${formatMoney(data.protection_payout_cents)} paid by damage protection`}
+          </p>
+          {typeof data.description === "string" && (
+            <p className="whitespace-pre-line text-ink-soft">Reported: {data.description}</p>
+          )}
+          {typeof data.resolution_note === "string" && (
+            <p className="whitespace-pre-line">Decision: {data.resolution_note}</p>
+          )}
+          {typeof data.dispute_id === "string" && (
+            <p className="text-xs">
+              <Link href={ROUTES.dispute(data.dispute_id)} className="underline underline-offset-4">
+                Dispute {shortId(data.dispute_id)}
+              </Link>
+              {typeof data.booking_id === "string" && (
+                <>
+                  {" "}·{" "}
+                  <Link href={ROUTES.booking(data.booking_id)} className="underline underline-offset-4">
+                    booking {shortId(data.booking_id)}
+                  </Link>
+                </>
+              )}
+            </p>
+          )}
+        </div>
+      )}
 
       {typeof data.duplicate_of === "string" && (
         <p className="mt-2 text-xs text-ink-soft">

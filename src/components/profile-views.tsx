@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Route } from "next";
 import { Badge, Button, ButtonLink, EmptyState, ImageSlot } from "./ui";
 import { enableRenting } from "@/app/profile/actions";
 import { EnableOwningForm } from "@/components/enable-owning-form";
@@ -19,9 +20,14 @@ import {
   PAYMENT_STATUS_LABELS,
 } from "@/lib/bookings";
 import { CancelBookingButton } from "@/components/bookings/cancel-booking-button";
+import { OverdueNotice } from "@/components/bookings/overdue-notice";
+import { SuspensionBanner } from "@/components/bookings/suspension-banner";
+import type { SuspensionStatus } from "@/lib/overdue";
 import { cancellationOutcomeLine } from "@/lib/cancellations";
 import { settlementLine } from "@/lib/settlement";
 import { ExtendBookingButton } from "@/components/bookings/extend-booking-button";
+import { canConfirmReturn, canStartReturnInspection, returnStatusLine } from "@/lib/returns";
+import { ConfirmReturnButton } from "@/components/bookings/confirm-return-button";
 import { canRequestExtension } from "@/lib/extensions";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -160,6 +166,7 @@ export function RenterView({
   bundleBookings = [],
   waitlist = [],
   reviewEligibility = [],
+  suspension,
 }: {
   enabled: boolean;
   bookings?: Booking[];
@@ -168,11 +175,14 @@ export function RenterView({
   /** S2-15: dates the renter is queueing for, which are not bookings yet. */
   waitlist?: WaitlistEntry[];
   reviewEligibility?: ReviewEligibility[];
+  /** S3-18: unpaid late fees, which pause new bookings until settled. */
+  suspension?: SuspensionStatus;
 }) {
   if (!enabled) return <NotEnabled side="renter" />;
   if (bookings.length > 0 || bundleBookings.length > 0 || waitlist.length > 0) {
     return (
       <div>
+        {suspension && <SuspensionBanner status={suspension} />}
         <div className="flex items-baseline justify-between gap-4">
           <div>
             <p className="eyebrow">Your rentals</p>
@@ -246,6 +256,10 @@ export function RenterView({
                     {booking.confirmed_meetup_time && `, ${formatDateTime(booking.confirmed_meetup_time)}`}
                   </p>
                 )}
+                {booking.status === "ACTIVE" && booking.return_state && returnStatusLine(booking.return_state, "renter") && (
+                  <p className="mt-1 text-sm text-ink-soft">{returnStatusLine(booking.return_state, "renter")}</p>
+                )}
+                <OverdueNotice booking={booking} side="renter" />
                 {booking.pending_extension && (
                   <p className="mt-1 text-sm text-ink-soft">
                     Extension requested: {booking.pending_extension.additional_days} more{" "}
@@ -259,6 +273,14 @@ export function RenterView({
                 <CancelBookingButton kind="booking" id={booking.id} status={booking.status} />
                 {canRequestExtension(booking) && (
                   <ExtendBookingButton bookingId={booking.id} endDate={booking.end_date} />
+                )}
+                {canStartReturnInspection(booking) && (
+                  <ButtonLink href={`/bookings/${booking.id}/return` as Route} variant="outline" className="px-3 py-1.5 text-xs">
+                    {booking.return_state?.inspection_status === "COMPLETED" ? "View return photos" : "Return photos"}
+                  </ButtonLink>
+                )}
+                {canConfirmReturn(booking, "renter") && booking.return_state?.inspection_status === "COMPLETED" && (
+                  <ConfirmReturnButton bookingId={booking.id} />
                 )}
                 <div className="flex flex-wrap justify-end gap-2">
                   {reviewEligibility.find((item) => item.booking_id === booking.id) && <ButtonLink href={reviewPath(reviewEligibility.find((item) => item.booking_id === booking.id)!)} variant="accent" className="px-3 py-1.5 text-xs">Rate owner</ButtonLink>}
