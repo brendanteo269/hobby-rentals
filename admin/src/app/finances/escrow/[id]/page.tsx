@@ -16,6 +16,7 @@ import {
 import { bookingStatusLabel, bookingStatusTone } from "@/lib/bookings";
 import { Badge, Container, DescriptionList, EmptyState, Panel } from "@/components/ui";
 import { AuditTrail } from "@/components/audit-trail";
+import { EscrowOverrideForm } from "@/components/escrow-override-form";
 
 export const metadata = { title: "Escrow record — HobbyRentals Admin" };
 
@@ -26,12 +27,12 @@ const COMPONENT_STATE_LABELS: Record<EscrowComponentSummary["state"], string> = 
 };
 
 /**
- * S3-15: read-only escrow record - the rental fee and security deposit as
+ * S3-15 / S3-16: escrow record - the rental fee and security deposit as
  * separate lifecycles, why settlement is blocked (if it is), and every wallet
- * transaction behind them. Nothing on this page writes; manual escrow
- * override is its own story and will add its actions as a panel beside the
- * breakdown, which is why this is not folded into the (deliberately
- * action-free) booking page.
+ * transaction behind them. The only write is the manual override panel
+ * (release held funds to the renter), offered while something is still held
+ * and no dispute is open; that is why this is not folded into the
+ * deliberately action-free booking page.
  */
 export default async function EscrowRecordPage({
   params,
@@ -58,6 +59,7 @@ export default async function EscrowRecordPage({
   const auditLastPage = Math.max(1, Math.ceil(auditTotal / AUDIT_PAGE_SIZE));
 
   const components = summariseEscrowComponents(record.ledger);
+  const heldParts = components.filter((component) => component.state === "HELD");
   const partyLabel = (userId: string) =>
     userId === record.renter_id ? "Renter" : userId === record.owner_id ? "Owner" : "Other";
 
@@ -142,6 +144,12 @@ export default async function EscrowRecordPage({
               </ul>
             )}
           </Panel>
+
+          {/* An open dispute is resolved through arbitration, never overridden; the
+              blocked-settlement panel above points there instead. */}
+          {!record.settlement_blocked && heldParts.length > 0 && (
+            <EscrowOverrideForm escrowId={record.id} heldParts={heldParts} />
+          )}
 
           {record.settlement_id && (
             <Panel title="Settlement" description={`Settled ${formatDateTime(record.settled_at)}.`}>

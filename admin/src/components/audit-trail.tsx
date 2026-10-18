@@ -39,6 +39,14 @@ export function AuditTrail({
                 <p className="mt-0.5 text-xs text-ink-soft">
                   {entry.actorLabel} · {formatDateTime(entry.created_at)}
                 </p>
+                {typeof entry.detail.reason === "string" && (
+                  <p className="mt-1 text-xs text-ink-soft">Reason: {entry.detail.reason}</p>
+                )}
+                {typeof entry.detail.previous_status === "string" && typeof entry.detail.updated_status === "string" && (
+                  <p className="mt-0.5 text-xs text-ink-soft">
+                    {entry.detail.previous_status} → {entry.detail.updated_status}
+                  </p>
+                )}
                 {entry.detail.email_sent === false && (
                   <p className="mt-1 text-xs text-bad">The email failed to send.</p>
                 )}

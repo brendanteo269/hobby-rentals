@@ -30,10 +30,18 @@ export const ESCROW_TYPE_LABELS: Record<string, string> = {
 export const ESCROW_COMPONENTS = ["RENTAL", "DEPOSIT", "PROTECTION"] as const;
 export type EscrowComponent = (typeof ESCROW_COMPONENTS)[number];
 
-export const ESCROW_COMPONENT_LABELS: Record<EscrowComponent, string> = {
+/**
+ * A bundle booking (and a booking from before holds were split) holds one
+ * lump sum with no escrow_component, so that hold is shown as a single
+ * "WHOLE" part rather than as fee and deposit.
+ */
+export type EscrowPart = EscrowComponent | "WHOLE";
+
+export const ESCROW_COMPONENT_LABELS: Record<EscrowPart, string> = {
   RENTAL: "Rental fee",
   DEPOSIT: "Security deposit",
   PROTECTION: "Damage protection",
+  WHOLE: "Whole hold",
 };
 
 /** Overall hold state computed by the admin_escrow_records view. */
@@ -229,7 +237,7 @@ export async function getEscrowRecordById(id: string): Promise<AdminEscrowDetail
 
 /** How one escrow component (rental fee, deposit, protection) stands, folded from its ledger rows. */
 export type EscrowComponentSummary = {
-  component: EscrowComponent;
+  component: EscrowPart;
   amount_cents: number;
   state: "HELD" | "RELEASED" | "SETTLED";
   held_at: string;
@@ -243,13 +251,22 @@ export type EscrowComponentSummary = {
  * Splits the ledger into one lifecycle per escrow component so the fee and the
  * deposit are read apart. Components that never had a hold are omitted; ledger
  * rows without a component (e.g. an owner payout) are left to the full ledger.
+ * A single component-less hold (a bundle's, or a pre-split booking's) becomes one WHOLE part.
  *
  * The hold row's own status carries the lifecycle: COMPLETED is live,
  * REFUNDED was released, SETTLED was consumed by settlement.
  */
 export function summariseEscrowComponents(ledger: EscrowLedgerRow[]): EscrowComponentSummary[] {
-  return ESCROW_COMPONENTS.flatMap((component) => {
-    const entries = ledger.filter((row) => row.escrow_component === component);
+  const parts: [EscrowPart, (row: EscrowLedgerRow) => boolean][] = [
+    ...ESCROW_COMPONENTS.map((component): [EscrowPart, (row: EscrowLedgerRow) => boolean] => [
+      component,
+      (row) => row.escrow_component === component,
+    ]),
+    ["WHOLE", (row) => row.escrow_component === null],
+  ];
+
+  return parts.flatMap(([component, belongs]) => {
+    const entries = ledger.filter(belongs);
     const hold = entries.find((row) => row.type === "ESCROW_HOLD");
     if (!hold) return [];
 
