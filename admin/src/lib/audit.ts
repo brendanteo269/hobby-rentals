@@ -19,6 +19,7 @@ export const AUDIT_ACTIONS = {
   listing_reactivated: "Listing reactivated",
   booking_viewed: "Booking viewed",
   escrow_viewed: "Escrow record viewed",
+  escrow_overridden: "Escrow manually released",
   dispute_resolved: "Damage dispute resolved",
 } as const;
 
