@@ -9,6 +9,8 @@ import { BUNDLE_STATUS_LABELS, type BundleAvailability } from "@/lib/bundles";
 import { CATEGORY_LABELS, LISTING_STATUS_LABELS, rentalDurationLimits } from "@/lib/listings";
 import { createClient } from "@/lib/supabase/server";
 import { BundleFavouriteButton } from "@/components/bundles/bundle-favourite-button";
+import { getBundleReviews } from "@/lib/api/reviews";
+import { RentalReviewSection } from "@/components/reviews/rental-review-section";
 
 export const metadata = { title: "Bundle — HobbyRentals" };
 
@@ -37,6 +39,7 @@ export default async function BundlePage({ params }: { params: Promise<{ id: str
     : null;
 
   const durationLimits = rentalDurationLimits(bundle);
+  const reviews = await getBundleReviews(bundle.id).catch(() => ({ average: null, count: 0, reviews: [] }));
 
   return (
     <Container className="py-16">
@@ -133,6 +136,7 @@ export default async function BundlePage({ params }: { params: Promise<{ id: str
             maxRentalDays={bundle.max_rental_days}
           />
         )}
+        <RentalReviewSection title="Reviews for this bundle" reviews={reviews} emptyBody="This bundle has not received any reviews yet." />
       </div>
     </Container>
   );

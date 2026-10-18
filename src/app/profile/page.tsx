@@ -8,9 +8,10 @@ import { getMyBookings } from "@/lib/api/bookings";
 import { getMySuspension } from "@/lib/api/overdue";
 import { getMyBundleBookings } from "@/lib/api/bundles";
 import { getMyWaitlist } from "@/lib/api/waitlist";
+import { getReviewEligibility } from "@/lib/api/reviews";
 import { Badge, Container } from "@/components/ui";
 import { isLocationArea, LOCATION_LABELS } from "@/lib/listings";
-import { ViewTabs, RenterView, OwnerView } from "@/components/profile-views";
+import { ViewTabs, RenterView, OwnerView, RatingsView } from "@/components/profile-views";
 import {
   defaultProfileView,
   isProfileView,
@@ -19,6 +20,7 @@ import {
 import type { Roles } from "@/lib/contact-details";
 import { AccountSettings } from "@/components/account-settings";
 import { CreditWallet } from "@/components/credit-wallet";
+import { getPublicMember } from "@/lib/api/reviews";
 
 export const metadata = { title: "Your profile — HobbyRentals" };
 
@@ -57,6 +59,7 @@ export default async function ProfilePage({
     wantsToOwn: profile.wants_to_own,
   };
   const active: ProfileView = resolveView(view, roles);
+  const ratings = active === "ratings" ? await getPublicMember(user.id).catch(() => null) : null;
 
   const memberSince = new Date(profile.created_at).toLocaleDateString("en-SG", {
     month: "long",
@@ -64,11 +67,12 @@ export default async function ProfilePage({
   });
   const isVerified = Boolean(user.email_confirmed_at);
   const availability = await getProfileAvailability();
-  const [myListings, myBookings, myBundleBookings, myWaitlist, suspension] = await Promise.all([
+  const [myListings, myBookings, myBundleBookings, myWaitlist, reviewEligibility, suspension] = await Promise.all([
     getMyListings(),
     getMyBookings(),
     getMyBundleBookings(),
     getMyWaitlist(true),
+    getReviewEligibility().catch(() => []),
     // S3-18: unpaid late fees pause new bookings; the banner is how the
     // renter learns that and settles up. Failures are swallowed on purpose:
     // this is a banner beside the bookings, and losing it must never cost
@@ -106,7 +110,7 @@ export default async function ProfilePage({
       <div className="mt-10">
         <ViewTabs active={active} />
         <div className="mt-8">
-          {active === "renter" && <RenterView enabled={profile.wants_to_rent} bookings={myBookings} bundleBookings={myBundleBookings} waitlist={myWaitlist} suspension={suspension} />}
+          {active === "renter" && <RenterView enabled={profile.wants_to_rent} bookings={myBookings} bundleBookings={myBundleBookings} waitlist={myWaitlist} reviewEligibility={reviewEligibility} suspension={suspension} />}
           {active === "owner" && (
             <OwnerView
               enabled={profile.wants_to_own}
@@ -114,6 +118,7 @@ export default async function ProfilePage({
               listings={myListings}
             />
           )}
+          {active === "ratings" && <RatingsView profile={ratings} />}
           {active === "wallet" && <CreditWallet />}
           {active === "account" && (
             <AccountSettings

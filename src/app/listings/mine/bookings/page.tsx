@@ -8,6 +8,7 @@ import { getOwnerBookingRequests, getOwnerBookings } from "@/lib/api/bookings";
 import { getMyListings } from "@/lib/api/listings";
 import { requestReviewPath } from "@/lib/bookings";
 import { formatDate } from "@/lib/format";
+import { getReviewEligibility } from "@/lib/api/reviews";
 
 export const metadata = { title: "Bookings — HobbyRentals" };
 
@@ -17,10 +18,11 @@ export const metadata = { title: "Bookings — HobbyRentals" };
  */
 export default async function OwnerBookingsPage() {
   await requireOwner();
-  const [listings, bookings, requests] = await Promise.all([
+  const [listings, bookings, requests, reviewEligibility] = await Promise.all([
     getMyListings(),
     getOwnerBookings(),
     getOwnerBookingRequests(),
+    getReviewEligibility(),
   ]);
   const booked = listings.filter((listing) => bookings.some((booking) => booking.listing_id === listing.id));
   // Bundle requests appear only in the requests list, never under a listing,
@@ -72,7 +74,7 @@ export default async function OwnerBookingsPage() {
               <h2 className="text-base font-semibold uppercase tracking-wide">
                 <Link href={`/listings/${listing.id}`} className="hover:underline">{listing.name}</Link>
               </h2>
-              <OwnerBookingList bookings={bookings.filter((booking) => booking.listing_id === listing.id)} />
+              <OwnerBookingList bookings={bookings.filter((booking) => booking.listing_id === listing.id)} reviewEligibility={reviewEligibility} />
             </li>
           ))}
         </ul>

@@ -22,6 +22,7 @@ import { formatDate, formatDateTime } from "@/lib/format";
 import { canReportDamage, settlementLine } from "@/lib/settlement";
 import { canConfirmReturn, returnStatusLine } from "@/lib/returns";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
+import { reviewPath, type ReviewEligibility } from "@/lib/reviews";
 
 // A request is answered from its review page, where the owner sees the renter
 // and the earnings and has to give a reason to decline. An active rental is
@@ -35,7 +36,7 @@ export function requesterName(booking: Pick<Booking, "renter_name">): string {
   return booking.renter_name || "A renter";
 }
 
-export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
+export function OwnerBookingList({ bookings, reviewEligibility = [] }: { bookings: Booking[]; reviewEligibility?: ReviewEligibility[] }) {
   // Rows always come from props. A status change refreshes the page rather
   // than patching the row from the action's response: that response is the
   // bare booking, without what the list adds to it (the renter's name, the
@@ -72,7 +73,7 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
           // (owner_booking_list_path in the backend's catalog).
           return <li key={booking.id} id={`booking-${booking.id}`} className="flex scroll-mt-24 flex-wrap items-center justify-between gap-2 bg-surface-muted px-3 py-2 text-sm data-[hash-target]:ring-1 data-[hash-target]:ring-ink">
             <span>
-              <span className="font-medium">{requesterName(booking)}</span> <span className="text-ink-soft">· {formatDate(booking.start_date)} – {formatDate(booking.end_date)} · {BOOKING_STATUS_LABELS[booking.status]}{booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}</span>
+              <span className="font-medium">{requesterName(booking)}</span> <span className="text-ink-soft">· {formatDate(booking.start_date)} – {formatDate(booking.end_date)} · {BOOKING_STATUS_LABELS[booking.status]}{booking.settlement_state?.settlement ? " · Settled" : booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}</span>
               {booking.confirmed_meetup_location && (
                 <span className="block text-ink-soft">
                   Meetup: {booking.confirmed_meetup_location}
@@ -102,6 +103,7 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
               {canReportDamage(booking.settlement_state) && booking.settlement_state?.claim_window_ends_at && (
                 <ReportDamageButton kind="booking" id={booking.id} windowEndsAt={booking.settlement_state.claim_window_ends_at} />
               )}
+              {reviewEligibility.find((item) => item.booking_id === booking.id) && <ButtonLink href={reviewPath(reviewEligibility.find((item) => item.booking_id === booking.id)!)} variant="accent" className="px-3 py-1.5 text-xs">Rate renter</ButtonLink>}
               {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
                 <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
               )}

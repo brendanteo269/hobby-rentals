@@ -68,6 +68,8 @@ export const PROTECTED_PREFIXES = [
   "/bundles",
   "/notifications",
   "/messages",
+  "/members",
+  "/reviews",
   "/bookings",
 ];
 

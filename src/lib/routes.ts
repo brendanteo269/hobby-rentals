@@ -54,9 +54,9 @@ export function authErrorPath(code: AuthErrorCode): `/auth-error?reason=${AuthEr
  * "renter" and "owner" are the two portal dashboards S1-02 sends a member to
  * once onboarding is done.
  */
-export type ProfileView = "renter" | "owner" | "wallet" | "account";
+export type ProfileView = "renter" | "owner" | "ratings" | "wallet" | "account";
 
-const PROFILE_VIEWS: readonly ProfileView[] = ["renter", "owner", "wallet", "account"];
+const PROFILE_VIEWS: readonly ProfileView[] = ["renter", "owner", "ratings", "wallet", "account"];
 
 export function isProfileView(value: string | undefined): value is ProfileView {
   return PROFILE_VIEWS.includes(value as ProfileView);
