@@ -101,6 +101,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
           listingName={conversation.listing_name}
           priceLocation={conversationPriceLocationLine(conversation)}
           booking={headerBooking}
+          otherPartyId={conversation.other_party_id}
           otherPartyName={conversation.other_party_name ?? "Member"}
           otherPartyRole={conversation.other_party_role}
         />

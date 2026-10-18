@@ -10,7 +10,7 @@ import { getMyWaitlist } from "@/lib/api/waitlist";
 import { getReviewEligibility } from "@/lib/api/reviews";
 import { Badge, Container } from "@/components/ui";
 import { isLocationArea, LOCATION_LABELS } from "@/lib/listings";
-import { ViewTabs, RenterView, OwnerView } from "@/components/profile-views";
+import { ViewTabs, RenterView, OwnerView, RatingsView } from "@/components/profile-views";
 import {
   defaultProfileView,
   isProfileView,
@@ -19,6 +19,7 @@ import {
 import type { Roles } from "@/lib/contact-details";
 import { AccountSettings } from "@/components/account-settings";
 import { CreditWallet } from "@/components/credit-wallet";
+import { getPublicMember } from "@/lib/api/reviews";
 
 export const metadata = { title: "Your profile — HobbyRentals" };
 
@@ -57,6 +58,7 @@ export default async function ProfilePage({
     wantsToOwn: profile.wants_to_own,
   };
   const active: ProfileView = resolveView(view, roles);
+  const ratings = active === "ratings" ? await getPublicMember(user.id).catch(() => null) : null;
 
   const memberSince = new Date(profile.created_at).toLocaleDateString("en-SG", {
     month: "long",
@@ -69,7 +71,7 @@ export default async function ProfilePage({
     getMyBookings(),
     getMyBundleBookings(),
     getMyWaitlist(true),
-    getReviewEligibility(),
+    getReviewEligibility().catch(() => []),
   ]);
 
   return (
@@ -108,6 +110,7 @@ export default async function ProfilePage({
               listings={myListings}
             />
           )}
+          {active === "ratings" && <RatingsView profile={ratings} />}
           {active === "wallet" && <CreditWallet />}
           {active === "account" && (
             <AccountSettings

@@ -25,13 +25,19 @@ import { ExtendBookingButton } from "@/components/bookings/extend-booking-button
 import { canRequestExtension } from "@/lib/extensions";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { reviewPath, type ReviewEligibility } from "@/lib/reviews";
+import {
+  reviewPath,
+  type PublicMemberProfile,
+  type ReviewEligibility,
+} from "@/lib/reviews";
+import { PublishedReviewCard } from "@/components/reviews/published-review-card";
 
 export type { ProfileView } from "@/lib/routes";
 
 const TABS: { view: ProfileView; label: string }[] = [
   { view: "renter", label: "Renting" },
   { view: "owner", label: "Owning" },
+  { view: "ratings", label: "Ratings" },
   { view: "wallet", label: "Wallet" },
   { view: "account", label: "Account" },
 ];
@@ -58,6 +64,60 @@ export function ViewTabs({ active }: { active: ProfileView }) {
         );
       })}
     </nav>
+  );
+}
+
+export function RatingsView({ profile }: { profile: PublicMemberProfile | null }) {
+  if (!profile) {
+    return (
+      <EmptyState
+        title="Ratings could not be loaded"
+        body="Try refreshing this page in a moment."
+      />
+    );
+  }
+
+  const reviews = profile.reviews;
+  return (
+    <div>
+      <div>
+        <p className="eyebrow">Your reputation</p>
+        <h2 className="heading mt-2 text-2xl">Ratings and reviews</h2>
+      </div>
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <RatingSummary
+          label="As an owner"
+          average={profile.owner_summary.average}
+          count={profile.owner_summary.count}
+        />
+        <RatingSummary
+          label="As a renter"
+          average={profile.renter_summary.average}
+          count={profile.renter_summary.count}
+        />
+      </div>
+      {reviews.length === 0 ? (
+        <p className="body-copy mt-8">No reviews yet.</p>
+      ) : (
+        <ul className="mt-8 space-y-3">
+          {reviews.map((review) => <li key={review.id}><PublishedReviewCard review={review} /></li>)}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function RatingSummary({ label, average, count }: { label: string; average: number | null; count: number }) {
+  return (
+    <div className="border border-line bg-white p-4">
+      <p className="text-xs text-ink-soft">{label}</p>
+      <p className="heading mt-1 text-xl">
+        {average === null ? "No ratings yet" : `${average.toFixed(1)} / 5`}
+      </p>
+      <p className="mt-1 text-xs text-ink-soft">
+        {count} {count === 1 ? "review" : "reviews"}
+      </p>
+    </div>
   );
 }
 
@@ -197,13 +257,15 @@ export function RenterView({
               <div className="flex flex-col items-end gap-2">
                 <Badge variant={booking.status === "CONFIRMED" || booking.status === "ACTIVE" ? "dark" : "neutral"}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
                 <CancelBookingButton kind="booking" id={booking.id} status={booking.status} />
-                {reviewEligibility.find((item) => item.booking_id === booking.id) && <ButtonLink href={reviewPath(reviewEligibility.find((item) => item.booking_id === booking.id)!)} variant="accent" className="px-3 py-1.5 text-xs">Rate owner</ButtonLink>}
                 {canRequestExtension(booking) && (
                   <ExtendBookingButton bookingId={booking.id} endDate={booking.end_date} />
                 )}
-                {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
-                  <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
-                )}
+                <div className="flex flex-wrap justify-end gap-2">
+                  {reviewEligibility.find((item) => item.booking_id === booking.id) && <ButtonLink href={reviewPath(reviewEligibility.find((item) => item.booking_id === booking.id)!)} variant="accent" className="px-3 py-1.5 text-xs">Rate owner</ButtonLink>}
+                  {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
+                    <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
+                  )}
+                </div>
               </div>
             </li>
           ))}

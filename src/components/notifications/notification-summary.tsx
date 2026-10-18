@@ -25,7 +25,9 @@ export function NotificationSummary({
           {!notification.read && <span className="sr-only"> (unread)</span>}
         </p>
         <p className="mt-0.5 text-sm text-ink-soft">{notification.body}</p>
-        {!compact && <p className="mt-1 text-sm text-ink">{notification.next_step}</p>}
+        {!compact && notification.next_step && (
+          <p className="mt-1 text-sm text-ink">{notification.next_step}</p>
+        )}
         <p className="mt-1 text-xs text-ink-soft">{notification.when}</p>
       </div>
     </div>
