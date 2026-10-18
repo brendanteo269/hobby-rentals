@@ -65,10 +65,20 @@ export function settlementLine(state: SettlementState, viewer: "renter" | "owner
   const { settlement, dispute } = state;
   if (settlement) {
     if (viewer === "renter") {
+      // Never "S$0.00 came back": say where the deposit went instead.
+      if (settlement.deposit_refund_cents === 0) {
+        return settlement.damage_deduction_cents > 0
+          ? `Settled. Your whole ${formatMoney(settlement.damage_deduction_cents)} deposit was deducted for damage.`
+          : "Settled. No deposit was held for this rental.";
+      }
       const back = `Settled. ${formatMoney(settlement.deposit_refund_cents)} of your deposit came back to your wallet`;
       return settlement.damage_deduction_cents > 0
         ? `${back}; ${formatMoney(settlement.damage_deduction_cents)} was deducted for damage.`
         : `${back}.`;
+    }
+    // A booking from before wallet holds is settled with nothing to move.
+    if (settlement.owner_total_payout_cents === 0 && settlement.rental_subtotal_cents === 0) {
+      return "Settled. Nothing was held for this rental, so there was nothing to pay out.";
     }
     const extras = [
       settlement.damage_deduction_cents + settlement.protection_payout_cents > 0 &&

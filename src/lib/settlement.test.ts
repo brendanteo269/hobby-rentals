@@ -81,6 +81,32 @@ describe("settlementLine", () => {
     );
   });
 
+  it("never tells the renter $0.00 came back", () => {
+    const wholly = { ...settlement, damage_deduction_cents: 2500, deposit_refund_cents: 0 };
+    expect(settlementLine({ ...returned, settlement: wholly }, "renter", NOW)).toBe(
+      `Settled. Your whole ${formatMoney(2500)} deposit was deducted for damage.`,
+    );
+    const noDeposit = { ...settlement, deposit_held_cents: 0, deposit_refund_cents: 0 };
+    expect(settlementLine({ ...returned, settlement: noDeposit }, "renter", NOW)).toBe(
+      "Settled. No deposit was held for this rental.",
+    );
+  });
+
+  it("says a rental with nothing held had nothing to pay out", () => {
+    const empty = {
+      ...settlement,
+      rental_subtotal_cents: 0,
+      commission_cents: 0,
+      owner_rental_payout_cents: 0,
+      deposit_held_cents: 0,
+      deposit_refund_cents: 0,
+      owner_total_payout_cents: 0,
+    };
+    expect(settlementLine({ ...returned, settlement: empty }, "owner", NOW)).toBe(
+      "Settled. Nothing was held for this rental, so there was nothing to pay out.",
+    );
+  });
+
   it("says funds are on hold while a dispute is open", () => {
     expect(settlementLine({ ...returned, dispute }, "renter", NOW)).toContain("deposit stays on hold");
     expect(settlementLine({ ...returned, dispute }, "owner", NOW)).toContain(`claiming ${formatMoney(4000)}`);
