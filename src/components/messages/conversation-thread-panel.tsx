@@ -6,6 +6,8 @@ import { CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { usePolling } from "@/components/use-polling";
+import { useRealtimeSignal } from "@/components/use-realtime-signal";
+import { useSingleFlight } from "@/components/use-single-flight";
 import { MessageThread } from "./message-thread";
 import { MessageComposer } from "./message-composer";
 import { MeetupProposalModal } from "./meetup-proposal-modal";
@@ -14,8 +16,11 @@ import { loadEarlierMessages } from "@/app/messages/actions";
 import { deriveMeetupState } from "@/lib/meetups";
 import type { ConversationLimits, Message, MessagePage } from "@/lib/conversations";
 
-/** How often an open thread checks for new messages. */
-const THREAD_POLL_MS = 4_000;
+/**
+ * Safety-net interval for an open thread. New messages normally arrive via a
+ * Realtime signal; this only covers a missed event or a dead socket.
+ */
+const THREAD_FALLBACK_POLL_MS = 45_000;
 
 /**
  * Pairs MessageThread with its reply MessageComposer and owns the message
@@ -83,11 +88,11 @@ export function ConversationThreadPanel({
   bookingStartDate?: string | null;
 }) {
   const { show, dismiss } = useToast();
-  const pollInFlight = useRef(false);
-  // Set when the tab is hidden; cleared by the first successful poll after it
-  // returns. Only then are newly-found messages ones the viewer missed.
+  // Set when the tab is hidden; cleared by the first successful check made
+  // once it's visible again. Only then are newly-found messages ones the viewer missed.
   const wasAway = useRef(false);
   const awayToastId = useRef<number | null>(null);
+  const missedWhileAway = useRef(0);
 
   useEffect(() => {
     const markAway = () => {
@@ -110,6 +115,7 @@ export function ConversationThreadPanel({
     if (awayToastId.current === null) return;
     dismiss(awayToastId.current);
     awayToastId.current = null;
+    missedWhileAway.current = 0;
   }
   const [messages, setMessages] = useState(initialMessages);
   const [hasMore, setHasMore] = useState(initialHasMore);
@@ -130,9 +136,7 @@ export function ConversationThreadPanel({
 
   // Pulls in what the other party sent while this thread is open, so the
   // viewer never has to refresh. See /api/messages/[id]/latest.
-  usePolling(async () => {
-    if (pollInFlight.current) return;
-    pollInFlight.current = true;
+  const checkForNewMessages = useSingleFlight(async () => {
     try {
       const after = messages.at(-1)?.id ?? "";
       const response = await fetch(`/api/messages/${encodeURIComponent(conversationId)}/latest?after=${encodeURIComponent(after)}`, {
@@ -148,22 +152,35 @@ export function ConversationThreadPanel({
       // The tab was in the background, so polling was paused and these
       // arrived unseen: leave a toast up until the viewer engages with the
       // reply box (dismissAwayToast), not on a timer they may have missed.
-      const missed = incoming.filter((m) => m.sender_id !== currentUserId).length;
-      if (wasAway.current && missed > 0) {
+      // Realtime delivers while the tab is hidden, so several checks can
+      // land before the viewer returns: the count accumulates across them.
+      const arrived = incoming.filter((m) => m.sender_id !== currentUserId).length;
+      if (wasAway.current && arrived > 0) {
+        missedWhileAway.current += arrived;
+        const total = missedWhileAway.current;
         if (awayToastId.current !== null) dismiss(awayToastId.current);
         awayToastId.current = show(
-          `${missed} new ${missed === 1 ? "message" : "messages"} from ${otherPartyName ?? "the other party"}`,
+          `${total} new ${total === 1 ? "message" : "messages"} from ${otherPartyName ?? "the other party"}`,
           "info",
           { persist: true },
         );
       }
-      wasAway.current = false;
+      if (document.visibilityState === "visible") wasAway.current = false;
     } catch {
       // Retried on the next tick; a transient failure isn't worth interrupting the viewer.
-    } finally {
-      pollInFlight.current = false;
     }
-  }, THREAD_POLL_MS);
+  });
+
+  useRealtimeSignal(
+    {
+      channel: `thread-${conversationId}`,
+      table: "messages",
+      event: "INSERT",
+      filter: `conversation_id=eq.${conversationId}`,
+    },
+    checkForNewMessages,
+  );
+  usePolling(checkForNewMessages, THREAD_FALLBACK_POLL_MS);
 
   async function loadEarlier() {
     const oldest = messages[0];
