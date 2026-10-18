@@ -190,7 +190,7 @@ export const MAX_LISTING_PHOTOS = 8;
  * "passport" photos are condition evidence, stored apart from listing photos;
  * "return" photos are a renter's return evidence, private in the same way.
  */
-export type PhotoKind = "listing" | "passport" | "return";
+export type PhotoKind = "listing" | "passport" | "return" | "pickup";
 
 /** S2-04 Scenario 2: the four angles a baseline covers, in capture order. */
 export const BASELINE_ANGLES = [
