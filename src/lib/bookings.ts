@@ -2,6 +2,7 @@ import type { CancellationOutcome } from "@/lib/cancellations";
 import type { ExtensionRequest } from "@/lib/extensions";
 import type { SettlementState } from "@/lib/settlement";
 import type { ReturnState } from "@/lib/returns";
+import type { ConditionScanState } from "@/lib/condition-scans";
 
 /**
  * The backend's booking states. Which moves between them are allowed, and by
@@ -82,6 +83,8 @@ export type Booking = {
   return_state?: ReturnState | null;
   /** S3-01: set on confirmed bookings in the lists; null until the renter starts the pickup photos. */
   pickup_inspection_status?: "IN_PROGRESS" | "COMPLETED" | null;
+  /** S3-05: set on active and returned bookings in the lists once the return photos are in. */
+  condition_scan?: ConditionScanState | null;
   created_at: string;
   updated_at: string;
 };
