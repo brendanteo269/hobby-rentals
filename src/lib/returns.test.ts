@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { acceptedCount, canStartReturnInspection, clientUtcOffsetMinutes, type InspectionAngle } from "@/lib/returns";
+import {
+  acceptedCount,
+  canConfirmReturn,
+  canStartReturnInspection,
+  clientUtcOffsetMinutes,
+  returnStatusLine,
+  type InspectionAngle,
+  type ReturnState,
+} from "@/lib/returns";
 
 describe("canStartReturnInspection", () => {
   it("allows an active rental", () => {
@@ -34,5 +42,37 @@ describe("acceptedCount", () => {
 
   it("counts only the angles with an accepted photo", () => {
     expect(acceptedCount({ angles: [angle(true), angle(false), angle(true), angle(false)] })).toBe(2);
+  });
+});
+
+describe("S3-04 return confirmation", () => {
+  const at = "2026-10-18T09:00:00+00:00";
+  const state = (overrides: Partial<ReturnState> = {}): ReturnState => ({
+    inspection_status: "COMPLETED",
+    renter_confirmed_at: null,
+    owner_confirmed_at: null,
+    ...overrides,
+  });
+
+  it("offers each side its confirmation only while the rental is active and theirs is outstanding", () => {
+    const active = { status: "ACTIVE" as const, return_state: state({ renter_confirmed_at: at }) };
+    expect(canConfirmReturn(active, "renter")).toBe(false);
+    expect(canConfirmReturn(active, "owner")).toBe(true);
+    expect(canConfirmReturn({ status: "COMPLETED", return_state: state() }, "owner")).toBe(false);
+    expect(canConfirmReturn({ status: "ACTIVE", return_state: null }, "owner")).toBe(false);
+  });
+
+  it("tells the owner the photos come first", () => {
+    expect(returnStatusLine(state({ inspection_status: null }), "owner")).toMatch(/return photos are needed/);
+    expect(returnStatusLine(state({ inspection_status: "IN_PROGRESS" }), "renter")).toMatch(/Finish the return photos/);
+    expect(returnStatusLine(state({ inspection_status: null }), "renter")).toBeNull();
+  });
+
+  it("says whose confirmation is still outstanding", () => {
+    expect(returnStatusLine(state({ renter_confirmed_at: at }), "renter")).toMatch(/Waiting for the owner to confirm/);
+    expect(returnStatusLine(state({ renter_confirmed_at: at }), "owner")).toMatch(/The renter confirmed the return/);
+    expect(returnStatusLine(state({ owner_confirmed_at: at }), "renter")).toMatch(/Confirm it too/);
+    expect(returnStatusLine(state(), "owner")).toMatch(/Check the item, then confirm/);
+    expect(returnStatusLine(state({ renter_confirmed_at: at, owner_confirmed_at: at }), "owner")).toBeNull();
   });
 });

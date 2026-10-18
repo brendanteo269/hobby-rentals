@@ -30,7 +30,13 @@ export default async function ReturnPhotosPage({ params }: { params: Promise<{ i
         <p className="eyebrow">Returning · {booking.listing_name ?? "Your rental"}</p>
         <h1 className="heading mt-3 text-3xl">{completed ? "Return photos saved" : "Photograph the return"}</h1>
         <div className="mt-10">
-          <ReturnInspection bookingId={id} listingName={booking.listing_name ?? null} initial={inspection} />
+          <ReturnInspection
+            bookingId={id}
+            listingName={booking.listing_name ?? null}
+            initial={inspection}
+            returnState={booking.return_state ?? null}
+            rentalActive={booking.status === "ACTIVE"}
+          />
         </div>
       </div>
     </Container>

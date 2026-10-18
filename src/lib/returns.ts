@@ -1,4 +1,5 @@
 import type { Booking } from "@/lib/bookings";
+import { formatDateTime } from "@/lib/format";
 
 /**
  * Guided return photo capture: mirrors app/routers/returns.py.
@@ -82,6 +83,59 @@ export function canStartReturnInspection(booking: Pick<Booking, "status">): bool
 /** The browser's offset from UTC, east positive, for reading EXIF times without a zone. */
 export function clientUtcOffsetMinutes(now = new Date()): number {
   return -now.getTimezoneOffset();
+}
+
+/** S3-04: where a booking's return stands. Set on active and returned bookings in the lists. */
+export type ReturnState = {
+  /** Null until the renter starts the return photos. */
+  inspection_status: "IN_PROGRESS" | "COMPLETED" | null;
+  renter_confirmed_at: string | null;
+  owner_confirmed_at: string | null;
+};
+
+/** What POST /bookings/{id}/return-confirmation answers with. */
+export type ReturnConfirmation = ReturnState & {
+  booking_id: string;
+  status: Booking["status"];
+  returned_at: string | null;
+  claim_window_ends_at: string | null;
+};
+
+export type ReturnViewer = "renter" | "owner";
+
+/** Whether this side still has a return confirmation to give. The server re-checks, photos included. */
+export function canConfirmReturn(booking: Pick<Booking, "status" | "return_state">, viewer: ReturnViewer): boolean {
+  if (booking.status !== "ACTIVE" || !booking.return_state) return false;
+  return !(viewer === "renter" ? booking.return_state.renter_confirmed_at : booking.return_state.owner_confirmed_at);
+}
+
+/**
+ * One line on where an active rental's return stands, for whoever is
+ * reading - or null before anything has happened, when the booking's usual
+ * next step says enough.
+ */
+export function returnStatusLine(state: ReturnState, viewer: ReturnViewer): string | null {
+  const mine = viewer === "renter" ? state.renter_confirmed_at : state.owner_confirmed_at;
+  const theirs = viewer === "renter" ? state.owner_confirmed_at : state.renter_confirmed_at;
+  const other = viewer === "renter" ? "the owner" : "the renter";
+  if (state.inspection_status !== "COMPLETED") {
+    if (viewer === "renter") {
+      return state.inspection_status === "IN_PROGRESS" ? "Finish the return photos before confirming the return." : null;
+    }
+    return "The renter's return photos are needed before the return can be confirmed.";
+  }
+  if (mine && !theirs) return `You confirmed the return on ${formatDateTime(mine)}. Waiting for ${other} to confirm.`;
+  if (theirs && !mine) {
+    return viewer === "renter"
+      ? `The owner confirmed the return on ${formatDateTime(theirs)}. Confirm it too to finish the rental.`
+      : `The renter confirmed the return on ${formatDateTime(theirs)}. Check the item, then confirm the return.`;
+  }
+  if (!mine && !theirs) {
+    return viewer === "renter"
+      ? "Return photos done. Confirm the return once the owner has the item."
+      : "The renter's return photos are in. Check the item, then confirm the return.";
+  }
+  return null;
 }
 
 /** How many of the four angles have an accepted photo. */
