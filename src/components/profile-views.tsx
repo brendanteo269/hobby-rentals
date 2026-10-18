@@ -25,6 +25,7 @@ import type { SuspensionStatus } from "@/lib/overdue";
 import { cancellationOutcomeLine } from "@/lib/cancellations";
 import { settlementLine } from "@/lib/settlement";
 import { ExtendBookingButton } from "@/components/bookings/extend-booking-button";
+import { canStartReturnInspection } from "@/lib/returns";
 import { canRequestExtension } from "@/lib/extensions";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -203,6 +204,11 @@ export function RenterView({
                 <CancelBookingButton kind="booking" id={booking.id} status={booking.status} />
                 {canRequestExtension(booking) && (
                   <ExtendBookingButton bookingId={booking.id} endDate={booking.end_date} />
+                )}
+                {canStartReturnInspection(booking) && (
+                  <ButtonLink href={`/bookings/${booking.id}/return`} variant="outline" className="px-3 py-1.5 text-xs">
+                    Return photos
+                  </ButtonLink>
                 )}
                 {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
                   <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />

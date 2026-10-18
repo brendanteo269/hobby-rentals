@@ -28,6 +28,9 @@ const VERIFIED_ONLY_PREFIXES = ["/listings/new", "/messages/new"];
 /** Suffixes under /listings/<id>/ that are owner actions rather than reads. */
 const VERIFIED_ONLY_LISTING_ACTIONS = ["/availability"];
 
+/** Suffixes under /bookings/<id>/ that act on the booking. */
+const VERIFIED_ONLY_BOOKING_ACTIONS = ["/return"];
+
 /**
  * Whether `pathname` is a lending or booking action.
  *
@@ -37,6 +40,9 @@ const VERIFIED_ONLY_LISTING_ACTIONS = ["/availability"];
  */
 export function requiresVerifiedEmail(pathname: string): boolean {
   if (VERIFIED_ONLY_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return true;
+  if (pathname.startsWith("/bookings/") && VERIFIED_ONLY_BOOKING_ACTIONS.some((action) => pathname.endsWith(action))) {
+    return true;
+  }
   return (
     pathname.startsWith("/listings/") &&
     VERIFIED_ONLY_LISTING_ACTIONS.some((action) => pathname.endsWith(action))
@@ -62,6 +68,7 @@ export const PROTECTED_PREFIXES = [
   "/bundles",
   "/notifications",
   "/messages",
+  "/bookings",
 ];
 
 export function requiresSignIn(pathname: string): boolean {
