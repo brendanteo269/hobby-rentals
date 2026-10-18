@@ -280,6 +280,10 @@ export type BookingRequestDetail = {
     total_amount_cents: number | null;
     /** Nothing can be selected until damage protection is offered. */
     damage_protection: { selected: boolean; fee_cents: number };
+    /** S3-10: taken from the owner's rental payout at settlement. */
+    platform_commission_bps: number;
+    platform_commission_cents: number | null;
+    /** The rental subtotal less the commission: what settlement pays the owner. */
     owner_net_earnings_cents: number | null;
   };
   created_at: string;

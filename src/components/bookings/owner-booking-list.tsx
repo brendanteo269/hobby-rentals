@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Button, ButtonLink } from "@/components/ui";
 import { changeBookingStatus, type BookingActionResult } from "@/app/bookings/actions";
 import { MessageButton } from "@/components/messages/message-button";
@@ -33,16 +34,16 @@ export function requesterName(booking: Pick<Booking, "renter_name">): string {
 }
 
 export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
-  // Only the rows this list has itself changed are held locally; the rest
-  // come straight from props on every render. Seeding state from `bookings`
-  // instead would freeze the list at whatever it held when the component
-  // first mounted, so a request that arrived afterwards - the next renter's,
-  // once a booking is cancelled - would never appear.
-  const [changed, setChanged] = useState<Record<string, Booking>>({});
+  // Rows always come from props. A status change refreshes the page rather
+  // than patching the row from the action's response: that response is the
+  // bare booking, without what the list adds to it (the renter's name, the
+  // settlement state that offers Report damage once an item is returned), so
+  // a patched row lost those until the page was reloaded.
+  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const items = bookings.map((booking) => changed[booking.id] ?? booking);
+  const items = bookings;
 
   function update(bookingId: string, nextStatus: BookingStatus) {
     startTransition(async () => {
@@ -52,7 +53,7 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
         return;
       }
       setError(null);
-      setChanged((current) => ({ ...current, [result.booking.id]: result.booking }));
+      router.refresh();
     });
   }
 
