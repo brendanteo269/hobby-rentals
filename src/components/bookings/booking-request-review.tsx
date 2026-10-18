@@ -55,7 +55,7 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
           </div>
           <dl className="mt-4 grid grid-cols-2 gap-y-2 text-sm">
             <dt className="text-ink-soft">Rating</dt>
-            <dd>{renter.rating === null ? "No ratings yet" : `${renter.rating.toFixed(1)} (${renter.review_count})`}</dd>
+            <dd>{renter.rating === null ? "No ratings yet" : `${renter.rating.toFixed(1)} / 5 · ${renter.review_count} ${renter.review_count === 1 ? "review" : "reviews"}`}</dd>
             <dt className="text-ink-soft">Completed rentals</dt>
             <dd>{renter.completed_rentals}</dd>
             {renter.member_since && <>
