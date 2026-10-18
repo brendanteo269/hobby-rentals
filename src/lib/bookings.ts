@@ -80,6 +80,8 @@ export type Booking = {
   settlement_state?: SettlementState | null;
   /** S3-04: the return photos and who has confirmed the return. Set on active and returned bookings in the lists only. */
   return_state?: ReturnState | null;
+  /** S3-01: set on confirmed bookings in the lists; null until the renter starts the pickup photos. */
+  pickup_inspection_status?: "IN_PROGRESS" | "COMPLETED" | null;
   created_at: string;
   updated_at: string;
 };

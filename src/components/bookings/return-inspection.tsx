@@ -10,6 +10,7 @@ import {
   acceptedCount,
   clientUtcOffsetMinutes,
   type InspectionAngle,
+  type InspectionStage,
   type ReturnInspection as Inspection,
   type ReturnPhotoIssue,
   type ReturnState,
@@ -20,11 +21,13 @@ type Stage =
   // Scenario 1: the owner's photo for this angle, before the camera opens.
   | { kind: "preview" }
   | { kind: "camera" }
+  // Pickup uploads: the chosen file beside the owner's photo, until confirmed.
+  | { kind: "review"; file: File; previewUrl: string }
   | { kind: "checking"; previewUrl: string }
   | { kind: "rejected"; previewUrl: string; issue: ReturnPhotoIssue; label: string };
 
 /**
- * Guided return photo capture.
+ * Guided photo capture at pickup (S3-01) or at return (S3-03).
  *
  * Walks the renter through Front, Back, Top and Base/Underside in order. For
  * each, the owner's baseline photo is shown first, then laid over the live
@@ -32,9 +35,12 @@ type Stage =
  * to S3 and then to the server, which checks its quality, timestamp and angle;
  * a refused one comes back with the reason, and the renter retakes it.
  *
- * The in-app camera (getUserMedia) is the main path. Where the browser will
- * not give one - no permission, or no camera API - the phone's own camera
- * opens through a file input instead, with the baseline shown above it.
+ * The in-app camera (getUserMedia) is the main path. At return, where the
+ * browser will not give one - no permission, or no camera API - the phone's
+ * own camera opens through a file input instead, with the baseline shown
+ * above it. At pickup the renter can also upload a saved photo for any angle;
+ * it is shown beside the owner's photo to confirm before it is checked. The
+ * server's checks are the same either way, the EXIF timestamp check included.
  */
 export function ReturnInspection({
   bookingId,
@@ -42,8 +48,10 @@ export function ReturnInspection({
   initial,
   returnState = null,
   rentalActive = true,
+  stage = "return",
 }: {
   bookingId: string;
+  stage?: InspectionStage;
   listingName: string | null;
   initial: Inspection | null;
   /** S3-04: who has confirmed the return, as of the page load. */
@@ -58,7 +66,7 @@ export function ReturnInspection({
   function start() {
     setError(undefined);
     startStarting(async () => {
-      const result = await startInspection(bookingId, clientUtcOffsetMinutes());
+      const result = await startInspection(bookingId, clientUtcOffsetMinutes(), stage);
       if ("error" in result) setError(result.error);
       else setInspection(result.inspection);
     });
@@ -67,77 +75,92 @@ export function ReturnInspection({
   if (!inspection) {
     return (
       <div className="space-y-6">
-        <p className="body-copy">
-          Before you hand {listingName ?? "the item"} back, photograph it from four angles: front, back, top and
-          base. The owner&apos;s own photo of each angle is shown so you can line yours up with it. These photos are
-          the record of the condition you returned it in, and can&apos;t be changed once saved.
-        </p>
+        {stage === "pickup" ? (
+          <p className="body-copy">
+            Before you take {listingName ?? "the item"} away, photograph it from four angles with this app&apos;s
+            camera: front, back, top and base. The owner&apos;s own photo of each angle is shown so you can line yours
+            up with it. These photos are the record of the condition you received it in, and can&apos;t be changed
+            once saved.
+          </p>
+        ) : (
+          <p className="body-copy">
+            Before you hand {listingName ?? "the item"} back, photograph it from four angles: front, back, top and
+            base. The owner&apos;s own photo of each angle is shown so you can line yours up with it. These photos are
+            the record of the condition you returned it in, and can&apos;t be changed once saved.
+          </p>
+        )}
         <FormNotice message={error} />
         <Button onClick={start} disabled={starting}>
-          {starting ? "Starting…" : "Start return photos"}
+          {starting ? "Starting…" : `Start ${stage} photos`}
         </Button>
       </div>
     );
   }
 
   if (inspection.status === "COMPLETED") {
+    if (stage === "pickup") return <PickupCompleted inspection={inspection} />;
     return (
       <Completed bookingId={bookingId} inspection={inspection} returnState={returnState} rentalActive={rentalActive} />
     );
   }
 
-  return <Capture bookingId={bookingId} inspection={inspection} onChange={setInspection} />;
+  return <Capture bookingId={bookingId} inspection={inspection} onChange={setInspection} stage={stage} />;
 }
 
 function Capture({
   bookingId,
   inspection,
   onChange,
+  stage,
 }: {
   bookingId: string;
   inspection: Inspection;
+  stage: InspectionStage;
   onChange: (next: Inspection) => void;
 }) {
   const current = inspection.angles.find((angle) => angle.angle === inspection.next_angle) ?? null;
-  const [stage, setStage] = useState<Stage>(() =>
+  const [step, setStep] = useState<Stage>(() =>
     current?.last_rejection
       ? { kind: "rejected", previewUrl: "", issue: current.last_rejection, label: current.label }
       : { kind: "preview" },
   );
   const [error, setError] = useState<string>();
   const [finishing, startFinishing] = useTransition();
+  // Pickup only: pick a saved photo for this angle, to confirm before it is checked.
+  const review =
+    stage === "pickup" ? (file: File) => setStep({ kind: "review", file, previewUrl: URL.createObjectURL(file) }) : undefined;
 
   async function submit(file: File) {
     if (!current) return;
     setError(undefined);
     const capturedAt = new Date().toISOString();
     const previewUrl = URL.createObjectURL(file);
-    setStage({ kind: "checking", previewUrl });
+    setStep({ kind: "checking", previewUrl });
     try {
-      const key = await putPhotoToS3(file, "return");
-      const outcome = await submitPhoto(inspection.id, current.angle, key, capturedAt);
+      const key = await putPhotoToS3(file, stage);
+      const outcome = await submitPhoto(inspection.id, current.angle, key, capturedAt, stage);
       if ("error" in outcome) {
         setError(outcome.error);
-        setStage({ kind: "camera" });
+        setStep({ kind: "camera" });
         return;
       }
       const { result } = outcome;
       if (result.accepted) {
         onChange(withAccepted(inspection, result.photo.angle, { ...result.photo, photo_url: previewUrl }));
-        setStage({ kind: "preview" });
+        setStep({ kind: "preview" });
       } else if (result.issue) {
-        setStage({ kind: "rejected", previewUrl, issue: result.issue, label: result.required_angle_label ?? current.label });
+        setStep({ kind: "rejected", previewUrl, issue: result.issue, label: result.required_angle_label ?? current.label });
       }
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "That photo failed to upload. Try again.");
-      setStage({ kind: "camera" });
+      setStep({ kind: "camera" });
     }
   }
 
   function finish() {
     setError(undefined);
     startFinishing(async () => {
-      const result = await completeInspection(bookingId, inspection.id);
+      const result = await completeInspection(bookingId, inspection.id, stage);
       if ("error" in result) setError(result.error);
       else onChange(result.inspection);
     });
@@ -156,21 +179,34 @@ function Capture({
             <h2 className="heading mt-2 text-2xl">{current.label}</h2>
           </div>
 
-          {stage.kind === "preview" && <Preview angle={current} onReady={() => setStage({ kind: "camera" })} />}
-          {stage.kind === "camera" && <Camera angle={current} onCapture={submit} />}
-          {stage.kind === "checking" && <Checking previewUrl={stage.previewUrl} />}
-          {stage.kind === "rejected" && (
-            <Rejected stage={stage} onRetake={() => setStage({ kind: "camera" })} />
+          {step.kind === "preview" && (
+            <Preview angle={current} onReady={() => setStep({ kind: "camera" })} onUpload={review} />
+          )}
+          {step.kind === "camera" && (
+            <Camera angle={current} onCapture={submit} allowFallback={stage === "return"} onUpload={review} />
+          )}
+          {step.kind === "review" && review && (
+            <Review
+              angle={current}
+              previewUrl={step.previewUrl}
+              onConfirm={() => submit(step.file)}
+              onReplace={review}
+              onCamera={() => setStep({ kind: "camera" })}
+            />
+          )}
+          {step.kind === "checking" && <Checking previewUrl={step.previewUrl} />}
+          {step.kind === "rejected" && (
+            <Rejected stage={step} onRetake={() => setStep({ kind: "camera" })} onUpload={review} />
           )}
         </section>
       ) : (
         <section className="space-y-4">
           <h2 className="heading text-2xl">All four photos are in</h2>
           <p className="body-copy">
-            Save them to finish. Once saved they are this rental&apos;s return record and can&apos;t be retaken.
+            Save them to finish. Once saved they are this rental&apos;s {stage} record and can&apos;t be retaken.
           </p>
           <Button onClick={finish} disabled={finishing}>
-            {finishing ? "Saving…" : "Save return photos"}
+            {finishing ? "Saving…" : `Save ${stage} photos`}
           </Button>
         </section>
       )}
@@ -210,8 +246,35 @@ function Progress({ angles, currentAngle }: { angles: InspectionAngle[]; current
   );
 }
 
+/** Picks one saved photo. A styled label, so the native file picker opens on click and on keyboard. */
+function UploadButton({ onFile, children }: { onFile: (file: File) => void; children: React.ReactNode }) {
+  return (
+    <label className="inline-flex cursor-pointer items-center justify-center rounded-full border border-line bg-white px-5 py-2.5 text-sm font-medium text-ink transition-colors hover:bg-surface-muted focus-within:ring-2 focus-within:ring-accent/40 focus-within:ring-offset-2">
+      {children}
+      <input
+        type="file"
+        accept={ALLOWED_PHOTO_CONTENT_TYPES.join(",")}
+        className="sr-only"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (file) onFile(file);
+        }}
+      />
+    </label>
+  );
+}
+
 /** Scenario 1: the owner's photo of this angle, shown before the camera opens. */
-function Preview({ angle, onReady }: { angle: InspectionAngle; onReady: () => void }) {
+function Preview({
+  angle,
+  onReady,
+  onUpload,
+}: {
+  angle: InspectionAngle;
+  onReady: () => void;
+  onUpload?: (file: File) => void;
+}) {
   return (
     <div className="space-y-4">
       {angle.baseline_overlay_url ? (
@@ -230,7 +293,66 @@ function Preview({ angle, onReady }: { angle: InspectionAngle; onReady: () => vo
       ) : (
         <p className="body-copy">Photograph the item&apos;s {angle.label.toLowerCase()}, filling the frame.</p>
       )}
-      <Button onClick={onReady}>Open camera</Button>
+      <div className="flex flex-wrap gap-3">
+        <Button onClick={onReady}>{onUpload ? "Take photo" : "Open camera"}</Button>
+        {onUpload && <UploadButton onFile={onUpload}>Upload photo</UploadButton>}
+      </div>
+    </div>
+  );
+}
+
+/** Pickup uploads: the owner's photo and the chosen one side by side, used only once confirmed. */
+function Review({
+  angle,
+  previewUrl,
+  onConfirm,
+  onReplace,
+  onCamera,
+}: {
+  angle: InspectionAngle;
+  previewUrl: string;
+  onConfirm: () => void;
+  onReplace: (file: File) => void;
+  onCamera: () => void;
+}) {
+  return (
+    <div className="space-y-4">
+      <p className="body-copy">
+        Is this the item&apos;s {angle.label.toLowerCase()}, from the same angle as the owner&apos;s photo?
+      </p>
+      <div className="grid grid-cols-2 gap-3">
+        <figure>
+          <figcaption className="text-sm font-medium">Owner&apos;s {angle.label}</figcaption>
+          {angle.baseline_overlay_url ? (
+            // eslint-disable-next-line @next/next/no-img-element -- a short-lived presigned URL
+            <img
+              src={angle.baseline_overlay_url}
+              alt={`The owner's ${angle.label} photo`}
+              className="mt-2 aspect-[4/3] w-full border border-line bg-surface-muted object-contain"
+            />
+          ) : (
+            <p className="mt-2 flex aspect-[4/3] items-center justify-center border border-line bg-surface-muted text-sm text-ink-soft">
+              No owner photo
+            </p>
+          )}
+        </figure>
+        <figure>
+          <figcaption className="text-sm font-medium">Your photo</figcaption>
+          {/* eslint-disable-next-line @next/next/no-img-element -- a local blob: preview */}
+          <img
+            src={previewUrl}
+            alt={`Your ${angle.label} photo`}
+            className="mt-2 aspect-[4/3] w-full border border-line bg-surface-muted object-contain"
+          />
+        </figure>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        <Button onClick={onConfirm}>Confirm {angle.label} photo</Button>
+        <UploadButton onFile={onReplace}>Choose a different photo</UploadButton>
+        <Button variant="outline" onClick={onCamera}>
+          Take photo instead
+        </Button>
+      </div>
     </div>
   );
 }
@@ -249,9 +371,11 @@ function Checking({ previewUrl }: { previewUrl: string }) {
 function Rejected({
   stage,
   onRetake,
+  onUpload,
 }: {
   stage: Extract<Stage, { kind: "rejected" }>;
   onRetake: () => void;
+  onUpload?: (file: File) => void;
 }) {
   return (
     <div className="space-y-4">
@@ -263,7 +387,10 @@ function Rejected({
         <p className="font-medium text-ink">Retake the {stage.label} photo</p>
         <p className="mt-1 text-sm text-ink">{stage.issue.message}</p>
       </div>
-      <Button onClick={onRetake}>Retake photo</Button>
+      <div className="flex flex-wrap gap-3">
+        <Button onClick={onRetake}>Retake photo</Button>
+        {onUpload && <UploadButton onFile={onUpload}>Upload a different photo</UploadButton>}
+      </div>
     </div>
   );
 }
@@ -274,7 +401,19 @@ type CameraState = "starting" | "live" | "unavailable";
  * The in-app camera with the baseline over it. Falls back to the phone's own
  * camera through a file input when getUserMedia is missing or refused.
  */
-function Camera({ angle, onCapture }: { angle: InspectionAngle; onCapture: (file: File) => void }) {
+function Camera({
+  angle,
+  onCapture,
+  allowFallback,
+  onUpload,
+}: {
+  angle: InspectionAngle;
+  onCapture: (file: File) => void;
+  /** Return only: the phone-camera file input when the in-app camera is unavailable. */
+  allowFallback: boolean;
+  /** Pickup only: upload a saved photo instead, to review before it is checked. */
+  onUpload?: (file: File) => void;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [state, setState] = useState<CameraState>("starting");
@@ -328,6 +467,18 @@ function Camera({ angle, onCapture }: { angle: InspectionAngle; onCapture: (file
       },
       "image/jpeg",
       0.92,
+    );
+  }
+
+  if (state === "unavailable" && !allowFallback) {
+    return (
+      <div className="space-y-4">
+        <p className="text-sm text-ink-soft">
+          The in-app camera isn&apos;t available here (check that this site is allowed to use your camera).
+          {onUpload ? " You can upload a photo instead." : ""}
+        </p>
+        {onUpload && <UploadButton onFile={(file) => onUpload(file)}>Upload {angle.label} photo</UploadButton>}
+      </div>
     );
   }
 
@@ -392,6 +543,16 @@ function Camera({ angle, onCapture }: { angle: InspectionAngle; onCapture: (file
             {overlay ? "Hide owner's photo" : "Show owner's photo"}
           </Button>
         )}
+        {onUpload && (
+          <UploadButton
+            onFile={(file) => {
+              stop();
+              onUpload(file);
+            }}
+          >
+            Upload photo instead
+          </UploadButton>
+        )}
       </div>
     </div>
   );
@@ -440,6 +601,38 @@ function Completed({
               <img
                 src={angle.accepted_photo.photo_url}
                 alt={`Your ${angle.label} return photo`}
+                className="mt-2 aspect-square w-full border border-line object-cover"
+              />
+            )}
+          </li>
+        ))}
+      </ul>
+      <ButtonLink href="/profile" variant="outline">
+        Back to my bookings
+      </ButtonLink>
+    </div>
+  );
+}
+
+/** S3-01, Scenario 6: the pickup record is saved; the handover itself is confirmed separately (S3-02). */
+function PickupCompleted({ inspection }: { inspection: Inspection }) {
+  return (
+    <div className="space-y-6">
+      <FormNotice
+        tone="success"
+        message={`All ${acceptedCount(inspection)} pickup photos are saved to this rental's record${
+          inspection.completed_at ? ` (${formatDateTime(inspection.completed_at)})` : ""
+        }.`}
+      />
+      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {inspection.angles.map((angle) => (
+          <li key={angle.angle}>
+            <p className="text-sm font-medium">{angle.label}</p>
+            {angle.accepted_photo && (
+              // eslint-disable-next-line @next/next/no-img-element -- a short-lived presigned URL
+              <img
+                src={angle.accepted_photo.photo_url}
+                alt={`Your ${angle.label} pickup photo`}
                 className="mt-2 aspect-square w-full border border-line object-cover"
               />
             )}
