@@ -18,6 +18,7 @@ export const AUDIT_ACTIONS = {
   listing_deactivated: "Listing deactivated",
   listing_reactivated: "Listing reactivated",
   booking_viewed: "Booking viewed",
+  escrow_viewed: "Escrow record viewed",
   dispute_resolved: "Damage dispute resolved",
 } as const;
 
@@ -215,11 +216,31 @@ export async function recordListingViewed(listingId: string, ownerId: string): P
 
 /** Records "booking_viewed", unless this booking's own audit trail already has an entry this recent (same reasoning as recordListingViewed). */
 export async function recordBookingViewed(bookingId: string, renterId: string): Promise<void> {
+  await recordRentalViewed("booking_viewed", bookingId, renterId);
+}
+
+/**
+ * Records "escrow_viewed" against the rental's renter, so it lands in the same
+ * per-booking trail as booking views. For a bundle record `rentalId` is the
+ * bundle booking id, which getBookingAuditTrail never asks for - those views
+ * are still written, just not surfaced on a booking page.
+ */
+export async function recordEscrowViewed(rentalId: string, renterId: string): Promise<void> {
+  await recordRentalViewed("escrow_viewed", rentalId, renterId);
+}
+
+/** Dedupes per action, so opening the booking and then its escrow within the window records both. */
+async function recordRentalViewed(
+  action: "booking_viewed" | "escrow_viewed",
+  bookingId: string,
+  renterId: string,
+): Promise<void> {
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("admin_audit_log")
     .select("created_at")
     .eq("target_user_id", renterId)
+    .eq("action", action)
     .eq("detail->>booking_id", bookingId)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -230,7 +251,7 @@ export async function recordBookingViewed(bookingId: string, renterId: string): 
   const lastEntryAt = data ? new Date(data.created_at).getTime() : null;
   if (lastEntryAt !== null && Date.now() - lastEntryAt < VIEW_DEDUPE_WINDOW_MS) return;
 
-  await recordAdminAction("booking_viewed", renterId, { booking_id: bookingId });
+  await recordAdminAction(action, renterId, { booking_id: bookingId });
 }
 
 /**

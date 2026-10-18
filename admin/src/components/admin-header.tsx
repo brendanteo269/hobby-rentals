@@ -48,6 +48,12 @@ export async function AdminHeader() {
             Disputes
           </Link>
           <Link
+            href={ROUTES.escrow}
+            className="text-sm text-ink-soft transition-colors hover:text-ink"
+          >
+            Finances
+          </Link>
+          <Link
             href={ROUTES.wallets}
             className="text-sm text-ink-soft transition-colors hover:text-ink"
           >

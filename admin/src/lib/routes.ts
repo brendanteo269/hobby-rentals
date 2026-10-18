@@ -24,6 +24,10 @@ export const ROUTES = {
   listingPassport: (id: string) => `/listings/${id}/passport` as Route,
   bookings: "/bookings",
   booking: (id: string) => `/bookings/${id}` as Route,
+  // Escrow lives under /finances so a platform-wide money-flow overview can
+  // later take /finances itself without moving these.
+  escrow: "/finances/escrow",
+  escrowHold: (id: string) => `/finances/escrow/${id}` as Route,
   disputes: "/disputes",
   dispute: (id: string) => `/disputes/${id}` as Route,
 } as const;

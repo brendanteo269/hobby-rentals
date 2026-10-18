@@ -14,6 +14,7 @@ import {
 } from "@/lib/bookings";
 import { Badge, Container, DescriptionList, EmptyState, Panel } from "@/components/ui";
 import { AuditTrail } from "@/components/audit-trail";
+import { ESCROW_COMPONENT_LABELS, ESCROW_TYPE_LABELS } from "@/lib/escrow";
 
 export const metadata = { title: "Booking — HobbyRentals Admin" };
 
@@ -21,23 +22,6 @@ const ACTOR_ROLE_LABELS: Record<string, string> = {
   RENTER: "Renter",
   OWNER: "Owner",
   SYSTEM: "System",
-};
-
-const ESCROW_TYPE_LABELS: Record<string, string> = {
-  ESCROW_HOLD: "Hold placed",
-  ESCROW_RELEASE: "Released",
-  // S3-10 settlement.
-  RENTAL_CHARGE: "Rental charged",
-  RENTAL_PAYOUT: "Paid to owner",
-  DAMAGE_DEDUCTION: "Deducted for damage",
-  DAMAGE_PAYOUT: "Damage paid to owner",
-  OVERDUE_SETTLEMENT: "Overdue fee",
-};
-
-const ESCROW_COMPONENT_LABELS: Record<string, string> = {
-  RENTAL: "Rental fee",
-  DEPOSIT: "Security deposit",
-  PROTECTION: "Damage protection",
 };
 
 /** The happy path every booking is headed toward unless it's declined, cancelled, or expires first. */
@@ -297,7 +281,17 @@ export default async function BookingDetailPage({
             )}
           </Panel>
 
-          <Panel title="Escrow ledger" description="Wallet holds and releases tied to this booking.">
+          <Panel
+            title="Escrow ledger"
+            description="Wallet holds and releases tied to this booking."
+            actions={
+              booking.escrowEntries.length > 0 && !booking.bundle_booking_id ? (
+                <Link href={ROUTES.escrowHold(booking.id)} className="text-sm underline underline-offset-4">
+                  View escrow record
+                </Link>
+              ) : undefined
+            }
+          >
             {booking.escrowEntries.length === 0 ? (
               <div className="-mx-6 -my-5">
                 <EmptyState title="No escrow activity" body="No hold has been placed for this booking." />
@@ -309,7 +303,7 @@ export default async function BookingDetailPage({
                     <div>
                       <p className="text-sm font-medium">
                         {ESCROW_TYPE_LABELS[entry.type] ?? entry.type}
-                        {entry.escrow_component && ` · ${ESCROW_COMPONENT_LABELS[entry.escrow_component] ?? entry.escrow_component}`}
+                        {entry.escrow_component && ` · ${ESCROW_COMPONENT_LABELS[entry.escrow_component as keyof typeof ESCROW_COMPONENT_LABELS] ?? entry.escrow_component}`}
                       </p>
                       <p className="mt-0.5 text-xs text-ink-soft">{formatDateTime(entry.created_at)} · {entry.status}</p>
                     </div>
