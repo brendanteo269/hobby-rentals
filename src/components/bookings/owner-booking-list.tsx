@@ -8,6 +8,7 @@ import { MessageButton } from "@/components/messages/message-button";
 import { ExtensionRequestDecision } from "@/components/bookings/extension-request-decision";
 import { OverdueNotice } from "@/components/bookings/overdue-notice";
 import { ReportDamageButton } from "@/components/bookings/report-damage-button";
+import { ConfirmReturnButton } from "@/components/bookings/confirm-return-button";
 import {
   BOOKING_STATUS_LABELS,
   MESSAGEABLE_BOOKING_STATUSES,
@@ -19,13 +20,14 @@ import {
 import { cancellationOutcomeLine, HANDED_OVER_NOTE } from "@/lib/cancellations";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { canReportDamage, settlementLine } from "@/lib/settlement";
+import { canConfirmReturn, returnStatusLine } from "@/lib/returns";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
 
 // A request is answered from its review page, where the owner sees the renter
-// and the earnings and has to give a reason to decline.
+// and the earnings and has to give a reason to decline. An active rental is
+// returned by both parties confirming (S3-04), not by a status change.
 const NEXT_ACTION: Partial<Record<BookingStatus, { status: BookingStatus; label: string }>> = {
   CONFIRMED: { status: "ACTIVE", label: "Start rental" },
-  ACTIVE: { status: "COMPLETED", label: "Mark returned" },
 };
 
 /** Who asked, for an owner reading a list of requests on one listing. */
@@ -82,6 +84,9 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
                   {HANDED_OVER_NOTE} <a href={SUPPORT_MAILTO} className="underline">{SUPPORT_EMAIL}</a>
                 </span>
               )}
+              {booking.status === "ACTIVE" && booking.return_state && returnStatusLine(booking.return_state, "owner") && (
+                <span className="block text-ink-soft">{returnStatusLine(booking.return_state, "owner")}</span>
+              )}
               {booking.cancellation_outcome && (
                 <span className="block text-ink-soft">{cancellationOutcomeLine(booking.cancellation_outcome, "owner")}</span>
               )}
@@ -91,6 +96,7 @@ export function OwnerBookingList({ bookings }: { bookings: Booking[] }) {
             </span>
             <span className="flex gap-2">
               {next && <Button className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, next.status)}>{next.label}</Button>}
+              {canConfirmReturn(booking, "owner") && <ConfirmReturnButton bookingId={booking.id} />}
               {booking.status === "PENDING" && <ButtonLink href={requestReviewPath("BOOKING", booking.id)} className="px-3 py-1.5 text-xs">Review request</ButtonLink>}
               {booking.status === "CONFIRMED" && <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "CANCELLED")}>Cancel booking</Button>}
               {canReportDamage(booking.settlement_state) && booking.settlement_state?.claim_window_ends_at && (

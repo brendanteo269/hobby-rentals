@@ -1,6 +1,7 @@
 import type { CancellationOutcome } from "@/lib/cancellations";
 import type { ExtensionRequest } from "@/lib/extensions";
 import type { SettlementState } from "@/lib/settlement";
+import type { ReturnState } from "@/lib/returns";
 
 /**
  * The backend's booking states. Which moves between them are allowed, and by
@@ -77,6 +78,8 @@ export type Booking = {
   /** S3-10: when the item came back, and where its money stands. Set on the bookings lists only. */
   returned_at?: string | null;
   settlement_state?: SettlementState | null;
+  /** S3-04: the return photos and who has confirmed the return. Set on active and returned bookings in the lists only. */
+  return_state?: ReturnState | null;
   created_at: string;
   updated_at: string;
 };
@@ -150,7 +153,8 @@ export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
   CANCELLED: "Cancelled",
   EXPIRED: "Expired",
   ACTIVE: "In progress",
-  COMPLETED: "Completed",
+  // Both parties confirmed the item is back (S3-04).
+  COMPLETED: "Returned",
 };
 
 /**
@@ -164,8 +168,8 @@ export const BOOKING_STATUS_NEXT_STEP: Record<BookingStatus, string> = {
   DECLINED: "Your hold has been released. You can request other dates.",
   CANCELLED: "Your deposit, and any refund under the cancellation policy, is back in your wallet.",
   EXPIRED: "The owner did not respond in time. Your hold has been released.",
-  ACTIVE: "Return the item by your end date.",
-  COMPLETED: "This rental is finished.",
+  ACTIVE: "Return the item by your end date: take the return photos, then confirm the return.",
+  COMPLETED: "The item is back with its owner.",
 };
 
 /** The same for a bundle booking, which is decided, withdrawn and cancelled whole. */

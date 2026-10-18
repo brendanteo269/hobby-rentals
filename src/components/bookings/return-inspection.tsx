@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Button, ButtonLink, FormNotice } from "@/components/ui";
 import { putPhotoToS3 } from "@/components/listings/photo-upload-field";
+import { ConfirmReturnButton } from "@/components/bookings/confirm-return-button";
 import { completeInspection, startInspection, submitPhoto } from "@/app/bookings/[id]/return/actions";
 import { ALLOWED_PHOTO_CONTENT_TYPES } from "@/lib/listings";
 import {
@@ -11,7 +12,9 @@ import {
   type InspectionAngle,
   type ReturnInspection as Inspection,
   type ReturnPhotoIssue,
+  type ReturnState,
 } from "@/lib/returns";
+import { formatDateTime } from "@/lib/format";
 
 type Stage =
   // Scenario 1: the owner's photo for this angle, before the camera opens.
@@ -37,10 +40,16 @@ export function ReturnInspection({
   bookingId,
   listingName,
   initial,
+  returnState = null,
+  rentalActive = true,
 }: {
   bookingId: string;
   listingName: string | null;
   initial: Inspection | null;
+  /** S3-04: who has confirmed the return, as of the page load. */
+  returnState?: ReturnState | null;
+  /** False once the rental is returned: nothing left to confirm. */
+  rentalActive?: boolean;
 }) {
   const [inspection, setInspection] = useState<Inspection | null>(initial);
   const [error, setError] = useState<string>();
@@ -71,7 +80,11 @@ export function ReturnInspection({
     );
   }
 
-  if (inspection.status === "COMPLETED") return <Completed inspection={inspection} />;
+  if (inspection.status === "COMPLETED") {
+    return (
+      <Completed bookingId={bookingId} inspection={inspection} returnState={returnState} rentalActive={rentalActive} />
+    );
+  }
 
   return <Capture bookingId={bookingId} inspection={inspection} onChange={setInspection} />;
 }
@@ -384,13 +397,40 @@ function Camera({ angle, onCapture }: { angle: InspectionAngle; onCapture: (file
   );
 }
 
-function Completed({ inspection }: { inspection: Inspection }) {
+function Completed({
+  bookingId,
+  inspection,
+  returnState,
+  rentalActive,
+}: {
+  bookingId: string;
+  inspection: Inspection;
+  returnState: ReturnState | null;
+  rentalActive: boolean;
+}) {
+  const confirmedAt = returnState?.renter_confirmed_at;
   return (
     <div className="space-y-6">
       <FormNotice
         tone="success"
         message={`All ${acceptedCount(inspection)} return photos are saved to this rental's record.`}
       />
+      {/* S3-04: the photos are the first half of returning; both sides then confirm. */}
+      {rentalActive && !confirmedAt && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-line px-4 py-3">
+          <p className="body-copy">
+            Last step: once the owner has the item, confirm the return. The rental is returned when you and the
+            owner have both confirmed.
+          </p>
+          <ConfirmReturnButton bookingId={bookingId} className="px-4 py-2 text-sm" />
+        </div>
+      )}
+      {rentalActive && confirmedAt && (
+        <p className="body-copy">
+          You confirmed the return on {formatDateTime(confirmedAt)}.{" "}
+          {returnState?.owner_confirmed_at ? "" : "The owner's confirmation is still outstanding."}
+        </p>
+      )}
       <ul className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {inspection.angles.map((angle) => (
           <li key={angle.angle}>

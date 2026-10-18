@@ -1,7 +1,7 @@
 import "server-only";
 
 import { backendRequest } from "@/lib/api/client";
-import type { ReturnAngle, ReturnInspection, ReturnPhotoResult } from "@/lib/returns";
+import type { ReturnAngle, ReturnConfirmation, ReturnInspection, ReturnPhotoResult } from "@/lib/returns";
 
 /** Mirrors the FastAPI routes in app/routers/returns.py. */
 
@@ -34,6 +34,17 @@ export function submitReturnPhoto(
 /** Freezes the four accepted photos and queues them for the AI comparison. */
 export function completeReturnInspection(inspectionId: string) {
   return backendRequest<ReturnInspection>(`/return-inspections/${encodeURIComponent(inspectionId)}/complete`, {
+    method: "POST",
+  });
+}
+
+/**
+ * S3-04: the caller - renter or owner - confirms the item is back. The second
+ * confirmation returns the booking. 409 with code RETURN_PHOTOS_REQUIRED
+ * until the return photos are complete.
+ */
+export function confirmBookingReturn(bookingId: string) {
+  return backendRequest<ReturnConfirmation>(`/bookings/${encodeURIComponent(bookingId)}/return-confirmation`, {
     method: "POST",
   });
 }

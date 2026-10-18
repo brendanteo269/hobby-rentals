@@ -25,7 +25,8 @@ import type { SuspensionStatus } from "@/lib/overdue";
 import { cancellationOutcomeLine } from "@/lib/cancellations";
 import { settlementLine } from "@/lib/settlement";
 import { ExtendBookingButton } from "@/components/bookings/extend-booking-button";
-import { canStartReturnInspection } from "@/lib/returns";
+import { canConfirmReturn, canStartReturnInspection, returnStatusLine } from "@/lib/returns";
+import { ConfirmReturnButton } from "@/components/bookings/confirm-return-button";
 import { canRequestExtension } from "@/lib/extensions";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -190,6 +191,9 @@ export function RenterView({
                     {booking.confirmed_meetup_time && `, ${formatDateTime(booking.confirmed_meetup_time)}`}
                   </p>
                 )}
+                {booking.status === "ACTIVE" && booking.return_state && returnStatusLine(booking.return_state, "renter") && (
+                  <p className="mt-1 text-sm text-ink-soft">{returnStatusLine(booking.return_state, "renter")}</p>
+                )}
                 <OverdueNotice booking={booking} side="renter" />
                 {booking.pending_extension && (
                   <p className="mt-1 text-sm text-ink-soft">
@@ -207,8 +211,11 @@ export function RenterView({
                 )}
                 {canStartReturnInspection(booking) && (
                   <ButtonLink href={`/bookings/${booking.id}/return`} variant="outline" className="px-3 py-1.5 text-xs">
-                    Return photos
+                    {booking.return_state?.inspection_status === "COMPLETED" ? "View return photos" : "Return photos"}
                   </ButtonLink>
+                )}
+                {canConfirmReturn(booking, "renter") && booking.return_state?.inspection_status === "COMPLETED" && (
+                  <ConfirmReturnButton bookingId={booking.id} />
                 )}
                 {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
                   <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
