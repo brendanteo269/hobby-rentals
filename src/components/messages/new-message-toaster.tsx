@@ -4,13 +4,16 @@ import { useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useToast } from "@/components/toast";
 import { usePolling } from "@/components/use-polling";
+import { useRealtimeSignal } from "@/components/use-realtime-signal";
+import { useSingleFlight } from "@/components/use-single-flight";
 import { findNewActivity, type ConversationActivity } from "@/lib/conversations";
 
-const POLL_MS = 8_000;
+/** Safety-net interval; a Realtime signal normally triggers the check long before this. */
+const FALLBACK_POLL_MS = 60_000;
 const MESSAGES_PATH = "/messages";
 
 /**
- * Renders nothing; polls the member's conversations from any page and raises
+ * Renders nothing; watches the member's conversations from any page and raises
  * a toast ("N new messages") when something new arrives from the other side.
  *
  * The first poll only records a baseline, so unread threads the member
@@ -24,11 +27,8 @@ export function NewMessageToaster() {
   const router = useRouter();
   const pathname = usePathname();
   const seen = useRef<Map<string, string> | null>(null);
-  const inFlight = useRef(false);
 
-  usePolling(async () => {
-    if (inFlight.current) return;
-    inFlight.current = true;
+  const checkForActivity = useSingleFlight(async () => {
     try {
       const response = await fetch("/api/conversations/updates", { cache: "no-store" });
       if (!response.ok) return;
@@ -50,10 +50,13 @@ export function NewMessageToaster() {
       if (pathname.startsWith(MESSAGES_PATH)) router.refresh();
     } catch {
       // A failed poll (offline, backend blip) is retried on the next tick; a toast about it would be noise.
-    } finally {
-      inFlight.current = false;
     }
-  }, POLL_MS);
+  });
+
+  // Every message bumps its conversation's updated_at, and Row Level
+  // Security limits these events to the member's own conversations.
+  useRealtimeSignal({ channel: "conversation-activity", table: "conversations", event: "UPDATE" }, checkForActivity);
+  usePolling(checkForActivity, FALLBACK_POLL_MS);
 
   return null;
 }
