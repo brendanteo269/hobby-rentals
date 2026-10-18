@@ -15,6 +15,7 @@ import { MessageButton } from "@/components/messages/message-button";
 import { getMyWaitlist } from "@/lib/api/waitlist";
 import { FavouriteButton } from "@/components/listings/favourite-button";
 import { getListingReviews } from "@/lib/api/reviews";
+import { RentalReviewSection } from "@/components/reviews/rental-review-section";
 import Link from "next/link";
 import type { Route } from "next";
 import { PersonAvatar } from "@/components/messages/person-avatar";
@@ -63,7 +64,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const passport = listing.status === "ACTIVE" ? await getPassport(listing.id).catch(() => null) : null;
   const badge = passportBadge(passport?.serial_status);
   const categoryDemand = listing.status === "ACTIVE" ? await getCategoryDemand(listing.category).catch(() => null) : null;
-  const reviews = await getListingReviews(listing.id).catch(() => []);
+  const reviews = await getListingReviews(listing.id).catch(() => ({ average: null, count: 0, reviews: [] }));
 
   return (
     <Container className="py-16">
@@ -194,10 +195,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           </div>
         </section>
       )}
-      <section className="mt-16 border-t border-line pt-10">
-        <h2 className="heading text-lg">Reviews for this listing</h2>
-        {reviews.length === 0 ? <p className="body-copy mt-2">No reviews for this listing yet.</p> : <ul className="mt-5 space-y-3">{reviews.map((review) => <li key={review.id} className="border border-line bg-white p-4"><div className="flex items-center gap-2"><Badge variant="dark">{review.rating} / 5</Badge><span className="text-xs text-ink-soft">{review.reviewer?.display_name ?? "Member"} · {formatDate(review.published_at)}</span></div><p className="mt-3 text-sm text-ink">{review.body}</p></li>)}</ul>}
-      </section>
+      <RentalReviewSection title="Reviews for this listing" reviews={reviews} emptyBody="This listing has not received any reviews yet." />
     </Container>
   );
 }

@@ -1,25 +1,28 @@
 "use client";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useState, useTransition } from "react";
 import { Star } from "lucide-react";
 import { submitRentalReview } from "@/app/reviews/actions";
 import { Button, FormNotice } from "@/components/ui";
 import { useToast } from "@/components/toast";
 
 export function ReviewForm({ bookingId, bundleBookingId, role, party }: { bookingId?: string | null; bundleBookingId?: string | null; role: "OWNER" | "RENTER"; party: "owner" | "renter" }) {
-  const [state, action, pending] = useActionState(submitRentalReview, undefined);
+  const [state, setState] = useState<{ error?: string; success?: boolean }>();
+  const [pending, startTransition] = useTransition();
   const { show } = useToast();
-  const announced = useRef(false);
   const [rating, setRating] = useState(0);
   const [body, setBody] = useState("");
   const wordCount = body.trim() ? body.trim().split(/\s+/).length : 0;
-  useEffect(() => {
-    if (state?.success && !announced.current) {
-      announced.current = true;
-      show("Thanks for sharing your rating and review.");
-    }
-  }, [show, state?.success]);
+
+  function submit(formData: FormData) {
+    startTransition(async () => {
+      const result = await submitRentalReview(undefined, formData);
+      setState(result);
+      if (result?.success) show("Thanks for sharing your rating and review.");
+    });
+  }
+
   if (state?.success) return <FormNotice message={`Your review of the ${role === "OWNER" ? "owner" : "renter"} has been published.`} />;
-  return <form action={action} className="mt-6 space-y-5">
+  return <form action={submit} className="mt-6 space-y-5">
     <input type="hidden" name="booking_id" value={bookingId ?? ""} />
     <input type="hidden" name="bundle_booking_id" value={bundleBookingId ?? ""} />
     <p className="text-sm text-ink-soft">How was your experience with this {party}? Your review will be published on their public profile. Keep it honest, relevant and respectful.</p>

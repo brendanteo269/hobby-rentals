@@ -15,6 +15,7 @@ export type PublishedReview = {
   } | null;
 };
 export type RatingSummary = { average: number | null; count: number };
+export type ReviewCollection = RatingSummary & { reviews: PublishedReview[] };
 import type { ListingCard } from "@/lib/listings";
 export type PublicMemberProfile = { id: string; display_name: string | null; created_at: string; owner_summary: RatingSummary; renter_summary: RatingSummary; reviews: PublishedReview[]; listings: ListingCard[] };
 

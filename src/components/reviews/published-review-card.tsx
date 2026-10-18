@@ -10,7 +10,7 @@ function reviewerRole(reviewedRole: PublishedReview["reviewed_role"]) {
 }
 
 /** A read-only reputation entry shared by public and personal profile pages. */
-export function PublishedReviewCard({ review }: { review: PublishedReview }) {
+export function PublishedReviewCard({ review, showRental = true }: { review: PublishedReview; showRental?: boolean }) {
   const reviewerName = review.reviewer?.display_name ?? "Member";
   const rental = review.rental_listing;
   const rentalName = rental?.name ?? review.rental_name_snapshot;
@@ -37,13 +37,15 @@ export function PublishedReviewCard({ review }: { review: PublishedReview }) {
         ))}
       </div>
       <p className="mt-4 text-sm leading-6 text-ink">{review.body}</p>
-      <div className="mt-4 flex items-center gap-3 border-t border-line pt-3">
-        <ImageSlot label={rentalName} src={rental?.photo_url ?? undefined} className="size-12 shrink-0 rounded-md" />
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-ink">{rentalName}</p>
-          {rental && <p className="mt-0.5 text-xs text-ink-soft">{CONDITION_LABELS[rental.condition]}</p>}
+      {showRental && (
+        <div className="mt-4 flex items-center gap-3 border-t border-line pt-3">
+          <ImageSlot label={rentalName} src={rental?.photo_url ?? undefined} className="size-12 shrink-0 rounded-md" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium text-ink">{rentalName}</p>
+            {rental && <p className="mt-0.5 text-xs text-ink-soft">{CONDITION_LABELS[rental.condition]}</p>}
+          </div>
         </div>
-      </div>
+      )}
     </article>
   );
 }
