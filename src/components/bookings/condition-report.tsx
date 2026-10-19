@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Badge } from "@/components/ui";
+import { ScanChecklist } from "@/components/bookings/scan-checklist";
 import { formatDateTime } from "@/lib/format";
 import {
   findingLabel,
@@ -25,6 +26,7 @@ export function ConditionReport({
     <div className="space-y-10">
       <Verdict scan={scan} />
       {action}
+      {scan.status !== "PROCESSING" && <ScanChecklist scan={scan} />}
       {scan.angles.map((angle) => (
         <AngleReport key={angle.angle} angle={angle} />
       ))}
