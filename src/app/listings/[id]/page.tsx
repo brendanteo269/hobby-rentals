@@ -13,6 +13,7 @@ import { BookingRequestForm } from "@/components/bookings/booking-request-form";
 import { ListingViewTelemetry } from "@/components/analytics/listing-view-telemetry";
 import { WaitlistPanel } from "@/components/bookings/waitlist-panel";
 import { MessageButton } from "@/components/messages/message-button";
+import { ReportListingButton } from "@/components/listings/report-listing-button";
 import { getMyWaitlist } from "@/lib/api/waitlist";
 import { FavouriteButton } from "@/components/listings/favourite-button";
 import { getListingReviews } from "@/lib/api/reviews";
@@ -174,6 +175,11 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               unavailableDates={bookingAvailability?.unavailable_dates ?? []}
               entries={waitlistEntries}
             />
+          )}
+          {listing.status === "ACTIVE" && user && user.id !== listing.owner_id && (
+            <div className="mt-8 border-t border-line pt-4">
+              <ReportListingButton listingId={listing.id} />
+            </div>
           )}
           {listing.status === "PENDING_REMOVAL" && user && user.id !== listing.owner_id && (
             <p className="mt-8 border-t border-line pt-6 text-sm text-ink-soft">
