@@ -5,6 +5,9 @@ import { getOwnProfile } from "@/lib/profile";
 import { getMyListings } from "@/lib/api/listings";
 import { getMyBookings } from "@/lib/api/bookings";
 import { getMySuspension } from "@/lib/api/overdue";
+import { getMyOwnerVerification } from "@/lib/api/verification";
+import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
+import { responseRatePercent } from "@/lib/verification";
 import { getMyBundleBookings } from "@/lib/api/bundles";
 import { getMyWaitlist } from "@/lib/api/waitlist";
 import { getReviewEligibility } from "@/lib/api/reviews";
@@ -68,12 +71,16 @@ export default async function ProfilePage({
     year: "numeric",
   });
   const isVerified = Boolean(user.email_confirmed_at);
-  const [myListings, myBookings, myBundleBookings, myWaitlist, reviewEligibility, suspension, ownerInsights] = await Promise.all([
+  const [myListings, myBookings, myBundleBookings, myWaitlist, reviewEligibility, verification, suspension, ownerInsights] = await Promise.all([
     getMyListings(),
     getMyBookings(),
     getMyBundleBookings(),
     getMyWaitlist(true),
     getReviewEligibility().catch(() => []),
+    // S4-01: the owner's own badge standing. Swallowed like the suspension
+    // below - a badge missing from your own profile must not cost you the
+    // page, and it says nothing a renter cannot already see.
+    getMyOwnerVerification().catch(() => undefined),
     // S3-18: unpaid late fees pause new bookings; the banner is how the
     // renter learns that and settles up. Failures are swallowed on purpose:
     // this is a banner beside the bookings, and losing it must never cost
@@ -88,12 +95,22 @@ export default async function ProfilePage({
     <Container className="py-16">
       <p className="eyebrow">Member since {memberSince}</p>
       <h1 className="heading mt-3 text-3xl">{profile.display_name ?? "Your profile"}</h1>
-      <p className="body-copy mt-2 flex items-center gap-3">
+      <p className="body-copy mt-2 flex flex-wrap items-center gap-3">
         {user.email}
+        {/* About the email address, not the owner. Named in full so it cannot
+            be read as the Verified Owner badge beside it (S4-01). */}
         <Badge variant={isVerified ? "dark" : "accent"}>
-          {isVerified ? "Verified" : "Pending verification"}
+          {isVerified ? "Verified account" : "Pending verification"}
         </Badge>
+        <VerifiedOwnerBadge verified={verification?.verified} />
       </p>
+      {verification?.verified && (
+        <p className="body-copy mt-2 text-sm">
+          {verification.completed_rentals} completed{" "}
+          {verification.completed_rentals === 1 ? "rental" : "rentals"} · You answered{" "}
+          {responseRatePercent(verification)}% of booking requests
+        </p>
+      )}
 
       {/* The one location a member has left: where they hand their gear over.
           Absent for anyone who only rents, which is most of this page's

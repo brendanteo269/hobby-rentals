@@ -212,6 +212,11 @@ function ListingRow({ listing, bookings, history, policies }: { listing: OwnerLi
             </Link>
           )}
           <Badge variant={STATUS_BADGE_VARIANT[listing.status]}>{LISTING_STATUS_LABELS[listing.status]}</Badge>
+          {(listing.open_report_count ?? 0) > 0 && (
+            <Badge variant="accent">
+              Reported · under review
+            </Badge>
+          )}
           {policies.length > 0 && <Badge variant={hobbyShieldActive ? "dark" : scheduled ? "accent" : "neutral"}>{hobbyShieldActive ? "HobbyShield Active" : scheduled ? "HobbyShield Scheduled" : "HobbyShield Expired"}</Badge>}
         </div>
       </div>

@@ -27,6 +27,8 @@ import {
   Panel,
 } from "@/components/ui";
 import { ListingModerationPanel } from "@/components/listing-moderation-panel";
+import { ListingReportsPanel } from "@/components/listing-reports-panel";
+import { getListingReports } from "@/lib/reports";
 import { AuditTrail } from "@/components/audit-trail";
 
 export const metadata = { title: "Listing — HobbyRentals Admin" };
@@ -71,6 +73,7 @@ export default async function ListingDetailPage({
     { data: attributeDefs },
     categories,
     { entries: auditEntries, total: auditTotal },
+    reports,
   ] = await Promise.all([
     getAdminPassport(id).catch(() => null),
     createAdminClient()
@@ -80,6 +83,7 @@ export default async function ListingDetailPage({
       .order("display_order"),
     getCategoryOptions(),
     getListingAuditTrail(id, listing.owner_id, auditPage),
+    getListingReports(id),
   ]);
   const auditLastPage = Math.max(1, Math.ceil(auditTotal / AUDIT_PAGE_SIZE));
 
@@ -327,6 +331,7 @@ export default async function ListingDetailPage({
         </div>
 
         <div className="space-y-6">
+          <ListingReportsPanel listingId={listing.id} reports={reports} />
           <ListingModerationPanel
             key={listing.status}
             listingId={listing.id}

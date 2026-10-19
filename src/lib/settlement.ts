@@ -1,3 +1,4 @@
+import type { ConditionScan } from "@/lib/condition-scans";
 import { formatDateTime, formatMoney } from "@/lib/format";
 
 /**
@@ -25,7 +26,41 @@ export type RentalDispute = {
   damage_cents: number | null;
   resolved_at: string | null;
   created_at: string;
+  /** S3-06 claims only: the AI scan it rests on. Null on an S3-10 report. */
+  condition_scan_id?: string | null;
+  /** S3-06 claims only: when the renter's time to accept or dispute runs out. */
+  respond_by?: string | null;
 };
+
+/** S3-06: a claim as either party reads it, with what it rests on. */
+export type DamageClaim = RentalDispute & {
+  owner_name: string | null;
+  renter_name: string | null;
+  /** The deposit the claim holds. */
+  deposit_cents: number | null;
+  start_date: string | null;
+  end_date: string | null;
+  evidence_photo_urls: string[];
+  scan: ConditionScan | null;
+};
+
+/**
+ * S3-06 "claim pending renter": an open claim still inside the renter's
+ * response window. Answering it is S3-07 (accept) and S3-08 (dispute).
+ */
+export function claimPendingRenter(dispute: RentalDispute | null | undefined, now: Date = new Date()): boolean {
+  return Boolean(dispute && dispute.status === "OPEN" && dispute.respond_by && now < new Date(dispute.respond_by));
+}
+
+/** Whole seconds from now until an ISO time (negative once it has passed), for a countdown's starting figure. */
+export function secondsUntil(iso: string, now: Date = new Date()): number {
+  return Math.floor((new Date(iso).getTime() - now.getTime()) / 1000);
+}
+
+/** The renter's view of a claim on their booking - the notification's link too. */
+export function renterClaimPath(bookingId: string): `/bookings/${string}/claim` {
+  return `/bookings/${bookingId}/claim`;
+}
 
 export type RentalSettlement = {
   id: string;
@@ -90,6 +125,11 @@ export function settlementLine(state: SettlementState, viewer: "renter" | "owner
       `${formatMoney(settlement.commission_cents)} platform commission` +
       (extras.length > 0 ? `, plus ${extras.join(" and ")}.` : ".")
     );
+  }
+  if (dispute && claimPendingRenter(dispute, now)) {
+    return viewer === "renter"
+      ? `Claim pending: the owner claims ${formatMoney(dispute.claimed_cents)} for damage. Review it and respond by ${formatDateTime(dispute.respond_by!)}. Your deposit stays on hold.`
+      : `Claim pending renter: you claimed ${formatMoney(dispute.claimed_cents)}. They have until ${formatDateTime(dispute.respond_by!)} to respond; the rental's funds stay on hold.`;
   }
   if (dispute?.status === "OPEN") {
     return viewer === "renter"

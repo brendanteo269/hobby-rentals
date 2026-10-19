@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { requirePortalSession } from "@/lib/admin";
 import { getCategoryOptions, searchListings, PAGE_SIZE } from "@/lib/listings";
 import { ROUTES } from "@/lib/routes";
-import { shortId } from "@/lib/format";
+import { formatDateTime, shortId } from "@/lib/format";
 import { listFlaggedPassports } from "@/lib/passports";
+import { LISTING_REPORT_REASON_LABELS, listOpenListingReports } from "@/lib/reports";
 import { Badge, Container, Panel } from "@/components/ui";
 import { ListingSearch } from "@/components/listing-search";
 import { ListingTable } from "@/components/listing-table";
@@ -32,10 +33,11 @@ export default async function ListingsPage({
   const categories = Array.isArray(category) ? category : category ? [category] : [];
   const statuses = Array.isArray(status) ? status : status ? [status] : [];
 
-  const [{ listings, total, error }, categoryOptions, queue] = await Promise.all([
+  const [{ listings, total, error }, categoryOptions, queue, reported] = await Promise.all([
     searchListings(q, categories, statuses, page),
     getCategoryOptions(),
     listFlaggedPassports(),
+    listOpenListingReports(),
   ]);
 
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -55,6 +57,43 @@ export default async function ListingsPage({
     <Container className="py-12">
       <p className="eyebrow">Admin</p>
       <h1 className="display-caps mt-3 text-3xl">Listings</h1>
+
+      {/* S3-21: listings members reported, waiting on an admin decision. */}
+      <div className="mt-8">
+        <Panel
+          title="Reported listings"
+          description={
+            reported.error ??
+            (reported.reports.length === 0
+              ? "Nothing waiting. Listings members report show up here."
+              : `${reported.reports.length} open report${reported.reports.length === 1 ? "" : "s"}, oldest first.`)
+          }
+        >
+          {reported.reports.length > 0 && (
+            <ul className="-mx-6 -my-5 divide-y divide-line">
+              {reported.reports.map((r) => (
+                <li key={r.id}>
+                  <Link
+                    href={ROUTES.listing(r.listing_id)}
+                    className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 hover:bg-sand"
+                  >
+                    <span>
+                      <span className="font-medium">{r.listing.name}</span>
+                      <span className="mt-0.5 block text-xs text-ink-soft">
+                        Reported {formatDateTime(r.created_at)} · owner {shortId(r.listing.owner_id)}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <Badge>{r.listing.status}</Badge>
+                      <Badge tone="warning">{LISTING_REPORT_REASON_LABELS[r.reason_code] ?? r.reason_code}</Badge>
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      </div>
 
       {/* S2-35: flagged passports waiting on an admin decision. */}
       <div className="mt-8">

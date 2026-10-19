@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Button, ButtonLink } from "@/components/ui";
+import { Badge, Button, ButtonLink } from "@/components/ui";
 import { changeBookingStatus, type BookingActionResult } from "@/app/bookings/actions";
 import { MessageButton } from "@/components/messages/message-button";
 import { ExtensionRequestDecision } from "@/components/bookings/extension-request-decision";
@@ -21,6 +21,7 @@ import { cancellationOutcomeLine, HANDED_OVER_NOTE } from "@/lib/cancellations";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { canReportDamage, settlementLine } from "@/lib/settlement";
 import { canConfirmReturn, returnStatusLine } from "@/lib/returns";
+import { ownerConditionReportPath, scanBadge } from "@/lib/condition-scans";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
 import { reviewPath, type ReviewEligibility } from "@/lib/reviews";
 
@@ -94,13 +95,24 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
               {booking.settlement_state && (
                 <span className="block text-ink-soft">{settlementLine(booking.settlement_state, "owner")}</span>
               )}
+              {booking.condition_scan && (
+                <Badge variant={scanBadge(booking.condition_scan).tone} className="mt-1">
+                  {scanBadge(booking.condition_scan).label}
+                </Badge>
+              )}
             </span>
             <span className="flex gap-2">
               {next && <Button className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, next.status)}>{next.label}</Button>}
               {canConfirmReturn(booking, "owner") && <ConfirmReturnButton bookingId={booking.id} />}
+              {booking.condition_scan && (
+                <ButtonLink href={ownerConditionReportPath(booking.id)} variant="outline" className="px-3 py-1.5 text-xs">
+                  Condition report
+                </ButtonLink>
+              )}
               {booking.status === "PENDING" && <ButtonLink href={requestReviewPath("BOOKING", booking.id)} className="px-3 py-1.5 text-xs">Review request</ButtonLink>}
               {booking.status === "CONFIRMED" && <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "CANCELLED")}>Cancel booking</Button>}
-              {canReportDamage(booking.settlement_state) && booking.settlement_state?.claim_window_ends_at && (
+              {/* With an AI condition report, the claim (S3-06) is made from the report page instead. */}
+              {canReportDamage(booking.settlement_state) && booking.settlement_state?.claim_window_ends_at && !booking.condition_scan && (
                 <ReportDamageButton kind="booking" id={booking.id} windowEndsAt={booking.settlement_state.claim_window_ends_at} />
               )}
               {reviewEligibility.find((item) => item.booking_id === booking.id) && <ButtonLink href={reviewPath(reviewEligibility.find((item) => item.booking_id === booking.id)!)} variant="accent" className="px-3 py-1.5 text-xs">Rate renter</ButtonLink>}

@@ -31,6 +31,10 @@ export type NotificationType =
   // S3-10: a returned rental settled (to the renter), and damage the owner reported.
   | "BOOKING_DEPOSIT_RETURNED"
   | "BOOKING_DAMAGE_REPORTED"
+  // S3-05: how the AI condition scan of a return came out, to the owner.
+  | "BOOKING_CONDITION_CLEAR_OWNER"
+  | "BOOKING_CONDITION_DAMAGE_OWNER"
+  | "BOOKING_CONDITION_SCAN_FAILED_OWNER"
   | "BOOKING_REVIEW_REQUESTED"
   | "BOOKING_REVIEW_RECEIVED"
   // A bundle booking notifies once per change, as one order.
@@ -59,6 +63,8 @@ export type NotificationType =
   // one lifecycle change the owner did not initiate themselves.
   | "LISTING_DEACTIVATED"
   | "LISTING_REACTIVATED"
+  // S3-21: the owner's listing was reported and is under review.
+  | "LISTING_REPORTED_OWNER"
   | "HOBBYSHIELD_EXPIRING_7_DAYS"
   | "HOBBYSHIELD_EXPIRING_3_DAYS"
   | "HOBBYSHIELD_EXPIRING_TODAY"
@@ -129,6 +135,10 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   BOOKING_PAYOUT_RELEASED_OWNER: "Payout released",
   BOOKING_DEPOSIT_RETURNED: "Rental settled",
   BOOKING_DAMAGE_REPORTED: "Damage reported",
+  BOOKING_CONDITION_CLEAR_OWNER: "No damage found",
+  BOOKING_CONDITION_DAMAGE_OWNER: "Possible damage found",
+  BOOKING_CONDITION_SCAN_FAILED_OWNER: "Condition check needs you",
+  LISTING_REPORTED_OWNER: "Listing reported",
   BOOKING_REVIEW_REQUESTED: "Rate your rental",
   BOOKING_REVIEW_RECEIVED: "Review received",
   BUNDLE_REQUESTED: "Bundle request sent",

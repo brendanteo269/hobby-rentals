@@ -36,6 +36,11 @@ export function SuspensionBanner({ status }: { status: SuspensionStatus }) {
     (total, booking) => total + booking.overdue_fee_cents,
     0,
   );
+  // Exact, not an estimate: each rental's fee is either met by its deposit or
+  // split into the part the deposit met and the part it did not, so the two
+  // always add back up to the total.
+  const coveredByDepositCents = totalFeesCents - status.debt_cents;
+  const rentals = status.overdue_bookings.length === 1 ? "this rental" : "your rentals";
 
   function settle() {
     setError(null);
@@ -50,7 +55,15 @@ export function SuspensionBanner({ status }: { status: SuspensionStatus }) {
     <Notice className="mb-6">
       <p className="font-medium text-ink">New bookings are paused on your account</p>
       <p className="mt-2 text-sm text-ink">
-        {formatMoney(totalFeesCents)} in late fees has built up on your rentals.
+        {formatMoney(totalFeesCents)} in late fees has built up on {rentals}.{" "}
+        {coveredByDepositCents > 0 ? (
+          <>
+            The {formatMoney(coveredByDepositCents)} security deposit covers part of it, leaving{" "}
+            {formatMoney(status.debt_cents)} for you to settle.
+          </>
+        ) : (
+          <>There is no deposit left to cover it, so {formatMoney(status.debt_cents)} is yours to settle.</>
+        )}
       </p>
 
       {stillOut.length > 0 && (

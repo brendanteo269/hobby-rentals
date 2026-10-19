@@ -21,9 +21,9 @@ import { OverdueNotice } from "@/components/bookings/overdue-notice";
 import { SuspensionBanner } from "@/components/bookings/suspension-banner";
 import type { SuspensionStatus } from "@/lib/overdue";
 import { cancellationOutcomeLine } from "@/lib/cancellations";
-import { settlementLine } from "@/lib/settlement";
+import { claimPendingRenter, renterClaimPath, settlementLine } from "@/lib/settlement";
 import { ExtendBookingButton } from "@/components/bookings/extend-booking-button";
-import { canConfirmReturn, canStartReturnInspection, returnStatusLine } from "@/lib/returns";
+import { canConfirmReturn, canStartPickupInspection, canStartReturnInspection, returnStatusLine } from "@/lib/returns";
 import { ConfirmReturnButton } from "@/components/bookings/confirm-return-button";
 import { canRequestExtension } from "@/lib/extensions";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
@@ -255,6 +255,14 @@ export function RenterView({
                     {booking.confirmed_meetup_time && `, ${formatDateTime(booking.confirmed_meetup_time)}`}
                   </p>
                 )}
+                {booking.pickup_inspection_status === "COMPLETED" && (
+                  <p className="mt-2 inline-flex items-center gap-1 rounded-full bg-success-soft px-2.5 py-0.5 text-xs font-medium text-success">
+                    ✓ Pickup photos saved
+                  </p>
+                )}
+                {booking.pickup_inspection_status === "IN_PROGRESS" && (
+                  <p className="mt-1 text-sm text-ink-soft">Pickup photos started. Finish all four angles to save them.</p>
+                )}
                 {booking.status === "ACTIVE" && booking.return_state && returnStatusLine(booking.return_state, "renter") && (
                   <p className="mt-1 text-sm text-ink-soft">{returnStatusLine(booking.return_state, "renter")}</p>
                 )}
@@ -273,9 +281,27 @@ export function RenterView({
                 {canRequestExtension(booking) && (
                   <ExtendBookingButton bookingId={booking.id} endDate={booking.end_date} />
                 )}
+                {canStartPickupInspection(booking) && (
+                  <ButtonLink href={`/bookings/${booking.id}/pickup` as Route} variant="outline" className="px-3 py-1.5 text-xs">
+                    {booking.pickup_inspection_status === "COMPLETED"
+                      ? "View pickup photos"
+                      : booking.pickup_inspection_status === "IN_PROGRESS"
+                        ? "Continue pickup photos"
+                        : "Pickup photos"}
+                  </ButtonLink>
+                )}
                 {canStartReturnInspection(booking) && (
                   <ButtonLink href={`/bookings/${booking.id}/return` as Route} variant="outline" className="px-3 py-1.5 text-xs">
                     {booking.return_state?.inspection_status === "COMPLETED" ? "View return photos" : "Return photos"}
+                  </ButtonLink>
+                )}
+                {booking.settlement_state?.dispute?.booking_id && (
+                  <ButtonLink
+                    href={renterClaimPath(booking.id)}
+                    variant={claimPendingRenter(booking.settlement_state.dispute) ? "accent" : "outline"}
+                    className="px-3 py-1.5 text-xs"
+                  >
+                    {claimPendingRenter(booking.settlement_state.dispute) ? "Review claim" : "View claim"}
                   </ButtonLink>
                 )}
                 {canConfirmReturn(booking, "renter") && booking.return_state?.inspection_status === "COMPLETED" && (

@@ -106,6 +106,11 @@ export type ListingCard = {
   location_area: LocationArea;
   /** The passport's serial status, for the card's badge (S2-30). */
   serial_status: SerialStatus | null;
+  /**
+   * S4-01: whether the owner currently holds the Verified Owner badge. About
+   * the person, not the item - serial_status above is the item's.
+   */
+  owner_verified?: boolean;
   /** Present for signed-in browse/favourites responses; public cards use 0. */
   favourite_count?: number;
   /** Present for signed-in browse/favourites responses. */
@@ -139,6 +144,8 @@ export type Listing = {
   owner_id: string;
   /** Detail responses include only this public owner identity field. */
   owner_display_name?: string | null;
+  /** S4-01: whether this listing's owner currently holds the Verified Owner badge. */
+  owner_verified?: boolean;
   name: string;
   description: string;
   category: ListingCategory;
@@ -190,7 +197,7 @@ export const MAX_LISTING_PHOTOS = 8;
  * "passport" photos are condition evidence, stored apart from listing photos;
  * "return" photos are a renter's return evidence, private in the same way.
  */
-export type PhotoKind = "listing" | "passport" | "return";
+export type PhotoKind = "listing" | "passport" | "return" | "pickup" | "claim";
 
 /** S2-04 Scenario 2: the four angles a baseline covers, in capture order. */
 export const BASELINE_ANGLES = [
@@ -318,6 +325,8 @@ export const PASSPORT_ENTRY_LABELS: Record<string, string> = {
   DAMAGE_RESOLUTION: "Damage review after a rental",
   // S3-04: both parties confirmed a rental came back; the photos are the renter's.
   RETURN: "Returned after a rental",
+  // S3-05: the AI's check of the return photos. Owner-only: the API never shows it to renters.
+  CONDITION_SCAN: "AI condition check after a rental (only you and HobbyRentals can see this)",
 };
 
 /** An entry's heading. An item without a serial records its marks photo under the same entry type. */
@@ -495,6 +504,8 @@ export const LOCATION_LABELS: Record<LocationArea, string> = {
 export type OwnerListing = Listing & {
   /** e.g. ["baseline", "serial"]; empty once the passport is complete. */
   passport_missing: string[];
+  /** S3-21: reports on it awaiting an administrator - never who made them. */
+  open_report_count?: number;
 };
 
 export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {

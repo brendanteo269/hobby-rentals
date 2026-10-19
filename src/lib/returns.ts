@@ -2,7 +2,8 @@ import type { Booking } from "@/lib/bookings";
 import { formatDateTime } from "@/lib/format";
 
 /**
- * Guided return photo capture: mirrors app/routers/returns.py.
+ * Guided photo capture at pickup (S3-01) and at return (S3-03): mirrors
+ * app/routers/returns.py. Both stages share these shapes.
  *
  * The renter photographs four angles of the item as they return it, each
  * against the owner's baseline photo as an overlay. Every photo is validated
@@ -11,6 +12,8 @@ import { formatDateTime } from "@/lib/format";
  */
 
 export type ReturnAngle = "front" | "back" | "top" | "underside";
+
+export type InspectionStage = "pickup" | "return";
 
 export type ReturnPhotoIssueCode =
   | "MISSING"
@@ -78,6 +81,11 @@ export type ReturnPhotoResult = {
  */
 export function canStartReturnInspection(booking: Pick<Booking, "status">): boolean {
   return booking.status === "ACTIVE";
+}
+
+/** S3-01: pickup photos are taken on a confirmed booking, before it becomes active. The server re-checks. */
+export function canStartPickupInspection(booking: Pick<Booking, "status">): boolean {
+  return booking.status === "CONFIRMED";
 }
 
 /** The browser's offset from UTC, east positive, for reading EXIF times without a zone. */

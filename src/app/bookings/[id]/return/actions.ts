@@ -8,7 +8,7 @@ import {
   startReturnInspection,
   submitReturnPhoto,
 } from "@/lib/api/returns";
-import type { ReturnAngle, ReturnConfirmation, ReturnInspection, ReturnPhotoResult } from "@/lib/returns";
+import type { InspectionStage, ReturnAngle, ReturnConfirmation, ReturnInspection, ReturnPhotoResult } from "@/lib/returns";
 
 export type InspectionActionResult = { error: string } | { inspection: ReturnInspection };
 export type PhotoActionResult = { error: string } | { result: ReturnPhotoResult };
@@ -23,8 +23,13 @@ async function attempt<T>(action: () => Promise<T>): Promise<{ error: string } |
   }
 }
 
-export async function startInspection(bookingId: string, clientUtcOffsetMinutes: number): Promise<InspectionActionResult> {
-  const outcome = await attempt(() => startReturnInspection(bookingId, clientUtcOffsetMinutes));
+// Shared by the pickup page (S3-01): `stage` picks which capture session.
+export async function startInspection(
+  bookingId: string,
+  clientUtcOffsetMinutes: number,
+  stage: InspectionStage = "return",
+): Promise<InspectionActionResult> {
+  const outcome = await attempt(() => startReturnInspection(bookingId, clientUtcOffsetMinutes, stage));
   return "error" in outcome ? outcome : { inspection: outcome.value };
 }
 
@@ -33,15 +38,20 @@ export async function submitPhoto(
   angle: ReturnAngle,
   photoKey: string,
   clientCapturedAt: string,
+  stage: InspectionStage = "return",
 ): Promise<PhotoActionResult> {
-  const outcome = await attempt(() => submitReturnPhoto(inspectionId, angle, photoKey, clientCapturedAt));
+  const outcome = await attempt(() => submitReturnPhoto(inspectionId, angle, photoKey, clientCapturedAt, stage));
   return "error" in outcome ? outcome : { result: outcome.value };
 }
 
-export async function completeInspection(bookingId: string, inspectionId: string): Promise<InspectionActionResult> {
-  const outcome = await attempt(() => completeReturnInspection(inspectionId));
+export async function completeInspection(
+  bookingId: string,
+  inspectionId: string,
+  stage: InspectionStage = "return",
+): Promise<InspectionActionResult> {
+  const outcome = await attempt(() => completeReturnInspection(inspectionId, stage));
   if ("error" in outcome) return outcome;
-  revalidatePath(`/bookings/${bookingId}/return`);
+  revalidatePath(`/bookings/${bookingId}/${stage}`);
   revalidatePath("/profile");
   return { inspection: outcome.value };
 }
