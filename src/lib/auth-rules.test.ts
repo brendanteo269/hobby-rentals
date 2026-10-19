@@ -353,4 +353,8 @@ describe("notifications are behind the sign-in wall", () => {
   it("guards a booking's own pages, such as its return photos", () => {
     expect(requiresSignIn("/bookings/abc-123/return")).toBe(true);
   });
+
+  it("guards the renter portal", () => {
+    expect(requiresSignIn("/rentals")).toBe(true);
+  });
 });

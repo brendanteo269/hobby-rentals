@@ -48,6 +48,9 @@ export async function SiteHeader() {
               <Link href="/messages" className="hidden text-sm text-ink-soft hover:text-ink sm:block">
                 Messages
               </Link>
+              <Link href="/rentals" className="hidden text-sm text-ink-soft hover:text-ink sm:block">
+                My rentals
+              </Link>
               <Link href="/listings/mine" className="hidden text-sm text-ink-soft hover:text-ink sm:block">
                 My listings
               </Link>

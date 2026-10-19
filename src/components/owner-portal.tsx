@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { Container } from "@/components/ui";
+import { PortalSwitcher } from "@/components/portal-switcher";
 import { getOwnProfile } from "@/lib/profile";
 import { profilePath } from "@/lib/routes";
 
@@ -30,8 +31,14 @@ export async function requireOwner() {
 export function OwnerPortal({ active, title, children }: { active: OwnerSection; title: string; children: ReactNode }) {
   return (
     <Container className="py-16">
-      <p className="eyebrow">Owner dashboard</p>
-      <h1 className="heading mt-3 text-3xl">{title}</h1>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="eyebrow">Owner dashboard</p>
+          <h1 className="heading mt-3 text-3xl">{title}</h1>
+        </div>
+        {/* S3-13 Scenario 4: back to the renter portal, for members who do both. */}
+        <PortalSwitcher active="owner" />
+      </div>
       <nav className="mt-8 flex gap-6 overflow-x-auto border-b border-line" aria-label="Owner dashboard">
         {SECTIONS.map((section) => {
           const isActive = section.label === active;
