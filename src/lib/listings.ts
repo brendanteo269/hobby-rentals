@@ -497,6 +497,8 @@ export const LOCATION_LABELS: Record<LocationArea, string> = {
 export type OwnerListing = Listing & {
   /** e.g. ["baseline", "serial"]; empty once the passport is complete. */
   passport_missing: string[];
+  /** S3-21: reports on it awaiting an administrator - never who made them. */
+  open_report_count?: number;
 };
 
 export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {

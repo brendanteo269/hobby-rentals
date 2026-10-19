@@ -9,6 +9,7 @@
 import "server-only";
 
 import { backendRequest } from "@/lib/api/client";
+import type { ListingReport, ListingReportReason } from "@/lib/reports";
 import type { Booking } from "@/lib/bookings";
 import type {
   BaselineAngle,
@@ -339,4 +340,12 @@ export async function publishIfComplete(listingId: string): Promise<boolean> {
   if (passport.missing.length > 0) return true;
   await publishListing(listingId);
   return false;
+}
+
+/** S3-21: report a live listing that isn't the caller's. 409 ALREADY_REPORTED repeats an open report. */
+export function reportListing(listingId: string, reason: ListingReportReason, explanation: string | null) {
+  return backendRequest<ListingReport>(`/listings/${encodeURIComponent(listingId)}/reports`, {
+    method: "POST",
+    body: JSON.stringify({ reason, explanation }),
+  });
 }
