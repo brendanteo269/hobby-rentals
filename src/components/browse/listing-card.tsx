@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { formatMoney } from "@/lib/format";
 import { Badge } from "@/components/ui";
+import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import {
   CATEGORY_LABELS,
   LOCATION_LABELS,
@@ -44,6 +45,7 @@ export function ListingCard({ listing, highDemand = false, className = "", onFav
             <p className="eyebrow">{CATEGORY_LABELS[listing.category]}</p>
             {highDemand && <Badge variant="accent">🔥 High demand</Badge>}
           </div>
+          <VerifiedOwnerBadge verified={listing.owner_verified} />
           {badge && (
             <Badge variant={listing.serial_status === "VERIFIED" ? "dark" : "neutral"} className="shrink-0 whitespace-nowrap">
               {badge}

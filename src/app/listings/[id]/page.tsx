@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { formatDate, formatMoney } from "@/lib/format";
 import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS, passportBadge } from "@/lib/listings";
 import { BookingRequestForm } from "@/components/bookings/booking-request-form";
+import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { ListingViewTelemetry } from "@/components/analytics/listing-view-telemetry";
 import { WaitlistPanel } from "@/components/bookings/waitlist-panel";
 import { MessageButton } from "@/components/messages/message-button";
@@ -110,6 +111,9 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           <Link href={`/members/${listing.owner_id}` as Route} className="mt-5 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
             <PersonAvatar name={listing.owner_display_name ?? "Member"} size="sm" />
             <span>Listed by <span className="font-medium underline-offset-2 hover:underline">{listing.owner_display_name ?? "Member"}</span></span>
+            {/* S4-01 Scenario 3: alongside the owner's details, where a
+                renter is already deciding whether to trust them. */}
+            <VerifiedOwnerBadge verified={listing.owner_verified} />
           </Link>
 
           <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-6 text-sm">

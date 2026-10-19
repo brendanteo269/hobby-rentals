@@ -106,6 +106,11 @@ export type ListingCard = {
   location_area: LocationArea;
   /** The passport's serial status, for the card's badge (S2-30). */
   serial_status: SerialStatus | null;
+  /**
+   * S4-01: whether the owner currently holds the Verified Owner badge. About
+   * the person, not the item - serial_status above is the item's.
+   */
+  owner_verified?: boolean;
   /** Present for signed-in browse/favourites responses; public cards use 0. */
   favourite_count?: number;
   /** Present for signed-in browse/favourites responses. */
@@ -139,6 +144,8 @@ export type Listing = {
   owner_id: string;
   /** Detail responses include only this public owner identity field. */
   owner_display_name?: string | null;
+  /** S4-01: whether this listing's owner currently holds the Verified Owner badge. */
+  owner_verified?: boolean;
   name: string;
   description: string;
   category: ListingCategory;
