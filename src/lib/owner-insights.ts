@@ -18,7 +18,7 @@ export type OwnerInsights = {
   end_at: string;
   summary: { settled_earnings_cents: number; completed_rentals: number; listing_opens: number; includes_bundle_rentals: boolean };
   bundle_rentals: { completed_rentals: number; settled_earnings_cents: number };
-  earnings_trend: { period_start: string; settled_earnings_cents: number }[];
+  earnings_trend: { period_start: string; settled_earnings_cents: number; sources: { name: string; earnings_cents: number }[] }[];
   listing_groups: Record<"top_earners" | "most_viewed" | "needs_attention", ListingInsight[]>;
   market_demand: { category: string; searches: number; change_percent: number | null; trend_available: boolean }[];
 };
