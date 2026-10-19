@@ -1,13 +1,12 @@
 import Link from "next/link";
 import type { Route } from "next";
-import { Badge, Button, ButtonLink, EmptyState, ImageSlot } from "./ui";
+import { Badge, Button, ButtonLink, EmptyState } from "./ui";
 import { enableRenting } from "@/app/profile/actions";
 import { EnableOwningForm } from "@/components/enable-owning-form";
 import { saveProfileAvailability } from "@/app/profile/actions";
 import { ProfileAvailabilityCard } from "@/components/profile-availability-card";
-import { RateLine } from "@/components/browse/listing-card";
 import { MessageButton } from "@/components/messages/message-button";
-import { CATEGORY_LABELS, LISTING_STATUS_LABELS, type Listing } from "@/lib/listings";
+import { type Listing } from "@/lib/listings";
 import { profilePath, type ProfileView } from "@/lib/routes";
 import type { Booking } from "@/lib/bookings";
 import type { BundleBooking } from "@/lib/bundles";
@@ -37,6 +36,8 @@ import {
   type ReviewEligibility,
 } from "@/lib/reviews";
 import { PublishedReviewCard } from "@/components/reviews/published-review-card";
+import { OwnerInsightsDashboard } from "@/components/owner-insights-dashboard";
+import type { OwnerInsights } from "@/lib/owner-insights";
 
 export type { ProfileView } from "@/lib/routes";
 
@@ -340,66 +341,22 @@ export function RenterView({
   );
 }
 
-/**
- * An owner's own listing, styled like the browse grid's ListingCard — same
- * photo/badge/price shell — with a status badge added, since that only
- * makes sense from the owner's own management view.
- */
-function OwnerListingCard({ listing }: { listing: Listing }) {
-  return (
-    <li className="overflow-hidden card">
-      <div className="relative overflow-hidden">
-        {/* Every real listing has at least one uploaded photo (see
-            CreateListingRequest's photo_keys validator), so photo_urls[0]
-            is always set here - no stock-photo fallback needed. */}
-        <ImageSlot
-          label={listing.photo_keys[0] ?? "No photo yet"}
-          src={listing.photo_urls[0]}
-          className="aspect-square w-full"
-        />
-        <Badge variant={listing.status === "ACTIVE" ? "dark" : "neutral"} className="absolute left-3 top-3">
-          {LISTING_STATUS_LABELS[listing.status]}
-        </Badge>
-      </div>
-
-      <div className="p-4">
-        <p className="eyebrow">{CATEGORY_LABELS[listing.category]}</p>
-        <h3 className="heading mt-1.5 text-sm leading-snug">{listing.name}</h3>
-
-        <div className="mt-3 border-t border-line pt-3">
-          <RateLine listing={listing} />
-        </div>
-      </div>
-    </li>
-  );
-}
-
 export function OwnerView({
   enabled,
   availableDays = [1, 2, 3, 4, 5, 6, 7],
   listings,
+  insights,
 }: {
   enabled: boolean;
   availableDays?: number[];
   listings: Listing[];
+  insights: OwnerInsights | null;
 }) {
   if (!enabled) return <NotEnabled side="owner" />;
   return (
     <div className="space-y-6">
+      {insights ? <OwnerInsightsDashboard insights={insights} listings={listings} /> : <p className="border border-line bg-surface-muted p-4 text-sm text-ink-soft">Insights are temporarily unavailable. Please try again shortly.</p>}
       <ProfileAvailabilityCard availableDays={availableDays} action={saveProfileAvailability} />
-      {listings.length > 0 ? (
-        <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {listings.map((listing) => (
-            <OwnerListingCard key={listing.id} listing={listing} />
-          ))}
-        </ul>
-      ) : (
-        <EmptyState
-          title="No listings yet"
-          body="Listings you create will appear here, along with requests from people wanting to book them."
-          action={<ButtonLink href="/listings/new">Create a listing</ButtonLink>}
-        />
-      )}
     </div>
   );
 }
