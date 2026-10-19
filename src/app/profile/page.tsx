@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/lib/profile";
-import { getProfileAvailability } from "@/lib/api/profile-availability";
 import { getMyListings } from "@/lib/api/listings";
 import { getMyBookings } from "@/lib/api/bookings";
 import { getMySuspension } from "@/lib/api/overdue";
@@ -24,6 +23,8 @@ import type { Roles } from "@/lib/contact-details";
 import { AccountSettings } from "@/components/account-settings";
 import { CreditWallet } from "@/components/credit-wallet";
 import { getPublicMember } from "@/lib/api/reviews";
+import { getOwnerInsights } from "@/lib/api/owner-insights";
+import { isInsightsPeriod, type InsightsPeriod } from "@/lib/owner-insights";
 
 export const metadata = { title: "Your profile — HobbyRentals" };
 
@@ -39,7 +40,7 @@ function resolveView(requested: string | undefined, roles: Roles): ProfileView {
 export default async function ProfilePage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; period?: string }>;
 }) {
   const supabase = await createClient();
   const {
@@ -56,7 +57,8 @@ export default async function ProfilePage({
   // from silently rendering a half-configured profile.
   if (!profile?.onboarded_at) redirect("/onboarding");
 
-  const { view } = await searchParams;
+  const { view, period: requestedPeriod } = await searchParams;
+  const insightsPeriod: InsightsPeriod = isInsightsPeriod(requestedPeriod) ? requestedPeriod : "30d";
   const roles: Roles = {
     wantsToRent: profile.wants_to_rent,
     wantsToOwn: profile.wants_to_own,
@@ -69,8 +71,7 @@ export default async function ProfilePage({
     year: "numeric",
   });
   const isVerified = Boolean(user.email_confirmed_at);
-  const availability = await getProfileAvailability();
-  const [myListings, myBookings, myBundleBookings, myWaitlist, reviewEligibility, verification, suspension] = await Promise.all([
+  const [myListings, myBookings, myBundleBookings, myWaitlist, reviewEligibility, verification, suspension, ownerInsights] = await Promise.all([
     getMyListings(),
     getMyBookings(),
     getMyBundleBookings(),
@@ -87,6 +88,7 @@ export default async function ProfilePage({
     // hiding it either - the database refuses a suspended renter's booking
     // whatever this page managed to show.
     getMySuspension().catch(() => undefined),
+    getOwnerInsights(insightsPeriod).catch(() => null),
   ]);
 
   return (
@@ -131,8 +133,8 @@ export default async function ProfilePage({
           {active === "owner" && (
             <OwnerView
               enabled={profile.wants_to_own}
-              availableDays={availability.available_days}
               listings={myListings}
+              insights={ownerInsights}
             />
           )}
           {active === "ratings" && <RatingsView profile={ratings} />}

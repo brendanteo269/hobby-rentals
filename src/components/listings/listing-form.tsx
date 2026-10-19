@@ -328,7 +328,7 @@ export function ListingForm({
         />
       </FormSection>
 
-      <FormSection title="Availability">
+      <FormSection title="Availability" id="availability">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
             label="Available from"
