@@ -1,6 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { formatDateTime, formatMoney } from "@/lib/format";
-import { canReportDamage, settlementLine, type RentalDispute, type RentalSettlement, type SettlementState } from "@/lib/settlement";
+import {
+  canReportDamage,
+  claimPendingRenter,
+  renterClaimPath,
+  secondsUntil,
+  settlementLine,
+  type RentalDispute,
+  type RentalSettlement,
+  type SettlementState,
+} from "@/lib/settlement";
 
 const NOW = new Date("2026-10-17T12:00:00Z");
 const WINDOW_ENDS = "2026-10-18T09:00:00+00:00";
@@ -121,5 +130,33 @@ describe("settlementLine", () => {
 
   it("says it is in progress once the window has passed", () => {
     expect(settlementLine(returned, "owner", new Date("2026-10-19T00:00:00Z"))).toBe("Your payout is being processed.");
+  });
+});
+
+
+describe("S3-06 claims", () => {
+  const RESPOND_BY = "2026-10-19T12:00:00+00:00";
+  const claim: RentalDispute = { ...dispute, respond_by: RESPOND_BY, condition_scan_id: "s1" };
+
+  it("is pending the renter while open and inside the response window", () => {
+    expect(claimPendingRenter(claim, NOW)).toBe(true);
+    expect(claimPendingRenter(claim, new Date("2026-10-19T12:00:01Z"))).toBe(false);
+    expect(claimPendingRenter({ ...claim, status: "RESOLVED" }, NOW)).toBe(false);
+    // An S3-10 report has no response window: it goes straight to the platform.
+    expect(claimPendingRenter(dispute, NOW)).toBe(false);
+    expect(claimPendingRenter(null, NOW)).toBe(false);
+  });
+
+  it("tells each side the claim is pending the renter, and until when", () => {
+    const state = { ...returned, dispute: claim };
+    expect(settlementLine(state, "renter", NOW)).toContain(`respond by ${formatDateTime(RESPOND_BY)}`);
+    expect(settlementLine(state, "renter", NOW)).toContain(formatMoney(claim.claimed_cents));
+    expect(settlementLine(state, "owner", NOW)).toMatch(/^Claim pending renter/);
+  });
+
+  it("counts down to a time and builds the renter's claim path", () => {
+    expect(secondsUntil("2026-10-17T12:01:00Z", NOW)).toBe(60);
+    expect(secondsUntil("2026-10-17T11:59:00Z", NOW)).toBe(-60);
+    expect(renterClaimPath("b1")).toBe("/bookings/b1/claim");
   });
 });

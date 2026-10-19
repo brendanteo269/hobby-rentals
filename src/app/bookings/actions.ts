@@ -8,6 +8,7 @@ import {
   getBookingCancellationPreview,
   getBookingQuote,
   reportBookingDamage,
+  submitDamageClaim,
   updateBookingStatus,
 } from "@/lib/api/bookings";
 import {
@@ -261,6 +262,28 @@ export async function reportDamage(
       kind === "bundle"
         ? await reportBundleDamage(id, listingId ?? "", description, claimedCents)
         : await reportBookingDamage(id, description, claimedCents);
+    revalidatePath("/", "layout");
+    return { dispute };
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
+}
+
+
+/**
+ * S3-06: the owner's damage claim on a returned booking, with the evidence
+ * photos already uploaded (presign kind "claim"). The deposit stays held and
+ * the renter is asked to respond.
+ */
+export async function submitClaim(
+  bookingId: string,
+  description: string,
+  claimedCents: number,
+  evidencePhotoKeys: string[],
+): Promise<ReportDamageResult> {
+  try {
+    const dispute = await submitDamageClaim(bookingId, description, claimedCents, evidencePhotoKeys);
     revalidatePath("/", "layout");
     return { dispute };
   } catch (error) {

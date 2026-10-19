@@ -111,7 +111,8 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
               )}
               {booking.status === "PENDING" && <ButtonLink href={requestReviewPath("BOOKING", booking.id)} className="px-3 py-1.5 text-xs">Review request</ButtonLink>}
               {booking.status === "CONFIRMED" && <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "CANCELLED")}>Cancel booking</Button>}
-              {canReportDamage(booking.settlement_state) && booking.settlement_state?.claim_window_ends_at && (
+              {/* With an AI condition report, the claim (S3-06) is made from the report page instead. */}
+              {canReportDamage(booking.settlement_state) && booking.settlement_state?.claim_window_ends_at && !booking.condition_scan && (
                 <ReportDamageButton kind="booking" id={booking.id} windowEndsAt={booking.settlement_state.claim_window_ends_at} />
               )}
               {reviewEligibility.find((item) => item.booking_id === booking.id) && <ButtonLink href={reviewPath(reviewEligibility.find((item) => item.booking_id === booking.id)!)} variant="accent" className="px-3 py-1.5 text-xs">Rate renter</ButtonLink>}

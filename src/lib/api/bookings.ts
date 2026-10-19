@@ -10,7 +10,7 @@ import type {
   DeclineReason,
 } from "@/lib/bookings";
 import type { CancellationPreview, CancellationRecord } from "@/lib/cancellations";
-import type { RentalDispute } from "@/lib/settlement";
+import type { DamageClaim, RentalDispute } from "@/lib/settlement";
 
 // Re-exported so existing callers keep importing the quote from here.
 export type { BookingQuote } from "@/lib/bookings";
@@ -89,6 +89,19 @@ export function reportBookingDamage(bookingId: string, description: string, clai
     method: "POST",
     body: JSON.stringify({ description, claimed_cents: claimedCents }),
   });
+}
+
+/** S3-06: the owner's damage claim on a returned booking, with evidence photo keys (presign kind "claim"). */
+export function submitDamageClaim(bookingId: string, description: string, claimedCents: number, evidencePhotoKeys: string[]) {
+  return backendRequest<RentalDispute>(`/bookings/${encodeURIComponent(bookingId)}/claims`, {
+    method: "POST",
+    body: JSON.stringify({ description, claimed_cents: claimedCents, evidence_photo_keys: evidencePhotoKeys }),
+  });
+}
+
+/** S3-06: the booking's damage claim, for its owner or renter. 404 when there is none. */
+export function getDamageClaim(bookingId: string) {
+  return backendRequest<DamageClaim>(`/bookings/${encodeURIComponent(bookingId)}/claim`);
 }
 
 /** What cancelling the renter's booking now would refund under the policy; changes nothing. */

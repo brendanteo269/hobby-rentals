@@ -18,13 +18,16 @@ import {
 export function ConditionReport({
   scan,
   action,
+  viewer = "owner",
 }: {
   scan: ConditionScan;
   action?: ReactNode;
+  /** The renter reads it as the evidence behind a claim on them (S3-06). */
+  viewer?: "owner" | "renter";
 }) {
   return (
     <div className="space-y-10">
-      <Verdict scan={scan} />
+      <Verdict scan={scan} viewer={viewer} />
       {action}
       {scan.status !== "PROCESSING" && <ScanChecklist scan={scan} />}
       {scan.angles.map((angle) => (
@@ -36,15 +39,15 @@ export function ConditionReport({
           {scan.model_version ?? "the AI"}.
           {scan.threshold != null &&
             ` Changes scoring ${scan.threshold.toFixed(2)} or more are looked at closely.`}{" "}
-          The AI can miss damage, and can flag things that aren&apos;t: check
-          the item yourself before making a claim.
+          The AI can miss damage, and can flag things that aren&apos;t
+          {viewer === "owner" ? ": check the item yourself before making a claim." : "."}
         </p>
       )}
     </div>
   );
 }
 
-function Verdict({ scan }: { scan: ConditionScan }) {
+function Verdict({ scan, viewer }: { scan: ConditionScan; viewer: "owner" | "renter" }) {
   const badge = scanBadge(scan);
   if (scan.status === "PROCESSING") {
     return (
@@ -108,9 +111,11 @@ function Verdict({ scan }: { scan: ConditionScan }) {
         </p>
       )}
       <p className="text-sm text-ink">
-        {clear
-          ? "Nothing to do: the deposit is released as usual once the claim window closes."
-          : "Next: check these spots on the item yourself, then decide whether to report damage before the claim window closes."}
+        {viewer === "renter"
+          ? "This is the AI's comparison of your return photos with the earlier photos, which the owner's claim refers to."
+          : clear
+            ? "Nothing to do: the deposit is released as usual once the claim window closes."
+            : "Next: check these spots on the item yourself, then decide whether to make a claim before the claim window closes."}
       </p>
     </section>
   );
