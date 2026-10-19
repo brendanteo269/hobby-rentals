@@ -1,16 +1,20 @@
 import { notFound } from "next/navigation";
 import { OwnerPortal, requireOwner } from "@/components/owner-portal";
 import { ConditionReport } from "@/components/bookings/condition-report";
-import { ReportDamageButton } from "@/components/bookings/report-damage-button";
+import { ClaimForm } from "@/components/bookings/claim-form";
+import { ClaimSummary } from "@/components/bookings/claim-summary";
 import { RefreshWhile } from "@/components/refresh-while";
 import { BackendApiError } from "@/lib/api/client";
-import { getOwnerBookings } from "@/lib/api/bookings";
+import { getDamageClaim, getOwnerBookings } from "@/lib/api/bookings";
 import { getConditionScan } from "@/lib/api/returns";
-import { canReportDamage } from "@/lib/settlement";
+import { canReportDamage, secondsUntil } from "@/lib/settlement";
 
 export const metadata = { title: "Condition report — HobbyRentals" };
 
-/** S3-05: the AI's check of a returned booking, for its owner to decide whether to claim. */
+/**
+ * S3-05: the AI's check of a returned booking, for its owner - and S3-06:
+ * where they make a damage claim from it, or see the claim they made.
+ */
 export default async function ConditionReportPage({ params }: { params: Promise<{ bookingId: string }> }) {
   await requireOwner();
   const { bookingId } = await params;
@@ -25,22 +29,33 @@ export default async function ConditionReportPage({ params }: { params: Promise<
     throw error;
   }
 
-  // Offered whatever the verdict: the AI can miss damage the owner finds.
-  const windowEndsAt = booking.settlement_state?.claim_window_ends_at;
+  const state = booking.settlement_state;
+  const windowEndsAt = state?.claim_window_ends_at;
+  let action;
+  if (state?.dispute) {
+    action = <ClaimSummary claim={await getDamageClaim(bookingId)} viewer="owner" />;
+  } else if (canReportDamage(state) && windowEndsAt) {
+    // Offered whatever the verdict: the AI can miss damage the owner finds.
+    action = (
+      <ClaimForm
+        bookingId={booking.id}
+        windowEndsAt={windowEndsAt}
+        windowSecondsLeft={secondsUntil(windowEndsAt)}
+        depositCents={booking.deposit_cents ?? null}
+      />
+    );
+  } else if (booking.status === "ACTIVE") {
+    action = (
+      <p className="body-copy border border-line px-4 py-3">
+        You can make a damage claim once you and the renter have both confirmed the return.
+      </p>
+    );
+  }
+
   return (
     <OwnerPortal active="Bookings" title={`Condition report · ${booking.listing_name ?? "Your item"}`}>
       <RefreshWhile active={scan.status === "PROCESSING"} />
-      <ConditionReport
-        scan={scan}
-        action={
-          canReportDamage(booking.settlement_state) && windowEndsAt ? (
-            <div className="flex flex-wrap items-center justify-between gap-3 border border-line px-4 py-3">
-              <p className="body-copy">Found damage when you checked the item? Report it before the claim window closes.</p>
-              <ReportDamageButton kind="booking" id={booking.id} windowEndsAt={windowEndsAt} />
-            </div>
-          ) : undefined
-        }
-      />
+      <ConditionReport scan={scan} action={action} />
     </OwnerPortal>
   );
 }

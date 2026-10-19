@@ -24,7 +24,7 @@ import { OverdueNotice } from "@/components/bookings/overdue-notice";
 import { SuspensionBanner } from "@/components/bookings/suspension-banner";
 import type { SuspensionStatus } from "@/lib/overdue";
 import { cancellationOutcomeLine } from "@/lib/cancellations";
-import { settlementLine } from "@/lib/settlement";
+import { claimPendingRenter, renterClaimPath, settlementLine } from "@/lib/settlement";
 import { ExtendBookingButton } from "@/components/bookings/extend-booking-button";
 import { canConfirmReturn, canStartPickupInspection, canStartReturnInspection, returnStatusLine } from "@/lib/returns";
 import { ConfirmReturnButton } from "@/components/bookings/confirm-return-button";
@@ -294,6 +294,15 @@ export function RenterView({
                 {canStartReturnInspection(booking) && (
                   <ButtonLink href={`/bookings/${booking.id}/return` as Route} variant="outline" className="px-3 py-1.5 text-xs">
                     {booking.return_state?.inspection_status === "COMPLETED" ? "View return photos" : "Return photos"}
+                  </ButtonLink>
+                )}
+                {booking.settlement_state?.dispute?.booking_id && (
+                  <ButtonLink
+                    href={renterClaimPath(booking.id)}
+                    variant={claimPendingRenter(booking.settlement_state.dispute) ? "accent" : "outline"}
+                    className="px-3 py-1.5 text-xs"
+                  >
+                    {claimPendingRenter(booking.settlement_state.dispute) ? "Review claim" : "View claim"}
                   </ButtonLink>
                 )}
                 {canConfirmReturn(booking, "renter") && booking.return_state?.inspection_status === "COMPLETED" && (
