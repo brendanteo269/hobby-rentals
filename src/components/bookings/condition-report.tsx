@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Badge, FormNotice } from "@/components/ui";
+import { Badge } from "@/components/ui";
 import { formatDateTime } from "@/lib/format";
 import {
   findingLabel,
@@ -55,25 +55,84 @@ function Verdict({ scan }: { scan: ConditionScan }) {
       </div>
     );
   }
-  if (scan.status === "COMPLETED" && scan.verdict === "CLEAR") {
+  if (scan.status === "FAILED") {
     return (
-      <FormNotice tone="success" message={scan.summary ?? "No damage found."} />
+      <div
+        className="rounded-lg border-l-2 border-accent bg-accent-soft px-4 py-3"
+        role="alert"
+      >
+        <p className="font-medium text-ink">
+          The AI couldn&apos;t finish this check
+        </p>
+        <p className="mt-1 text-sm text-ink">{scan.failure_reason}</p>
+      </div>
     );
   }
+
+  const found = scan.angles.flatMap((angle) =>
+    angle.findings.map((finding) => ({ angle, finding })),
+  );
+  const damage = found.filter(({ finding }) => !finding.is_wear);
+  const wear = found.filter(({ finding }) => finding.is_wear);
+  const skipped = scan.angles.filter(
+    (angle) =>
+      angle.status === "NOT_COMPARED" || angle.status === "NOT_APPLICABLE",
+  );
+  const clear = scan.verdict === "CLEAR";
   return (
-    <div
-      className="rounded-lg border-l-2 border-accent bg-accent-soft px-4 py-3"
-      role="alert"
+    <section
+      aria-labelledby="verdict-heading"
+      className={`space-y-3 rounded-lg border-l-2 px-4 py-4 ${clear ? "border-success bg-success-soft" : "border-accent bg-accent-soft"}`}
     >
-      <p className="font-medium text-ink">
-        {scan.status === "FAILED"
-          ? "The AI couldn't finish this check"
-          : "Possible damage found"}
+      <h2 id="verdict-heading" className="font-semibold text-ink">
+        {clear
+          ? "No damage found"
+          : `Possible damage found in ${damage.length} place${damage.length === 1 ? "" : "s"}`}
+      </h2>
+      {damage.length > 0 && <FindingList items={damage} />}
+      {wear.length > 0 && (
+        <div>
+          <p className="text-sm font-medium text-ink">
+            Normal wear (not damage)
+          </p>
+          <FindingList items={wear} />
+        </div>
+      )}
+      {skipped.length > 0 && (
+        <p className="text-sm text-ink-soft">
+          Not checked:{" "}
+          {skipped.map((angle) => angle.label.toLowerCase()).join(", ")}. See
+          below for why.
+        </p>
+      )}
+      <p className="text-sm text-ink">
+        {clear
+          ? "Nothing to do: the deposit is released as usual once the claim window closes."
+          : "Next: check these spots on the item yourself, then decide whether to report damage before the claim window closes."}
       </p>
-      <p className="mt-1 text-sm text-ink">
-        {scan.status === "FAILED" ? scan.failure_reason : scan.summary}
-      </p>
-    </div>
+    </section>
+  );
+}
+
+function FindingList({
+  items,
+}: {
+  items: { angle: ScanAngle; finding: ScanAngle["findings"][number] }[];
+}) {
+  return (
+    <ul className="mt-1 space-y-1 text-sm text-ink">
+      {items.map(({ angle, finding }) => (
+        <li key={`${angle.angle}-${finding.number}`} className="flex gap-2">
+          <span aria-hidden>•</span>
+          <span>
+            <span className="font-medium">
+              {angle.label} #{finding.number} · {findingLabel(finding)}
+            </span>{" "}
+            — {finding.summary}
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
