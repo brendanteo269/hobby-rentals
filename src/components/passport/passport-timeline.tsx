@@ -39,6 +39,17 @@ export function PassportTimeline({ entries }: { entries: PassportEntry[] }) {
             </p>
           )}
 
+          {/* S3-05: the scan's outcome; the full report is on the booking. */}
+          {entry.entry_type === "CONDITION_SCAN" && (
+            <p className="body-copy mt-2">
+              {entry.data.verdict === "CLEAR"
+                ? "No damage found."
+                : entry.data.verdict === "DAMAGE_DETECTED"
+                  ? "Possible damage found. Not a finding until it is reviewed."
+                  : "The check couldn't be completed."}
+            </p>
+          )}
+
           {Object.keys(entry.photo_urls).length > 0 && (
             <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
               {Object.entries(entry.photo_urls).map(([name, url]) => {

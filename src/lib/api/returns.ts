@@ -1,6 +1,7 @@
 import "server-only";
 
 import { backendRequest } from "@/lib/api/client";
+import type { ConditionScan } from "@/lib/condition-scans";
 import type { InspectionStage, ReturnAngle, ReturnConfirmation, ReturnInspection, ReturnPhotoResult } from "@/lib/returns";
 
 /** Mirrors the FastAPI routes in app/routers/returns.py. `stage` picks pickup (S3-01) or return. */
@@ -48,4 +49,9 @@ export function confirmBookingReturn(bookingId: string) {
   return backendRequest<ReturnConfirmation>(`/bookings/${encodeURIComponent(bookingId)}/return-confirmation`, {
     method: "POST",
   });
+}
+
+/** S3-05: the booking's AI condition scan, for its owner or renter. 404 until the return photos are done. */
+export function getConditionScan(bookingId: string) {
+  return backendRequest<ConditionScan>(`/bookings/${encodeURIComponent(bookingId)}/condition-scan`);
 }

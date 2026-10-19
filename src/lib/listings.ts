@@ -318,6 +318,8 @@ export const PASSPORT_ENTRY_LABELS: Record<string, string> = {
   DAMAGE_RESOLUTION: "Damage review after a rental",
   // S3-04: both parties confirmed a rental came back; the photos are the renter's.
   RETURN: "Returned after a rental",
+  // S3-05: the AI's check of the return photos. Owner-only: the API never shows it to renters.
+  CONDITION_SCAN: "AI condition check after a rental (only you and HobbyRentals can see this)",
 };
 
 /** An entry's heading. An item without a serial records its marks photo under the same entry type. */
