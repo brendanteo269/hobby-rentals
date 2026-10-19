@@ -3,8 +3,6 @@ import type { Route } from "next";
 import { Badge, Button, ButtonLink, EmptyState } from "./ui";
 import { enableRenting } from "@/app/profile/actions";
 import { EnableOwningForm } from "@/components/enable-owning-form";
-import { saveProfileAvailability } from "@/app/profile/actions";
-import { ProfileAvailabilityCard } from "@/components/profile-availability-card";
 import { MessageButton } from "@/components/messages/message-button";
 import { type Listing } from "@/lib/listings";
 import { profilePath, type ProfileView } from "@/lib/routes";
@@ -343,12 +341,10 @@ export function RenterView({
 
 export function OwnerView({
   enabled,
-  availableDays = [1, 2, 3, 4, 5, 6, 7],
   listings,
   insights,
 }: {
   enabled: boolean;
-  availableDays?: number[];
   listings: Listing[];
   insights: OwnerInsights | null;
 }) {
@@ -356,7 +352,6 @@ export function OwnerView({
   return (
     <div className="space-y-6">
       {insights ? <OwnerInsightsDashboard insights={insights} listings={listings} /> : <p className="border border-line bg-surface-muted p-4 text-sm text-ink-soft">Insights are temporarily unavailable. Please try again shortly.</p>}
-      <ProfileAvailabilityCard availableDays={availableDays} action={saveProfileAvailability} />
     </div>
   );
 }

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/lib/profile";
-import { getProfileAvailability } from "@/lib/api/profile-availability";
 import { getMyListings } from "@/lib/api/listings";
 import { getMyBookings } from "@/lib/api/bookings";
 import { getMySuspension } from "@/lib/api/overdue";
@@ -69,7 +68,6 @@ export default async function ProfilePage({
     year: "numeric",
   });
   const isVerified = Boolean(user.email_confirmed_at);
-  const availability = await getProfileAvailability();
   const [myListings, myBookings, myBundleBookings, myWaitlist, reviewEligibility, suspension, ownerInsights] = await Promise.all([
     getMyListings(),
     getMyBookings(),
@@ -118,7 +116,6 @@ export default async function ProfilePage({
           {active === "owner" && (
             <OwnerView
               enabled={profile.wants_to_own}
-              availableDays={availability.available_days}
               listings={myListings}
               insights={ownerInsights}
             />
