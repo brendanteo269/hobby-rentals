@@ -23,6 +23,8 @@ import type { SuspensionStatus } from "@/lib/overdue";
 import { cancellationOutcomeLine } from "@/lib/cancellations";
 import { claimPendingRenter, renterClaimPath, settlementLine } from "@/lib/settlement";
 import { ExtendBookingButton } from "@/components/bookings/extend-booking-button";
+import { canConfirmHandover, handoverStatusLine } from "@/lib/handover";
+import { ConfirmHandoverButton } from "@/components/bookings/confirm-handover-button";
 import { canConfirmReturn, canStartPickupInspection, canStartReturnInspection, returnStatusLine } from "@/lib/returns";
 import { ConfirmReturnButton } from "@/components/bookings/confirm-return-button";
 import { canRequestExtension } from "@/lib/extensions";
@@ -263,6 +265,9 @@ export function RenterView({
                 {booking.pickup_inspection_status === "IN_PROGRESS" && (
                   <p className="mt-1 text-sm text-ink-soft">Pickup photos started. Finish all four angles to save them.</p>
                 )}
+                {booking.status === "CONFIRMED" && booking.handover_state && handoverStatusLine(booking.handover_state, "renter", booking.start_date) && (
+                  <p className="mt-1 text-sm text-ink-soft">{handoverStatusLine(booking.handover_state, "renter", booking.start_date)}</p>
+                )}
                 {booking.status === "ACTIVE" && booking.return_state && returnStatusLine(booking.return_state, "renter") && (
                   <p className="mt-1 text-sm text-ink-soft">{returnStatusLine(booking.return_state, "renter")}</p>
                 )}
@@ -290,6 +295,7 @@ export function RenterView({
                         : "Pickup photos"}
                   </ButtonLink>
                 )}
+                {canConfirmHandover(booking, "renter") && <ConfirmHandoverButton bookingId={booking.id} />}
                 {canStartReturnInspection(booking) && (
                   <ButtonLink href={`/bookings/${booking.id}/return` as Route} variant="outline" className="px-3 py-1.5 text-xs">
                     {booking.return_state?.inspection_status === "COMPLETED" ? "View return photos" : "Return photos"}

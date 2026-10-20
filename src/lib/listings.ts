@@ -323,6 +323,8 @@ export const PASSPORT_ENTRY_LABELS: Record<string, string> = {
   STOLEN_REPORT: "Reported stolen",
   // S3-10: HobbyRentals deciding damage the owner reported after a rental.
   DAMAGE_RESOLUTION: "Damage review after a rental",
+  // S3-02: both parties confirmed the item changed hands; the photos are the renter's pickup angles.
+  HANDOVER: "Handed over for a rental",
   // S3-04: both parties confirmed a rental came back; the photos are the renter's.
   RETURN: "Returned after a rental",
   // S3-05: the AI's check of the return photos. Owner-only: the API never shows it to renters.
@@ -343,7 +345,7 @@ export const MAX_CONDITION_UPDATE_PHOTOS = 4;
 /** Label for a photo slot name; falls back to the raw name for types added later. */
 export const PASSPORT_PHOTO_LABELS: Record<string, string> = {
   ...Object.fromEntries(BASELINE_ANGLES.map(({ key, label }) => [key, label])),
-  // S3-04: a RETURN entry's photos are the renter's four return angles.
+  // S3-02, S3-04: HANDOVER and RETURN entries' photos are the renter's four angles.
   top: "Top",
   serial: "Serial number",
   marks: "Distinguishing marks",

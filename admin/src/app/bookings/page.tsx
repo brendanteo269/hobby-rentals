@@ -1,8 +1,10 @@
 import type { Route } from "next";
 import { redirect } from "next/navigation";
 import { requirePortalSession } from "@/lib/admin";
-import { searchBookings, PAGE_SIZE } from "@/lib/bookings";
+import { getFlaggedHandovers, searchBookings, PAGE_SIZE } from "@/lib/bookings";
+import { formatDate, shortId } from "@/lib/format";
 import { ROUTES } from "@/lib/routes";
+import Link from "next/link";
 import { Container, Panel } from "@/components/ui";
 import { BookingSearch } from "@/components/booking-search";
 import { BookingTable } from "@/components/booking-table";
@@ -33,7 +35,10 @@ export default async function BookingsPage({
   // Empty means "any" - no status filter leaves every booking in the result set.
   const statuses = Array.isArray(status) ? status : status ? [status] : [];
 
-  const { bookings, total, error } = await searchBookings(q, statuses, page);
+  const [{ bookings, total, error }, flaggedHandovers] = await Promise.all([
+    searchBookings(q, statuses, page),
+    getFlaggedHandovers(),
+  ]);
 
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
@@ -52,6 +57,29 @@ export default async function BookingsPage({
     <Container className="py-12">
       <p className="eyebrow">Admin</p>
       <h1 className="display-caps mt-3 text-3xl">Bookings</h1>
+
+      {/* S3-02: rentals past their start date that the renter and owner have not both confirmed. */}
+      {flaggedHandovers.length > 0 && (
+        <div className="mt-8">
+          <Panel
+            title="Handover not confirmed"
+            description="These bookings passed their start date without both parties confirming the handover. They stay confirmed until both do."
+          >
+            <ul className="divide-y divide-line text-sm">
+              {flaggedHandovers.map((booking) => (
+                <li key={booking.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
+                  <Link href={ROUTES.booking(booking.id)} className="font-medium underline-offset-4 hover:underline">
+                    {booking.listing_name}
+                  </Link>
+                  <span className="text-ink-soft">
+                    {shortId(booking.id)} · started {formatDate(booking.start_date)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        </div>
+      )}
 
       <div className="mt-8">
         <BookingSearch query={q} statuses={statuses} />

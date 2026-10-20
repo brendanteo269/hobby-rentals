@@ -21,16 +21,15 @@ import { cancellationOutcomeLine, HANDED_OVER_NOTE } from "@/lib/cancellations";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { canReportDamage, settlementLine } from "@/lib/settlement";
 import { canConfirmReturn, returnStatusLine } from "@/lib/returns";
+import { canConfirmHandover, handoverStatusLine, ownerPickupPhotosPath } from "@/lib/handover";
+import { ConfirmHandoverButton } from "@/components/bookings/confirm-handover-button";
 import { ownerConditionReportPath, scanBadge } from "@/lib/condition-scans";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
 import { reviewPath, type ReviewEligibility } from "@/lib/reviews";
 
 // A request is answered from its review page, where the owner sees the renter
-// and the earnings and has to give a reason to decline. An active rental is
-// returned by both parties confirming (S3-04), not by a status change.
-const NEXT_ACTION: Partial<Record<BookingStatus, { status: BookingStatus; label: string }>> = {
-  CONFIRMED: { status: "ACTIVE", label: "Start rental" },
-};
+// and the earnings and has to give a reason to decline. A rental starts (S3-02)
+// and is returned (S3-04) by both parties confirming, not by a status change.
 
 /** Who asked, for an owner reading a list of requests on one listing. */
 export function requesterName(booking: Pick<Booking, "renter_name">): string {
@@ -69,7 +68,6 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
       {error && <p role="alert" className="mt-2 text-xs text-accent-dark">{error}</p>}
       <ul className="mt-2 space-y-2">
         {items.map((booking) => {
-          const next = NEXT_ACTION[booking.status];
           // The id is what a notification's link scrolls to
           // (owner_booking_list_path in the backend's catalog).
           return <li key={booking.id} id={`booking-${booking.id}`} className="flex scroll-mt-24 flex-wrap items-center justify-between gap-2 bg-surface-muted px-3 py-2 text-sm data-[hash-target]:ring-1 data-[hash-target]:ring-ink">
@@ -80,6 +78,9 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
                   Meetup: {booking.confirmed_meetup_location}
                   {booking.confirmed_meetup_time && `, ${formatDateTime(booking.confirmed_meetup_time)}`}
                 </span>
+              )}
+              {booking.status === "CONFIRMED" && booking.handover_state && handoverStatusLine(booking.handover_state, "owner", booking.start_date) && (
+                <span className="block text-ink-soft">{handoverStatusLine(booking.handover_state, "owner", booking.start_date)}</span>
               )}
               {booking.status === "ACTIVE" && (
                 <span className="block text-ink-soft">
@@ -102,7 +103,12 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
               )}
             </span>
             <span className="flex gap-2">
-              {next && <Button className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, next.status)}>{next.label}</Button>}
+              {booking.status === "CONFIRMED" && booking.handover_state?.inspection_status === "COMPLETED" && (
+                <ButtonLink href={ownerPickupPhotosPath(booking.id)} variant="outline" className="px-3 py-1.5 text-xs">
+                  Pickup photos
+                </ButtonLink>
+              )}
+              {canConfirmHandover(booking, "owner") && <ConfirmHandoverButton bookingId={booking.id} />}
               {canConfirmReturn(booking, "owner") && <ConfirmReturnButton bookingId={booking.id} />}
               {booking.condition_scan && (
                 <ButtonLink href={ownerConditionReportPath(booking.id)} variant="outline" className="px-3 py-1.5 text-xs">

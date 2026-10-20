@@ -2,6 +2,7 @@ import type { CancellationOutcome } from "@/lib/cancellations";
 import type { ExtensionRequest } from "@/lib/extensions";
 import type { SettlementState } from "@/lib/settlement";
 import type { ReturnState } from "@/lib/returns";
+import type { HandoverState } from "@/lib/handover";
 import type { ConditionScanState } from "@/lib/condition-scans";
 
 /**
@@ -83,6 +84,8 @@ export type Booking = {
   return_state?: ReturnState | null;
   /** S3-01: set on confirmed bookings in the lists; null until the renter starts the pickup photos. */
   pickup_inspection_status?: "IN_PROGRESS" | "COMPLETED" | null;
+  /** S3-02: the pickup photos and who has confirmed the handover. Set on confirmed and active bookings in the lists only. */
+  handover_state?: HandoverState | null;
   /** S3-05: set on active and returned bookings in the lists once the return photos are in. */
   condition_scan?: ConditionScanState | null;
   created_at: string;
@@ -169,7 +172,7 @@ export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
  */
 export const BOOKING_STATUS_NEXT_STEP: Record<BookingStatus, string> = {
   PENDING: "The owner will accept or decline. You can withdraw until then.",
-  CONFIRMED: "Collect the item on your start date. You can cancel until then; the refund depends on how close to the start you cancel.",
+  CONFIRMED: "Collect the item on your start date: take the pickup photos, then you and the owner each confirm the handover. You can cancel until then; the refund depends on how close to the start you cancel.",
   DECLINED: "Your hold has been released. You can request other dates.",
   CANCELLED: "Your deposit, and any refund under the cancellation policy, is back in your wallet.",
   EXPIRED: "The owner did not respond in time. Your hold has been released.",
