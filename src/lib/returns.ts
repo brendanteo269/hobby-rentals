@@ -1,5 +1,5 @@
 import type { Booking } from "@/lib/bookings";
-import { formatDateTime } from "@/lib/format";
+import { formatDateTime, todayIso } from "@/lib/format";
 
 /**
  * Guided photo capture at pickup (S3-01) and at return (S3-03): mirrors
@@ -83,9 +83,15 @@ export function canStartReturnInspection(booking: Pick<Booking, "status">): bool
   return booking.status === "ACTIVE";
 }
 
-/** S3-01: pickup photos are taken on a confirmed booking, before it becomes active. The server re-checks. */
-export function canStartPickupInspection(booking: Pick<Booking, "status">): boolean {
-  return booking.status === "CONFIRMED";
+/**
+ * S3-01: pickup photos are taken on a confirmed booking, before it becomes
+ * active, and (S3-02) only while the rental period lasts: after the end date
+ * the handover can no longer be confirmed, so photos would go nowhere. The
+ * server checks the status; the date is checked here and again when the
+ * handover is confirmed.
+ */
+export function canStartPickupInspection(booking: Pick<Booking, "status" | "end_date">, today: string = todayIso()): boolean {
+  return booking.status === "CONFIRMED" && booking.end_date >= today;
 }
 
 /** The browser's offset from UTC, east positive, for reading EXIF times without a zone. */

@@ -2,6 +2,7 @@ import type { CancellationOutcome } from "@/lib/cancellations";
 import type { ExtensionRequest } from "@/lib/extensions";
 import type { SettlementState } from "@/lib/settlement";
 import type { ReturnState } from "@/lib/returns";
+import type { HandoverState } from "@/lib/handover";
 import type { ConditionScanState } from "@/lib/condition-scans";
 
 /**
@@ -83,6 +84,8 @@ export type Booking = {
   return_state?: ReturnState | null;
   /** S3-01: set on confirmed bookings in the lists; null until the renter starts the pickup photos. */
   pickup_inspection_status?: "IN_PROGRESS" | "COMPLETED" | null;
+  /** S3-02: the pickup photos and who has confirmed the handover. Set on confirmed and active bookings in the lists only. */
+  handover_state?: HandoverState | null;
   /** S3-05: set on active and returned bookings in the lists once the return photos are in. */
   condition_scan?: ConditionScanState | null;
   created_at: string;
@@ -191,14 +194,17 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   RELEASED: "Hold released",
 };
 
-/** Badge colour for a booking's status - confirmed/active read as the "it's happening" states, everything else neutral. */
-export const BOOKING_STATUS_BADGE_VARIANT: Record<BookingStatus, "dark" | "neutral"> = {
-  PENDING: "neutral",
-  CONFIRMED: "dark",
+/**
+ * Badge colour for a booking's status: green once the item is out or about to
+ * be, red while it waits on the owner, neutral for everything that is over.
+ */
+export const BOOKING_STATUS_BADGE_VARIANT: Record<BookingStatus, "accent" | "success" | "neutral"> = {
+  PENDING: "accent",
+  CONFIRMED: "success",
   DECLINED: "neutral",
   CANCELLED: "neutral",
   EXPIRED: "neutral",
-  ACTIVE: "dark",
+  ACTIVE: "success",
   COMPLETED: "neutral",
 };
 

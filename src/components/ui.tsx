@@ -219,12 +219,13 @@ export function SelectField({
   );
 }
 
-type BadgeVariant = "neutral" | "accent" | "dark";
+type BadgeVariant = "neutral" | "accent" | "dark" | "success";
 
 const badgeVariants: Record<BadgeVariant, string> = {
   neutral: "border border-line bg-white/95 text-ink",
   accent: "bg-accent-soft text-accent-dark",
   dark: "bg-ink text-white",
+  success: "bg-success-soft text-success",
 };
 
 /** Small pill label — location tags, filter chips, marketing ribbons. */

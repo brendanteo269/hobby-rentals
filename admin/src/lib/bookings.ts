@@ -157,6 +157,48 @@ export async function searchBookings(
   };
 }
 
+/** A confirmed rental whose start date passed with the handover still unconfirmed (S3-02). */
+export type FlaggedHandover = {
+  id: string;
+  listing_name: string;
+  start_date: string;
+  flagged_at: string;
+};
+
+/**
+ * Confirmed bookings flagged by the unconfirmed-handover sweep, oldest first.
+ * The flag only asks for a look: the booking stays confirmed until both
+ * parties confirm. Failures return an empty list so the search below still
+ * renders.
+ *
+ * Call only behind requirePortalSession(), like searchBookings.
+ */
+export async function getFlaggedHandovers(): Promise<FlaggedHandover[]> {
+  const { data, error } = await createAdminClient()
+    .from("bookings")
+    .select("id, start_date, handover_flagged_at, listing:listings(name)")
+    .eq("status", "CONFIRMED")
+    .not("handover_flagged_at", "is", null)
+    .order("handover_flagged_at", { ascending: true })
+    .limit(50);
+
+  if (error) {
+    console.error("Flagged handover lookup failed:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row) => {
+    // PostgREST types a to-one embed as an object or, loosely, an array.
+    const listing = Array.isArray(row.listing) ? row.listing[0] : row.listing;
+    return {
+      id: row.id as string,
+      listing_name: (listing?.name as string | undefined) ?? "Unknown listing",
+      start_date: row.start_date as string,
+      flagged_at: row.handover_flagged_at as string,
+    };
+  });
+}
+
 /** Everything admin_get_booking returns, plus the status timeline and escrow ledger the detail page shows. */
 export type AdminBookingDetail = {
   id: string;
