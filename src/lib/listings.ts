@@ -117,6 +117,8 @@ export type ListingCard = {
   is_favourited?: boolean;
   /** Approximate distance to the listing area's documented anchor. */
   distance_km?: number | null;
+  /** S3-28: server-computed; drives the "Promoted" badge. */
+  is_promoted?: boolean;
 };
 
 export type BrowseListingsResponse = {
@@ -177,6 +179,8 @@ export type Listing = {
   favourite_count: number;
   /** Whether the signed-in detail-page viewer saved this listing. */
   is_favourited: boolean;
+  /** S3-28: server-computed - ACTIVE with a promotion still running. */
+  is_promoted?: boolean;
 };
 
 /** A listing in the member's saved-items page. Unavailable rows stay visible
@@ -508,6 +512,8 @@ export type OwnerListing = Listing & {
   passport_missing: string[];
   /** S3-21: reports on it awaiting an administrator - never who made them. */
   open_report_count?: number;
+  /** S3-28: end of the running promotion; null when there is none. */
+  promoted_until?: string | null;
 };
 
 export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {

@@ -11,6 +11,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS, passportBadge } from "@/lib/listings";
 import { BookingRequestForm } from "@/components/bookings/booking-request-form";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
+import { PromotedBadge } from "@/components/listings/promoted-badge";
 import { ListingViewTelemetry } from "@/components/analytics/listing-view-telemetry";
 import { WaitlistPanel } from "@/components/bookings/waitlist-panel";
 import { MessageButton } from "@/components/messages/message-button";
@@ -87,6 +88,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               {CATEGORY_LABELS[listing.category]} · {LOCATION_LABELS[listing.location_area]}
             </p>
             {categoryDemand?.is_high_demand && <Badge variant="accent">🔥 High demand</Badge>}
+            <PromotedBadge promoted={listing.is_promoted} />
           </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
             <h1 className="heading text-3xl">{listing.name}</h1>
@@ -100,6 +102,11 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               <ButtonLink href={listing.replacement_value_cents == null ? `/listings/${listing.id}/edit#price` : `/listings/${listing.id}/protection`} variant="accent" className="px-4 py-2 text-xs">
                 HobbyShield
               </ButtonLink>
+              {listing.status === "ACTIVE" && (
+                <ButtonLink href={`/listings/${listing.id}/promotion`} variant="outline" className="px-4 py-2 text-xs">
+                  {listing.is_promoted ? "View promotion" : "Promote listing"}
+                </ButtonLink>
+              )}
             </div>
           )}
 

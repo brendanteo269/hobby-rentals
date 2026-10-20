@@ -219,11 +219,13 @@ export function SelectField({
   );
 }
 
-type BadgeVariant = "neutral" | "accent" | "dark" | "success";
+type BadgeVariant = "neutral" | "accent" | "accent-strong" | "dark" | "success";
 
 const badgeVariants: Record<BadgeVariant, string> = {
   neutral: "border border-line bg-white/95 text-ink",
   accent: "bg-accent-soft text-accent-dark",
+  // Paid placement: solid, so it never reads as the soft "High demand" tag.
+  "accent-strong": "bg-accent text-white",
   dark: "bg-ink text-white",
   success: "bg-success-soft text-success",
 };
