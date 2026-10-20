@@ -1,3 +1,4 @@
+import { adminApiKey, apiUrl } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { StatusTone } from "@/lib/users";
 
@@ -197,6 +198,64 @@ export async function getFlaggedHandovers(): Promise<FlaggedHandover[]> {
       flagged_at: row.handover_flagged_at as string,
     };
   });
+}
+
+/**
+ * Whether a booking is flagged for an unconfirmed handover (S3-02) and so can
+ * be started or cancelled by an administrator. Read straight from the table:
+ * admin_get_booking predates the flag. Call only behind requirePortalSession().
+ */
+export async function isHandoverFlagged(bookingId: string): Promise<boolean> {
+  const { data, error } = await createAdminClient()
+    .from("bookings")
+    .select("handover_flagged_at")
+    .eq("id", bookingId)
+    .eq("status", "CONFIRMED")
+    .not("handover_flagged_at", "is", null)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Handover flag lookup failed:", error.message);
+    return false;
+  }
+  return Boolean(data);
+}
+
+/** Where a booking's handover stands, as GET /admin/bookings/{id}/handover answers (S3-02). */
+export type HandoverDetails = {
+  booking_id: string;
+  status: string;
+  flagged_at: string | null;
+  renter_confirmed_at: string | null;
+  owner_confirmed_at: string | null;
+  /** IN_PROGRESS or COMPLETED; null before the renter starts the photos. */
+  pickup_inspection_status: "IN_PROGRESS" | "COMPLETED" | null;
+  pickup_completed_at: string | null;
+  /** Short-lived signed URLs: the photos are never publicly readable. */
+  pickup_photos: { angle: string; label: string; photo_url: string }[];
+};
+
+/**
+ * Through the API rather than Supabase, for the signed photo URLs. Null when
+ * it cannot be loaded: the page still renders, just without the panel, so a
+ * flagged booking can still be acted on.
+ */
+export async function getHandoverDetails(bookingId: string): Promise<HandoverDetails | null> {
+  try {
+    const response = await fetch(`${apiUrl()}/admin/bookings/${encodeURIComponent(bookingId)}/handover`, {
+      headers: { "X-Admin-Key": adminApiKey() },
+      // Signed URLs expire; never serve a cached copy.
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      console.error("Handover lookup failed:", response.status);
+      return null;
+    }
+    return (await response.json()) as HandoverDetails;
+  } catch (error) {
+    console.error("Handover lookup failed:", error);
+    return null;
+  }
 }
 
 /** Everything admin_get_booking returns, plus the status timeline and escrow ledger the detail page shows. */
