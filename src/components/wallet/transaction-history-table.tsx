@@ -35,6 +35,7 @@ const typeLabels: Record<TransactionType, string> = {
   ADMIN_CREDIT: "ADJUSTMENT",
   ADMIN_DEBIT: "ADJUSTMENT",
   OWNER_PROTECTION_PREMIUM: "HOBBYSHIELD",
+  LISTING_PROMOTION: "PROMOTION",
   CANCELLATION_FEE: "CANCELLATION",
   CANCELLATION_PAYOUT: "CANCELLATION",
   OVERDUE_SETTLEMENT: "OVERDUE FEE",
@@ -135,6 +136,7 @@ export function TransactionHistoryTable({ transactions }: { transactions: Wallet
                   <td className="max-w-xs px-4 py-4">
                     <TransactionDescription description={tx.description} />
                     {tx.hobbyShieldListingId && <Link className="mt-1 block text-xs underline" href={`/listings/${tx.hobbyShieldListingId}/protection`}>View HobbyShield</Link>}
+                    {tx.promotionListingId && <Link className="mt-1 block text-xs underline" href={`/listings/${tx.promotionListingId}/promotion`}>View promotion</Link>}
                     {tx.bookingReference && <BookingReferenceLine reference={tx.bookingReference} />}
                   </td>
                   <td className="whitespace-nowrap px-4 py-4 text-ink-soft">{formatDateTime(tx.date)}</td>

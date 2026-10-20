@@ -1,4 +1,6 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
+import { Megaphone, ShieldCheck, type LucideIcon } from "lucide-react";
 import { Badge, ButtonLink, EmptyState } from "@/components/ui";
 import { OwnerPortal, requireOwner } from "@/components/owner-portal";
 import { ListingLifecycleActions } from "@/components/listings/listing-lifecycle-actions";
@@ -7,7 +9,7 @@ import { getListingHistory, getMyListings, type ListingHistory } from "@/lib/api
 import { getBundleEvents, getMyBundles, getOwnerBundleBookings } from "@/lib/api/bundles";
 import { getOwnerBookings } from "@/lib/api/bookings";
 import { getMyHobbyShieldPolicies } from "@/lib/api/owner-protection";
-import { formatMoney, formatSingaporeDateTime } from "@/lib/format";
+import { formatDate, formatMoney } from "@/lib/format";
 import { daysUntilExpiry, policyIsCurrent, type HobbyShieldPolicy } from "@/lib/owner-protection";
 import {
   CATEGORY_LABELS,
@@ -171,7 +173,6 @@ const STATUS_BADGE_VARIANT: Record<Listing["status"], "neutral" | "accent" | "da
 function ListingRow({ listing, bookings, history, policies }: { listing: OwnerListing; bookings: Booking[]; history?: ListingHistory; policies: HobbyShieldPolicy[] }) {
   const policy = policies.find((item) => policyIsCurrent(item));
   const scheduled = policies.find((item) => item.status === "SCHEDULED");
-  const hobbyShieldActive = Boolean(policy);
   const expiresIn = policy ? daysUntilExpiry(policy) : 0;
   // An unanswered request is still under the owner's control. Coverage must
   // not be bought or renewed once a renter has a confirmed reservation or is
@@ -188,6 +189,30 @@ function ListingRow({ listing, bookings, history, policies }: { listing: OwnerLi
   const hobbyShieldHref = listing.replacement_value_cents == null
     ? (`/listings/${listing.id}/edit#price` as const)
     : (`/listings/${listing.id}/protection` as const);
+  const tileButton = "px-3 py-1.5 text-xs";
+  const expiringSoon = expiresIn >= 0 && expiresIn <= 7;
+  const hobbyShield: AddOnState = policy && scheduled
+    ? { status: `Covered until ${formatDate(scheduled.effective_to)}`, tone: "good", action: <ButtonLink href={hobbyShieldHref} variant="outline" className={tileButton}>View</ButtonLink> }
+    : policy && expiringSoon
+      ? { status: expiresIn === 0 ? "Expires today" : `Expires in ${expiresIn} ${expiresIn === 1 ? "day" : "days"}`, tone: "warn", action: <ButtonLink href={hobbyShieldHref} variant="accent" className={tileButton}>Renew</ButtonLink> }
+      : policy
+        ? { status: `Covered until ${formatDate(policy.effective_to)}`, tone: "good", action: <ButtonLink href={hobbyShieldHref} variant="outline" className={tileButton}>View</ButtonLink> }
+        : scheduled
+          ? { status: `Starts ${formatDate(scheduled.effective_from)}`, tone: "good", action: <ButtonLink href={hobbyShieldHref} variant="outline" className={tileButton}>View</ButtonLink> }
+          : hobbyShieldBlockedByPassport
+            ? { status: "Complete the Product Passport first", tone: "muted", action: <ButtonLink href={passportHref} variant="outline" className={tileButton}>Complete passport</ButtonLink> }
+            : listing.status !== "ACTIVE"
+              ? { status: "Publish the listing to add cover", tone: "muted" }
+              : hobbyShieldLockedByRental
+                ? { status: "Unavailable during a confirmed or active rental", tone: "muted" }
+                : { status: policies.length > 0 ? "Expired" : "Not covered", tone: "muted", action: <ButtonLink href={hobbyShieldHref} variant="accent" className={tileButton}>Get HobbyShield</ButtonLink> };
+  // S3-28: one promotion at a time - a running one shows its end date, and
+  // purchase reopens once it ends.
+  const promotion: AddOnState = listing.promoted_until
+    ? { status: `Promoted until ${formatDate(listing.promoted_until)}`, tone: "good", action: <ButtonLink href={`/listings/${listing.id}/promotion`} variant="outline" className={tileButton}>View</ButtonLink> }
+    : listing.status !== "ACTIVE"
+      ? { status: "Publish the listing to promote", tone: "muted" }
+      : { status: "Not promoted", tone: "muted", action: <ButtonLink href={`/listings/${listing.id}/promotion`} variant="outline" className={tileButton}>Promote</ButtonLink> };
   return (
     <li className="border border-line bg-white p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -217,28 +242,14 @@ function ListingRow({ listing, bookings, history, policies }: { listing: OwnerLi
               Reported · under review
             </Badge>
           )}
-          {policies.length > 0 && <Badge variant={hobbyShieldActive ? "dark" : scheduled ? "accent" : "neutral"}>{hobbyShieldActive ? "HobbyShield Active" : scheduled ? "HobbyShield Scheduled" : "HobbyShield Expired"}</Badge>}
         </div>
       </div>
 
       {listing.status !== "REMOVED" && <ListingLifecycleActions listing={listing} />}
       {listing.status !== "REMOVED" && (
-        <div className="mt-4 flex flex-wrap items-center gap-3 text-sm">
-          {hobbyShieldActive ? (
-            <ButtonLink href={hobbyShieldHref} variant={scheduled ? "outline" : expiresIn >= 0 && expiresIn <= 7 ? "accent" : "outline"} className="px-4 py-2 text-xs">{scheduled ? "View HobbyShield" : expiresIn >= 0 && expiresIn <= 7 ? "Renew HobbyShield" : "View HobbyShield"}</ButtonLink>
-          ) : scheduled ? (
-            <ButtonLink href={hobbyShieldHref} variant="outline" className="px-4 py-2 text-xs">View HobbyShield</ButtonLink>
-          ) : hobbyShieldBlockedByPassport ? (
-            <p className="text-ink-soft">Complete this item&apos;s Product Passport before buying HobbyShield. <ButtonLink href={passportHref} variant="outline" className="ml-2 px-3 py-1.5 text-xs">Complete passport</ButtonLink></p>
-          ) : listing.status !== "ACTIVE" ? (
-            <p className="text-ink-soft">Only published listings can get HobbyShield.</p>
-          ) : hobbyShieldLockedByRental ? (
-            <p className="text-ink-soft">HobbyShield is unavailable while this listing has a confirmed or active rental. It can be purchased after all rentals are completed or settled.</p>
-          ) : (
-            <ButtonLink href={hobbyShieldHref} variant="accent" className="px-4 py-2 text-xs">Get HobbyShield</ButtonLink>
-          )}
-          {hobbyShieldActive && policy && scheduled ? <p className="text-success">Coverage is continuous until {formatSingaporeDateTime(scheduled.effective_to)}.</p> : hobbyShieldActive && policy && <p className={expiresIn >= 0 && expiresIn <= 7 ? "text-amber-800" : "text-ink-soft"}>Expires {formatSingaporeDateTime(policy.effective_to)}{expiresIn >= 0 && expiresIn <= 7 ? " · Renew now to keep coverage continuous." : ""}</p>}
-          {!hobbyShieldActive && scheduled && <p className="text-success">Coverage starts {formatSingaporeDateTime(scheduled.effective_from)}.</p>}
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <AddOnTile icon={ShieldCheck} title="HobbyShield" {...hobbyShield} />
+          <AddOnTile icon={Megaphone} title="Promotion" {...promotion} />
         </div>
       )}
       <OwnerBookingList bookings={bookings} />
@@ -253,5 +264,29 @@ function ListingRow({ listing, bookings, history, policies }: { listing: OwnerLi
         </details>
       )}
     </li>
+  );
+}
+
+type AddOnState = { status: string; tone: "good" | "warn" | "muted"; action?: ReactNode };
+
+const ADD_ON_TONE: Record<AddOnState["tone"], string> = {
+  good: "text-success",
+  warn: "text-amber-800",
+  muted: "text-ink-soft",
+};
+
+/** One paid add-on (HobbyShield, promotion) on a listing row: what it is, where it stands, and the one next step. */
+function AddOnTile({ icon: Icon, title, status, tone, action }: AddOnState & { icon: LucideIcon; title: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border border-line bg-surface-muted px-4 py-3">
+      <div className="flex min-w-0 items-center gap-3">
+        <Icon className="h-5 w-5 shrink-0 text-ink" aria-hidden />
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-wide">{title}</p>
+          <p className={`mt-0.5 text-sm ${ADD_ON_TONE[tone]}`}>{status}</p>
+        </div>
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </div>
   );
 }

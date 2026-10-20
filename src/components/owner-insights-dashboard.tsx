@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { TrendingDown, TrendingUp } from "lucide-react";
+import { Megaphone, TrendingDown, TrendingUp } from "lucide-react";
 import { useState } from "react";
 import { ButtonLink, EmptyState, ImageSlot } from "@/components/ui";
+import { PromotedBadge } from "@/components/listings/promoted-badge";
 import { CATEGORY_LABELS, type Listing } from "@/lib/listings";
 import { formatMoney } from "@/lib/format";
 import type { InsightsPeriod, ListingInsight, OwnerInsights } from "@/lib/owner-insights";
@@ -38,14 +39,22 @@ function actionLabel(item: ListingInsight): string {
 }
 
 function ListingInsightCard({ item, listing }: { item: ListingInsight; listing?: Listing }) {
-  return <article className="group overflow-hidden card transition-colors hover:border-ink-soft">
-    <ImageSlot label={listing?.photo_keys[0] ?? "Listing image"} src={listing?.photo_urls[0]} className="aspect-square w-full transition-transform duration-300 ease-out group-hover:scale-105" />
+  return <article className="group flex h-full flex-col overflow-hidden card transition-colors hover:border-ink-soft">
+    <div className="relative overflow-hidden">
+      <ImageSlot label={listing?.photo_keys[0] ?? "Listing image"} src={listing?.photo_urls[0]} className="aspect-square w-full transition-transform duration-300 ease-out group-hover:scale-105" />
+      <PromotedBadge promoted={listing?.is_promoted} className="absolute right-3 top-3" />
+    </div>
     <div className="flex min-w-0 flex-1 flex-col p-4">
       <h3 className="heading text-base">{item.listing_name}</h3>
       <div className="mt-4"><p className="text-xs text-ink-soft">Settled earnings</p><p className="heading mt-1 text-2xl">{formatMoney(item.settled_earnings_cents)}</p></div>
       <dl className="mt-4 grid grid-cols-2 gap-2 border-t border-line pt-3 text-xs"><div><dt className="text-ink-soft">Clicks</dt><dd className="mt-1">{item.listing_opens}</dd></div><div><dt className="text-ink-soft">Completed rentals</dt><dd className="mt-1">{item.completed_rentals}</dd></div></dl>
       {item.insight && <p className="mt-4 text-sm text-ink-soft">{item.insight}</p>}
-      <Link href={actionHref(item)} className="mt-4 w-fit text-sm font-medium underline underline-offset-4">{actionLabel(item)}</Link>
+      {/* mt-auto: actions line up across a row whatever the insight's length. */}
+      <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-4 text-sm font-medium">
+        <Link href={actionHref(item)} className="w-fit underline underline-offset-4">{actionLabel(item)}</Link>
+        {/* S3-28: only a published listing without a running promotion can be promoted. */}
+        {listing?.status === "ACTIVE" && !listing.is_promoted && <Link href={`/listings/${item.listing_id}/promotion` as Route} className="inline-flex w-fit items-center gap-1 underline underline-offset-4"><Megaphone className="h-3.5 w-3.5" aria-hidden />Promote</Link>}
+      </div>
     </div>
   </article>;
 }

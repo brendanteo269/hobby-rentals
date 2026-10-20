@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/client";
 
 /**
  * OWNER_PROTECTION_PREMIUM is an owner buying HobbyShield cover.
+ * LISTING_PROMOTION is an owner paying to promote a listing (S3-28).
  * CANCELLATION_FEE is the non-refundable part of a booking the renter
  * cancelled leaving their held balance; CANCELLATION_PAYOUT is the same amount
  * reaching the owner.
@@ -21,6 +22,7 @@ export type TransactionType =
   | "ADMIN_CREDIT"
   | "ADMIN_DEBIT"
   | "OWNER_PROTECTION_PREMIUM"
+  | "LISTING_PROMOTION"
   | "CANCELLATION_FEE"
   | "CANCELLATION_PAYOUT"
   | "OVERDUE_SETTLEMENT"
@@ -44,6 +46,7 @@ export type WalletTransaction = {
   status: TransactionStatus;
   paymentIntentId?: string;
   hobbyShieldListingId?: string;
+  promotionListingId?: string;
   /** The booking or bundle booking the money was for; null for a top-up or withdrawal. */
   bookingReference: BookingReference | null;
 };
@@ -105,6 +108,7 @@ export function mapWalletResponse(data: WalletApiResponse): WalletState {
       status: tx.status,
       paymentIntentId: tx.stripe_payment_intent_id,
       hobbyShieldListingId: tx.type === "OWNER_PROTECTION_PREMIUM" ? tx.metadata?.listing_id : undefined,
+      promotionListingId: tx.type === "LISTING_PROMOTION" ? tx.metadata?.listing_id : undefined,
       bookingReference: tx.booking_reference
         ? {
             bookingId: tx.booking_reference.booking_id,
