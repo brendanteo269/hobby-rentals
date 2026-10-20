@@ -5,6 +5,7 @@ import { formatMoney } from "@/lib/format";
 import { Badge } from "@/components/ui";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { PromotedBadge } from "@/components/listings/promoted-badge";
+import { HighDemandBadge } from "@/components/listings/high-demand-badge";
 import {
   CATEGORY_LABELS,
   LOCATION_LABELS,
@@ -31,32 +32,28 @@ import { FavouriteButton } from "@/components/listings/favourite-button";
  */
 export function ListingCard({ listing, highDemand = false, className = "", onFavouriteRemoved }: { listing: ListingCardData; highDemand?: boolean; className?: string; onFavouriteRemoved?: () => void }) {
   const badge = passportBadge(listing.serial_status);
+  const hasDistance = listing.distance_km !== null && listing.distance_km !== undefined;
+  const hasInfoPills = Boolean(listing.owner_verified || badge || hasDistance);
+  // Pills live in two fixed slots so cards in a row line up however many a
+  // listing has: attention pills overlay the photo, and info pills sit in a
+  // row pinned to the bottom of the body, below the title and price.
   return (
-    <li className={`group overflow-hidden card transition-colors hover:border-ink-soft ${className}`}>
+    <li className={`group flex h-full flex-col overflow-hidden card transition-colors hover:border-ink-soft ${className}`}>
       <ListingCardCarousel
         photoUrls={listing.photo_urls}
         listingId={listing.id}
         name={listing.name}
         locationLabel={LOCATION_LABELS[listing.location_area]}
+        overlay={(listing.is_promoted || highDemand) && (
+          <>
+            <PromotedBadge promoted={listing.is_promoted} />
+            <HighDemandBadge highDemand={highDemand} />
+          </>
+        )}
       />
 
-      <div className="p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <p className="eyebrow">{CATEGORY_LABELS[listing.category]}</p>
-            {highDemand && <Badge variant="accent">🔥 High demand</Badge>}
-            <PromotedBadge promoted={listing.is_promoted} />
-          </div>
-          <VerifiedOwnerBadge verified={listing.owner_verified} />
-          {badge && (
-            <Badge variant={listing.serial_status === "VERIFIED" ? "dark" : "neutral"} className="shrink-0 whitespace-nowrap">
-              {badge}
-            </Badge>
-          )}
-          {listing.distance_km !== null && listing.distance_km !== undefined && (
-            <Badge variant="neutral" className="shrink-0 whitespace-nowrap">~{listing.distance_km.toFixed(1)} km away</Badge>
-          )}
-        </div>
+      <div className="flex flex-1 flex-col p-4">
+        <p className="eyebrow">{CATEGORY_LABELS[listing.category]}</p>
         <Link href={`/listings/${listing.id}`} className="mt-1.5 block">
           <h3 className="heading text-sm leading-snug">{listing.name}</h3>
         </Link>
@@ -77,6 +74,19 @@ export function ListingCard({ listing, highDemand = false, className = "", onFav
             />
           )}
         </div>
+        {hasInfoPills && (
+          <div className="mt-auto flex flex-wrap gap-1.5 pt-3">
+            <VerifiedOwnerBadge verified={listing.owner_verified} />
+            {badge && (
+              <Badge variant={listing.serial_status === "VERIFIED" ? "dark" : "neutral"} className="shrink-0 whitespace-nowrap">
+                {badge}
+              </Badge>
+            )}
+            {hasDistance && (
+              <Badge variant="neutral" className="shrink-0 whitespace-nowrap">~{listing.distance_km!.toFixed(1)} km away</Badge>
+            )}
+          </div>
+        )}
       </div>
     </li>
   );

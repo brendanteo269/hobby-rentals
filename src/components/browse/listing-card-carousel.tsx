@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Badge, ImageSlot } from "@/components/ui";
@@ -20,11 +20,14 @@ export function ListingCardCarousel({
   listingId,
   name,
   locationLabel,
+  overlay,
 }: {
   photoUrls: string[];
   listingId: string;
   name: string;
   locationLabel: string;
+  /** Attention pills (Promoted, High demand) pinned top-right, so they never change the card body's height. */
+  overlay?: ReactNode;
 }) {
   const [active, setActive] = useState(0);
   const hasMultiple = photoUrls.length > 1;
@@ -43,6 +46,7 @@ export function ListingCardCarousel({
         />
       </Link>
       <Badge className="absolute left-3 top-3">{locationLabel}</Badge>
+      {overlay && <div className="absolute right-3 top-3 flex flex-col items-end gap-1.5">{overlay}</div>}
 
       {hasMultiple && (
         <>

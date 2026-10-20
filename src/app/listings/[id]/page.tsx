@@ -12,6 +12,7 @@ import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS, passportBadge } fro
 import { BookingRequestForm } from "@/components/bookings/booking-request-form";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { PromotedBadge } from "@/components/listings/promoted-badge";
+import { HighDemandBadge } from "@/components/listings/high-demand-badge";
 import { ListingViewTelemetry } from "@/components/analytics/listing-view-telemetry";
 import { WaitlistPanel } from "@/components/bookings/waitlist-panel";
 import { MessageButton } from "@/components/messages/message-button";
@@ -87,7 +88,7 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             <p className="eyebrow">
               {CATEGORY_LABELS[listing.category]} · {LOCATION_LABELS[listing.location_area]}
             </p>
-            {categoryDemand?.is_high_demand && <Badge variant="accent">🔥 High demand</Badge>}
+            <HighDemandBadge highDemand={categoryDemand?.is_high_demand} />
             <PromotedBadge promoted={listing.is_promoted} />
           </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
