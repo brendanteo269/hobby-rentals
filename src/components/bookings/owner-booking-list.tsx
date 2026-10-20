@@ -21,7 +21,9 @@ import { cancellationOutcomeLine, HANDED_OVER_NOTE } from "@/lib/cancellations";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { canReportDamage, settlementLine } from "@/lib/settlement";
 import { canConfirmReturn, returnStatusLine } from "@/lib/returns";
-import { canConfirmHandover, handoverStatusLine, ownerPickupPhotosPath } from "@/lib/handover";
+import { canConfirmHandover, cancelBlockedReason, ownerPickupPhotosPath } from "@/lib/handover";
+import { HandoverTracker } from "@/components/bookings/handover-tracker";
+import { BlockedCancelButton } from "@/components/bookings/cancel-booking-button";
 import { ConfirmHandoverButton } from "@/components/bookings/confirm-handover-button";
 import { ownerConditionReportPath, scanBadge } from "@/lib/condition-scans";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
@@ -79,9 +81,6 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
                   {booking.confirmed_meetup_time && `, ${formatDateTime(booking.confirmed_meetup_time)}`}
                 </span>
               )}
-              {booking.status === "CONFIRMED" && booking.handover_state && handoverStatusLine(booking.handover_state, "owner", booking.start_date) && (
-                <span className="block text-ink-soft">{handoverStatusLine(booking.handover_state, "owner", booking.start_date)}</span>
-              )}
               {booking.status === "ACTIVE" && (
                 <span className="block text-ink-soft">
                   {HANDED_OVER_NOTE} <a href={SUPPORT_MAILTO} className="underline">{SUPPORT_EMAIL}</a>
@@ -116,7 +115,12 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
                 </ButtonLink>
               )}
               {booking.status === "PENDING" && <ButtonLink href={requestReviewPath("BOOKING", booking.id)} className="px-3 py-1.5 text-xs">Review request</ButtonLink>}
-              {booking.status === "CONFIRMED" && <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "CANCELLED")}>Cancel booking</Button>}
+              {booking.status === "CONFIRMED" &&
+                (cancelBlockedReason(booking) ? (
+                  <BlockedCancelButton label="Cancel booking" reason={cancelBlockedReason(booking)!} />
+                ) : (
+                  <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "CANCELLED")}>Cancel booking</Button>
+                ))}
               {/* With an AI condition report, the claim (S3-06) is made from the report page instead. */}
               {canReportDamage(booking.settlement_state) && booking.settlement_state?.claim_window_ends_at && !booking.condition_scan && (
                 <ReportDamageButton kind="booking" id={booking.id} windowEndsAt={booking.settlement_state.claim_window_ends_at} />
@@ -128,6 +132,11 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
             </span>
             {/* S3-18: the late fee this rental has run up, on its own line so
                 it is not lost among the status text above. */}
+            {booking.status === "CONFIRMED" && booking.handover_state && (
+              <div className="w-full py-2">
+                <HandoverTracker booking={booking} viewer="owner" />
+              </div>
+            )}
             <span className="w-full"><OverdueNotice booking={booking} side="owner" /></span>
             {/* S3-17: on its own line below the row's buttons - approving it
                 changes the booking's dates and charges the renter, which is a

@@ -172,7 +172,7 @@ export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
  */
 export const BOOKING_STATUS_NEXT_STEP: Record<BookingStatus, string> = {
   PENDING: "The owner will accept or decline. You can withdraw until then.",
-  CONFIRMED: "Collect the item on your start date: take the pickup photos, then you and the owner each confirm the handover. You can cancel until then; the refund depends on how close to the start you cancel.",
+  CONFIRMED: "Collect the item on your start date. You can cancel until then; the refund depends on how close to the start you cancel.",
   DECLINED: "Your hold has been released. You can request other dates.",
   CANCELLED: "Your deposit, and any refund under the cancellation policy, is back in your wallet.",
   EXPIRED: "The owner did not respond in time. Your hold has been released.",
@@ -194,14 +194,17 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   RELEASED: "Hold released",
 };
 
-/** Badge colour for a booking's status - confirmed/active read as the "it's happening" states, everything else neutral. */
-export const BOOKING_STATUS_BADGE_VARIANT: Record<BookingStatus, "dark" | "neutral"> = {
-  PENDING: "neutral",
-  CONFIRMED: "dark",
+/**
+ * Badge colour for a booking's status: green once the item is out or about to
+ * be, red while it waits on the owner, neutral for everything that is over.
+ */
+export const BOOKING_STATUS_BADGE_VARIANT: Record<BookingStatus, "accent" | "success" | "neutral"> = {
+  PENDING: "accent",
+  CONFIRMED: "success",
   DECLINED: "neutral",
   CANCELLED: "neutral",
   EXPIRED: "neutral",
-  ACTIVE: "dark",
+  ACTIVE: "success",
   COMPLETED: "neutral",
 };
 

@@ -183,3 +183,20 @@ function Cancelled({ record, onClose }: { record: CancellationRecord; onClose: (
     </>
   );
 }
+
+/**
+ * A cancel button that is shown but cannot be pressed, with the reason on
+ * hover. The title sits on a wrapper because a disabled button gets no
+ * pointer events in some browsers; the reason is also read out for screen
+ * readers, and the cards say it in words too for anyone without a hover.
+ */
+export function BlockedCancelButton({ label, reason }: { label: string; reason: string }) {
+  return (
+    <span title={reason} className="cursor-not-allowed">
+      <Button variant="outline" className="px-3 py-1.5 text-xs" disabled>
+        {label}
+      </Button>
+      <span className="sr-only">{reason}</span>
+    </span>
+  );
+}
