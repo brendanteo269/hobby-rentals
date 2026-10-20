@@ -10,7 +10,7 @@ import type {
   DeclineReason,
 } from "@/lib/bookings";
 import type { CancellationPreview, CancellationRecord } from "@/lib/cancellations";
-import type { DamageClaim, RentalDispute } from "@/lib/settlement";
+import type { ClaimSettlement, DamageClaim, RentalDispute } from "@/lib/settlement";
 
 // Re-exported so existing callers keep importing the quote from here.
 export type { BookingQuote } from "@/lib/bookings";
@@ -88,6 +88,13 @@ export function reportBookingDamage(bookingId: string, description: string, clai
   return backendRequest<RentalDispute>(`/bookings/${encodeURIComponent(bookingId)}/disputes`, {
     method: "POST",
     body: JSON.stringify({ description, claimed_cents: claimedCents }),
+  });
+}
+
+/** S3-07: the renter accepts the owner's figure; the rental settles immediately. */
+export function acceptDamageClaim(bookingId: string) {
+  return backendRequest<ClaimSettlement>(`/bookings/${encodeURIComponent(bookingId)}/claim/accept`, {
+    method: "POST",
   });
 }
 
