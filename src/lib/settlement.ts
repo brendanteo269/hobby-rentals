@@ -144,3 +144,17 @@ export function settlementLine(state: SettlementState, viewer: "renter" | "owner
   }
   return viewer === "renter" ? "Your deposit is being returned." : "Your payout is being processed.";
 }
+
+
+/**
+ * S3-07: what accepting a damage claim moved.
+ *
+ * `unrecovered_cents` is Scenario 3 - the part of the claim the held deposit
+ * could not cover, which the owner does not get.
+ */
+export type ClaimSettlement = {
+  deducted_cents: number;
+  deposit_refund_cents: number;
+  unrecovered_cents: number;
+  owner_payout_cents: number;
+};

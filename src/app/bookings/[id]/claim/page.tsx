@@ -36,7 +36,13 @@ export default async function ClaimPage({ params }: { params: Promise<{ id: stri
           <h1 className="heading mt-3 text-3xl">Review the owner&apos;s claim</h1>
         </div>
         <ClaimSummary claim={claim} viewer="renter" />
-        {claimPendingRenter(claim) && <ClaimResponseOptions />}
+        {claimPendingRenter(claim) && (
+          <ClaimResponseOptions
+            bookingId={id}
+            claimedCents={claim.claimed_cents}
+            depositCents={claim.deposit_cents}
+          />
+        )}
         {claim.scan ? (
           <ConditionReport scan={claim.scan} viewer="renter" />
         ) : (
