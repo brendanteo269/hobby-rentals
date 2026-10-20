@@ -9,11 +9,15 @@ import {
   bookingStatusLabel,
   bookingStatusTone,
   getBookingById,
+  getHandoverDetails,
+  isHandoverFlagged,
   paymentStatusLabel,
   paymentStatusTone,
 } from "@/lib/bookings";
 import { Badge, Container, DescriptionList, EmptyState, Panel } from "@/components/ui";
 import { AuditTrail } from "@/components/audit-trail";
+import { HandoverDetailsPanel } from "@/components/handover-details-panel";
+import { HandoverResolveForm } from "@/components/handover-resolve-form";
 import { ESCROW_COMPONENT_LABELS, ESCROW_TYPE_LABELS } from "@/lib/escrow";
 
 export const metadata = { title: "Booking — HobbyRentals Admin" };
@@ -57,8 +61,8 @@ function ReceiptRow({
  * S2-27: read-only booking detail - status timeline, renter/owner
  * references, rental period and amount, security deposit, escrow hold/
  * release records, damage protection ("insurance") terms, and admin
- * activity. Nothing on this page writes to a booking; there is no action
- * here that could change its outcome.
+ * activity. Nothing on this page writes to a booking, except that one flagged
+ * for an unconfirmed handover (S3-02) can be started or cancelled.
  */
 export default async function BookingDetailPage({
   params,
@@ -80,6 +84,13 @@ export default async function BookingDetailPage({
   // Financial and party detail is sensitive, so looking is itself recorded -
   // same pattern as the listing detail page's own audit entry.
   await recordBookingViewed(id, booking.renter_id);
+
+  // Only a booking that has not started or been cancelled has a handover to look at.
+  const handoverRelevant = booking.status === "CONFIRMED" || booking.status === "ACTIVE";
+  const [handoverFlagged, handoverDetails] = await Promise.all([
+    isHandoverFlagged(id),
+    handoverRelevant ? getHandoverDetails(id) : null,
+  ]);
 
   const { entries: auditEntries, total: auditTotal } = await getBookingAuditTrail(id, booking.renter_id, auditPage);
   const auditLastPage = Math.max(1, Math.ceil(auditTotal / AUDIT_PAGE_SIZE));
@@ -107,6 +118,19 @@ export default async function BookingDetailPage({
           <Badge tone={paymentStatusTone(booking.payment_status)}>{paymentStatusLabel(booking.payment_status)}</Badge>
         </div>
       </div>
+
+      {/* S3-02: how the handover stands, and - only for a booking flagged for an
+          unconfirmed one - the action that resolves it. */}
+      {handoverDetails && (
+        <div className="mt-8">
+          <HandoverDetailsPanel details={handoverDetails} />
+        </div>
+      )}
+      {handoverFlagged && (
+        <div className="mt-6">
+          <HandoverResolveForm bookingId={booking.id} />
+        </div>
+      )}
 
       <div className="mt-10 grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">

@@ -23,6 +23,8 @@ export const AUDIT_ACTIONS = {
   escrow_viewed: "Escrow record viewed",
   escrow_overridden: "Escrow manually released",
   dispute_resolved: "Damage dispute resolved",
+  handover_started_by_admin: "Rental started (handover not confirmed)",
+  unconfirmed_booking_cancelled_by_admin: "Booking cancelled (handover not confirmed)",
 } as const;
 
 export type AuditAction = keyof typeof AUDIT_ACTIONS;
