@@ -95,6 +95,40 @@ describe("cancellationOutcomeLine", () => {
     expect(cancellationOutcomeLine(byOwner, "owner")).toBe(`You cancelled. The renter's hold of ${formatMoney(4600)} was released in full.`);
   });
 
+  describe("when the cancellation was because an account was suspended or banned", () => {
+    const renterSuspended: CancellationOutcome = { ...byRenter, cancelled_by: "SYSTEM", cancelled_reason: "user_unavailable_renter_banned" };
+    const ownerSuspended: CancellationOutcome = { ...byOwner, cancelled_by: "SYSTEM", cancelled_reason: "user_unavailable_owner_suspended" };
+
+    it("does not tell the suspended renter that they cancelled", () => {
+      const line = cancellationOutcomeLine(renterSuspended, "renter");
+      expect(line).not.toMatch(/You cancelled/);
+      expect(line).toBe(
+        `Cancelled because your account was banned. ${formatMoney(3550)} came back to your wallet; ${formatMoney(1051)} was not refundable under the cancellation policy.`,
+      );
+    });
+
+    it("tells the owner the renter's account is unavailable and what they were paid", () => {
+      expect(cancellationOutcomeLine(renterSuspended, "owner")).toBe(
+        `Cancelled because the renter's account was banned. ${formatMoney(1051)} was paid to you under the cancellation policy.`,
+      );
+    });
+
+    it("still reads reasons recorded before the kind was known", () => {
+      expect(cancellationOutcomeLine({ ...byOwner, cancelled_by: "SYSTEM", cancelled_reason: "user_unavailable_owner" }, "renter")).toBe(
+        `Cancelled because the owner's account was suspended or banned. Your hold of ${formatMoney(4600)} was released in full.`,
+      );
+    });
+
+    it("says whose account it was when it was the owner's, to each side", () => {
+      expect(cancellationOutcomeLine(ownerSuspended, "renter")).toBe(
+        `Cancelled because the owner's account was suspended. Your hold of ${formatMoney(4600)} was released in full.`,
+      );
+      expect(cancellationOutcomeLine(ownerSuspended, "owner")).toBe(
+        `Cancelled because your account was suspended. The renter's hold of ${formatMoney(4600)} was released in full.`,
+      );
+    });
+  });
+
   it("names the platform when nobody on the booking cancelled it", () => {
     expect(cancellationOutcomeLine({ ...byOwner, cancelled_by: "SYSTEM", released_to_wallet_cents: 0 }, "renter")).toBe(
       "The platform cancelled. Nothing was held, so nothing needed releasing.",
