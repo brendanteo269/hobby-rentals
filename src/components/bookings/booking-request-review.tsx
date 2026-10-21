@@ -3,10 +3,17 @@ import { Badge, EmptyState } from "@/components/ui";
 import { BookingRequestDecision } from "@/components/bookings/booking-request-decision";
 import { RequestCountdown } from "@/components/bookings/request-countdown";
 import { BOOKING_STATUS_LABELS, type BookingRequestDetail } from "@/lib/bookings";
+import { cancellationOutcomeLine } from "@/lib/cancellations";
 import { formatDate, formatMoney, formatMonthYear } from "@/lib/format";
 
 function money(cents: number | null) {
   return cents === null ? "—" : formatMoney(cents);
+}
+
+/** How a cancelled request ended, in words for its owner; a renter's suspension adds that the dates are free again. */
+function cancelledBody(outcome: NonNullable<BookingRequestDetail["cancellation_outcome"]>): string {
+  const line = cancellationOutcomeLine(outcome, "owner");
+  return outcome.cancelled_reason?.startsWith("user_unavailable_renter") ? `${line} Those dates are open for booking again.` : line;
 }
 
 /**
@@ -95,7 +102,10 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
       <div className="mt-8">
         {request.status === "PENDING"
           ? <BookingRequestDecision kind={request.kind} bookingId={request.id} expiresInSeconds={request.expires_in_seconds} />
-          : <EmptyState title="Already answered" body={`This request is ${BOOKING_STATUS_LABELS[request.status].toLowerCase()}.`} />}
+          : request.status === "CANCELLED" && request.cancellation_outcome
+            // Someone who opens a notification about a cancelled request is told what happened and why.
+            ? <EmptyState title="This request was cancelled" body={cancelledBody(request.cancellation_outcome)} />
+            : <EmptyState title="Already answered" body={`This request is ${BOOKING_STATUS_LABELS[request.status].toLowerCase()}.`} />}
       </div>
     </>
   );

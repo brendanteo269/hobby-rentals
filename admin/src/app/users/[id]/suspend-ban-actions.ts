@@ -19,11 +19,12 @@ const KIND_BY_ACTION = { suspend: "SUSPENSION", ban: "BAN" } as const;
  * ends or flags their bookings, tells them and writes the audit entry - so
  * this action only parses the form and passes a refusal through.
  */
-export async function suspendOrBanUser(_prev: SuspendBanState, formData: FormData): Promise<SuspendBanState> {
+async function suspendOrBanUser(_prev: SuspendBanState, formData: FormData): Promise<SuspendBanState> {
   await requirePortalSession();
 
   const userId = String(formData.get("user_id") ?? "");
-  const action = String(formData.get("action") ?? "");
+  // Named "operation", not "action": a form field called action shadows the form's own action property.
+  const action = String(formData.get("operation") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
   const endsOn = String(formData.get("ends_on") ?? "");
 
@@ -55,7 +56,7 @@ export async function suspendOrBanUser(_prev: SuspendBanState, formData: FormDat
  * clears the account's ban, puts back the listings the suspension paused,
  * tells the member and writes the audit entry; bookings it ended stay ended.
  */
-export async function liftSuspension(_prev: SuspendBanState, formData: FormData): Promise<SuspendBanState> {
+async function liftSuspension(_prev: SuspendBanState, formData: FormData): Promise<SuspendBanState> {
   await requirePortalSession();
 
   const userId = String(formData.get("user_id") ?? "");
@@ -67,5 +68,17 @@ export async function liftSuspension(_prev: SuspendBanState, formData: FormData)
 
   revalidatePath(ROUTES.user(userId));
   revalidatePath(ROUTES.users);
-  return { success: "Suspension lifted. The member can sign in again, and their paused listings are live." };
+  return { success: "Suspension lifted. The member can sign in again, and their paused listings have been reinstated." };
+}
+
+/**
+ * The Suspend / Ban form's one action: suspend, ban or unsuspend, as chosen in
+ * its dropdown. Each is its own database function with its own refusals (a ban
+ * cannot be lifted, a member already suspended cannot be suspended again), so
+ * this only routes.
+ */
+export async function updateSuspendBan(prev: SuspendBanState, formData: FormData): Promise<SuspendBanState> {
+  return String(formData.get("operation") ?? "") === "unsuspend"
+    ? liftSuspension(prev, formData)
+    : suspendOrBanUser(prev, formData);
 }

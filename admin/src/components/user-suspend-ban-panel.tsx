@@ -1,29 +1,25 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { Badge, Button, FormMessage, Input, Panel, RequiredMark, Select, Textarea } from "./ui";
+import { Button, FormMessage, Input, Panel, RequiredMark, Select, Textarea } from "./ui";
 import { ConfirmDialog } from "./confirm-dialog";
 import { useToast } from "./toast";
-import {
-  suspendOrBanUser,
-  liftSuspension,
-  type SuspendBanState,
-} from "@/app/users/[id]/suspend-ban-actions";
-import { formatDateTime } from "@/lib/format";
+import { updateSuspendBan, type SuspendBanState } from "@/app/users/[id]/suspend-ban-actions";
 import type { Enforcement } from "@/lib/moderation";
 
 /**
- * Suspending or banning a member, lifting a suspension, and the history of what
- * has been done to them (S3-24). A suspension ends on the day chosen, or when an
- * administrator lifts it; a ban has no end and cannot be lifted. Each takes
- * effect at once: the member is signed out, their listings are paused (a
- * suspension) or deactivated (a ban), and their bookings are ended or flagged.
+ * Suspending, banning or unsuspending a member (S3-24), as one choice in one
+ * form. A suspension ends on the day chosen, or when an administrator lifts it;
+ * a ban has no end and cannot be lifted. Each takes effect at once: the member
+ * is signed out (or let back in), their listings are paused (a suspension) or
+ * deactivated (a ban), and their bookings are ended or flagged. What happened,
+ * when and why is in the member's activity, so it is not repeated here.
  *
- * What is offered follows where the member stands: nothing is offered for a
- * banned member or an administrator; a suspended member can be banned or have
- * the suspension lifted, but not suspended again; anyone else can be suspended
- * or banned. A ban asks for confirmation in a red dialog that says what it
- * does, because it cannot be undone. The result is a toast.
+ * What the dropdown offers follows where the member stands: nothing for a
+ * banned member or an administrator; for a suspended member, Unsuspend or Ban
+ * but not Suspend again; for anyone else, Suspend or Ban. A ban asks for
+ * confirmation in a red dialog that says what it does, because it cannot be
+ * undone. The result is a toast.
  */
 export function UserSuspendBanPanel({
   userId,
@@ -31,6 +27,7 @@ export function UserSuspendBanPanel({
   isAdmin,
 }: {
   userId: string;
+  /** Only to know where the member stands: what is in force now. */
   history: Enforcement[];
   /** An administrator cannot be suspended or banned. */
   isAdmin: boolean;
@@ -41,55 +38,29 @@ export function UserSuspendBanPanel({
   return (
     <Panel
       title="Suspend / Ban"
-      description="Suspend or ban this member. It takes effect at once: they are signed out, and their listings and bookings are dealt with."
+      description="Suspend, ban or unsuspend this member. It takes effect at once: they are signed out, and their listings and bookings are dealt with."
     >
-      {history.length > 0 && <History history={history} />}
-
       {isAdmin ? (
         <p className="text-sm text-ink-soft">This is an administrator&apos;s account, so it can&apos;t be suspended or banned here.</p>
       ) : banned ? (
         <p className="text-sm text-ink-soft">This member is banned. A ban is permanent and can&apos;t be lifted.</p>
       ) : (
-        <div className="space-y-8">
-          <SuspendBanForm userId={userId} suspended={suspended} />
-          {suspended && <LiftForm userId={userId} />}
-        </div>
+        // Keyed on where the member stands, so the form starts afresh once an action has changed it.
+        <SuspendBanForm key={suspended ? "suspended" : "free"} userId={userId} suspended={suspended} />
       )}
     </Panel>
   );
 }
 
-function History({ history }: { history: Enforcement[] }) {
-  return (
-    <ol className="mb-6 space-y-3">
-      {history.map((entry) => (
-        <li key={entry.id} className="border-l-2 border-line pl-4 text-sm">
-          <p className="flex flex-wrap items-center gap-2">
-            <Badge tone={entry.kind === "BAN" ? "critical" : "warning"}>{entry.kind === "BAN" ? "Ban" : "Suspension"}</Badge>
-            <span className="text-xs text-ink-soft">
-              {entry.source === "STRIKES" ? "Strike limit reached" : (entry.actor_label ?? "Administrator")} ·{" "}
-              {formatDateTime(entry.starts_at)}
-              {entry.ends_at ? ` to ${formatDateTime(entry.ends_at)}` : ", no end date"}
-              {entry.lifted_at ? ` · lifted ${formatDateTime(entry.lifted_at)}` : entry.active ? " · in force" : " · ended"}
-            </span>
-          </p>
-          <p className="mt-1 whitespace-pre-line">{entry.reason}</p>
-          {entry.lifted_reason && (
-            <p className="mt-1 whitespace-pre-line text-ink-soft">
-              <span className="font-medium text-ink">Lifted:</span> {entry.lifted_reason}
-            </p>
-          )}
-        </li>
-      ))}
-    </ol>
-  );
-}
+const SUBMIT_LABELS: Record<string, string> = { suspend: "Suspend member", ban: "Ban member", unsuspend: "Unsuspend member" };
 
 function SuspendBanForm({ userId, suspended }: { userId: string; suspended: boolean }) {
-  const [state, action, pending] = useActionState<SuspendBanState, FormData>(suspendOrBanUser, undefined);
-  const [choice, setChoice] = useState(suspended ? "ban" : "");
+  const [state, action, pending] = useActionState<SuspendBanState, FormData>(updateSuspendBan, undefined);
+  const [choice, setChoice] = useState("");
   const [confirming, setConfirming] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  // Set when the dialog has been answered yes, so the next submit goes through.
+  const confirmedRef = useRef(false);
   const { show } = useToast();
 
   useEffect(() => {
@@ -103,9 +74,28 @@ function SuspendBanForm({ userId, suspended }: { userId: string; suspended: bool
     if (formRef.current?.reportValidity()) setConfirming(true);
   }
 
+  function confirm() {
+    // The dialog is done once answered; the result comes back as a toast or a message in the form.
+    setConfirming(false);
+    confirmedRef.current = true;
+    formRef.current?.requestSubmit();
+  }
+
+  // A submit that has not been confirmed (Enter in a field, say) asks first. One
+  // that has must NOT be prevented: React runs the form's action only if the
+  // submit event goes through.
+  function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    if (confirmedRef.current) {
+      confirmedRef.current = false;
+      return;
+    }
+    event.preventDefault();
+    ask();
+  }
+
   return (
     <>
-      <form ref={formRef} action={action} className="space-y-4" onSubmit={(event) => event.preventDefault()}>
+      <form ref={formRef} action={action} className="space-y-4" onSubmit={onSubmit}>
         <input type="hidden" name="user_id" value={userId} />
 
         <div>
@@ -115,7 +105,7 @@ function SuspendBanForm({ userId, suspended }: { userId: string; suspended: bool
           </label>
           <Select
             id="suspend-ban-action"
-            name="action"
+            name="operation"
             required
             value={choice}
             onChange={(event) => setChoice(event.target.value)}
@@ -124,11 +114,14 @@ function SuspendBanForm({ userId, suspended }: { userId: string; suspended: bool
             <option value="" disabled>
               Choose an action…
             </option>
-            {/* Already suspended: another suspension would add nothing, so only a ban is offered. */}
-            {!suspended && <option value="suspend">Suspend until a date: it lifts by itself</option>}
+            {/* Already suspended: another suspension would add nothing, so the choice is to undo it or to ban. */}
+            {suspended ? (
+              <option value="unsuspend">Unsuspend: let them back in, with a reason</option>
+            ) : (
+              <option value="suspend">Suspend until a date: it lifts by itself</option>
+            )}
             <option value="ban">Ban permanently: cannot be undone</option>
           </Select>
-          {suspended && <p className="mt-2 text-xs text-ink-soft">This member is already suspended, so the only further step is a ban.</p>}
         </div>
 
         {choice === "suspend" && (
@@ -152,14 +145,18 @@ function SuspendBanForm({ userId, suspended }: { userId: string; suspended: bool
             required
             rows={3}
             className="mt-2"
-            placeholder="Why. Kept in the suspend / ban history and the audit trail."
+            placeholder={
+              choice === "unsuspend"
+                ? "Why the suspension is being lifted early. Kept in the audit trail."
+                : "Why. Kept in the audit trail."
+            }
           />
         </div>
 
         <FormMessage state={state?.error ? state : undefined} />
 
         <Button type="button" onClick={ask} disabled={pending || !choice}>
-          {choice === "ban" ? "Ban member" : "Suspend member"}
+          {SUBMIT_LABELS[choice] ?? "Choose an action"}
         </Button>
       </form>
 
@@ -168,103 +165,41 @@ function SuspendBanForm({ userId, suspended }: { userId: string; suspended: bool
           tone="danger"
           title="Ban this member permanently?"
           confirmLabel="Yes, ban permanently"
-          onConfirm={() => {
-            // The dialog is done once answered; the result comes back as a toast or a message in the form.
-            setConfirming(false);
-            formRef.current?.requestSubmit();
-          }}
+          onConfirm={confirm}
           onCancel={() => setConfirming(false)}
         >
           <p className="font-medium text-bad">This cannot be undone.</p>
           <ul className="mt-3 list-disc space-y-1.5 pl-5">
             <li>They are signed out everywhere and can never sign in again.</li>
             <li>All their listings are deactivated for good.</li>
-            <li>Their pending and confirmed bookings are ended and the other people refunded.</li>
+            <li>
+              Their pending and confirmed bookings are ended. An owner&apos;s renters are refunded in full; a renter is
+              refunded under the cancellation policy.
+            </li>
             <li>Rentals that are out are left for you to settle.</li>
             <li>They can&apos;t withdraw from their wallet, and no one can message them.</li>
           </ul>
         </ConfirmDialog>
       )}
       {confirming && choice === "suspend" && (
-        <ConfirmDialog
-          title="Suspend this member?"
-          confirmLabel="Suspend"
-          onConfirm={() => {
-            // The dialog is done once answered; the result comes back as a toast or a message in the form.
-            setConfirming(false);
-            formRef.current?.requestSubmit();
-          }}
-          onCancel={() => setConfirming(false)}
-        >
+        <ConfirmDialog title="Suspend this member?" confirmLabel="Suspend" onConfirm={confirm} onCancel={() => setConfirming(false)}>
           <p>
             They are signed out now, their listings are paused until the suspension ends, and their pending and confirmed
-            bookings that start before then are ended. You can lift the suspension early.
+            bookings that start before then are ended, with everyone refunded in full. You can unsuspend them early.
           </p>
         </ConfirmDialog>
       )}
-    </>
-  );
-}
-
-function LiftForm({ userId }: { userId: string }) {
-  const [state, action, pending] = useActionState<SuspendBanState, FormData>(liftSuspension, undefined);
-  const [confirming, setConfirming] = useState(false);
-  const formRef = useRef<HTMLFormElement>(null);
-  const { show } = useToast();
-
-  useEffect(() => {
-    if (state?.success) show(state.success, "success");
-  }, [show, state]);
-
-  return (
-    <>
-      <form
-        ref={formRef}
-        action={action}
-        className="space-y-4 border-t border-line pt-6"
-        onSubmit={(event) => event.preventDefault()}
-      >
-        <input type="hidden" name="user_id" value={userId} />
-        <p className="text-sm font-medium">Unsuspend</p>
-        <div>
-          <label htmlFor="lift-reason" className="block text-sm font-medium">
-            Reason
-            <RequiredMark />
-          </label>
-          <Textarea
-            id="lift-reason"
-            name="reason"
-            required
-            rows={2}
-            className="mt-2"
-            placeholder="Why the suspension is being lifted early."
-          />
-        </div>
-        <FormMessage state={state?.error ? state : undefined} />
-        <Button
-          type="button"
-          variant="outline"
-          disabled={pending}
-          onClick={() => formRef.current?.reportValidity() && setConfirming(true)}
-        >
-          Lift suspension
-        </Button>
-      </form>
-
-      {confirming && (
+      {confirming && choice === "unsuspend" && (
         <ConfirmDialog
-          title="Lift this suspension?"
-          confirmLabel="Lift suspension"
-          onConfirm={() => {
-            // The dialog is done once answered; the result comes back as a toast or a message in the form.
-            setConfirming(false);
-            formRef.current?.requestSubmit();
-          }}
+          title="Unsuspend this member?"
+          confirmLabel="Unsuspend"
+          onConfirm={confirm}
           onCancel={() => setConfirming(false)}
         >
           <p>
-            The member can sign in again and the listings the suspension paused go live. Bookings it ended stay ended: the
-            other people were already told.
+            This restores the member&apos;s access: they will be able to sign in again, and any listings paused by the
+            suspension will be reinstated. Bookings that were cancelled during the suspension remain cancelled, and the
+            affected members have already been notified.
           </p>
         </ConfirmDialog>
       )}

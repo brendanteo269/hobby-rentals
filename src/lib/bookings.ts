@@ -288,6 +288,8 @@ export type BookingRequestDetail = {
     completed_rentals: number;
   };
   period: { start_date: string; end_date: string; rental_days: number | null };
+  /** Set on a cancelled request: who cancelled it, and why if a member's account was suspended or banned. */
+  cancellation_outcome?: CancellationOutcome | null;
   pricing: {
     price_per_day_cents: number | null;
     price_per_week_cents: number | null;

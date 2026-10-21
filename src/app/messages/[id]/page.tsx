@@ -141,8 +141,9 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
             // S3-24: no more messages to or from a suspended or banned member.
             conversation.other_party_unavailable ? (
               <p className="rounded-2xl border border-line bg-surface-muted px-4 py-3 text-sm text-ink">
-                {conversation.other_party_name ?? "This member"} is no longer available on HobbyRentals, so this conversation
-                can&apos;t take new messages.
+                {conversation.other_party_name ?? "This member"}&apos;s account has been{" "}
+                {conversation.other_party_enforcement === "BAN" ? "banned" : "suspended"}, so this conversation can&apos;t take
+                new messages.
               </p>
             ) : bookingConfirmed && relevantBooking ? (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface-muted px-4 py-3">

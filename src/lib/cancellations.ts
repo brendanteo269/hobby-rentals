@@ -63,6 +63,11 @@ export type CancellationRecord = CancellationTerms & {
  */
 export type CancellationOutcome = {
   cancelled_by: "RENTER" | "OWNER" | "SYSTEM";
+  /**
+   * Set when the platform cancelled because a member was suspended or banned
+   * (S3-24), and whose account it was: the owner's or the renter's.
+   */
+  cancelled_reason?: string | null;
   cancelled_at: string;
   /** Everything that went back to the renter's wallet. */
   released_to_wallet_cents: number;
@@ -74,6 +79,16 @@ export type CancellationOutcome = {
 };
 
 /**
+ * Whose account and what was done to it, from the reason the database
+ * records: user_unavailable_<owner|renter>_<suspended|banned>. Reasons from
+ * before the kind was recorded have no suffix and read as "suspended or banned".
+ */
+export function unavailableReason(reason: string | null | undefined): { account: "owner" | "renter"; kind: string } | null {
+  const match = /^user_unavailable_(owner|renter)(?:_(suspended|banned))?$/.exec(reason ?? "");
+  return match ? { account: match[1] as "owner" | "renter", kind: match[2] ?? "suspended or banned" } : null;
+}
+
+/**
  * One line saying who cancelled and where the money went, worded for whoever
  * is reading: the renter sees what came back to their wallet, the owner what
  * (if anything) was paid to them.
@@ -81,6 +96,23 @@ export type CancellationOutcome = {
 export function cancellationOutcomeLine(outcome: CancellationOutcome, viewer: "renter" | "owner"): string {
   const released = outcome.released_to_wallet_cents;
   const kept = outcome.non_refundable_cents ?? 0;
+  // A member's account was suspended or banned: nobody on the booking chose to cancel it.
+  const unavailable = unavailableReason(outcome.cancelled_reason);
+  if (unavailable) {
+    const { account, kind } = unavailable;
+    if (account === "renter") {
+      if (viewer === "renter") {
+        const back = `Cancelled because your account was ${kind}. ${formatMoney(released)} came back to your wallet`;
+        return kept > 0 ? `${back}; ${formatMoney(kept)} was not refundable under the cancellation policy.` : `${back}.`;
+      }
+      return kept > 0
+        ? `Cancelled because the renter's account was ${kind}. ${formatMoney(kept)} was paid to you under the cancellation policy.`
+        : `Cancelled because the renter's account was ${kind}. Nothing was payable to you.`;
+    }
+    return viewer === "renter"
+      ? `Cancelled because the owner's account was ${kind}. Your hold of ${formatMoney(released)} was released in full.`
+      : `Cancelled because your account was ${kind}. The renter's hold of ${formatMoney(released)} was released in full.`;
+  }
   if (outcome.cancelled_by === "RENTER") {
     if (viewer === "owner") {
       return kept > 0
