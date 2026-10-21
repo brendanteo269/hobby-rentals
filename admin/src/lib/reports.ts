@@ -1,3 +1,4 @@
+import { adminApiKey, apiUrl } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
@@ -23,6 +24,13 @@ export const REPORT_STATUS: Record<ReportStatus, { label: string; tone: "warning
   OPEN: { label: "Awaiting review", tone: "warning" },
   DISMISSED: { label: "Dismissed", tone: "neutral" },
   ACTIONED: { label: "Listing deactivated", tone: "critical" },
+};
+
+/** The same statuses for a user report (S3-22): "actioned" there means the claim was upheld and sent to the person reported. */
+export const USER_REPORT_STATUS: Record<ReportStatus, { label: string; tone: "warning" | "neutral" | "critical" }> = {
+  OPEN: { label: "Awaiting review", tone: "warning" },
+  DISMISSED: { label: "Dismissed", tone: "neutral" },
+  ACTIONED: { label: "User warned", tone: "critical" },
 };
 
 export type QueuedListingReport = {
@@ -69,6 +77,7 @@ export type ListingReport = {
   status: ReportStatus;
   resolution_note: string | null;
   resolved_at: string | null;
+  decision_by: "ADMIN" | "AI";
   created_at: string;
   evidence: {
     captured_at?: string;
@@ -83,7 +92,7 @@ export async function getListingReports(listingId: string): Promise<ListingRepor
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("reports")
-    .select("id, reporter_id, booking_id, reason_code, explanation, status, resolution_note, resolved_at, created_at, evidence")
+    .select("id, reporter_id, booking_id, reason_code, explanation, status, resolution_note, resolved_at, decision_by, created_at, evidence")
     .eq("kind", "LISTING")
     .eq("listing_id", listingId)
     .order("created_at", { ascending: false });
@@ -116,4 +125,97 @@ export async function resolveListingReport(
     p_note: reason,
   });
   return { error: error ? error.message : null };
+}
+
+
+// --- S3-22: reports on users ------------------------------------------------------------
+
+/** Mirrors the reasons members choose from (public.user_report_reasons()). */
+export const USER_REPORT_REASON_LABELS: Record<string, string> = {
+  HARASSMENT: "Harassment or abuse",
+  THREATS: "Threats",
+  SCAM_OR_FRAUD: "Scam or fraud",
+  INAPPROPRIATE_CONTENT: "Inappropriate content",
+  SPAM: "Spam",
+  OTHER: "Something else",
+};
+
+export type ReportParty = { id: string; display_name: string | null; role: "RENTER" | "OWNER" };
+
+type ReportBooking = {
+  id: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  listing_id: string;
+  listing_name: string | null;
+};
+
+/** One row of the user-report queue, without the message bundle. */
+export type UserReportSummary = {
+  id: string;
+  reason_code: string;
+  status: ReportStatus;
+  created_at: string;
+  reporter: ReportParty;
+  reported: ReportParty;
+  booking: ReportBooking;
+  message_count: number;
+};
+
+/** A user report with its evidence bundle, as GET /admin/user-reports/{id} answers. */
+export type UserReportDetail = {
+  id: string;
+  reason_code: string;
+  explanation: string;
+  status: ReportStatus;
+  created_at: string;
+  /** When it was decided; null while it awaits an administrator. */
+  resolved_at: string | null;
+  /** The administrator's own note: never shown to either member. */
+  resolution_note: string | null;
+  /** Who decided it; AI means it was dismissed without a person, and can be reopened. */
+  decision_by: "ADMIN" | "AI" | null;
+  captured_at: string | null;
+  reporter: ReportParty;
+  reported: ReportParty;
+  booking: ReportBooking;
+  conversation_id: string;
+  messages: {
+    id: string;
+    from: "REPORTER" | "REPORTED";
+    body: string;
+    sent_at: string;
+    /** Short-lived signed URLs: attachments are never publicly readable. */
+    attachment_urls: string[];
+  }[];
+};
+
+/**
+ * Through the API rather than Supabase, so attachment keys can be signed for
+ * viewing. Call only behind requirePortalSession().
+ */
+export async function listOpenUserReports(): Promise<{ reports: UserReportSummary[]; error: string | null }> {
+  try {
+    const response = await fetch(`${apiUrl()}/admin/user-reports`, {
+      headers: { "X-Admin-Key": adminApiKey() },
+      cache: "no-store",
+    });
+    if (!response.ok) return { reports: [], error: "Could not load user reports." };
+    return { reports: await response.json(), error: null };
+  } catch (error) {
+    console.error("User report queue failed:", error);
+    return { reports: [], error: "Could not load user reports." };
+  }
+}
+
+/** Null when there is no such report. */
+export async function getUserReport(id: string): Promise<UserReportDetail | null> {
+  const response = await fetch(`${apiUrl()}/admin/user-reports/${encodeURIComponent(id)}`, {
+    headers: { "X-Admin-Key": adminApiKey() },
+    cache: "no-store",
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) throw new Error(`User report lookup failed: ${response.status}`);
+  return response.json();
 }

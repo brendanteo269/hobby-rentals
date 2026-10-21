@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { requirePortalSession } from "@/lib/admin";
 import { ROUTES } from "@/lib/routes";
 import { getUserAuditTrail } from "@/lib/audit";
+import { getUserModeration } from "@/lib/moderation";
 import { formatDate, formatDateTime } from "@/lib/format";
 import {
   accountStatus,
@@ -14,6 +15,7 @@ import {
 } from "@/lib/users";
 import { Badge, Container, DescriptionList, Panel } from "@/components/ui";
 import { VerificationPanel } from "@/components/verification-panel";
+import { UserModerationPanel } from "@/components/user-moderation-panel";
 import { AuditTrail } from "@/components/audit-trail";
 import { AUDIT_PAGE_SIZE } from "@/lib/audit";
 
@@ -39,6 +41,7 @@ export default async function UserDetailPage({
   const status = accountStatus(user);
   const verified = isEmailVerified(user);
   const suspended = isSuspended(user);
+  const moderation = await getUserModeration(user.id);
   const { entries: auditEntries, total: auditTotal } = await getUserAuditTrail(user.id, auditPage);
   const auditLastPage = Math.max(1, Math.ceil(auditTotal / AUDIT_PAGE_SIZE));
 
@@ -113,6 +116,8 @@ export default async function UserDetailPage({
           </Panel>
 
           <VerificationPanel userId={user.id} email={user.email} verified={verified} />
+
+          {moderation && <UserModerationPanel moderation={moderation} />}
         </div>
 
         <AuditTrail

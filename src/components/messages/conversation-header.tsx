@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import type { Route } from "next";
 import { Badge, ImageSlot } from "@/components/ui";
@@ -22,6 +23,7 @@ export function ConversationHeader({
   otherPartyId,
   otherPartyName,
   otherPartyRole,
+  actions,
 }: {
   listingId: string;
   photoUrl: string | null;
@@ -39,6 +41,8 @@ export function ConversationHeader({
   /** Omitted on the "start a new thread" screen, where no other party has been resolved yet. */
   otherPartyName?: string | null;
   otherPartyRole: ConversationRole;
+  /** Controls for an existing thread, after the other party - e.g. reporting them (S3-22). */
+  actions?: ReactNode;
 }) {
   return (
     <div className="flex items-center gap-3 border-b border-line px-4 py-3">
@@ -84,6 +88,7 @@ export function ConversationHeader({
           </Badge>
         </div>
       )}
+      {actions}
     </div>
   );
 }

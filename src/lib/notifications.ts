@@ -65,6 +65,9 @@ export type NotificationType =
   | "LISTING_REACTIVATED"
   // S3-21: the owner's listing was reported and is under review.
   | "LISTING_REPORTED_OWNER"
+  | "ACCOUNT_REPORTED"
+  | "ACCOUNT_REPORT_DECIDED"
+  | "ACCOUNT_SUSPENDED"
   | "HOBBYSHIELD_EXPIRING_7_DAYS"
   | "HOBBYSHIELD_EXPIRING_3_DAYS"
   | "HOBBYSHIELD_EXPIRING_TODAY"
@@ -139,6 +142,9 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   BOOKING_CONDITION_DAMAGE_OWNER: "Possible damage found",
   BOOKING_CONDITION_SCAN_FAILED_OWNER: "Condition check needs you",
   LISTING_REPORTED_OWNER: "Listing reported",
+  ACCOUNT_REPORTED: "Report upheld",
+  ACCOUNT_REPORT_DECIDED: "Report reviewed",
+  ACCOUNT_SUSPENDED: "Account suspended",
   BOOKING_REVIEW_REQUESTED: "Rate your rental",
   BOOKING_REVIEW_RECEIVED: "Review received",
   BUNDLE_REQUESTED: "Bundle request sent",

@@ -42,6 +42,12 @@ export async function AdminHeader() {
             Bookings
           </Link>
           <Link
+            href={ROUTES.moderation}
+            className="text-sm text-ink-soft transition-colors hover:text-ink"
+          >
+            Moderation
+          </Link>
+          <Link
             href={ROUTES.disputes}
             className="text-sm text-ink-soft transition-colors hover:text-ink"
           >

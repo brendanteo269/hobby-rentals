@@ -55,6 +55,15 @@ const DUPLICATE_EMAIL_MESSAGE =
 const UNCONFIRMED_EMAIL_CODE = "email_not_confirmed";
 
 /**
+ * What gotrue returns for a member whose account is banned: here, one
+ * suspended at the strike limit (S3-23). It lifts by itself when the ban
+ * period ends, so this is not a failed credential either, and the member is
+ * told why rather than "User is banned".
+ */
+const BANNED_CODE = "user_banned";
+const SUSPENDED_MESSAGE = "Your account is suspended. You can sign in again once the suspension ends.";
+
+/**
  * Says what to do about it, unlike Supabase's bare "Email not confirmed".
  *
  * Signing up again with the same address resends the link — see signUp — which
@@ -167,6 +176,10 @@ export async function logIn(_prev: AuthState, formData: FormData): Promise<AuthS
     // this is what a correct password for an unverified account returns.
     if (error.code === UNCONFIRMED_EMAIL_CODE) {
       return { error: UNCONFIRMED_EMAIL_MESSAGE, values };
+    }
+
+    if (error.code === BANNED_CODE) {
+      return { error: SUSPENDED_MESSAGE, values };
     }
 
     await recordFailedLogin(supabase, email);

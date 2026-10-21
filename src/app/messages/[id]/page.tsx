@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { MessagesShell } from "@/components/messages/messages-shell";
 import { ConversationList } from "@/components/messages/conversation-list";
+import { ConversationActionsMenu } from "@/components/messages/conversation-actions-menu";
 import { ConversationHeader } from "@/components/messages/conversation-header";
 import { ConversationThreadPanel } from "@/components/messages/conversation-thread-panel";
 import { EnquiryBookingStatus } from "@/components/messages/enquiry-booking-status";
@@ -104,6 +105,12 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
           otherPartyId={conversation.other_party_id}
           otherPartyName={conversation.other_party_name ?? "Member"}
           otherPartyRole={conversation.other_party_role}
+          actions={
+            // S3-22: only a booking conversation can be reported from.
+            conversation.scope === "BOOKING" && conversation.other_party_id ? (
+              <ConversationActionsMenu conversationId={id} otherPartyName={conversation.other_party_name ?? "this member"} />
+            ) : undefined
+          }
         />
 
         <ConversationThreadPanel
