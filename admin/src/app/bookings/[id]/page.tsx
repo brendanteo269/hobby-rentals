@@ -10,6 +10,7 @@ import {
   bookingStatusTone,
   getBookingById,
   getHandoverDetails,
+  isHandoverOverridable,
   paymentStatusLabel,
   paymentStatusTone,
 } from "@/lib/bookings";
@@ -87,9 +88,9 @@ export default async function BookingDetailPage({
   // Only a booking that has not started or been cancelled has a handover to look at.
   const handoverRelevant = booking.status === "CONFIRMED" || booking.status === "ACTIVE";
   const handoverDetails = handoverRelevant ? await getHandoverDetails(id) : null;
-  // Any confirmed single booking can be started or cancelled by an administrator,
-  // flagged or not: the flag is how they are found, not a condition of acting.
-  const canResolveHandover = booking.status === "CONFIRMED" && !booking.bundle_booking_id;
+  // Only a confirmed, single booking whose start date and confirmation window have
+  // passed without both parties confirming; the database holds the rule.
+  const canResolveHandover = booking.status === "CONFIRMED" && (await isHandoverOverridable(id));
 
   const { entries: auditEntries, total: auditTotal } = await getBookingAuditTrail(id, booking.renter_id, auditPage);
   const auditLastPage = Math.max(1, Math.ceil(auditTotal / AUDIT_PAGE_SIZE));
@@ -126,7 +127,7 @@ export default async function BookingDetailPage({
       )}
       {canResolveHandover && (
         <div className="mt-6">
-          <HandoverResolveForm bookingId={booking.id} />
+          <HandoverResolveForm bookingId={booking.id} updatedAt={booking.updated_at} />
         </div>
       )}
 

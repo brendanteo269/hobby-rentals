@@ -21,10 +21,10 @@ const SUCCESS_BY_INTENT = {
 } as const;
 
 /**
- * Starts or cancels a booking flagged for an unconfirmed handover (S3-02).
+ * Starts or cancels a booking whose handover nobody confirmed (S3-02).
  *
- * The database function does the real work atomically - checks the flag and
- * the rules, moves the booking, writes the passport entry or releases the
+ * The database function does the real work atomically - checks that it is
+ * really an unconfirmed handover, and the rules, moves the booking, writes the passport entry or releases the
  * holds, notifies both parties and records the audit entry. This action only
  * parses the form and passes a refusal through, so a decision is recorded
  * exactly once.
@@ -38,6 +38,7 @@ export async function resolveUnconfirmedHandover(
   const bookingId = String(formData.get("booking_id") ?? "");
   const intent = String(formData.get("intent") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
+  const expectedUpdatedAt = String(formData.get("expected_updated_at") ?? "") || null;
 
   if (intent !== "start" && intent !== "cancel") return { error: "Choose whether to start or cancel the booking." };
   if (!reason) return { error: "A reason is required." };
@@ -45,6 +46,7 @@ export async function resolveUnconfirmedHandover(
   const { error } = await createAdminClient().rpc(FUNCTION_BY_INTENT[intent], {
     p_booking_id: bookingId,
     p_reason: reason,
+    p_expected_updated_at: expectedUpdatedAt,
   });
   if (error) return { error: error.message.replace(ERROR_CODE_PREFIX, "") };
 

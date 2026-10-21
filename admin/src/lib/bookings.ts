@@ -159,45 +159,59 @@ export async function searchBookings(
 }
 
 /** A confirmed rental whose start date passed with the handover still unconfirmed (S3-02). */
-export type FlaggedHandover = {
+export type UnconfirmedHandover = {
   id: string;
   listing_name: string;
+  renter_name: string | null;
+  owner_name: string | null;
   start_date: string;
-  flagged_at: string;
+  end_date: string;
+  /** When the background job flagged it; null if it is overdue but not yet flagged. */
+  flagged_at: string | null;
+  renter_confirmed: boolean;
+  owner_confirmed: boolean;
+  pickup_photos_done: boolean;
+  /** Seconds since the rental was due to start. */
+  overdue_seconds: number;
 };
 
 /**
- * Confirmed bookings flagged by the unconfirmed-handover sweep, oldest first.
- * The flag only asks for a look: the booking stays confirmed until both
- * parties confirm. Failures return an empty list so the search below still
- * renders.
+ * The unconfirmed-handover queue: exactly the bookings an administrator may
+ * start or cancel (the database decides, so the list and the action cannot
+ * disagree), longest overdue first. Failures return an empty list so the
+ * search below still renders.
  *
  * Call only behind requirePortalSession(), like searchBookings.
  */
-export async function getFlaggedHandovers(): Promise<FlaggedHandover[]> {
-  const { data, error } = await createAdminClient()
-    .from("bookings")
-    .select("id, start_date, handover_flagged_at, listing:listings(name)")
-    .eq("status", "CONFIRMED")
-    .not("handover_flagged_at", "is", null)
-    .order("handover_flagged_at", { ascending: true })
-    .limit(50);
-
+export async function getUnconfirmedHandoverQueue(): Promise<UnconfirmedHandover[]> {
+  const { data, error } = await createAdminClient().rpc("admin_unconfirmed_handover_queue", { p_limit: 50 });
   if (error) {
-    console.error("Flagged handover lookup failed:", error.message);
+    console.error("Unconfirmed handover queue lookup failed:", error.message);
     return [];
   }
+  return ((data ?? []) as Record<string, unknown>[]).map((row) => ({
+    id: row.booking_id as string,
+    listing_name: (row.listing_name as string | null) ?? "Unknown listing",
+    renter_name: (row.renter_name as string | null) ?? null,
+    owner_name: (row.owner_name as string | null) ?? null,
+    start_date: row.start_date as string,
+    end_date: row.end_date as string,
+    flagged_at: (row.flagged_at as string | null) ?? null,
+    renter_confirmed: Boolean(row.renter_confirmed),
+    owner_confirmed: Boolean(row.owner_confirmed),
+    pickup_photos_done: Boolean(row.pickup_photos_done),
+    overdue_seconds: Number(row.overdue_seconds ?? 0),
+  }));
+}
 
-  return (data ?? []).map((row) => {
-    // PostgREST types a to-one embed as an object or, loosely, an array.
-    const listing = Array.isArray(row.listing) ? row.listing[0] : row.listing;
-    return {
-      id: row.id as string,
-      listing_name: (listing?.name as string | undefined) ?? "Unknown listing",
-      start_date: row.start_date as string,
-      flagged_at: row.handover_flagged_at as string,
-    };
-  });
+/** Whether the administrator may start or cancel this booking for an unconfirmed handover. */
+export async function isHandoverOverridable(bookingId: string): Promise<boolean> {
+  const { data, error } = await createAdminClient().rpc("admin_handover_overridable", { p_booking_id: bookingId });
+  if (error) {
+    console.error("Handover override check failed:", error.message);
+    return false;
+  }
+  return data === true;
 }
 
 /** A booking an enforcement against one of its members (S3-24) left for an administrator. */
