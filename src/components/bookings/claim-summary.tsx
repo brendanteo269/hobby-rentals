@@ -65,7 +65,7 @@ export function ClaimSummary({ claim, viewer }: { claim: DamageClaim; viewer: "o
         {pending
           ? viewer === "owner"
             ? "The renter can accept or dispute your claim. The deposit and your payout stay on hold until then."
-            : "Nothing is deducted until you accept, the time to respond runs out, or a dispute is decided."
+            : "Nothing is deducted until you accept or the time to respond runs out."
           : "The deposit and payout stay on hold until the claim is settled."}
       </p>
     </section>

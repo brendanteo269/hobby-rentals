@@ -41,6 +41,7 @@ export default async function DisputeDetailPage({ params }: { params: Promise<{ 
         <div className="space-y-6 lg:col-span-2">
           <Panel title="What the owner reported">
             <p className="body-copy whitespace-pre-line">{dispute.description}</p>
+            <EvidencePhotos urls={dispute.evidence_photo_urls} label="Owner's evidence photos" />
             <div className="mt-5">
               <DescriptionList
                 items={[
@@ -74,6 +75,23 @@ export default async function DisputeDetailPage({ params }: { params: Promise<{ 
               />
             </div>
           </Panel>
+
+          {/* S3-08. Only once the renter has answered: before that there is
+              nothing to show, and an empty panel would read as the renter
+              having said nothing rather than not yet been asked. */}
+          {dispute.rebutted_at && (
+            <Panel title="What the renter said">
+              <p className="body-copy whitespace-pre-line">{dispute.rebuttal}</p>
+              <EvidencePhotos urls={dispute.rebuttal_photo_urls} label="Renter's counter-evidence photos" />
+              <div className="mt-5">
+                <DescriptionList
+                  items={[
+                    { term: "Disputed", value: formatDateTime(dispute.rebutted_at) },
+                  ]}
+                />
+              </div>
+            </Panel>
+          )}
 
           {dispute.status === "OPEN" ? (
             <DisputeResolveForm
@@ -149,5 +167,35 @@ export default async function DisputeDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
     </Container>
+  );
+}
+
+/**
+ * Evidence photos for one side of a dispute.
+ *
+ * Plain <img>, not next/image: these are short-lived presigned S3 URLs, so
+ * the optimiser would cache a link that has already expired. Each opens full
+ * size in a new tab - an arbitrator deciding on damage needs to look closely.
+ */
+function EvidencePhotos({ urls, label }: { urls?: string[]; label: string }) {
+  if (!urls?.length) return null;
+  return (
+    <div className="mt-5">
+      <p className="text-xs uppercase tracking-wide text-ink-soft">{label}</p>
+      <ul className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {urls.map((url, index) => (
+          <li key={url}>
+            <a href={url} target="_blank" rel="noreferrer" className="block">
+              {/* eslint-disable-next-line @next/next/no-img-element -- S3 URL, possibly short-lived presigned */}
+              <img
+                src={url}
+                alt={`${label} photo ${index + 1}`}
+                className="aspect-square w-full border border-line object-cover"
+              />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

@@ -31,7 +31,7 @@ export function DisputeResolveForm({
   return (
     <Panel
       title="Resolve dispute"
-      description="The decision settles the rental straight away: the owner is paid, the renter's deposit is returned less any deduction, and the outcome is added to the item's passport. It can't be undone."
+      description="The decision settles the rental dispute: the owner is paid, the renter's deposit is returned less any deduction, and the outcome is added to the item's passport."
     >
       <form
         action={action}
@@ -101,7 +101,7 @@ export function DisputeResolveForm({
             maxLength={2000}
             rows={3}
             className="mt-2"
-            placeholder="What you checked and why. The decision names no admin, so this is its only record."
+            placeholder="Explain your reasons."
           />
         </div>
 

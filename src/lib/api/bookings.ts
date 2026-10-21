@@ -91,6 +91,14 @@ export function reportBookingDamage(bookingId: string, description: string, clai
   });
 }
 
+/** S3-08: the renter rebuts the claim; the case goes to arbitration and the deposit stays frozen. */
+export function disputeDamageClaim(bookingId: string, rebuttal: string, photoKeys: string[]) {
+  return backendRequest<RentalDispute>(`/bookings/${encodeURIComponent(bookingId)}/claim/dispute`, {
+    method: "POST",
+    body: JSON.stringify({ rebuttal, photo_keys: photoKeys }),
+  });
+}
+
 /** S3-07: the renter accepts the owner's figure; the rental settles immediately. */
 export function acceptDamageClaim(bookingId: string) {
   return backendRequest<ClaimSettlement>(`/bookings/${encodeURIComponent(bookingId)}/claim/accept`, {

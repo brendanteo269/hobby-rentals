@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
   const requestedKind = body !== null && typeof body === "object" && "kind" in body ? (body as { kind: unknown }).kind : undefined;
   const kind: PhotoKind =
-    requestedKind === "passport" || requestedKind === "return" || requestedKind === "pickup" || requestedKind === "claim"
+    requestedKind === "passport" || requestedKind === "return" || requestedKind === "pickup" || requestedKind === "claim" || requestedKind === "rebuttal"
       ? requestedKind
       : "listing";
 
