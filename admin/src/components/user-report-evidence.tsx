@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Panel } from "./ui";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { ROUTES } from "@/lib/routes";
+import { ConversationLogModal } from "./conversation-log-modal";
 import { USER_REPORT_REASON_LABELS, type ReportParty, type UserReportDetail } from "@/lib/reports";
 
 const ROLE_LABELS: Record<ReportParty["role"], string> = { RENTER: "Renter", OWNER: "Owner" };
@@ -60,36 +61,7 @@ export function UserReportEvidence({ report, relied = [] }: { report: UserReport
           report.captured_at ? ` on ${formatDateTime(report.captured_at)}` : ""
         }.`}
       >
-        {report.messages.length === 0 ? (
-          <p className="text-sm text-ink-soft">No messages had been sent.</p>
-        ) : (
-          <ol className="space-y-3">
-            {report.messages.map((message, index) => {
-              const sender = message.from === "REPORTER" ? report.reporter : report.reported;
-              return (
-                <li key={message.id} className={`border px-4 py-3 text-sm ${relied.includes(index + 1) ? "border-accent bg-accent-soft/30" : "border-line"}`}>
-                  <p className="text-xs text-ink-soft">
-                    {index + 1}. {sender.display_name ?? ROLE_LABELS[sender.role]} ({message.from === "REPORTER" ? "reporter" : "reported"}) ·{" "}
-                    {formatDateTime(message.sent_at)}{relied.includes(index + 1) && " · AI relied on this"}
-                  </p>
-                  {message.body && <p className="mt-1 whitespace-pre-line">{message.body}</p>}
-                  {message.attachment_urls.length > 0 && (
-                    <ul className="mt-2 flex flex-wrap gap-2">
-                      {message.attachment_urls.map((url, index) => (
-                        <li key={url}>
-                          <a href={url} target="_blank" rel="noreferrer" className="block">
-                            {/* eslint-disable-next-line @next/next/no-img-element -- a short-lived signed URL */}
-                            <img src={url} alt={`Attachment ${index + 1}`} className="size-24 border border-line object-cover" />
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        )}
+        <ConversationLogModal report={report} relied={relied} />
       </Panel>
     </div>
   );
