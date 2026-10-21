@@ -200,27 +200,6 @@ export async function getFlaggedHandovers(): Promise<FlaggedHandover[]> {
   });
 }
 
-/**
- * Whether a booking is flagged for an unconfirmed handover (S3-02) and so can
- * be started or cancelled by an administrator. Read straight from the table:
- * admin_get_booking predates the flag. Call only behind requirePortalSession().
- */
-export async function isHandoverFlagged(bookingId: string): Promise<boolean> {
-  const { data, error } = await createAdminClient()
-    .from("bookings")
-    .select("handover_flagged_at")
-    .eq("id", bookingId)
-    .eq("status", "CONFIRMED")
-    .not("handover_flagged_at", "is", null)
-    .maybeSingle();
-
-  if (error) {
-    console.error("Handover flag lookup failed:", error.message);
-    return false;
-  }
-  return Boolean(data);
-}
-
 /** Where a booking's handover stands, as GET /admin/bookings/{id}/handover answers (S3-02). */
 export type HandoverDetails = {
   booking_id: string;
