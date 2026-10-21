@@ -6,9 +6,9 @@ import { useToast } from "./toast";
 import { resolveUnconfirmedHandover, type ResolveHandoverState } from "@/app/bookings/[id]/actions";
 
 /**
- * How an administrator unsticks a booking flagged for an unconfirmed handover
- * (S3-02): neither party can cancel it from the start date, and it cannot
- * start without both confirming. Start it if the item did change hands;
+ * How an administrator steps into a confirmed booking whose handover has not
+ * gone through (S3-02): neither party can cancel it from the start date, and it
+ * cannot start without both confirming. Start it if the item did change hands;
  * cancel it, releasing every hold to the renter, if it did not.
  *
  * The result is a toast: either action moves the booking off Confirmed, so
@@ -24,8 +24,8 @@ export function HandoverResolveForm({ bookingId }: { bookingId: string }) {
 
   return (
     <Panel
-      title="Handover not confirmed"
-      description="The renter and the owner did not both confirm the handover. Start the rental if the item changed hands, or cancel the booking and release the renter's holds if it did not. Both are recorded in the audit trail and tell the renter and the owner."
+      title="Resolve the handover"
+      description="Use this when the renter and the owner have not both confirmed the handover. Start the rental if the item changed hands, or cancel the booking and release the renter's holds if it did not. Both are recorded in the audit trail and tell the renter and the owner."
     >
       <form
         action={action}
@@ -34,7 +34,7 @@ export function HandoverResolveForm({ bookingId }: { bookingId: string }) {
           const intent = ((event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null)?.value;
           const message =
             intent === "cancel"
-              ? "Cancel this booking and release every hold to the renter? This can't be undone."
+              ? "Cancel this booking and release every hold - the rental fee and the deposit - back to the renter? This can't be undone."
               : "Start this rental? This can't be undone.";
           if (!window.confirm(message)) event.preventDefault();
         }}

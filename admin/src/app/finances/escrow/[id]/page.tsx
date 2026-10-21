@@ -31,8 +31,8 @@ const COMPONENT_STATE_LABELS: Record<EscrowComponentSummary["state"], string> = 
  * separate lifecycles, why settlement is blocked (if it is), and every wallet
  * transaction behind them. The only write is the manual override panel
  * (release held funds to the renter), offered while something is still held
- * and no dispute is open; that is why this is not folded into the
- * deliberately action-free booking page.
+ * and no dispute is open. It moves money only; starting or cancelling the
+ * booking itself (S3-02) is on the booking page, which this page points to.
  */
 export default async function EscrowRecordPage({
   params,
@@ -147,6 +147,15 @@ export default async function EscrowRecordPage({
 
           {/* An open dispute is resolved through arbitration, never overridden; the
               blocked-settlement panel above points there instead. */}
+          {record.subject_type === "BOOKING" && record.status === "CONFIRMED" && heldParts.length > 0 && (
+            <p className="border border-line bg-white px-4 py-3 text-sm text-ink-soft">
+              This booking is still confirmed. To start or cancel it, use{" "}
+              <Link href={ROUTES.booking(record.id)} className="underline underline-offset-4">
+                the booking page
+              </Link>
+              . Releasing funds here leaves the booking as it is, and neither party is told.
+            </p>
+          )}
           {!record.settlement_blocked && heldParts.length > 0 && (
             <EscrowOverrideForm escrowId={record.id} heldParts={heldParts} />
           )}

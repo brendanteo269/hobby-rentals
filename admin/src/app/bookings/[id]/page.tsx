@@ -10,7 +10,6 @@ import {
   bookingStatusTone,
   getBookingById,
   getHandoverDetails,
-  isHandoverFlagged,
   paymentStatusLabel,
   paymentStatusTone,
 } from "@/lib/bookings";
@@ -61,8 +60,8 @@ function ReceiptRow({
  * S2-27: read-only booking detail - status timeline, renter/owner
  * references, rental period and amount, security deposit, escrow hold/
  * release records, damage protection ("insurance") terms, and admin
- * activity. Nothing on this page writes to a booking, except that one flagged
- * for an unconfirmed handover (S3-02) can be started or cancelled.
+ * activity. Nothing on this page writes to a booking, except that a confirmed
+ * one can be started or cancelled by an administrator (S3-02).
  */
 export default async function BookingDetailPage({
   params,
@@ -87,10 +86,10 @@ export default async function BookingDetailPage({
 
   // Only a booking that has not started or been cancelled has a handover to look at.
   const handoverRelevant = booking.status === "CONFIRMED" || booking.status === "ACTIVE";
-  const [handoverFlagged, handoverDetails] = await Promise.all([
-    isHandoverFlagged(id),
-    handoverRelevant ? getHandoverDetails(id) : null,
-  ]);
+  const handoverDetails = handoverRelevant ? await getHandoverDetails(id) : null;
+  // Any confirmed single booking can be started or cancelled by an administrator,
+  // flagged or not: the flag is how they are found, not a condition of acting.
+  const canResolveHandover = booking.status === "CONFIRMED" && !booking.bundle_booking_id;
 
   const { entries: auditEntries, total: auditTotal } = await getBookingAuditTrail(id, booking.renter_id, auditPage);
   const auditLastPage = Math.max(1, Math.ceil(auditTotal / AUDIT_PAGE_SIZE));
@@ -119,14 +118,13 @@ export default async function BookingDetailPage({
         </div>
       </div>
 
-      {/* S3-02: how the handover stands, and - only for a booking flagged for an
-          unconfirmed one - the action that resolves it. */}
+      {/* S3-02: how the handover stands, and the actions that resolve a stuck one. */}
       {handoverDetails && (
         <div className="mt-8">
           <HandoverDetailsPanel details={handoverDetails} />
         </div>
       )}
-      {handoverFlagged && (
+      {canResolveHandover && (
         <div className="mt-6">
           <HandoverResolveForm bookingId={booking.id} />
         </div>
