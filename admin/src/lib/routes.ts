@@ -28,8 +28,8 @@ export const ROUTES = {
   // later take /finances itself without moving these.
   escrow: "/finances/escrow",
   escrowHold: (id: string) => `/finances/escrow/${id}` as Route,
-  reports: "/reports" as Route,
-  report: (id: string) => `/reports/${id}` as Route,
+  moderation: "/moderation" as Route,
+  moderationReport: (id: string) => `/moderation/${id}` as Route,
   disputes: "/disputes",
   dispute: (id: string) => `/disputes/${id}` as Route,
 } as const;

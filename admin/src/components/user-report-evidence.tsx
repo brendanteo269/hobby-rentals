@@ -25,7 +25,7 @@ function Party({ label, party }: { label: string; party: ReportParty }) {
  * the conversation as it stood when it was. If the report is upheld the
  * reported user reads this same bundle.
  */
-export function UserReportEvidence({ report }: { report: UserReportDetail }) {
+export function UserReportEvidence({ report, relied = [] }: { report: UserReportDetail; /** 1-based positions of the messages the AI relied on, marked in the log. */ relied?: number[] }) {
   return (
     <div className="space-y-6">
       <Panel title="Report" description={`Made ${formatDateTime(report.created_at)}.`}>
@@ -64,13 +64,13 @@ export function UserReportEvidence({ report }: { report: UserReportDetail }) {
           <p className="text-sm text-ink-soft">No messages had been sent.</p>
         ) : (
           <ol className="space-y-3">
-            {report.messages.map((message) => {
+            {report.messages.map((message, index) => {
               const sender = message.from === "REPORTER" ? report.reporter : report.reported;
               return (
-                <li key={message.id} className="border border-line px-4 py-3 text-sm">
+                <li key={message.id} className={`border px-4 py-3 text-sm ${relied.includes(index + 1) ? "border-accent bg-accent-soft/30" : "border-line"}`}>
                   <p className="text-xs text-ink-soft">
-                    {sender.display_name ?? ROLE_LABELS[sender.role]} ({message.from === "REPORTER" ? "reporter" : "reported"}) ·{" "}
-                    {formatDateTime(message.sent_at)}
+                    {index + 1}. {sender.display_name ?? ROLE_LABELS[sender.role]} ({message.from === "REPORTER" ? "reporter" : "reported"}) ·{" "}
+                    {formatDateTime(message.sent_at)}{relied.includes(index + 1) && " · AI relied on this"}
                   </p>
                   {message.body && <p className="mt-1 whitespace-pre-line">{message.body}</p>}
                   {message.attachment_urls.length > 0 && (

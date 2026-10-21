@@ -30,7 +30,7 @@ export const REPORT_STATUS: Record<ReportStatus, { label: string; tone: "warning
 export const USER_REPORT_STATUS: Record<ReportStatus, { label: string; tone: "warning" | "neutral" | "critical" }> = {
   OPEN: { label: "Awaiting review", tone: "warning" },
   DISMISSED: { label: "Dismissed", tone: "neutral" },
-  ACTIONED: { label: "Upheld and sent", tone: "critical" },
+  ACTIONED: { label: "User warned", tone: "critical" },
 };
 
 export type QueuedListingReport = {
@@ -77,6 +77,7 @@ export type ListingReport = {
   status: ReportStatus;
   resolution_note: string | null;
   resolved_at: string | null;
+  decision_by: "ADMIN" | "AI";
   created_at: string;
   evidence: {
     captured_at?: string;
@@ -91,7 +92,7 @@ export async function getListingReports(listingId: string): Promise<ListingRepor
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("reports")
-    .select("id, reporter_id, booking_id, reason_code, explanation, status, resolution_note, resolved_at, created_at, evidence")
+    .select("id, reporter_id, booking_id, reason_code, explanation, status, resolution_note, resolved_at, decision_by, created_at, evidence")
     .eq("kind", "LISTING")
     .eq("listing_id", listingId)
     .order("created_at", { ascending: false });
@@ -173,6 +174,8 @@ export type UserReportDetail = {
   resolved_at: string | null;
   /** The administrator's own note: never shown to either member. */
   resolution_note: string | null;
+  /** Who decided it; AI means it was dismissed without a person, and can be reopened. */
+  decision_by: "ADMIN" | "AI" | null;
   captured_at: string | null;
   reporter: ReportParty;
   reported: ReportParty;
