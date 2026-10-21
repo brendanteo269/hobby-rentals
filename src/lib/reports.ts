@@ -94,14 +94,17 @@ export type UserReport = {
   id: string;
   viewer: "REPORTER" | "REPORTED" | "ADMIN";
   reason_code: UserReportReason;
-  explanation: string;
+  /** Null for the person reported: they are given the general cause, not what the reporter wrote. */
+  explanation: string | null;
   status: UserReportStatus;
   created_at: string;
   /** When an administrator decided it; null while it awaits them. */
   resolved_at: string | null;
   captured_at: string | null;
-  reporter: ReportParty;
+  /** Null for the person reported: the report reaches them anonymously. */
+  reporter: ReportParty | null;
   reported: ReportParty;
+  /** Null, with no conversation, for the person reported: they get the cause and the date only. */
   booking: {
     id: string;
     status: string;
@@ -109,8 +112,8 @@ export type UserReport = {
     end_date: string;
     listing_id: string;
     listing_name: string | null;
-  };
-  conversation_id: string;
+  } | null;
+  conversation_id: string | null;
   messages: ReportMessage[];
 };
 
@@ -118,3 +121,16 @@ export type UserReport = {
 export function userReportPath(reportId: string): `/reports/${string}` {
   return `/reports/${reportId}`;
 }
+
+/**
+ * What to tell a member whose report was upheld (S3-23): what is expected of
+ * them, in terms that hold whatever they were reported for. Shown with the
+ * report they are sent. Deliberately says nothing of strikes or how many there
+ * are - that is for administrators - only what is expected.
+ */
+export const USER_REPORT_ADVICE =
+  "Please keep every conversation on HobbyRentals respectful, honest and about the booking. Don't harass, threaten or pressure other members, ask anyone to pay or hand over money outside the app, or send offensive or unrelated messages.";
+
+/** Said after the advice: where to go instead, and what further valid reports can mean. */
+export const USER_REPORT_ADVICE_CLOSING =
+  "If something goes wrong with a booking, contact support instead of taking it up with the other person. Further reports that our team finds to be valid can lead to restrictions on your account.";
