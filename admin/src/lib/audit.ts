@@ -23,6 +23,9 @@ export const AUDIT_ACTIONS = {
   escrow_viewed: "Escrow record viewed",
   escrow_overridden: "Escrow manually released",
   dispute_resolved: "Damage dispute resolved",
+  user_report_viewed: "User report evidence viewed",
+  user_report_upheld: "User report upheld and sent to the reported user",
+  user_report_dismissed: "User report dismissed",
   handover_started_by_admin: "Rental started (handover not confirmed)",
   unconfirmed_booking_cancelled_by_admin: "Booking cancelled (handover not confirmed)",
 } as const;
@@ -217,6 +220,30 @@ export async function recordListingViewed(listingId: string, ownerId: string): P
   if (lastEntryAt !== null && Date.now() - lastEntryAt < VIEW_DEDUPE_WINDOW_MS) return;
 
   await recordAdminAction("listing_viewed", ownerId, { listing_id: listingId });
+}
+
+/**
+ * Records "user_report_viewed" against the person reported (S3-22): a report
+ * carries a whole conversation, so reading it is itself recorded. Deduped like
+ * recordListingViewed, so reloading the page is not a second entry.
+ */
+export async function recordUserReportViewed(reportId: string, reportedUserId: string): Promise<void> {
+  const { data, error } = await createAdminClient()
+    .from("admin_audit_log")
+    .select("created_at")
+    .eq("target_user_id", reportedUserId)
+    .eq("action", "user_report_viewed")
+    .eq("detail->>report_id", reportId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) console.error("Failed to check report audit trail:", error.message);
+
+  const lastEntryAt = data ? new Date(data.created_at).getTime() : null;
+  if (lastEntryAt !== null && Date.now() - lastEntryAt < VIEW_DEDUPE_WINDOW_MS) return;
+
+  await recordAdminAction("user_report_viewed", reportedUserId, { report_id: reportId });
 }
 
 /** Records "booking_viewed", unless this booking's own audit trail already has an entry this recent (same reasoning as recordListingViewed). */
