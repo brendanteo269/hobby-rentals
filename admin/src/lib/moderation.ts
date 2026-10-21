@@ -2,9 +2,12 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { StatusTone } from "@/lib/users";
 
 /**
- * S3-23: the moderation queue - listing reports (S3-21) and user reports
- * (S3-22) in one place. Priority and case age are worked out in the database
- * (admin_moderation_queue), not stored, so they never go stale.
+ * S3-23: reports on listings (S3-21) and users (S3-22), their priority and case
+ * age, strikes and the AI's assessments. Each kind is reviewed and decided where
+ * its subject is (a listing on its listing page, a user on their user page), and
+ * the queue of what is waiting sits at the top of that list. Priority and case
+ * age are worked out in the database (admin_moderation_queue), not stored, so
+ * they never go stale.
  */
 
 export type ReportKind = "LISTING" | "USER";
@@ -33,21 +36,6 @@ export const DECISION_LABELS: Record<ReportDecisionKind, string> = {
   DEACTIVATE: "Listing deactivated",
   WARN: "Acknowledged, strike added",
 };
-
-/** The filters the queue offers, in the order the dropdowns list them. */
-export const STATUS_OPTIONS: { value: QueueStatus; label: string }[] = [
-  { value: "OPEN", label: "Open" },
-  { value: "DECIDED", label: "Decided" },
-];
-export const KIND_OPTIONS: { value: ReportKind; label: string }[] = [
-  { value: "LISTING", label: "Listing reports" },
-  { value: "USER", label: "User reports" },
-];
-export const PRIORITY_OPTIONS: { value: Priority; label: string }[] = [
-  { value: "HIGH", label: "High" },
-  { value: "MEDIUM", label: "Medium" },
-  { value: "LOW", label: "Low" },
-];
 
 /** One row of admin_moderation_queue. */
 export type QueuedReport = {
@@ -177,8 +165,18 @@ export type ReportAssessment = {
   failure_reason: string | null;
   model: string | null;
   prompt_version: string | null;
+  /** How many times a worker has picked it up: none yet means it is still waiting for one. */
+  attempts: number;
+  /** How long it has been queued, by the database's clock. */
+  queued_seconds: number;
   completed_at: string | null;
 };
+
+/** Mirrors report_triage_max_attempts, after which an assessment is given up on. */
+export const ASSESSMENT_MAX_ATTEMPTS = 3;
+
+/** How long an assessment may wait unclaimed before the page suggests the worker is not running. */
+export const ASSESSMENT_STALLED_AFTER_SECONDS = 180;
 
 /** Null before one exists. Administrators only. */
 export async function getReportAssessment(reportId: string): Promise<ReportAssessment | null> {

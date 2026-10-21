@@ -28,6 +28,7 @@ export async function decideUserReport(_prev: DecideReportState, formData: FormD
   await requirePortalSession();
 
   const reportId = String(formData.get("report_id") ?? "");
+  const userId = String(formData.get("user_id") ?? "");
   const intent = String(formData.get("intent") ?? "");
   const note = String(formData.get("note") ?? "").trim();
 
@@ -41,27 +42,7 @@ export async function decideUserReport(_prev: DecideReportState, formData: FormD
   });
   if (error) return { error: error.message.replace(ERROR_CODE_PREFIX, "") };
 
-  revalidatePath(ROUTES.moderationReport(reportId));
-  revalidatePath(ROUTES.moderation);
+  revalidatePath(ROUTES.user(userId));
+  revalidatePath(ROUTES.users);
   return { success: SUCCESS_BY_INTENT[intent] };
-}
-
-/**
- * An administrator reopens a report the AI dismissed, so a person decides it
- * (S3-23 follow-up). Only an AI dismissal can be reopened, and a reason is
- * required; the database writes the audit entry.
- */
-export async function reopenAiDismissal(_prev: DecideReportState, formData: FormData): Promise<DecideReportState> {
-  await requirePortalSession();
-
-  const reportId = String(formData.get("report_id") ?? "");
-  const note = String(formData.get("note") ?? "").trim();
-  if (!note) return { error: "A reason is required." };
-
-  const { error } = await createAdminClient().rpc("admin_reopen_ai_dismissal", { p_report_id: reportId, p_note: note });
-  if (error) return { error: error.message.replace(ERROR_CODE_PREFIX, "") };
-
-  revalidatePath(ROUTES.moderationReport(reportId));
-  revalidatePath(ROUTES.moderation);
-  return { success: "Report reopened. It is back in the queue for a person to decide." };
 }

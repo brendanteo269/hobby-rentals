@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X } from "lucide-react";
 import { Button } from "./ui";
 import { formatDateTime } from "@/lib/format";
 import type { ReportParty, UserReportDetail } from "@/lib/reports";
@@ -36,20 +35,13 @@ export function ConversationLogModal({
   const count = report.messages.length;
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-ink-soft">
-          {count === 0
-            ? "No messages had been sent."
-            : relied.length > 0
-              ? `${relied.length} message${relied.length === 1 ? "" : "s"} marked as relied on by the AI.`
-              : "Read the whole conversation, with any photos."}
-        </p>
-        {count > 0 && (
-          <Button variant="outline" onClick={() => setOpen(true)}>
-            View conversation ({count} message{count === 1 ? "" : "s"})
-          </Button>
-        )}
-      </div>
+      {count === 0 ? (
+        <p className="text-sm text-ink-soft">No messages had been sent.</p>
+      ) : (
+        <Button variant="outline" onClick={() => setOpen(true)}>
+          View conversation ({count} message{count === 1 ? "" : "s"})
+        </Button>
+      )}
 
       {open && (
         <div
@@ -80,7 +72,9 @@ export function ConversationLogModal({
                 aria-label="Close conversation"
                 className="text-ink-soft transition-colors hover:text-ink"
               >
-                <X className="size-5" aria-hidden="true" />
+                <svg viewBox="0 0 20 20" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" aria-hidden="true">
+                  <path d="M5 5l10 10M15 5L5 15" />
+                </svg>
               </button>
             </div>
 

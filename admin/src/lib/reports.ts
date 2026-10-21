@@ -219,3 +219,25 @@ export async function getUserReport(id: string): Promise<UserReportDetail | null
   if (!response.ok) throw new Error(`User report lookup failed: ${response.status}`);
   return response.json();
 }
+
+/**
+ * Every user report made about one member, open first, each with its evidence
+ * bundle (attachments signed for viewing), for the page on that member.
+ * Empty when there are none or it cannot be loaded - the page still renders.
+ */
+export async function getReportsAboutUser(userId: string): Promise<UserReportDetail[]> {
+  try {
+    const response = await fetch(`${apiUrl()}/admin/users/${encodeURIComponent(userId)}/user-reports`, {
+      headers: { "X-Admin-Key": adminApiKey() },
+      cache: "no-store",
+    });
+    if (!response.ok) {
+      console.error("User reports lookup failed:", response.status);
+      return [];
+    }
+    return (await response.json()) as UserReportDetail[];
+  } catch (error) {
+    console.error("User reports lookup failed:", error);
+    return [];
+  }
+}

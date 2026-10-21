@@ -48,3 +48,18 @@ body {
   text-transform: uppercase;
   color: var(--color-ink-soft);
 }
+
+
+/* A progress bar for work with no known end: a bar sliding back and forth. */
+@keyframes indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(300%);
+  }
+}
+
+@utility animate-indeterminate {
+  animation: indeterminate 1.4s ease-in-out infinite alternate;
+}

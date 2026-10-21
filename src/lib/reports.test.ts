@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { USER_REPORT_REASONS, userReportPath, userReportReasonLabel } from "@/lib/reports";
+import {
+  USER_REPORT_ADVICE,
+  USER_REPORT_ADVICE_CLOSING,
+  USER_REPORT_REASONS,
+  userReportPath,
+  userReportReasonLabel,
+} from "@/lib/reports";
 
 describe("user report reasons", () => {
   it("offers each reason once, with a label", () => {
@@ -13,5 +19,12 @@ describe("user report reasons", () => {
   });
   it("links to a report's page", () => {
     expect(userReportPath("abc")).toBe("/reports/abc");
+  });
+});
+
+describe("advice to a member whose report was upheld", () => {
+  it("is general, so it holds whatever they were reported for, and never mentions strikes", () => {
+    expect(`${USER_REPORT_ADVICE} ${USER_REPORT_ADVICE_CLOSING}`.toLowerCase()).not.toContain("strike");
+    expect(USER_REPORT_ADVICE.length).toBeGreaterThan(40);
   });
 });

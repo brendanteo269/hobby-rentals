@@ -31,8 +31,6 @@ export async function decideListingReportAction(
 
   revalidatePath(ROUTES.listing(listingId));
   revalidatePath(ROUTES.listings);
-  revalidatePath(ROUTES.moderation);
-  revalidatePath(ROUTES.moderationReport(reportId));
   return {
     success: decision === "DISMISS" ? "Report dismissed." : "Listing deactivated, the owner told, and its reports closed.",
   };

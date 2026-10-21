@@ -29,6 +29,7 @@ import {
 import { ListingModerationPanel } from "@/components/listing-moderation-panel";
 import { ListingReportsPanel } from "@/components/listing-reports-panel";
 import { getListingReports } from "@/lib/reports";
+import { getReportAssessment } from "@/lib/moderation";
 import { AuditTrail } from "@/components/audit-trail";
 
 export const metadata = { title: "Listing — HobbyRentals Admin" };
@@ -86,6 +87,10 @@ export default async function ListingDetailPage({
     getListingReports(id),
   ]);
   const auditLastPage = Math.max(1, Math.ceil(auditTotal / AUDIT_PAGE_SIZE));
+  // What the AI made of each report on this listing, shown above the decision.
+  const assessments = Object.fromEntries(
+    await Promise.all(reports.map(async (report) => [report.id, await getReportAssessment(report.id)] as const)),
+  );
 
   const categoryLabel =
     categories.find((c) => c.slug === listing.category)?.label ??
@@ -331,7 +336,7 @@ export default async function ListingDetailPage({
         </div>
 
         <div className="space-y-6">
-          <ListingReportsPanel listingId={listing.id} reports={reports} />
+          <ListingReportsPanel listingId={listing.id} reports={reports} assessments={assessments} />
           <ListingModerationPanel
             key={listing.status}
             listingId={listing.id}

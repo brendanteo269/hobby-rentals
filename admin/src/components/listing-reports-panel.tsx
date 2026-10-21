@@ -6,6 +6,9 @@ import { useToast } from "./toast";
 import { decideListingReportAction, type ReportDecisionState } from "@/app/listings/[id]/report-actions";
 import { formatDate, formatDateTime, shortId } from "@/lib/format";
 import { LISTING_REPORT_REASON_LABELS, REPORT_STATUS, type ListingReport } from "@/lib/reports";
+import type { ReportAssessment } from "@/lib/moderation";
+import { ReopenAiDismissalForm } from "./reopen-ai-dismissal-form";
+import { ReportAssessmentSummary } from "./report-assessment-summary";
 import { ROUTES } from "@/lib/routes";
 
 /**
@@ -14,7 +17,16 @@ import { ROUTES } from "@/lib/routes";
  * with the owner, as captured when the report was made - and, while open, the
  * decision: dismiss it, or deactivate the listing.
  */
-export function ListingReportsPanel({ listingId, reports }: { listingId: string; reports: ListingReport[] }) {
+export function ListingReportsPanel({
+  listingId,
+  reports,
+  assessments = {},
+}: {
+  listingId: string;
+  reports: ListingReport[];
+  /** What the AI made of each report, by report id; advice shown above the decision. */
+  assessments?: Record<string, ReportAssessment | null>;
+}) {
   if (reports.length === 0) return null;
   const open = reports.filter((report) => report.status === "OPEN").length;
   return (
@@ -26,8 +38,11 @@ export function ListingReportsPanel({ listingId, reports }: { listingId: string;
         {reports.map((report) => (
           <li key={report.id} className="space-y-3 px-6 py-4">
             <ReportDetails report={report} />
+            <ReportAssessmentSummary assessment={assessments[report.id]} />
             {report.status === "OPEN" ? (
               <DecisionForm listingId={listingId} reportId={report.id} />
+            ) : report.decision_by === "AI" && report.status === "DISMISSED" ? (
+              <ReopenAiDismissalForm reportId={report.id} />
             ) : (
               <p className="border-l-2 border-line bg-sand px-3 py-2 text-sm">
                 <span className="font-medium">Decided {report.resolved_at ? formatDateTime(report.resolved_at) : ""}: </span>
