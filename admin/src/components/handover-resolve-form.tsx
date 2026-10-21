@@ -14,7 +14,7 @@ import { resolveUnconfirmedHandover, type ResolveHandoverState } from "@/app/boo
  * The result is a toast: either action moves the booking off Confirmed, so
  * the page stops rendering this panel.
  */
-export function HandoverResolveForm({ bookingId }: { bookingId: string }) {
+export function HandoverResolveForm({ bookingId, updatedAt }: { bookingId: string; updatedAt: string }) {
   const [state, action, pending] = useActionState<ResolveHandoverState, FormData>(resolveUnconfirmedHandover, undefined);
   const { show } = useToast();
 
@@ -40,6 +40,8 @@ export function HandoverResolveForm({ bookingId }: { bookingId: string }) {
         }}
       >
         <input type="hidden" name="booking_id" value={bookingId} />
+        {/* What the booking looked like on this page: a change since refuses the action. */}
+        <input type="hidden" name="expected_updated_at" value={updatedAt} />
         <div>
           <label htmlFor="reason" className="block text-sm font-medium">
             Reason

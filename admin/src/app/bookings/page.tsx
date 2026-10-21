@@ -4,14 +4,15 @@ import { requirePortalSession } from "@/lib/admin";
 import {
   bookingStatusLabel,
   getEnforcementFlaggedBookings,
-  getFlaggedHandovers,
+  getUnconfirmedHandoverQueue,
   searchBookings,
   PAGE_SIZE,
 } from "@/lib/bookings";
 import { formatDate, shortId } from "@/lib/format";
+import { formatCaseAge } from "@/lib/moderation";
 import { ROUTES } from "@/lib/routes";
 import Link from "next/link";
-import { Container, Panel } from "@/components/ui";
+import { Badge, Container, Panel } from "@/components/ui";
 import { BookingSearch } from "@/components/booking-search";
 import { BookingTable } from "@/components/booking-table";
 import { Pagination } from "@/components/pagination";
@@ -41,9 +42,9 @@ export default async function BookingsPage({
   // Empty means "any" - no status filter leaves every booking in the result set.
   const statuses = Array.isArray(status) ? status : status ? [status] : [];
 
-  const [{ bookings, total, error }, flaggedHandovers, enforcementFlagged] = await Promise.all([
+  const [{ bookings, total, error }, unconfirmedHandovers, enforcementFlagged] = await Promise.all([
     searchBookings(q, statuses, page),
-    getFlaggedHandovers(),
+    getUnconfirmedHandoverQueue(),
     getEnforcementFlaggedBookings(),
   ]);
 
@@ -66,27 +67,46 @@ export default async function BookingsPage({
       <h1 className="display-caps mt-3 text-3xl">Bookings</h1>
 
       {/* S3-02: rentals past their start date that the renter and owner have not both confirmed. */}
-      {flaggedHandovers.length > 0 && (
-        <div className="mt-8">
-          <Panel
-            title="Handover not confirmed"
-            description="These bookings passed their start date without both parties confirming the handover. They stay confirmed until both do."
-          >
-            <ul className="divide-y divide-line text-sm">
-              {flaggedHandovers.map((booking) => (
-                <li key={booking.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
-                  <Link href={ROUTES.booking(booking.id)} className="font-medium underline-offset-4 hover:underline">
-                    {booking.listing_name}
+      <div className="mt-8">
+        <Panel
+          title="Unconfirmed handovers"
+          description={
+            unconfirmedHandovers.length === 0
+              ? "Nothing waiting. Rentals whose handover nobody confirmed show up here once their start date has passed."
+              : `${unconfirmedHandovers.length} rental${unconfirmedHandovers.length === 1 ? "" : "s"} past the start date without both parties confirming the handover, longest overdue first.`
+          }
+        >
+          {unconfirmedHandovers.length > 0 && (
+            <ul className="-mx-6 -my-5 divide-y divide-line">
+              {unconfirmedHandovers.map((booking) => (
+                <li key={booking.id}>
+                  <Link
+                    href={ROUTES.booking(booking.id)}
+                    className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 hover:bg-sand"
+                  >
+                    <span>
+                      <span className="font-medium">{booking.listing_name}</span>
+                      <span className="mt-0.5 block text-xs text-ink-soft">
+                        {booking.renter_name ?? "A renter"} renting from {booking.owner_name ?? "an owner"} ·{" "}
+                        {shortId(booking.id)} · due {formatDate(booking.start_date)}, overdue {formatCaseAge(booking.overdue_seconds)}
+                      </span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <Badge tone={booking.renter_confirmed ? "positive" : "warning"}>
+                        Renter {booking.renter_confirmed ? "confirmed" : "not confirmed"}
+                      </Badge>
+                      <Badge tone={booking.owner_confirmed ? "positive" : "warning"}>
+                        Owner {booking.owner_confirmed ? "confirmed" : "not confirmed"}
+                      </Badge>
+                      {!booking.pickup_photos_done && <Badge tone="critical">No pickup photos</Badge>}
+                    </span>
                   </Link>
-                  <span className="text-ink-soft">
-                    {shortId(booking.id)} · started {formatDate(booking.start_date)}
-                  </span>
                 </li>
               ))}
             </ul>
-          </Panel>
-        </div>
-      )}
+          )}
+        </Panel>
+      </div>
 
       {/* S3-24: bookings a suspension or ban left for an administrator. */}
       {enforcementFlagged.length > 0 && (
