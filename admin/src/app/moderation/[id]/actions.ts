@@ -13,8 +13,8 @@ const ERROR_CODE_PREFIX = /^[A-Z_]+: /;
 const DECISION_BY_INTENT = { warn: "WARN", dismiss: "DISMISS" } as const;
 
 const SUCCESS_BY_INTENT = {
-  warn: "User warned. They have been sent the report, and the reporter has been told.",
-  dismiss: "Report dismissed. The reporter has been told; the reported user was not.",
+  warn: "Report acknowledged. A strike was added, the reported user has been sent it, and the reporter has been told.",
+  dismiss: "Report dismissed. The reporter has been told nothing substantial was found; the reported user was not told.",
 } as const;
 
 /**
@@ -31,8 +31,8 @@ export async function decideUserReport(_prev: DecideReportState, formData: FormD
   const intent = String(formData.get("intent") ?? "");
   const note = String(formData.get("note") ?? "").trim();
 
-  if (intent !== "warn" && intent !== "dismiss") return { error: "Choose whether to warn the user or dismiss the report." };
-  if (!note) return { error: "A reason is required." };
+  if (intent !== "warn" && intent !== "dismiss") return { error: "Choose a decision." };
+  if (!note) return { error: "A comment is required." };
 
   const { error } = await createAdminClient().rpc("admin_resolve_user_report", {
     p_report_id: reportId,

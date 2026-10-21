@@ -31,8 +31,23 @@ export const PRIORITY: Record<Priority, { label: string; tone: StatusTone }> = {
 export const DECISION_LABELS: Record<ReportDecisionKind, string> = {
   DISMISS: "Dismissed",
   DEACTIVATE: "Listing deactivated",
-  WARN: "User warned",
+  WARN: "Acknowledged, strike added",
 };
+
+/** The filters the queue offers, in the order the dropdowns list them. */
+export const STATUS_OPTIONS: { value: QueueStatus; label: string }[] = [
+  { value: "OPEN", label: "Open" },
+  { value: "DECIDED", label: "Decided" },
+];
+export const KIND_OPTIONS: { value: ReportKind; label: string }[] = [
+  { value: "LISTING", label: "Listing reports" },
+  { value: "USER", label: "User reports" },
+];
+export const PRIORITY_OPTIONS: { value: Priority; label: string }[] = [
+  { value: "HIGH", label: "High" },
+  { value: "MEDIUM", label: "Medium" },
+  { value: "LOW", label: "Low" },
+];
 
 /** One row of admin_moderation_queue. */
 export type QueuedReport = {
@@ -61,19 +76,28 @@ export type QueuedReport = {
   total_count: number;
 };
 
+/** What narrows the queue. An empty list, or no search, means any. */
+export type QueueFilters = {
+  statuses: QueueStatus[];
+  kinds: ReportKind[];
+  priorities: Priority[];
+  search: string;
+};
+
 /**
- * One page of the queue. `status` and `kind` narrow it; null is both.
- * Refusals are surfaced rather than thrown so the page can stay up. Call only
- * behind requirePortalSession(): the client carries the secret key.
+ * One page of the queue, filtered. Refusals are surfaced rather than thrown so
+ * the page can stay up. Call only behind requirePortalSession(): the client
+ * carries the secret key.
  */
 export async function getModerationQueue(
-  status: QueueStatus | null,
-  kind: ReportKind | null,
+  filters: QueueFilters,
   page = 1,
 ): Promise<{ reports: QueuedReport[]; total: number; error: string | null }> {
   const { data, error } = await createAdminClient().rpc("admin_moderation_queue", {
-    p_status: status,
-    p_kind: kind,
+    p_statuses: filters.statuses,
+    p_kinds: filters.kinds,
+    p_priorities: filters.priorities,
+    p_search: filters.search,
     p_limit: PAGE_SIZE,
     p_offset: (page - 1) * PAGE_SIZE,
   });

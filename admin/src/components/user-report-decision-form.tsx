@@ -1,18 +1,19 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
-import { Button, FormMessage, Panel, RequiredMark, Textarea } from "./ui";
+import { Button, FormMessage, Panel, RequiredMark, Select, Textarea } from "./ui";
 import { useToast } from "./toast";
 import { STRIKE_LIMIT, SUSPENSION_DAYS } from "@/lib/moderation";
 import { decideUserReport, type DecideReportState } from "@/app/moderation/[id]/actions";
 
 /**
- * An administrator's decision on a user report (S3-22, S3-23): warn the user,
- * which sends them the report and adds a strike (three suspend the account),
- * or dismiss it, which never tells them. Either needs a reason, which is kept
- * in the audit trail and not shown to either member.
- * The result is a toast: deciding closes the report, so the page stops
- * rendering this panel.
+ * An administrator's decision on a user report (S3-22, S3-23): dismiss it, or
+ * acknowledge it as true. Acknowledging sends the report to the reported user
+ * and adds a strike they are not shown (strike STRIKE_LIMIT suspends the
+ * account); dismissing tells only the reporter, that nothing substantial was
+ * found. Either needs a comment, which is kept in the audit trail and not
+ * shown to either member. The result is a toast: deciding closes the report,
+ * so the page stops rendering this panel.
  */
 export function UserReportDecisionForm({ reportId }: { reportId: string }) {
   const [state, action, pending] = useActionState<DecideReportState, FormData>(decideUserReport, undefined);
@@ -25,24 +26,41 @@ export function UserReportDecisionForm({ reportId }: { reportId: string }) {
   return (
     <Panel
       title="Decide"
-      description={`Warn the user if the claim is true: the report is sent to them and a strike is added against their account, which they are not shown. Strike ${STRIKE_LIMIT} suspends the account for ${SUSPENSION_DAYS} days. Dismiss it if not: the reported user is never told. The reporter hears the outcome either way.`}
+      description="Choose an outcome and say why. Both are recorded in the audit trail, and the reporter is told the result either way."
     >
       <form
         action={action}
         className="space-y-5"
         onSubmit={(event) => {
-          const intent = ((event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null)?.value;
+          const intent = new FormData(event.currentTarget).get("intent");
           const message =
             intent === "warn"
-              ? "Warn this user and send them the report? A strike is added, and strike " + STRIKE_LIMIT + " suspends the account. This can't be undone."
+              ? `Acknowledge this report? The reported user is sent it and a strike is added; strike ${STRIKE_LIMIT} suspends the account for ${SUSPENSION_DAYS} days. This can't be undone.`
               : "Dismiss this report? The reported user will not be told. This can't be undone.";
           if (!window.confirm(message)) event.preventDefault();
         }}
       >
         <input type="hidden" name="report_id" value={reportId} />
+
+        <div>
+          <label htmlFor="intent" className="block text-sm font-medium">
+            Decision
+            <RequiredMark />
+          </label>
+          <Select id="intent" name="intent" required defaultValue="" className="mt-2">
+            <option value="" disabled>
+              Choose a decision…
+            </option>
+            <option value="dismiss">Dismiss report: the reporter is told nothing substantial was found</option>
+            <option value="warn">
+              Acknowledge report: the claim is true, the reported user is sent it and a strike is added
+            </option>
+          </Select>
+        </div>
+
         <div>
           <label htmlFor="note" className="block text-sm font-medium">
-            Reason
+            Comments
             <RequiredMark />
           </label>
           <Textarea
@@ -51,20 +69,15 @@ export function UserReportDecisionForm({ reportId }: { reportId: string }) {
             required
             rows={3}
             className="mt-2"
-            placeholder="What you found in the conversation, for the audit trail."
+            placeholder="What you found in the conversation. Stored in the audit trail, not shown to either person."
           />
         </div>
 
         <FormMessage state={state?.error ? state : undefined} />
 
-        <div className="flex flex-wrap gap-3">
-          <Button type="submit" name="intent" value="warn" disabled={pending}>
-            Warn user
-          </Button>
-          <Button type="submit" name="intent" value="dismiss" variant="outline" disabled={pending}>
-            Dismiss
-          </Button>
-        </div>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Saving…" : "Submit decision"}
+        </Button>
       </form>
     </Panel>
   );

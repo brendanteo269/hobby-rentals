@@ -1,4 +1,3 @@
-import type { Route } from "next";
 import Link from "next/link";
 import { requirePortalSession } from "@/lib/admin";
 import {
@@ -9,43 +8,42 @@ import {
   getModerationQueue,
   KIND_LABELS,
   PAGE_SIZE,
+  KIND_OPTIONS,
   PRIORITY,
+  PRIORITY_OPTIONS,
+  STATUS_OPTIONS,
+  type QueueFilters,
   type QueuedReport,
-  type QueueStatus,
-  type ReportKind,
 } from "@/lib/moderation";
 import { LISTING_REPORT_REASON_LABELS, USER_REPORT_REASON_LABELS } from "@/lib/reports";
 import { formatDateTime } from "@/lib/format";
 import { ROUTES } from "@/lib/routes";
 import { Badge, Container, EmptyState, Panel } from "@/components/ui";
+import { ModerationSearch } from "@/components/moderation-search";
 import { Pagination } from "@/components/pagination";
 
 export const metadata = { title: "Moderation — HobbyRentals Admin" };
-
-const STATUS_FILTERS: { key: QueueStatus | "ALL"; label: string }[] = [
-  { key: "OPEN", label: "Open" },
-  { key: "DECIDED", label: "Decided" },
-  { key: "ALL", label: "All" },
-];
-
-const KIND_FILTERS: { key: ReportKind | "ALL"; label: string }[] = [
-  { key: "ALL", label: "Listings and users" },
-  { key: "LISTING", label: "Listings" },
-  { key: "USER", label: "Users" },
-];
 
 function reasonLabel(report: QueuedReport): string {
   const labels = report.kind === "LISTING" ? LISTING_REPORT_REASON_LABELS : USER_REPORT_REASON_LABELS;
   return labels[report.reason_code] ?? report.reason_code;
 }
 
-function hrefFor(status: string, kind: string, page = 1): Route {
+/** The values a URL parameter may hold, checked against the options so a made-up one is ignored. */
+function readAll<T extends string>(raw: string | string[] | undefined, allowed: { value: T }[]): T[] {
+  const values = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  return allowed.map((option) => option.value).filter((value) => values.includes(value));
+}
+
+function hrefForPage(filters: QueueFilters, page: number): string {
   const params = new URLSearchParams();
-  if (status !== "OPEN") params.set("status", status);
-  if (kind !== "ALL") params.set("kind", kind);
+  if (filters.search) params.set("q", filters.search);
+  filters.statuses.forEach((value) => params.append("status", value));
+  filters.kinds.forEach((value) => params.append("kind", value));
+  filters.priorities.forEach((value) => params.append("priority", value));
   if (page > 1) params.set("page", String(page));
   const query = params.toString();
-  return (query ? `${ROUTES.moderation}?${query}` : ROUTES.moderation) as Route;
+  return query ? `${ROUTES.moderation}?${query}` : ROUTES.moderation;
 }
 
 /**
@@ -56,57 +54,36 @@ function hrefFor(status: string, kind: string, page = 1): Route {
 export default async function ModerationPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; kind?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; status?: string | string[]; kind?: string | string[]; priority?: string | string[]; page?: string }>;
 }) {
   await requirePortalSession();
-  const { status: statusParam, kind: kindParam, page: pageParam } = await searchParams;
-  const status = statusParam === "DECIDED" || statusParam === "ALL" ? statusParam : "OPEN";
-  const kind = kindParam === "LISTING" || kindParam === "USER" ? kindParam : "ALL";
-  const page = Math.max(1, Number(pageParam) || 1);
+  const params = await searchParams;
+  const filters: QueueFilters = {
+    search: (params.q ?? "").trim(),
+    statuses: readAll(params.status, STATUS_OPTIONS),
+    kinds: readAll(params.kind, KIND_OPTIONS),
+    priorities: readAll(params.priority, PRIORITY_OPTIONS),
+  };
+  const page = Math.max(1, Number(params.page) || 1);
 
-  const [{ reports, total, error }, agreement] = await Promise.all([
-    getModerationQueue(status === "ALL" ? null : status, kind === "ALL" ? null : kind, page),
-    getAiAgreement(),
-  ]);
+  const [{ reports, total, error }, agreement] = await Promise.all([getModerationQueue(filters, page), getAiAgreement()]);
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const filtered = Boolean(filters.search || filters.statuses.length || filters.kinds.length || filters.priorities.length);
 
   return (
     <Container className="py-12">
       <p className="eyebrow">Moderation</p>
       <h1 className="display-caps mt-3 text-3xl">Moderation queue</h1>
 
-      <div className="mt-6 flex flex-wrap gap-x-8 gap-y-3 text-sm">
-        <nav className="flex gap-4" aria-label="Status">
-          {STATUS_FILTERS.map((filter) => (
-            <Link
-              key={filter.key}
-              href={hrefFor(filter.key, kind)}
-              aria-current={status === filter.key ? "page" : undefined}
-              className={status === filter.key ? "font-medium underline underline-offset-4" : "text-ink-soft hover:text-ink"}
-            >
-              {filter.label}
-            </Link>
-          ))}
-        </nav>
-        <nav className="flex gap-4" aria-label="Report type">
-          {KIND_FILTERS.map((filter) => (
-            <Link
-              key={filter.key}
-              href={hrefFor(status, filter.key)}
-              aria-current={kind === filter.key ? "page" : undefined}
-              className={kind === filter.key ? "font-medium underline underline-offset-4" : "text-ink-soft hover:text-ink"}
-            >
-              {filter.label}
-            </Link>
-          ))}
-        </nav>
+      <div className="mt-8">
+        <ModerationSearch filters={filters} />
       </div>
 
-      <div className="mt-6">
-        <Panel title="Reports" description={error ?? `${total} report${total === 1 ? "" : "s"}.`}>
+      <div className="mt-8">
+        <Panel title="Reports" description={error ?? `${total} report${total === 1 ? "" : "s"}${filtered ? " matching this search" : ""}. Open reports come first.`}>
           {reports.length === 0 ? (
             <div className="-mx-6 -my-5">
-              <EmptyState title="No reports" body="Nothing matches this view." />
+              <EmptyState title="No matching reports" body="Search by report ID, reason, reporter, reported user or listing, or loosen the filters." />
             </div>
           ) : (
             <div className="-mx-6 -my-5 overflow-x-auto">
@@ -199,7 +176,7 @@ export default async function ModerationPage({
         </div>
       )}
 
-      <Pagination page={page} lastPage={lastPage} hrefForPage={(p) => hrefFor(status, kind, p)} />
+      <Pagination page={page} lastPage={lastPage} hrefForPage={(p) => hrefForPage(filters, p)} />
     </Container>
   );
 }
