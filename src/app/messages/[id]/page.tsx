@@ -11,6 +11,7 @@ import { getConversation, getConversationLimits, getMessages, getMyConversations
 import { getBookingAvailability, getListing } from "@/lib/api/listings";
 import { getMyBookings, getOwnerBookings } from "@/lib/api/bookings";
 import { conversationPriceLocationLine, type Conversation } from "@/lib/conversations";
+import { unavailableReason } from "@/lib/cancellations";
 import { MESSAGEABLE_BOOKING_STATUSES, RETRYABLE_BOOKING_STATUSES, type Booking } from "@/lib/bookings";
 import { createClient } from "@/lib/supabase/server";
 
@@ -80,6 +81,14 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
         ? { status: conversation.booking_status, startDate: conversation.booking_start_date, endDate: conversation.booking_end_date }
         : null;
 
+  // A booking the platform cancelled: an administrator, or a member's suspension or ban.
+  const cancelledAccount = unavailableReason(conversation.booking_cancelled_reason);
+  const platformCancellation =
+    conversation.booking_status === "CANCELLED" && conversation.booking_cancelled_by === "SYSTEM"
+      ? cancelledAccount
+        ? `This booking was cancelled because the ${cancelledAccount.account}'s account was ${cancelledAccount.kind}.`
+        : `This booking was cancelled by an administrator.${conversation.booking_cancelled_note ? ` Reason: ${conversation.booking_cancelled_note}` : ""}`
+      : null;
   const bookingConfirmed = Boolean(relevantBooking && MESSAGEABLE_BOOKING_STATUSES.includes(relevantBooking.status));
   // Linking straight to the booking thread's own id (already in hand from
   // the conversations list fetched above) skips the detour through
@@ -138,13 +147,19 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
             ) : undefined
           }
           replaceComposerWith={
-            // S3-24: no more messages to or from a suspended or banned member.
-            conversation.other_party_unavailable ? (
-              <p className="rounded-2xl border border-line bg-surface-muted px-4 py-3 text-sm text-ink">
-                {conversation.other_party_name ?? "This member"}&apos;s account has been{" "}
-                {conversation.other_party_enforcement === "BAN" ? "banned" : "suspended"}, so this conversation can&apos;t take
-                new messages.
-              </p>
+            // S3-24: no more messages to or from a suspended or banned member, and
+            // a booking the platform cancelled says so.
+            conversation.other_party_unavailable || platformCancellation ? (
+              <div className="space-y-2 rounded-2xl border border-line bg-surface-muted px-4 py-3 text-sm text-ink">
+                {platformCancellation && <p>{platformCancellation}</p>}
+                {conversation.other_party_unavailable && (
+                  <p>
+                    {conversation.other_party_name ?? "This member"}&apos;s account has been{" "}
+                    {conversation.other_party_enforcement === "BAN" ? "banned" : "suspended"}, so this conversation can&apos;t
+                    take new messages.
+                  </p>
+                )}
+              </div>
             ) : bookingConfirmed && relevantBooking ? (
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface-muted px-4 py-3">
                 <p className="text-sm text-ink">

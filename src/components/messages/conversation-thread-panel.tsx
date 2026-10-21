@@ -218,7 +218,7 @@ export function ConversationThreadPanel({
         <ConfirmedMeetupBar confirmed={meetupState.confirmed} rescheduleProposed={meetupState.pending !== null} />
       )}
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+      <div ref={scrollRef} className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
         <MessageThread
           messages={messages}
           currentUserId={currentUserId}

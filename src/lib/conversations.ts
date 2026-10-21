@@ -30,6 +30,11 @@ export type Conversation = {
   booking_id: string | null;
   /** Set whenever booking_id is - either this thread's own booking, or the booking a LISTING-scope enquiry led to. */
   booking_status: BookingStatus | null;
+  /** "SYSTEM" when the platform cancelled the booking (an administrator, or a suspension or ban). */
+  booking_cancelled_by?: "RENTER" | "OWNER" | "SYSTEM" | null;
+  booking_cancelled_reason?: string | null;
+  /** The administrator's reason, when one cancelled the booking. */
+  booking_cancelled_note?: string | null;
   booking_start_date: string | null;
   booking_end_date: string | null;
   other_party_id: string;

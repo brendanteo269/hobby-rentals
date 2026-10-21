@@ -68,6 +68,8 @@ export type CancellationOutcome = {
    * (S3-24), and whose account it was: the owner's or the renter's.
    */
   cancelled_reason?: string | null;
+  /** The administrator's reason, when one cancelled it. */
+  cancelled_note?: string | null;
   cancelled_at: string;
   /** Everything that went back to the renter's wallet. */
   released_to_wallet_cents: number;
@@ -123,10 +125,11 @@ export function cancellationOutcomeLine(outcome: CancellationOutcome, viewer: "r
     return kept > 0 ? `${back}; ${formatMoney(kept)} was not refundable under the policy.` : `${back}.`;
   }
   const who = outcome.cancelled_by === "OWNER" ? (viewer === "owner" ? "You" : "The owner") : "The platform";
+  const note = outcome.cancelled_note ? ` Reason: ${outcome.cancelled_note}` : "";
   const whose = viewer === "owner" ? "The renter's" : "Your";
   return released > 0
-    ? `${who} cancelled. ${whose} hold of ${formatMoney(released)} was released in full.`
-    : `${who} cancelled. Nothing was held, so nothing needed releasing.`;
+    ? `${who} cancelled.${note} ${whose} hold of ${formatMoney(released)} was released in full.`
+    : `${who} cancelled.${note} Nothing was held, so nothing needed releasing.`;
 }
 
 /**
