@@ -2,15 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui";
+import { Button, Modal } from "@/components/ui";
 
 type StepResult = { error: string } | object;
 
 /**
  * One side's confirmation of a two-party booking step (handover, return). The
- * server decides whether it is allowed and its message is shown as is. The
- * second confirmation moves the booking on, so the page is refreshed either
- * way.
+ * server decides whether it is allowed and a refusal is shown as is, in a
+ * dialog in the middle of the screen. The second confirmation moves the
+ * booking on, so the page is refreshed either way.
  */
 export function ConfirmStepButton({
   label,
@@ -34,17 +34,23 @@ export function ConfirmStepButton({
         setError(result.error);
         return;
       }
-      setError(null);
       router.refresh();
     });
   }
 
   return (
-    <span className="flex flex-col items-end gap-1">
+    <>
       <Button className={className ?? "px-3 py-1.5 text-xs"} disabled={isPending} onClick={run}>
         {isPending ? pendingLabel : label}
       </Button>
-      {error && <span role="alert" className="max-w-56 text-right text-xs text-accent-dark">{error}</span>}
-    </span>
+      {error && (
+        <Modal title="Can't confirm yet" onClose={() => setError(null)}>
+          <p role="alert" className="body-copy mt-4">{error}</p>
+          <div className="mt-6 flex justify-end">
+            <Button onClick={() => setError(null)}>OK</Button>
+          </div>
+        </Modal>
+      )}
+    </>
   );
 }
