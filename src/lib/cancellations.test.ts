@@ -135,3 +135,20 @@ describe("cancellationOutcomeLine", () => {
     );
   });
 });
+
+describe("an administrator's cancellation", () => {
+  it("states the reason they gave", () => {
+    const outcome: CancellationOutcome = {
+      cancelled_by: "SYSTEM",
+      cancelled_note: "Owner never showed",
+      cancelled_at: "2026-10-12T00:00:00Z",
+      released_to_wallet_cents: 4600,
+      refund_cents: null,
+      non_refundable_cents: null,
+      deposit_released_cents: null,
+      protection_released_cents: null,
+      tier_label: null,
+    };
+    expect(cancellationOutcomeLine(outcome, "renter")).toContain("Reason: Owner never showed");
+  });
+});

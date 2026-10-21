@@ -111,7 +111,7 @@ export function MessageThread({
             <li key={message.id} className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"}`}>
               {!mine && <PersonAvatar name={otherPartyName} size="sm" />}
               <div
-                className={`rounded-2xl px-4 py-3 text-sm leading-relaxed ${hasAttachments ? "w-full max-w-[85%] sm:max-w-sm" : "max-w-[70%]"} ${mine ? "bg-ink text-white" : "bg-surface-muted text-ink"}`}
+                className={`min-w-0 rounded-2xl px-4 py-3 text-sm leading-relaxed ${hasAttachments ? "w-full max-w-[85%] sm:max-w-sm" : "max-w-[70%]"} ${mine ? "bg-ink text-white" : "bg-surface-muted text-ink"}`}
               >
                 {hasAttachments && (
                   // Full-width, meetup-card-sized photos rather than a
@@ -133,7 +133,7 @@ export function MessageThread({
                     ))}
                   </ul>
                 )}
-                {message.body && <p className="whitespace-pre-line">{message.body}</p>}
+                {message.body && <p className="whitespace-pre-line [overflow-wrap:anywhere]">{message.body}</p>}
                 <p className={`mt-1.5 text-[0.6875rem] ${mine ? "text-white/70" : "text-ink-soft"}`}>
                   <time dateTime={message.created_at}>{formatChatTimestamp(message.created_at)}</time>
                 </p>
