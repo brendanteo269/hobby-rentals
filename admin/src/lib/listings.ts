@@ -2,12 +2,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import type { StatusTone } from "@/lib/users";
 
 /** Mirrors app/listing_service.py's ListingStatus enum on the backend. */
-export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "PENDING_REMOVAL" | "REMOVED" | "DEACTIVATED";
+export type ListingStatus = "DRAFT" | "ACTIVE" | "ARCHIVED" | "PENDING_REMOVAL" | "REMOVED" | "DEACTIVATED" | "SUSPENDED";
 
 /** ACTIVE first: it's the status an admin checks most often. */
 export const LISTING_STATUSES: ListingStatus[] = [
   "ACTIVE",
   "DEACTIVATED",
+  "SUSPENDED",
   "DRAFT",
   "ARCHIVED",
   "PENDING_REMOVAL",
@@ -21,6 +22,8 @@ export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   PENDING_REMOVAL: "Removal scheduled",
   REMOVED: "Removed",
   DEACTIVATED: "Deactivated",
+  // S3-24: paused while its owner is suspended; back by itself when that ends.
+  SUSPENDED: "Paused (owner suspended)",
 };
 
 /** Published reads as the "it's live" state; a scheduled removal and an admin's own deactivation are the ones that need attention. */
@@ -31,7 +34,11 @@ export const LISTING_STATUS_TONE: Record<ListingStatus, StatusTone> = {
   PENDING_REMOVAL: "warning",
   REMOVED: "critical",
   DEACTIVATED: "critical",
+  SUSPENDED: "warning",
 };
+
+/** The reason a ban gives the listings it deactivates (enforce_listings_for_user). */
+export const OWNER_BANNED_REASON = "Owner banned";
 
 /** S2-23: statuses an administrator may deactivate from - mirrors the story's "active or paused listing" wording (paused = archived, the only other owner-hidden-but-restorable state). */
 export const DEACTIVATABLE_STATUSES: ListingStatus[] = ["ACTIVE", "ARCHIVED"];
@@ -318,6 +325,10 @@ export async function reactivateListing(id: string): Promise<ListingModerationRe
   if (!listing) return { error: "That listing no longer exists." };
   if (listing.status !== "DEACTIVATED") {
     return { error: "Only a deactivated listing can be reactivated." };
+  }
+  // S3-24: a ban deactivates the owner's listings for good.
+  if (listing.deactivation_reason === OWNER_BANNED_REASON) {
+    return { error: "This listing was deactivated because its owner is banned, so it can't be reactivated." };
   }
 
   const { error } = await createAdminClient()

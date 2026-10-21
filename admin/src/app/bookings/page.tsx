@@ -1,7 +1,13 @@
 import type { Route } from "next";
 import { redirect } from "next/navigation";
 import { requirePortalSession } from "@/lib/admin";
-import { getFlaggedHandovers, searchBookings, PAGE_SIZE } from "@/lib/bookings";
+import {
+  bookingStatusLabel,
+  getEnforcementFlaggedBookings,
+  getFlaggedHandovers,
+  searchBookings,
+  PAGE_SIZE,
+} from "@/lib/bookings";
 import { formatDate, shortId } from "@/lib/format";
 import { ROUTES } from "@/lib/routes";
 import Link from "next/link";
@@ -35,9 +41,10 @@ export default async function BookingsPage({
   // Empty means "any" - no status filter leaves every booking in the result set.
   const statuses = Array.isArray(status) ? status : status ? [status] : [];
 
-  const [{ bookings, total, error }, flaggedHandovers] = await Promise.all([
+  const [{ bookings, total, error }, flaggedHandovers, enforcementFlagged] = await Promise.all([
     searchBookings(q, statuses, page),
     getFlaggedHandovers(),
+    getEnforcementFlaggedBookings(),
   ]);
 
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -73,6 +80,30 @@ export default async function BookingsPage({
                   </Link>
                   <span className="text-ink-soft">
                     {shortId(booking.id)} · started {formatDate(booking.start_date)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        </div>
+      )}
+
+      {/* S3-24: bookings a suspension or ban left for an administrator. */}
+      {enforcementFlagged.length > 0 && (
+        <div className="mt-8">
+          <Panel
+            title="Member suspended or banned"
+            description="A member in these bookings was suspended or banned. A rental that is out is not cancelled from under the other person, so each is for you to settle."
+          >
+            <ul className="divide-y divide-line text-sm">
+              {enforcementFlagged.map((booking) => (
+                <li key={booking.id} className="flex flex-wrap items-center justify-between gap-2 py-3">
+                  <Link href={ROUTES.booking(booking.id)} className="font-medium underline-offset-4 hover:underline">
+                    {booking.listing_name}
+                  </Link>
+                  <span className="text-ink-soft">
+                    {shortId(booking.id)} · {bookingStatusLabel(booking.status)} · {formatDate(booking.start_date)} –{" "}
+                    {formatDate(booking.end_date)}
                   </span>
                 </li>
               ))}
