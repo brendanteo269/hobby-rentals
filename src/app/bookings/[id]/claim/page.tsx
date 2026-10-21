@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
-import { Container } from "@/components/ui";
+import { Container, Notice } from "@/components/ui";
 import { ClaimSummary } from "@/components/bookings/claim-summary";
 import { ClaimResponseOptions } from "@/components/bookings/claim-response-options";
 import { ConditionReport } from "@/components/bookings/condition-report";
 import { BackendApiError } from "@/lib/api/client";
 import { getDamageClaim, getMyBookings } from "@/lib/api/bookings";
-import { claimPendingRenter } from "@/lib/settlement";
+import { claimPendingRenter, claimUnderArbitration } from "@/lib/settlement";
 
 export const metadata = { title: "Damage claim — HobbyRentals" };
 
@@ -36,6 +36,12 @@ export default async function ClaimPage({ params }: { params: Promise<{ id: stri
           <h1 className="heading mt-3 text-3xl">Review the owner&apos;s claim</h1>
         </div>
         <ClaimSummary claim={claim} viewer="renter" />
+        {claimUnderArbitration(claim) && (
+          <Notice tone="success">
+            <span className="font-medium">The claim dispute has been handed over to the platform arbitrator.</span>
+            Your deposit stays on hold until they reach a decision.
+          </Notice>
+        )}
         {claimPendingRenter(claim) && (
           <ClaimResponseOptions
             bookingId={id}

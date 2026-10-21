@@ -114,7 +114,10 @@ function Entry({ entry }: { entry: PassportEntry }) {
         <time dateTime={entry.created_at}>{formatDateTime(entry.created_at)}</time> · by{" "}
         {entry.created_by ? (
           <Link href={ROUTES.user(entry.created_by)} className="underline underline-offset-4">
-            {shortId(entry.created_by)}
+            {/* The name first, since that is what an admin is looking for;
+                the id stays beside it because it is what they can search on
+                and the only thing guaranteed to be unique. */}
+            {entry.created_by_name ?? "Unnamed member"} ({shortId(entry.created_by)})
           </Link>
         ) : (
           "the admin portal"

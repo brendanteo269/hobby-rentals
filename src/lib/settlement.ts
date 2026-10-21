@@ -28,6 +28,11 @@ export type RentalDispute = {
   created_at: string;
   /** S3-06 claims only: the AI scan it rests on. Null on an S3-10 report. */
   condition_scan_id?: string | null;
+  /** S3-08: the renter's rebuttal, once they have disputed the claim. */
+  rebuttal?: string | null;
+  rebuttal_photo_keys?: string[];
+  /** When the case was escalated to arbitration. Null until the renter disputes. */
+  rebutted_at?: string | null;
   /** S3-06 claims only: when the renter's time to accept or dispute runs out. */
   respond_by?: string | null;
 };
@@ -49,7 +54,23 @@ export type DamageClaim = RentalDispute & {
  * response window. Answering it is S3-07 (accept) and S3-08 (dispute).
  */
 export function claimPendingRenter(dispute: RentalDispute | null | undefined, now: Date = new Date()): boolean {
-  return Boolean(dispute && dispute.status === "OPEN" && dispute.respond_by && now < new Date(dispute.respond_by));
+  return Boolean(
+    dispute &&
+      dispute.status === "OPEN" &&
+      // S3-08: a disputed claim is still OPEN - that is what keeps the deposit
+      // frozen - so the window alone no longer means it is the renter's move.
+      !dispute.rebutted_at &&
+      dispute.respond_by &&
+      now < new Date(dispute.respond_by),
+  );
+}
+
+/**
+ * S3-08: the renter rejected the claim and an arbitrator has it. Still OPEN,
+ * deliberately: the deposit stays frozen until S3-09 decides.
+ */
+export function claimUnderArbitration(dispute: RentalDispute | null | undefined): boolean {
+  return Boolean(dispute && dispute.status === "OPEN" && dispute.rebutted_at);
 }
 
 /** Whole seconds from now until an ISO time (negative once it has passed), for a countdown's starting figure. */

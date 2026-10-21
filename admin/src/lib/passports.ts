@@ -8,6 +8,8 @@ export type PassportEntry = {
   entry_type: string;
   /** Null for an ADMIN_REVIEW: the portal's shared password names no user. */
   created_by: string | null;
+  /** Who that is. Null for an admin entry, or a member with no display name. */
+  created_by_name: string | null;
   created_at: string;
   /** Photo name ("front", "serial", ...) -> a viewable, possibly short-lived URL. */
   photo_urls: Record<string, string>;

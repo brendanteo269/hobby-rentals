@@ -21,6 +21,17 @@ export type AdminDispute = {
   owner_name: string | null;
   renter_name: string | null;
   description: string;
+  /**
+   * S3-08: the renter's rebuttal, when they disputed rather than accepted.
+   * rebutted_at being set is what marks the case as escalated - the status
+   * stays OPEN so the deposit stays frozen.
+   */
+  rebuttal?: string | null;
+  rebuttal_photo_keys?: string[];
+  rebutted_at?: string | null;
+  /** Signed by the API: the S3 keys are private, so a URL is the only usable form. */
+  evidence_photo_urls?: string[];
+  rebuttal_photo_urls?: string[];
   claimed_cents: number;
   status: "OPEN" | "RESOLVED";
   liable_party: LiableParty | null;
