@@ -21,7 +21,7 @@ type Stage =
   // Scenario 1: the owner's photo for this angle, before the camera opens.
   | { kind: "preview" }
   | { kind: "camera" }
-  // Pickup uploads: the chosen file beside the owner's photo, until confirmed.
+  // Uploads: the chosen file beside the owner's photo, until confirmed.
   | { kind: "review"; file: File; previewUrl: string }
   | { kind: "checking"; previewUrl: string }
   | { kind: "rejected"; previewUrl: string; issue: ReturnPhotoIssue; label: string };
@@ -38,7 +38,7 @@ type Stage =
  * The in-app camera (getUserMedia) is the main path. At return, where the
  * browser will not give one - no permission, or no camera API - the phone's
  * own camera opens through a file input instead, with the baseline shown
- * above it. At pickup the renter can also upload a saved photo for any angle;
+ * above it. At pickup and at return the renter can also upload a saved photo for any angle;
  * it is shown beside the owner's photo to confirm before it is checked. The
  * server's checks are the same either way, the EXIF timestamp check included.
  */
@@ -126,9 +126,8 @@ function Capture({
   );
   const [error, setError] = useState<string>();
   const [finishing, startFinishing] = useTransition();
-  // Pickup only: pick a saved photo for this angle, to confirm before it is checked.
-  const review =
-    stage === "pickup" ? (file: File) => setStep({ kind: "review", file, previewUrl: URL.createObjectURL(file) }) : undefined;
+  // Pick a saved photo for this angle, to confirm before it is checked.
+  const review = (file: File) => setStep({ kind: "review", file, previewUrl: URL.createObjectURL(file) });
 
   async function submit(file: File) {
     if (!current) return;
@@ -185,7 +184,7 @@ function Capture({
           {step.kind === "camera" && (
             <Camera angle={current} onCapture={submit} allowFallback={stage === "return"} onUpload={review} />
           )}
-          {step.kind === "review" && review && (
+          {step.kind === "review" && (
             <Review
               angle={current}
               previewUrl={step.previewUrl}
@@ -301,7 +300,7 @@ function Preview({
   );
 }
 
-/** Pickup uploads: the owner's photo and the chosen one side by side, used only once confirmed. */
+/** Uploads: the owner's photo and the chosen one side by side, used only once confirmed. */
 function Review({
   angle,
   previewUrl,
@@ -411,7 +410,7 @@ function Camera({
   onCapture: (file: File) => void;
   /** Return only: the phone-camera file input when the in-app camera is unavailable. */
   allowFallback: boolean;
-  /** Pickup only: upload a saved photo instead, to review before it is checked. */
+  /** Upload a saved photo instead, to review before it is checked. */
   onUpload?: (file: File) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
