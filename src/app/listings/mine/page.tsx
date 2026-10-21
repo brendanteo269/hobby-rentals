@@ -168,6 +168,8 @@ const STATUS_BADGE_VARIANT: Record<Listing["status"], "neutral" | "accent" | "da
   // An administrator's action, not the owner's own - the one status here
   // that needs the same "pay attention" treatment as a pending removal.
   DEACTIVATED: "accent",
+  // Paused by a suspension of the owner's account (S3-24): needs the same attention.
+  SUSPENDED: "accent",
 };
 
 function ListingRow({ listing, bookings, history, policies }: { listing: OwnerListing; bookings: Booking[]; history?: ListingHistory; policies: HobbyShieldPolicy[] }) {

@@ -35,6 +35,8 @@ export type Conversation = {
   other_party_id: string;
   other_party_name: string | null;
   other_party_role: ConversationRole;
+  /** S3-24: the other party is suspended or banned, so the thread takes no more messages. */
+  other_party_unavailable: boolean;
   unread: boolean;
   updated_at: string;
 };

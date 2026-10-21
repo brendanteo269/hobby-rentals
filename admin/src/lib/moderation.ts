@@ -120,8 +120,47 @@ export function formatCaseAge(seconds: number): string {
 export type UserModeration = {
   strike_limit: number;
   strikes: { id: string; report_id: string; reason: string; created_at: string }[];
-  suspension: { id: string; report_id: string; reason: string; starts_at: string; ends_at: string } | null;
+  /** The enforcement in force, if any: a ban has no end. */
+  suspension: {
+    id: string;
+    kind: "SUSPENSION" | "BAN";
+    source: "STRIKES" | "ADMIN";
+    report_id: string | null;
+    reason: string;
+    starts_at: string;
+    ends_at: string | null;
+  } | null;
 };
+
+/** One entry in a member's suspend/ban history (S3-24): what was done, by what route and for how long. */
+export type Enforcement = {
+  id: string;
+  kind: "SUSPENSION" | "BAN";
+  /** STRIKES: the strike limit was reached. ADMIN: an administrator did it. */
+  source: "STRIKES" | "ADMIN";
+  reason: string;
+  report_id: string | null;
+  starts_at: string;
+  /** Null for a ban. */
+  ends_at: string | null;
+  actor_label: string | null;
+  /** Set when an administrator lifted a suspension early; a ban can never be lifted. */
+  lifted_at: string | null;
+  lifted_reason: string | null;
+  lifted_by_label: string | null;
+  /** In force now: not over, and not lifted. */
+  active: boolean;
+};
+
+/** A member's suspend/ban history, newest first. Administrators only; never shown to the member. */
+export async function getUserSuspendBanHistory(userId: string): Promise<Enforcement[]> {
+  const { data, error } = await createAdminClient().rpc("admin_user_enforcements", { p_user_id: userId });
+  if (error) {
+    console.error("Enforcement history lookup failed:", error.message);
+    return [];
+  }
+  return (data ?? []) as Enforcement[];
+}
 
 /** A member's strikes and any suspension in force. Administrators only; never shown to the member. */
 export async function getUserModeration(userId: string): Promise<UserModeration | null> {

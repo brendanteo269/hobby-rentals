@@ -17,8 +17,8 @@ export function UserModerationPanel({ moderation }: { moderation: UserModeration
     >
       {suspension && (
         <p className="mb-4 flex flex-wrap items-center gap-2 text-sm">
-          <Badge tone="critical">Suspended</Badge>
-          until {formatDateTime(suspension.ends_at)}
+          <Badge tone="critical">{suspension.kind === "BAN" ? "Banned" : "Suspended"}</Badge>
+          {suspension.ends_at ? `until ${formatDateTime(suspension.ends_at)}` : "with no end date"}
         </p>
       )}
       {strikes.length === 0 ? (

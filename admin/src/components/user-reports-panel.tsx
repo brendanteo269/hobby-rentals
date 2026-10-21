@@ -25,12 +25,15 @@ export function UserReportsPanel({
   userId,
   reports,
   selectedIndex,
+  strikeNumbers,
   assessment,
 }: {
   userId: string;
   reports: UserReportDetail[];
   /** Which of `reports` is shown. */
   selectedIndex: number;
+  /** The strike a report earned, by report id: report 1 is the one behind strike 1. */
+  strikeNumbers: Record<string, number>;
   /** What the AI made of the selected report. */
   assessment: ReportAssessment | null | undefined;
 }) {
@@ -46,60 +49,43 @@ export function UserReportsPanel({
   return (
     <div className="space-y-6">
       {reports.length > 1 && <ReportPager userId={userId} reports={reports} index={index} />}
-      <ReportCase userId={userId} report={report} assessment={assessment} />
+      <ReportCase userId={userId} report={report} strike={strikeNumbers[report.id]} assessment={assessment} />
     </div>
   );
 }
 
-/** Previous and next through the member's reports, with where you are and what each one's state is. */
+/**
+ * Previous and next through the member's reports, centred, with where you are.
+ * The order is the strikes' (see the page): report 1 is the one behind strike 1,
+ * and so on, with reports that earned no strike after them.
+ */
 function ReportPager({ userId, reports, index }: { userId: string; reports: UserReportDetail[]; index: number }) {
   const previous = reports[index - 1];
   const next = reports[index + 1];
-  const open = reports.filter((report) => report.status === "OPEN").length;
   const arrow = "flex size-9 items-center justify-center rounded-sm border border-line bg-white text-lg leading-none transition-colors";
   return (
-    <nav aria-label="Reports about this member" className="flex flex-wrap items-center justify-between gap-3 border border-line bg-white px-4 py-3">
-      <div className="flex items-center gap-3">
-        {previous ? (
-          <Link href={userReportPath(userId, previous.id)} aria-label="Previous report" className={`${arrow} hover:bg-sand`}>
-            <span aria-hidden="true">‹</span>
-          </Link>
-        ) : (
-          <span aria-hidden="true" className={`${arrow} cursor-not-allowed text-ink-soft/40`}>
-            ‹
-          </span>
-        )}
-        <p className="text-sm">
-          <span className="font-medium">
-            Report {index + 1} of {reports.length}
-          </span>
-          <span className="ml-2 text-ink-soft">{open ? `${open} awaiting a decision` : "all decided"}</span>
-        </p>
-        {next ? (
-          <Link href={userReportPath(userId, next.id)} aria-label="Next report" className={`${arrow} hover:bg-sand`}>
-            <span aria-hidden="true">›</span>
-          </Link>
-        ) : (
-          <span aria-hidden="true" className={`${arrow} cursor-not-allowed text-ink-soft/40`}>
-            ›
-          </span>
-        )}
-      </div>
-      <ol className="flex items-center gap-1.5" aria-label="Jump to a report">
-        {reports.map((report, position) => (
-          <li key={report.id}>
-            <Link
-              href={userReportPath(userId, report.id)}
-              aria-label={`Report ${position + 1}: ${USER_REPORT_STATUS[report.status].label}`}
-              aria-current={position === index ? "true" : undefined}
-              title={`${USER_REPORT_REASON_LABELS[report.reason_code] ?? report.reason_code} · ${USER_REPORT_STATUS[report.status].label}`}
-              className={`block size-3 rounded-full border transition-colors ${
-                position === index ? "border-ink" : "border-line hover:border-ink-soft"
-              } ${report.status === "OPEN" ? "bg-clay" : "bg-stone"}`}
-            />
-          </li>
-        ))}
-      </ol>
+    <nav aria-label="Reports about this member" className="flex items-center justify-center gap-5 border border-line bg-white px-4 py-3">
+      {previous ? (
+        <Link href={userReportPath(userId, previous.id)} aria-label="Previous report" className={`${arrow} hover:bg-sand`}>
+          <span aria-hidden="true">‹</span>
+        </Link>
+      ) : (
+        <span aria-hidden="true" className={`${arrow} cursor-not-allowed text-ink-soft/40`}>
+          ‹
+        </span>
+      )}
+      <p className="min-w-28 text-center text-sm font-medium">
+        Report {index + 1} of {reports.length}
+      </p>
+      {next ? (
+        <Link href={userReportPath(userId, next.id)} aria-label="Next report" className={`${arrow} hover:bg-sand`}>
+          <span aria-hidden="true">›</span>
+        </Link>
+      ) : (
+        <span aria-hidden="true" className={`${arrow} cursor-not-allowed text-ink-soft/40`}>
+          ›
+        </span>
+      )}
     </nav>
   );
 }
@@ -107,10 +93,13 @@ function ReportPager({ userId, reports, index }: { userId: string; reports: User
 function ReportCase({
   userId,
   report,
+  strike,
   assessment,
 }: {
   userId: string;
   report: UserReportDetail;
+  /** The strike this report earned, if it did. */
+  strike: number | undefined;
   assessment: ReportAssessment | null | undefined;
 }) {
   const status = USER_REPORT_STATUS[report.status];
@@ -122,7 +111,10 @@ function ReportCase({
           <p className="eyebrow">Report {shortId(report.id)}</p>
           <h2 className="display-caps mt-1 text-xl">{USER_REPORT_REASON_LABELS[report.reason_code] ?? report.reason_code}</h2>
         </div>
-        <Badge tone={status.tone}>{status.label}</Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          {strike !== undefined && <Badge tone="critical">Strike {strike}</Badge>}
+          <Badge tone={status.tone}>{status.label}</Badge>
+        </div>
       </div>
 
       <Panel title="Report">

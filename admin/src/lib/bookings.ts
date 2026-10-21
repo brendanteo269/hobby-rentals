@@ -200,6 +200,51 @@ export async function getFlaggedHandovers(): Promise<FlaggedHandover[]> {
   });
 }
 
+/** A booking an enforcement against one of its members (S3-24) left for an administrator. */
+export type EnforcementFlaggedBooking = {
+  id: string;
+  listing_name: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  flagged_at: string;
+};
+
+/**
+ * Bookings left open by a suspension or ban: a rental that is out, or one that
+ * could not be ended automatically. They are not cancelled from under the
+ * other person; an administrator decides. Oldest first. Failures return an
+ * empty list so the search below still renders.
+ *
+ * Call only behind requirePortalSession(), like searchBookings.
+ */
+export async function getEnforcementFlaggedBookings(): Promise<EnforcementFlaggedBooking[]> {
+  const { data, error } = await createAdminClient()
+    .from("bookings")
+    .select("id, status, start_date, end_date, enforcement_flagged_at, listing:listings(name)")
+    .in("status", ["PENDING", "CONFIRMED", "ACTIVE"])
+    .not("enforcement_flagged_at", "is", null)
+    .order("enforcement_flagged_at", { ascending: true })
+    .limit(50);
+
+  if (error) {
+    console.error("Enforcement-flagged booking lookup failed:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row) => {
+    const listing = Array.isArray(row.listing) ? row.listing[0] : row.listing;
+    return {
+      id: row.id as string,
+      listing_name: (listing?.name as string | undefined) ?? "Unknown listing",
+      status: row.status as string,
+      start_date: row.start_date as string,
+      end_date: row.end_date as string,
+      flagged_at: row.enforcement_flagged_at as string,
+    };
+  });
+}
+
 /** Where a booking's handover stands, as GET /admin/bookings/{id}/handover answers (S3-02). */
 export type HandoverDetails = {
   booking_id: string;

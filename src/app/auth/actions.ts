@@ -56,12 +56,13 @@ const UNCONFIRMED_EMAIL_CODE = "email_not_confirmed";
 
 /**
  * What gotrue returns for a member whose account is banned: here, one
- * suspended at the strike limit (S3-23). It lifts by itself when the ban
- * period ends, so this is not a failed credential either, and the member is
- * told why rather than "User is banned".
+ * suspended (S3-23, S3-24) or banned outright. A suspension lifts by itself when
+ * its period ends, so this is not a failed credential either, and the member is
+ * told why rather than "User is banned". (gotrue does not say which it was.)
  */
 const BANNED_CODE = "user_banned";
-const SUSPENDED_MESSAGE = "Your account is suspended. You can sign in again once the suspension ends.";
+const SUSPENDED_MESSAGE =
+  "Your account has been suspended or banned, so you can't sign in. A suspension ends by itself. If you think this is a mistake, contact support.";
 
 /**
  * Says what to do about it, unlike Supabase's bare "Email not confirmed".

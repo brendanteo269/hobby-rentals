@@ -124,12 +124,29 @@ export function isSuspended(user: AdminUser): boolean {
 }
 
 /**
+ * A ban has no end, but GoTrue wants a date, so it is given one a century away
+ * (apply_auth_ban). Anything past this is a ban, not a suspension.
+ */
+const BAN_THRESHOLD_YEARS = 20;
+
+/** True when the account's ban date is so far off that it is a permanent ban (S3-24). */
+export function isBanned(user: AdminUser): boolean {
+  if (!isSuspended(user) || user.banned_until === null) return false;
+  const threshold = new Date();
+  threshold.setFullYear(threshold.getFullYear() + BAN_THRESHOLD_YEARS);
+  return new Date(user.banned_until) > threshold;
+}
+
+/**
  * The single status shown at the top of an account.
  *
  * Suspension outranks verification: a suspended account cannot sign in, so
  * describing it as merely "pending verification" would be misleading.
  */
 export function accountStatus(user: AdminUser): AccountStatus {
+  if (isBanned(user)) {
+    return { label: "Banned", tone: "critical", detail: "Cannot sign in. The ban has no end date." };
+  }
   if (isSuspended(user)) {
     return {
       label: "Suspended",
