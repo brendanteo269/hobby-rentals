@@ -10,8 +10,8 @@ const SECTIONS = [
   { href: "/browse", label: "Browse" },
   { href: "/rentals", label: "My Rentals" },
   { href: "/messages", label: "Messages" },
-  { href: profilePath("wallet"), label: "Wallet" },
-  { href: profilePath("account"), label: "Profile" },
+  { href: "/rentals/wallet", label: "Wallet" },
+  { href: "/rentals/profile", label: "Profile" },
 ] as const;
 
 export type RenterSection = (typeof SECTIONS)[number]["label"];
@@ -27,6 +27,16 @@ export async function requireRenter(): Promise<Profile> {
   const profile = await getOwnProfile();
   if (!profile?.wants_to_rent) redirect(profilePath("renter"));
   return profile;
+}
+
+/**
+ * Browse and Messages are portal tabs, but members who don't rent use them
+ * too. A renter sees them inside the portal so its tabs stay in reach; anyone
+ * else sees the page on its own.
+ */
+export async function isRenting(): Promise<boolean> {
+  const profile = await getOwnProfile();
+  return profile?.wants_to_rent ?? false;
 }
 
 /** S3-13 Scenario 1: the renter portal's navigation, with the role switcher for members who also own. */

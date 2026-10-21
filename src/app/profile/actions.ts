@@ -227,6 +227,7 @@ export async function updateDisplayName(
   if (error) return { error: error.message };
 
   revalidatePath("/profile");
+  revalidatePath("/rentals/profile");
   return { success: "Display name updated." };
 }
 
@@ -278,6 +279,7 @@ export async function updateContactDetails(
   if (error) return { error: error.message };
 
   revalidatePath("/profile");
+  revalidatePath("/rentals/profile");
   return { success: "Contact details updated." };
 }
 
