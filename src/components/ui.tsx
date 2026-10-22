@@ -67,6 +67,10 @@ export function ButtonLink<T extends string>({
   );
 }
 
+/** The round, borderless icon control in the site header (favourites, messages, notifications), so the icons there line up. */
+export const headerIconButton =
+  "relative flex size-9 items-center justify-center rounded-full text-ink-soft outline-none transition-colors hover:bg-surface-muted hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2";
+
 export const inputBase =
   "w-full border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-ink placeholder:text-ink-soft/70 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-ink-soft";
 
