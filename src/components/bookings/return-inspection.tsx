@@ -454,10 +454,14 @@ function Camera({
   function capture() {
     const video = videoRef.current;
     if (!video || !video.videoWidth) return;
+    // Capped at the 1920 the stream asked for: an iPhone on Continuity Camera
+    // can hand back far larger frames than requested, and a multi-MB upload
+    // over the Wi-Fi link it shares fails as a NetworkError.
+    const scale = Math.min(1, 1920 / Math.max(video.videoWidth, video.videoHeight));
     const canvas = document.createElement("canvas");
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d")?.drawImage(video, 0, 0);
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
     canvas.toBlob(
       (blob) => {
         if (!blob) return;
