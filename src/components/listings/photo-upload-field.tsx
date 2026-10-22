@@ -62,16 +62,10 @@ export async function putPhotoToS3(file: File, kind: PhotoKind = "listing"): Pro
   }
   const { upload_url, photo_key } = (await presignRes.json()) as PresignPhotoResponse;
 
-  const put = () => fetch(upload_url, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
-  // One retry on a dropped connection (fetch rejects with TypeError): macOS
-  // briefly drops Wi-Fi as it releases an iPhone Continuity Camera, right
-  // when a just-captured photo starts uploading. Re-PUTting the same key is safe.
-  const putRes = await put().catch(async (caught: unknown) => {
-    if (!(caught instanceof TypeError)) throw caught;
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-    return put().catch(() => {
-      throw new Error("The upload was interrupted by a network drop. Check your connection and try again.");
-    });
+  const putRes = await fetch(upload_url, {
+    method: "PUT",
+    headers: { "Content-Type": file.type },
+    body: file,
   });
   if (!putRes.ok) {
     throw new Error(`${file.name} failed to upload. Try again.`);
