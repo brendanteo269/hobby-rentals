@@ -5,14 +5,15 @@ import type { Route } from "next";
 import { usePathname, useRouter } from "next/navigation";
 import { Input } from "./ui";
 import { MultiSelectDropdown } from "./multi-select-dropdown";
-import { BOOKING_STATUSES, BOOKING_STATUS_LABELS } from "@/lib/bookings";
+import { BOOKING_STATUSES, BOOKING_STATUS_LABELS, ESCROW_FILTERS, ESCROW_FILTER_LABELS } from "@/lib/bookings";
 
 const QUERY_DEBOUNCE_MS = 350;
 
-function buildSearch(q: string, statuses: string[]): string {
+function buildSearch(q: string, statuses: string[], escrow: string[]): string {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   statuses.forEach((s) => params.append("status", s));
+  escrow.forEach((e) => params.append("escrow", e));
   // Omitted on purpose: any change here is a new search, so it always starts
   // back at page one rather than wherever the previous search's pages left off.
   const search = params.toString();
@@ -33,33 +34,41 @@ function buildSearch(q: string, statuses: string[]): string {
 export function BookingSearch({
   query,
   statuses: initialStatuses,
+  escrow: initialEscrow,
 }: {
   query: string;
   statuses: string[];
+  escrow: string[];
 }) {
   const router = useRouter();
   const pathname = usePathname();
 
   const [q, setQ] = useState(query);
   const [statuses, setStatuses] = useState(initialStatuses);
+  const [escrow, setEscrow] = useState(initialEscrow);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function navigate(nextQ: string, nextStatuses: string[]) {
+  function navigate(nextQ: string, nextStatuses: string[], nextEscrow: string[]) {
     // typedRoutes can't verify a string built from arbitrary filter values
     // against the route tree - this one is always /bookings plus a query
     // string, never a different path, so the cast is safe.
-    router.replace(`${pathname}${buildSearch(nextQ, nextStatuses)}` as Route, { scroll: false });
+    router.replace(`${pathname}${buildSearch(nextQ, nextStatuses, nextEscrow)}` as Route, { scroll: false });
   }
 
   function onQueryChange(value: string) {
     setQ(value);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => navigate(value, statuses), QUERY_DEBOUNCE_MS);
+    debounceRef.current = setTimeout(() => navigate(value, statuses, escrow), QUERY_DEBOUNCE_MS);
   }
 
   function onStatusesChange(value: string[]) {
     setStatuses(value);
-    navigate(q, value);
+    navigate(q, value, escrow);
+  }
+
+  function onEscrowChange(value: string[]) {
+    setEscrow(value);
+    navigate(q, statuses, value);
   }
 
   // Flushes any pending debounce on unmount, so a quick type-then-navigate-away
@@ -68,7 +77,7 @@ export function BookingSearch({
     if (debounceRef.current) clearTimeout(debounceRef.current);
   }, []);
 
-  const hasFilters = Boolean(q || statuses.length > 0);
+  const hasFilters = Boolean(q || statuses.length > 0 || escrow.length > 0);
 
   return (
     <form
@@ -77,7 +86,7 @@ export function BookingSearch({
       onSubmit={(event) => {
         event.preventDefault();
         if (debounceRef.current) clearTimeout(debounceRef.current);
-        navigate(q, statuses);
+        navigate(q, statuses, escrow);
       }}
     >
       <div className="min-w-64 flex-1">
@@ -106,14 +115,26 @@ export function BookingSearch({
         noun="statuses"
       />
 
+      <MultiSelectDropdown
+        name="escrow"
+        label="Escrow"
+        options={ESCROW_FILTERS.map((e) => ({ value: e, label: ESCROW_FILTER_LABELS[e] }))}
+        selected={escrow}
+        onChange={onEscrowChange}
+        noneLabel="Any escrow"
+        allLabel="All escrow"
+        noun="escrow filters"
+      />
+
       {hasFilters && (
         <button
           type="button"
           onClick={() => {
             setQ("");
             setStatuses([]);
+            setEscrow([]);
             if (debounceRef.current) clearTimeout(debounceRef.current);
-            navigate("", []);
+            navigate("", [], []);
           }}
           className="px-1 pb-3 text-sm text-ink-soft underline underline-offset-4 hover:text-ink"
         >

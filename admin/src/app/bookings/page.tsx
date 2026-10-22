@@ -4,6 +4,7 @@ import { requirePortalSession } from "@/lib/admin";
 import {
   bookingStatusLabel,
   getEnforcementFlaggedBookings,
+  ESCROW_FILTERS,
   getUnconfirmedHandoverQueue,
   searchBookings,
   PAGE_SIZE,
@@ -28,7 +29,7 @@ export const metadata = { title: "Bookings — HobbyRentals Admin" };
 export default async function BookingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; status?: string | string[]; page?: string }>;
+  searchParams: Promise<{ q?: string; status?: string | string[]; escrow?: string | string[]; page?: string }>;
 }) {
   // The proxy already turned away anyone without the portal password.
   // Repeated here because a page that reads booking/party data should not
@@ -36,14 +37,17 @@ export default async function BookingsPage({
   // silently exposing it.
   await requirePortalSession();
 
-  const { q = "", status, page: pageParam } = await searchParams;
+  const { q = "", status, escrow, page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 
   // Empty means "any" - no status filter leaves every booking in the result set.
   const statuses = Array.isArray(status) ? status : status ? [status] : [];
+  const escrowFilters = (Array.isArray(escrow) ? escrow : escrow ? [escrow] : []).filter((e) =>
+    (ESCROW_FILTERS as readonly string[]).includes(e),
+  );
 
   const [{ bookings, total, error }, unconfirmedHandovers, enforcementFlagged] = await Promise.all([
-    searchBookings(q, statuses, page),
+    searchBookings(q, statuses, page, escrowFilters),
     getUnconfirmedHandoverQueue(),
     getEnforcementFlaggedBookings(),
   ]);
@@ -53,13 +57,13 @@ export default async function BookingsPage({
   // A page past the end of the result set (a bookmarked or shared link whose
   // matches have since shrunk) would otherwise render as a false "no
   // bookings match this search" - send it back to the real last page instead.
-  if (page > lastPage) redirect(hrefForBookingsPage(q, statuses, lastPage) as Route);
+  if (page > lastPage) redirect(hrefForBookingsPage(q, statuses, escrowFilters, lastPage) as Route);
 
   const description = error
     ? error
     : total === 0
       ? "No bookings match this search."
-      : `${total} booking${total === 1 ? "" : "s"}${q || statuses.length > 0 ? " matching this search" : ""}.`;
+      : `${total} booking${total === 1 ? "" : "s"}${q || statuses.length > 0 || escrowFilters.length > 0 ? " matching this search" : ""}.`;
 
   return (
     <Container className="py-12">
@@ -133,7 +137,7 @@ export default async function BookingsPage({
       )}
 
       <div className="mt-8">
-        <BookingSearch query={q} statuses={statuses} />
+        <BookingSearch query={q} statuses={statuses} escrow={escrowFilters} />
       </div>
 
       <div className="mt-8">
@@ -144,15 +148,16 @@ export default async function BookingsPage({
         </Panel>
       </div>
 
-      <Pagination page={page} lastPage={lastPage} hrefForPage={(p) => hrefForBookingsPage(q, statuses, p)} />
+      <Pagination page={page} lastPage={lastPage} hrefForPage={(p) => hrefForBookingsPage(q, statuses, escrowFilters, p)} />
     </Container>
   );
 }
 
-function hrefForBookingsPage(q: string, statuses: string[], page: number): string {
+function hrefForBookingsPage(q: string, statuses: string[], escrow: string[], page: number): string {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   statuses.forEach((s) => params.append("status", s));
+  escrow.forEach((e) => params.append("escrow", e));
   if (page > 1) params.set("page", String(page));
   const search = params.toString();
   return search ? `${ROUTES.bookings}?${search}` : ROUTES.bookings;

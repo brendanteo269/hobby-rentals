@@ -49,8 +49,6 @@ export async function overrideEscrow(
 
   if (error) return { error: error.message.replace(ERROR_CODE_PREFIX, "") };
 
-  revalidatePath(ROUTES.escrowHold(escrowId));
-  revalidatePath(ROUTES.escrow);
   // The booking page lists the same ledger; for a bundle id this is a no-op.
   revalidatePath(ROUTES.booking(escrowId));
 

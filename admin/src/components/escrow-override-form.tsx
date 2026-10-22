@@ -3,7 +3,7 @@
 import { useActionState, useEffect } from "react";
 import { Button, FormMessage, Panel, RequiredMark, Select, Textarea } from "./ui";
 import { useToast } from "./toast";
-import { overrideEscrow, type EscrowOverrideState } from "@/app/finances/escrow/[id]/actions";
+import { overrideEscrow, type EscrowOverrideState } from "@/app/bookings/[id]/escrow-actions";
 import { formatMoney } from "@/lib/format";
 import { ESCROW_COMPONENT_LABELS, type EscrowComponentSummary } from "@/lib/escrow";
 
