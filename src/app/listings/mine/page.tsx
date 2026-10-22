@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Megaphone, ShieldCheck, type LucideIcon } from "lucide-react";
+import { Layers, Megaphone, SearchX, ShieldCheck, Tag, type LucideIcon } from "lucide-react";
 import { Badge, ButtonLink, EmptyState } from "@/components/ui";
 import { EnableOwningPrompt, OwnerPortal } from "@/components/owner-portal";
 import { ListingLifecycleActions } from "@/components/listings/listing-lifecycle-actions";
@@ -102,13 +102,13 @@ export default async function MyListingsPage({ searchParams }: { searchParams: P
         <h2 className="eyebrow">Items</h2>
         <div className="mt-3">
           {allListings.length === 0 ? (
-            <EmptyState
+            <EmptyState icon={Tag}
               title="No listings yet"
               body="Once you list a piece of gear, it'll show up here so you can manage its availability, archive it, or remove it."
               action={<ButtonLink href="/listings/new">Create your first listing</ButtonLink>}
             />
           ) : listings.length === 0 ? (
-            <EmptyState
+            <EmptyState icon={SearchX}
               title={`No ${LISTING_STATUS_LABELS[filter!].toLowerCase()} listings`}
               body="Try another status, or show all your listings."
               action={<ButtonLink href="/listings/mine" variant="outline">Show all</ButtonLink>}
@@ -134,7 +134,7 @@ export default async function MyListingsPage({ searchParams }: { searchParams: P
 
         <div className="mt-4">
           {bundles.length === 0 ? (
-            <EmptyState
+            <EmptyState icon={Layers}
               title="No bundles yet"
               body="Bundle two or more of your published listings so renters can book a common set of gear in one go."
               action={<ButtonLink href="/listings/mine/bundles/new">Create your first bundle</ButtonLink>}

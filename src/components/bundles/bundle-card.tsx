@@ -23,7 +23,7 @@ export function BundleCard({ bundle, className = "", onFavouriteRemoved }: {
   const favouriteCount = "favourite_count" in bundle ? bundle.favourite_count : undefined;
   const favourited = "is_favourited" in bundle ? bundle.is_favourited : undefined;
   return (
-    <li className={`group overflow-hidden card transition-colors hover:border-ink-soft ${className}`}>
+    <li className={`group overflow-hidden card card-lift ${className}`}>
       <Link href={`/bundles/${bundle.id}`} className="relative block overflow-hidden">
         <ImageSlot label={bundle.name} src={firstPhoto(bundle)} className="aspect-[4/3] w-full transition-transform duration-300 ease-out group-hover:scale-105" />
         {/* Dark where an item card's location pill is white, so a bundle

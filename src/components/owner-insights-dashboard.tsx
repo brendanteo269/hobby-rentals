@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import type { Route } from "next";
-import { Megaphone, TrendingDown, TrendingUp } from "lucide-react";
+import { Banknote, CircleCheck, Megaphone, MousePointerClick, Tag, TrendingDown, TrendingUp } from "lucide-react";
 import { useState } from "react";
-import { ButtonLink, EmptyState, ImageSlot } from "@/components/ui";
+import { ButtonLink, EmptyState, ImageSlot, StatTile } from "@/components/ui";
 import { PromotedBadge } from "@/components/listings/promoted-badge";
 import { CATEGORY_LABELS, type Listing } from "@/lib/listings";
 import { formatMoney } from "@/lib/format";
@@ -17,9 +17,6 @@ const PERIODS: { value: InsightsPeriod; label: string }[] = [
   { value: "12m", label: "Last 12 months" },
 ];
 
-function MetricCard({ label, value, detail }: { label: string; value: string; detail?: string }) {
-  return <div className="card p-5"><p className="text-sm font-semibold text-ink">{label}</p><p className="heading mt-3 text-3xl">{value}</p>{detail && <p className="mt-2 text-xs text-ink-soft">{detail}</p>}</div>;
-}
 
 function actionHref(item: ListingInsight): Route {
   if (item.action === "availability") return `/listings/${item.listing_id}/edit#availability` as Route;
@@ -36,7 +33,7 @@ function actionLabel(item: ListingInsight): string {
 }
 
 function ListingInsightCard({ item, listing }: { item: ListingInsight; listing?: Listing }) {
-  return <article className="group flex h-full flex-col overflow-hidden card transition-colors hover:border-ink-soft">
+  return <article className="group flex h-full flex-col overflow-hidden card card-lift">
     <div className="relative overflow-hidden">
       <ImageSlot label={listing?.photo_keys[0] ?? "Listing image"} src={listing?.photo_urls[0]} className="aspect-square w-full transition-transform duration-300 ease-out group-hover:scale-105" />
       <PromotedBadge promoted={listing?.is_promoted} className="absolute right-3 top-3" />
@@ -84,6 +81,6 @@ function MarketDemand({ insights, listings }: { insights: OwnerInsights; listing
 }
 
 export function OwnerInsightsDashboard({ insights, listings }: { insights: OwnerInsights; listings: Listing[] }) {
-  if (listings.length === 0) return <EmptyState title="No listings yet" body="Create a listing to start tracking rental performance and renter interest." action={<ButtonLink href="/listings/new">Create a listing</ButtonLink>} />;
-  return <div className="space-y-10"><section><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="eyebrow">Owner insights</p><h2 className="heading mt-2 text-2xl">Your rental business</h2><p className="body-copy mt-2">Historical performance and practical next steps for your listings.</p></div><div className="flex rounded-full border border-line bg-white p-1">{PERIODS.map((option) => <Link key={option.value} href={ownerInsightsPath(option.value)} className={`rounded-full px-3 py-1.5 text-xs ${option.value === insights.period ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}>{option.label}</Link>)}</div></div><div className="mt-6 grid gap-3 sm:grid-cols-3"><MetricCard label="Settled rental earnings" value={formatMoney(insights.summary.settled_earnings_cents)} detail={insights.summary.includes_bundle_rentals ? "Includes bundle rentals" : undefined} /><MetricCard label="Completed rentals" value={String(insights.summary.completed_rentals)} /><MetricCard label="Listing clicks" value={String(insights.summary.listing_opens)} /></div>{insights.bundle_rentals.completed_rentals > 0 && <div className="mt-3 border border-line bg-surface-muted p-4 text-sm"><span className="font-medium">Bundle rentals</span><span className="ml-3 text-ink-soft">{insights.bundle_rentals.completed_rentals} completed · {formatMoney(insights.bundle_rentals.settled_earnings_cents)} settled rental earnings</span></div>}</section><div className="grid gap-6 lg:grid-cols-2"><Trend insights={insights} /><MarketDemand insights={insights} listings={listings} /></div><div className="space-y-10"><Group title="Top earners" body="Listings with the strongest settled single-listing rental earnings." items={insights.listing_groups.top_earners} listings={listings} /><Group title="Needs attention" body="A few practical prompts based on availability, renter interest, and recent rental outcomes." items={insights.listing_groups.needs_attention} listings={listings} /><Group title="Most viewed" body="Listings receiving the most renter interest that are not already shown above." items={insights.listing_groups.most_viewed} listings={listings} /></div></div>;
+  if (listings.length === 0) return <EmptyState icon={Tag} title="No listings yet" body="Create a listing to start tracking rental performance and renter interest." action={<ButtonLink href="/listings/new">Create a listing</ButtonLink>} />;
+  return <div className="space-y-10"><section><div className="flex flex-wrap items-center justify-between gap-4"><p className="body-copy">Historical performance and practical next steps for your listings.</p><div className="flex rounded-full border border-line bg-white p-1">{PERIODS.map((option) => <Link key={option.value} href={ownerInsightsPath(option.value)} className={`rounded-full px-3 py-1.5 text-xs ${option.value === insights.period ? "bg-ink text-white" : "text-ink-soft hover:text-ink"}`}>{option.label}</Link>)}</div></div><div className="mt-6 grid gap-3 sm:grid-cols-3"><StatTile icon={Banknote} tone="success" label="Settled rental earnings" value={formatMoney(insights.summary.settled_earnings_cents)} detail={insights.summary.includes_bundle_rentals ? "Includes bundle rentals" : undefined} /><StatTile icon={CircleCheck} tone="info" label="Completed rentals" value={String(insights.summary.completed_rentals)} /><StatTile icon={MousePointerClick} tone="accent" label="Listing clicks" value={String(insights.summary.listing_opens)} /></div>{insights.bundle_rentals.completed_rentals > 0 && <div className="mt-3 border border-line bg-surface-muted p-4 text-sm"><span className="font-medium">Bundle rentals</span><span className="ml-3 text-ink-soft">{insights.bundle_rentals.completed_rentals} completed · {formatMoney(insights.bundle_rentals.settled_earnings_cents)} settled rental earnings</span></div>}</section><div className="grid gap-6 lg:grid-cols-2"><Trend insights={insights} /><MarketDemand insights={insights} listings={listings} /></div><div className="space-y-10"><Group title="Top earners" body="Listings with the strongest settled single-listing rental earnings." items={insights.listing_groups.top_earners} listings={listings} /><Group title="Needs attention" body="A few practical prompts based on availability, renter interest, and recent rental outcomes." items={insights.listing_groups.needs_attention} listings={listings} /><Group title="Most viewed" body="Listings receiving the most renter interest that are not already shown above." items={insights.listing_groups.most_viewed} listings={listings} /></div></div>;
 }

@@ -14,6 +14,7 @@ import {
 import type { BrowseBundlesResponse } from "@/lib/bundles";
 import type { SearchParams } from "@/lib/browse-params";
 import { BundleCard } from "@/components/bundles/bundle-card";
+import { CloudOff, Layers, SearchX } from "lucide-react";
 
 export const metadata = { title: "Bundles · Browse marketplace — HobbyRentals" };
 
@@ -105,7 +106,7 @@ function resultSummary(total: number, error: string | null): string {
 function NoResults({ filters, error }: { filters: BundleBrowseFilters; error: string | null }) {
   if (error) {
     return (
-      <EmptyState
+      <EmptyState icon={CloudOff}
         title="Bundles could not be loaded"
         body="Something went wrong reaching the marketplace. Try again in a moment."
       />
@@ -114,7 +115,7 @@ function NoResults({ filters, error }: { filters: BundleBrowseFilters; error: st
 
   if (hasActiveBundleFilters(filters)) {
     return (
-      <EmptyState
+      <EmptyState icon={SearchX}
         title="Nothing matches those filters"
         body="Try widening the dates, choosing another area, or searching for something broader."
         action={
@@ -127,7 +128,7 @@ function NoResults({ filters, error }: { filters: BundleBrowseFilters; error: st
   }
 
   return (
-    <EmptyState
+    <EmptyState icon={Layers}
       title="No bundles yet"
       body="No owner has published a gear bundle yet. Browse individual listings in the meantime."
       action={<ButtonLink href="/browse" variant="outline">Browse items</ButtonLink>}

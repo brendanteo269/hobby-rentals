@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ButtonLink, EmptyState } from "@/components/ui";
+import { ButtonLink, EmptyState, StatTile } from "@/components/ui";
+import { Lock, Receipt, Undo2 } from "lucide-react";
 import { RenterPortal, requireRenter } from "@/components/renter-portal";
 import { backendRequest } from "@/lib/api/client";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
@@ -44,11 +45,11 @@ export default async function RenterSpendingPage({ searchParams }: { searchParam
         </ButtonLink>
       </div>
 
-      <dl className="mt-6 grid gap-3 sm:grid-cols-3">
-        <Figure label="Spent on rentals" value={formatMoney(spentCents)} detail="Rent, fees and anything taken from a deposit" />
-        <Figure label="Returned to your wallet" value={formatMoney(returnedCents)} detail="Deposits and holds released, and refunds" />
-        <Figure label="Held in escrow now" value={formatMoney(wallet.heldCents)} detail="Comes back unless a claim takes some of it" />
-      </dl>
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <StatTile icon={Receipt} tone="accent" label="Spent on rentals" value={formatMoney(spentCents)} detail="Rent, fees and anything taken from a deposit" />
+        <StatTile icon={Undo2} tone="success" label="Returned to your wallet" value={formatMoney(returnedCents)} detail="Deposits and holds released, and refunds" />
+        <StatTile icon={Lock} label="Held in escrow now" value={formatMoney(wallet.heldCents)} detail="Comes back unless a claim takes some of it" />
+      </div>
 
       <section aria-labelledby="by-rental-heading" className="mt-12">
         <h2 id="by-rental-heading" className="heading text-xl">
@@ -56,7 +57,7 @@ export default async function RenterSpendingPage({ searchParams }: { searchParam
         </h2>
         {rentals.length === 0 ? (
           <div className="mt-4">
-            <EmptyState
+            <EmptyState icon={Receipt}
               title="Nothing in this period"
               body="Charges appear here once a rental is settled or cancelled. Money still on hold shows in your wallet."
               action={
@@ -105,15 +106,5 @@ export default async function RenterSpendingPage({ searchParams }: { searchParam
         )}
       </section>
     </RenterPortal>
-  );
-}
-
-function Figure({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <div className="card p-5">
-      <dt className="text-sm font-semibold text-ink">{label}</dt>
-      <dd className="heading mt-3 text-3xl">{value}</dd>
-      <dd className="mt-2 text-xs text-ink-soft">{detail}</dd>
-    </div>
   );
 }

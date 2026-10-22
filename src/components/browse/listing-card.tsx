@@ -38,7 +38,7 @@ export function ListingCard({ listing, highDemand = false, className = "", onFav
   // listing has: attention pills overlay the photo, and info pills sit in a
   // row pinned to the bottom of the body, below the title and price.
   return (
-    <li className={`group flex h-full flex-col overflow-hidden card transition-colors hover:border-ink-soft ${className}`}>
+    <li className={`group flex h-full flex-col overflow-hidden card card-lift ${className}`}>
       <ListingCardCarousel
         photoUrls={listing.photo_urls}
         listingId={listing.id}
@@ -60,7 +60,7 @@ export function ListingCard({ listing, highDemand = false, className = "", onFav
 
         <div className="mt-3 border-t border-line pt-2">
           <Link href={`/listings/${listing.id}`} className="min-w-0">
-            <RateLine listing={listing} />
+            <RateLine listing={listing} className="heading text-lg" />
           </Link>
         </div>
         <div className="mt-1 flex items-center justify-between gap-2">
@@ -100,8 +100,11 @@ export function ListingCard({ listing, highDemand = false, className = "", onFav
  */
 export function RateLine({
   listing,
+  className = "text-base",
 }: {
   listing: Pick<ListingCardData, "price_per_day_cents" | "price_per_week_cents">;
+  /** Sizing for the figure; the browse card sets it larger so the price leads the card. */
+  className?: string;
 }) {
   const rates: { amount: number; unit: string }[] = [];
   if (listing.price_per_day_cents !== null) {
@@ -112,7 +115,7 @@ export function RateLine({
   }
 
   return (
-    <p className="text-base font-semibold">
+    <p className={`font-semibold ${className}`}>
       {rates.map(({ amount, unit }, index) => (
         // whitespace-nowrap keeps "$320.00 / week" together as one unit, so
         // a narrow card wraps between rates rather than orphaning "week"

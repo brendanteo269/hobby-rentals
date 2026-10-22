@@ -4,6 +4,7 @@ import { backendRequest } from "@/lib/api/client";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import { profilePath } from "@/lib/routes";
 import { EARNING_TYPES, mapWalletResponse, type TransactionType, type WalletTransaction } from "@/lib/wallet";
+import { Banknote } from "lucide-react";
 
 export const metadata = { title: "Earnings — HobbyRentals" };
 
@@ -33,7 +34,7 @@ export default async function OwnerEarningsPage() {
   return (
     <OwnerPortal active="Earnings" title="Earnings">
       {earnings.length === 0 ? (
-        <EmptyState
+        <EmptyState icon={Banknote}
           title="No earnings yet"
           body="A rental is paid out here once it is returned and its claim window passes with no damage reported."
           action={<ButtonLink href={profilePath("wallet")} variant="outline">Open wallet</ButtonLink>}

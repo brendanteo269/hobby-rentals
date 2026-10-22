@@ -3,6 +3,7 @@ import { FavouriteListingCard } from "@/components/listings/favourite-listing-ca
 import { getFavourites } from "@/lib/api/listings";
 import { FavouriteBundleCard } from "@/components/bundles/favourite-bundle-card";
 import { getFavouriteBundles } from "@/lib/api/bundles";
+import { Heart } from "lucide-react";
 
 export const metadata = { title: "Favourites — HobbyRentals" };
 
@@ -15,7 +16,7 @@ export default async function FavouritesPage() {
       <h1 className="heading mt-3 text-3xl">Favourites</h1>
       {empty ? (
         <div className="mt-8">
-          <EmptyState
+          <EmptyState icon={Heart}
             title="No favourites yet"
             body="Save listings you want to return to later."
             action={<ButtonLink href="/browse">Browse active listings</ButtonLink>}

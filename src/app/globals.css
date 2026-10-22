@@ -76,6 +76,16 @@ body {
   box-shadow: var(--shadow-card);
 }
 
+/* A card that is a link: lifts on hover so it reads as clickable. */
+@utility card-lift {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover);
+    border-color: var(--color-ink-soft);
+  }
+}
+
 @keyframes toast-in {
   from {
     opacity: 0;

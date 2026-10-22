@@ -16,6 +16,7 @@ import {
 } from "@/lib/browse-params";
 import type { BrowseListingsResponse } from "@/lib/listings";
 import { getCategoryDemandOverview } from "@/lib/api/analytics";
+import { CloudOff, SearchX, Tag } from "lucide-react";
 
 export const metadata = { title: "Browse marketplace — HobbyRentals" };
 
@@ -114,7 +115,7 @@ function resultSummary(total: number, error: string | null): string {
 function NoResults({ filters, error }: { filters: BrowseFilters; error: string | null }) {
   if (error) {
     return (
-      <EmptyState
+      <EmptyState icon={CloudOff}
         title="Listings could not be loaded"
         body="Something went wrong reaching the marketplace. Try again in a moment."
       />
@@ -123,7 +124,7 @@ function NoResults({ filters, error }: { filters: BrowseFilters; error: string |
 
   if (hasActiveFilters(filters)) {
     return (
-      <EmptyState
+      <EmptyState icon={SearchX}
         title="Nothing matches those filters"
         body="Try widening the dates, choosing another area, or searching for something broader."
         action={
@@ -136,7 +137,7 @@ function NoResults({ filters, error }: { filters: BrowseFilters; error: string |
   }
 
   return (
-    <EmptyState
+    <EmptyState icon={Tag}
       title="No listings yet"
       body="Nothing is available to rent right now. Be the first to list something."
       action={<ButtonLink href="/listings/new">Create a listing</ButtonLink>}

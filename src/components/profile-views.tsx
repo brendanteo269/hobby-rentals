@@ -3,6 +3,7 @@ import { EmptyState } from "./ui";
 import { profilePath, type ProfileView } from "@/lib/routes";
 import type { PublicMemberProfile } from "@/lib/reviews";
 import { PublishedReviewCard } from "@/components/reviews/published-review-card";
+import { CloudOff } from "lucide-react";
 
 export type { ProfileView } from "@/lib/routes";
 
@@ -40,7 +41,7 @@ export function ViewTabs({ active }: { active: ProfileView }) {
 export function RatingsView({ profile }: { profile: PublicMemberProfile | null }) {
   if (!profile) {
     return (
-      <EmptyState
+      <EmptyState icon={CloudOff}
         title="Ratings could not be loaded"
         body="Try refreshing this page in a moment."
       />

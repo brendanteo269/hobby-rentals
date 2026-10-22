@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { unstable_rethrow } from "next/navigation";
 import type { ReactNode } from "react";
-import type { Route } from "next";
-import { Badge, ButtonLink, EmptyState } from "@/components/ui";
+import { Badge, ButtonLink, EmptyState, StatTile } from "@/components/ui";
+import { CalendarClock, Hourglass, Lock, PackageCheck, ShoppingBag } from "lucide-react";
 import { EnableRentingPrompt, RenterPortal } from "@/components/renter-portal";
 import { ConfirmHandoverButton } from "@/components/bookings/confirm-handover-button";
 import { ConfirmReturnButton } from "@/components/bookings/confirm-return-button";
@@ -43,23 +43,25 @@ export default async function RentalsPage() {
       {suspension && <SuspensionBanner status={suspension} />}
       {!hasAnyBooking && waitlist.length === 0 ? (
         // Scenario 3.
-        <EmptyState
+        <EmptyState icon={ShoppingBag}
           title="You haven't rented anything yet"
           body="Find gear from people nearby. Your active and upcoming rentals will show here."
           action={<ButtonLink href="/browse">Browse the marketplace</ButtonLink>}
         />
       ) : (
         <div className="space-y-12">
-          <dl className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label="Active" value={String(active.length)} href={renterBookingsPath("active")} />
-            <Stat label="Upcoming" value={String(upcoming.length)} href={renterBookingsPath("upcoming")} />
-            <Stat label="Awaiting owner" value={String(pendingCount)} href={renterBookingsPath("requests")} />
-            <Stat
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatTile icon={PackageCheck} tone="success" label="Active" value={String(active.length)} detail="Out with you now" href={renterBookingsPath("active")} />
+            <StatTile icon={CalendarClock} tone="info" label="Upcoming" value={String(upcoming.length)} detail="Confirmed, not yet collected" href={renterBookingsPath("upcoming")} />
+            <StatTile icon={Hourglass} tone="warning" label="Awaiting owner" value={String(pendingCount)} detail="Requests not answered yet" href={renterBookingsPath("requests")} />
+            <StatTile
+              icon={Lock}
               label="Held in escrow"
               value={heldCents === null ? "—" : formatMoney(heldCents)}
+              detail="Comes back after each rental"
               href={profilePath("wallet")}
             />
-          </dl>
+          </div>
 
           <section aria-labelledby="actions-heading">
             <h2 id="actions-heading" className="heading text-xl">
@@ -118,14 +120,6 @@ async function heldInEscrow(): Promise<number | null> {
   }
 }
 
-function Stat({ label, value, href }: { label: string; value: string; href: Route }) {
-  return (
-    <Link href={href} className="block card p-4 transition-colors hover:border-ink">
-      <dt className="text-xs text-ink-soft">{label}</dt>
-      <dd className="heading mt-1 text-2xl">{value}</dd>
-    </Link>
-  );
-}
 
 /** The one control that settles an action item: a link, or the confirm button its booking row has too. */
 function ActionControl({ item }: { item: RenterActionItem }): ReactNode {

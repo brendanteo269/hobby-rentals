@@ -30,7 +30,7 @@ export function FavouriteBundleCard({ bundle }: { bundle: FavouriteBundle }) {
     </>
   );
   return (
-    <li className={`overflow-hidden card ${active ? "transition-colors hover:border-ink-soft" : "border-dashed bg-surface-muted"}`}>
+    <li className={`overflow-hidden card ${active ? "card-lift" : "border-dashed bg-surface-muted"}`}>
       {active ? <Link href={`/bundles/${bundle.id}`} className="block">{content}</Link> : <div>{content}</div>}
       <div className="flex justify-end border-t border-line px-3 py-1">
         <BundleFavouriteButton bundleId={bundle.id} initiallySaved initialCount={0} hideCount onRemoved={() => router.refresh()} />

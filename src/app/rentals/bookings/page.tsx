@@ -5,6 +5,7 @@ import { SuspensionBanner } from "@/components/bookings/suspension-banner";
 import { getRenterActivity } from "@/lib/api/rentals";
 import { isRentalFilter, matchesRentalFilter, RENTAL_FILTERS, type RentalFilter } from "@/lib/rentals";
 import { renterBookingsPath } from "@/lib/routes";
+import { SearchX, ShoppingBag } from "lucide-react";
 
 export const metadata = { title: "Bookings — HobbyRentals" };
 
@@ -40,7 +41,7 @@ export default async function RenterBookingsPage({ searchParams }: { searchParam
     <RenterPortal active="Bookings" title="Bookings">
       {suspension && <SuspensionBanner status={suspension} />}
       {!hasAnything ? (
-        <EmptyState
+        <EmptyState icon={ShoppingBag}
           title="You haven't rented anything yet"
           body="Listings you book will appear here, with collection dates and every step of the rental."
           action={<ButtonLink href="/browse">Browse the marketplace</ButtonLink>}
@@ -89,7 +90,7 @@ export default async function RenterBookingsPage({ searchParams }: { searchParam
             )}
 
             {filter && countUnder(filter) === 0 && (
-              <EmptyState
+              <EmptyState icon={SearchX}
                 title={filter === "waitlist" ? "You're not queueing for anything" : `No ${filterLabel!.toLowerCase()} bookings`}
                 body="Try another filter, or show all your bookings."
                 action={
