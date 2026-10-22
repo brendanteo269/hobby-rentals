@@ -6,6 +6,7 @@ import { CalendarClock, Hourglass, Lock, PackageCheck, ShoppingBag } from "lucid
 import { EnableRentingPrompt, RenterPortal } from "@/components/renter-portal";
 import { ConfirmHandoverButton } from "@/components/bookings/confirm-handover-button";
 import { ConfirmReturnButton } from "@/components/bookings/confirm-return-button";
+import { HandoverTracker } from "@/components/bookings/handover-tracker";
 import { SuspensionBanner } from "@/components/bookings/suspension-banner";
 import { backendRequest } from "@/lib/api/client";
 import { getRenterActivity } from "@/lib/api/rentals";
@@ -207,6 +208,17 @@ function RentalCardView({ card, nextAction }: { card: RentalCard; nextAction?: R
       </dl>
 
       {card.meetup && <p className="text-sm text-ink-soft">Meetup: {card.meetup}</p>}
+
+      {/* The same pickup progress the booking's row shows, so an upcoming
+          rental says how close it is to being collected. */}
+      {card.status === "CONFIRMED" && card.handover && (
+        <div className="border-t border-line pt-4">
+          <HandoverTracker
+            booking={{ start_date: card.startDate, end_date: card.endDate, handover_state: card.handover }}
+            viewer="renter"
+          />
+        </div>
+      )}
 
       <div className="mt-auto flex flex-wrap items-center justify-between gap-3">
         <Link href={card.detailsHref} className="text-sm font-medium text-ink underline underline-offset-4">

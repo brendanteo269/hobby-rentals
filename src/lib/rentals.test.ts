@@ -209,3 +209,16 @@ describe("renterActionItems", () => {
     expect(items.map((item) => item.title)).toEqual(["Take the return photos", "Rate the owner"]);
   });
 });
+
+describe("renterDashboard handover", () => {
+  it("carries a confirmed booking's handover state to its card, for the progress tracker", () => {
+    const handover_state = { inspection_status: "COMPLETED" as const, renter_confirmed_at: null, owner_confirmed_at: null };
+    const [card] = renterDashboard([booking("u1", "CONFIRMED", "2026-11-01", "2026-11-03", { handover_state })], []).upcoming;
+    expect(card.handover).toEqual(handover_state);
+  });
+
+  it("has no handover on a bundle's card", () => {
+    const [card] = renterDashboard([], [bundle("b1", "CONFIRMED", "2026-11-01", "2026-11-03")]).upcoming;
+    expect(card.handover).toBeNull();
+  });
+});

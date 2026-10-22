@@ -41,6 +41,12 @@ export type RentalCard = {
   overdueSince: string | null;
   /** S2-19: the agreed handover place and time, when one has been accepted. */
   meetup: string | null;
+  /**
+   * S3-02: where the pickup handover stands, for the card's progress tracker.
+   * Set on confirmed single bookings; null for bundles, whose handover is not
+   * tracked this way.
+   */
+  handover: Booking["handover_state"] | null;
 };
 
 export type RenterDashboard = {
@@ -73,6 +79,7 @@ function bookingCard(booking: Booking): RentalCard {
           .filter(Boolean)
           .join(", ")
       : null,
+    handover: booking.handover_state ?? null,
   };
 }
 
@@ -91,6 +98,7 @@ function bundleCard(booking: BundleBooking): RentalCard {
     depositCents: booking.deposit_cents ?? 0,
     overdueSince: null,
     meetup: null,
+    handover: null,
   };
 }
 
