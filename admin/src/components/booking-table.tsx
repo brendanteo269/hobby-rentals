@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Badge, EmptyState } from "./ui";
 import { ROUTES } from "@/lib/routes";
 import { formatDate, formatDateTime, formatMoney, shortId } from "@/lib/format";
-import { bookingStatusLabel, bookingStatusTone, type AdminBookingSummary } from "@/lib/bookings";
+import { bookingStatusLabel, bookingStatusTone, ESCROW_FILTER_LABELS, type AdminBookingSummary } from "@/lib/bookings";
 
 /**
  * Search results.
@@ -36,6 +36,7 @@ export function BookingTable({ bookings }: { bookings: AdminBookingSummary[] }) 
             <th scope="col" className="eyebrow px-6 py-3 font-normal">Start date</th>
             <th scope="col" className="eyebrow px-6 py-3 font-normal">End date</th>
             <th scope="col" className="eyebrow px-6 py-3 font-normal">Amount</th>
+            <th scope="col" className="eyebrow px-6 py-3 font-normal">Escrow</th>
             <th scope="col" className="eyebrow px-6 py-3 font-normal">Created</th>
           </tr>
         </thead>
@@ -69,6 +70,14 @@ export function BookingTable({ bookings }: { bookings: AdminBookingSummary[] }) 
               <td className="px-6 py-4 whitespace-nowrap text-ink-soft">{formatDate(booking.start_date)}</td>
               <td className="px-6 py-4 whitespace-nowrap text-ink-soft">{formatDate(booking.end_date)}</td>
               <td className="px-6 py-4 whitespace-nowrap">{formatMoney(booking.total_amount_cents)}</td>
+              <td className="px-6 py-4">
+                <span className="flex flex-wrap gap-1.5">
+                  <Badge tone={booking.hold_state === "HELD" ? "positive" : "neutral"}>
+                    {ESCROW_FILTER_LABELS[booking.hold_state as keyof typeof ESCROW_FILTER_LABELS] ?? booking.hold_state}
+                  </Badge>
+                  {booking.settlement_blocked && <Badge tone="critical">Blocked</Badge>}
+                </span>
+              </td>
               <td className="px-6 py-4 whitespace-nowrap text-ink-soft">{formatDateTime(booking.created_at)}</td>
             </tr>
           ))}

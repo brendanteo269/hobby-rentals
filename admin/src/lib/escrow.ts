@@ -70,7 +70,7 @@ export function holdStateTone(state: string): StatusTone {
   return HOLD_STATE_TONE[state as HoldState] ?? "neutral";
 }
 
-/** A row of admin_search_escrow_holds - one escrow record, with just enough to scan in a table. */
+/** One escrow record from admin_get_escrow_hold: a rental with its hold amounts, state and settlement-blocking claim. */
 export type AdminEscrowSummary = {
   /** BUNDLE records are keyed by a bundle booking id, not a booking id. */
   subject_type: "BOOKING" | "BUNDLE";
@@ -92,90 +92,6 @@ export type AdminEscrowSummary = {
   hold_state: string;
   settlement_blocked: boolean;
 };
-
-type SearchRow = AdminEscrowSummary & { total_count: number };
-
-export const PAGE_SIZE = 25;
-
-export type EscrowSearchResult = {
-  records: AdminEscrowSummary[];
-  total: number;
-  /** Null when the search succeeded. Surfaced rather than thrown so the page can stay up. */
-  error: string | null;
-};
-
-const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
-
-/** Singapore time, matching the backend's pickup-day rule and the portal's en-SG formatting. */
-const PORTAL_UTC_OFFSET = "+08:00";
-
-/** A yyyy-mm-dd picked in the portal, or null when blank or malformed (so a hand-edited URL cannot reach the RPC). */
-export function parseDateParam(value: string | undefined): string | null {
-  if (!value || !ISO_DAY.test(value)) return null;
-  return Number.isNaN(new Date(`${value}T00:00:00${PORTAL_UTC_OFFSET}`).getTime()) ? null : value;
-}
-
-/** Start of the given portal day, as the inclusive lower bound admin_search_escrow_holds expects. */
-function startOfDay(day: string): string {
-  return new Date(`${day}T00:00:00${PORTAL_UTC_OFFSET}`).toISOString();
-}
-
-/** Start of the day after `day`: the RPC's upper bound is exclusive, so the whole picked end day stays in range. */
-function startOfNextDay(day: string): string {
-  const next = new Date(`${day}T00:00:00${PORTAL_UTC_OFFSET}`);
-  next.setUTCDate(next.getUTCDate() + 1);
-  return next.toISOString();
-}
-
-/**
- * Finds escrow records by rental id, listing/bundle name, or renter/owner
- * name, email or account id, optionally narrowed to the days a rental was
- * created between `from` and `to` (both yyyy-mm-dd, inclusive).
- *
- * The matching happens in admin_search_escrow_holds, which re-checks
- * authorisation itself. A caller without the secret key gets an error and an
- * empty list, never a partial one.
- *
- * Call only behind requirePortalSession(): the client used here carries the
- * secret key and so satisfies that check unconditionally.
- */
-export async function searchEscrowHolds(
-  query: string,
-  from: string | null,
-  to: string | null,
-  page = 1,
-): Promise<EscrowSearchResult> {
-  const supabase = createAdminClient();
-
-  const call = (offset: number) =>
-    supabase.rpc("admin_search_escrow_holds", {
-      search: query,
-      date_from: from ? startOfDay(from) : null,
-      date_to: to ? startOfNextDay(to) : null,
-      result_limit: PAGE_SIZE,
-      result_offset: offset,
-    });
-
-  const { data, error } = await call((page - 1) * PAGE_SIZE);
-
-  if (error) {
-    console.error("Escrow search failed:", error.message);
-    return { records: [], total: 0, error: "Could not load escrow records." };
-  }
-
-  const rows = (data ?? []) as SearchRow[];
-  let total = rows[0]?.total_count ?? 0;
-
-  // Same "page past the end of the result set" handling as searchBookings:
-  // total_count rides on every row, so an empty page has nowhere to read it
-  // from unless page 1 is re-fetched just for that number.
-  if (rows.length === 0 && page > 1) {
-    const { data: firstPage, error: firstPageError } = await call(0);
-    if (!firstPageError) total = ((firstPage ?? []) as SearchRow[])[0]?.total_count ?? 0;
-  }
-
-  return { records: rows, total, error: null };
-}
 
 /** One wallet_transactions row tied to a rental's escrow. */
 export type EscrowLedgerRow = {

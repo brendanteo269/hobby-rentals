@@ -18,7 +18,8 @@ import { Badge, Container, DescriptionList, EmptyState, Panel } from "@/componen
 import { AuditTrail } from "@/components/audit-trail";
 import { HandoverDetailsPanel } from "@/components/handover-details-panel";
 import { HandoverResolveForm } from "@/components/handover-resolve-form";
-import { ESCROW_COMPONENT_LABELS, ESCROW_TYPE_LABELS } from "@/lib/escrow";
+import { BookingEscrowPanels } from "@/components/booking-escrow-panels";
+import { getEscrowRecordById } from "@/lib/escrow";
 
 export const metadata = { title: "Booking — HobbyRentals Admin" };
 
@@ -91,6 +92,9 @@ export default async function BookingDetailPage({
   // Only a confirmed, single booking whose start date and confirmation window have
   // passed without both parties confirming; the database holds the rule.
   const canResolveHandover = booking.status === "CONFIRMED" && (await isHandoverOverridable(id));
+
+  // The escrow, fold of the wallet ledger: a bundle component's is held on its bundle.
+  const escrowRecord = booking.bundle_booking_id ? null : await getEscrowRecordById(id);
 
   const { entries: auditEntries, total: auditTotal } = await getBookingAuditTrail(id, booking.renter_id, auditPage);
   const auditLastPage = Math.max(1, Math.ceil(auditTotal / AUDIT_PAGE_SIZE));
@@ -304,38 +308,9 @@ export default async function BookingDetailPage({
             )}
           </Panel>
 
-          <Panel
-            title="Escrow ledger"
-            description="Wallet holds and releases tied to this booking."
-            actions={
-              booking.escrowEntries.length > 0 && !booking.bundle_booking_id ? (
-                <Link href={ROUTES.escrowHold(booking.id)} className="text-sm underline underline-offset-4">
-                  View escrow record
-                </Link>
-              ) : undefined
-            }
-          >
-            {booking.escrowEntries.length === 0 ? (
-              <div className="-mx-6 -my-5">
-                <EmptyState title="No escrow activity" body="No hold has been placed for this booking." />
-              </div>
-            ) : (
-              <ul className="space-y-3">
-                {booking.escrowEntries.map((entry) => (
-                  <li key={entry.id} className="flex flex-wrap items-center justify-between gap-2 border-l-2 border-line pl-4">
-                    <div>
-                      <p className="text-sm font-medium">
-                        {ESCROW_TYPE_LABELS[entry.type] ?? entry.type}
-                        {entry.escrow_component && ` · ${ESCROW_COMPONENT_LABELS[entry.escrow_component as keyof typeof ESCROW_COMPONENT_LABELS] ?? entry.escrow_component}`}
-                      </p>
-                      <p className="mt-0.5 text-xs text-ink-soft">{formatDateTime(entry.created_at)} · {entry.status}</p>
-                    </div>
-                    <p className="text-sm font-medium">{formatMoney(Math.abs(entry.amount_cents))}</p>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Panel>
+          {!booking.bundle_booking_id && (
+            <BookingEscrowPanels record={escrowRecord} needsHandoverResolution={canResolveHandover} />
+          )}
         </div>
 
         <div className="space-y-6">

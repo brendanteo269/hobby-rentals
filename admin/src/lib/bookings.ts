@@ -71,6 +71,16 @@ export function paymentStatusTone(status: string | null): StatusTone {
   return PAYMENT_STATUS_TONE[status as PaymentStatus] ?? "neutral";
 }
 
+/** The escrow filter's options: a hold state, or settlement blocked by a dispute. */
+export const ESCROW_FILTERS = ["HELD", "SETTLED", "RELEASED", "NONE", "BLOCKED"] as const;
+export const ESCROW_FILTER_LABELS: Record<(typeof ESCROW_FILTERS)[number], string> = {
+  HELD: "Held in escrow",
+  SETTLED: "Settled",
+  RELEASED: "Released",
+  NONE: "No hold",
+  BLOCKED: "Settlement blocked",
+};
+
 /** A row of admin_search_bookings - one booking, with just enough of each party to show in a table. */
 export type AdminBookingSummary = {
   id: string;
@@ -87,6 +97,10 @@ export type AdminBookingSummary = {
   end_date: string;
   total_amount_cents: number;
   created_at: string;
+  /** HELD, SETTLED, RELEASED or NONE: where the booking's escrow stands. */
+  hold_state: string;
+  /** An open damage dispute is holding up settlement. */
+  settlement_blocked: boolean;
 };
 
 type SearchRow = AdminBookingSummary & { total_count: number };
@@ -120,6 +134,7 @@ export async function searchBookings(
   query: string,
   statuses: string[],
   page = 1,
+  holdStates: string[] = [],
 ): Promise<BookingSearchResult> {
   const supabase = createAdminClient();
 
@@ -128,6 +143,7 @@ export async function searchBookings(
     status_filter: statuses,
     result_limit: PAGE_SIZE,
     result_offset: (page - 1) * PAGE_SIZE,
+    hold_state_filter: holdStates,
   });
 
   if (error) {
@@ -147,6 +163,7 @@ export async function searchBookings(
       status_filter: statuses,
       result_limit: PAGE_SIZE,
       result_offset: 0,
+      hold_state_filter: holdStates,
     });
     if (!firstPageError) total = ((firstPage ?? []) as SearchRow[])[0]?.total_count ?? 0;
   }
