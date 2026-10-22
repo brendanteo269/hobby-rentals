@@ -17,3 +17,16 @@ export type OwnerVerification = {
 export function responseRatePercent(verification: Pick<OwnerVerification, "response_rate_bps">): number {
   return Math.floor(verification.response_rate_bps / 100);
 }
+
+/**
+ * Whether this owner has ever been asked to answer a booking request.
+ *
+ * With none, the rate is a vacuous 100% - nothing was asked, so nothing was
+ * missed. Shown as a percentage it would claim a perfect record the owner has
+ * not earned, so callers say "no requests yet" instead.
+ */
+export function hasAnsweredRequests(
+  verification: Pick<OwnerVerification, "answered_requests" | "missed_requests">,
+): boolean {
+  return verification.answered_requests + verification.missed_requests > 0;
+}

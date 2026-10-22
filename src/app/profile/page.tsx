@@ -7,7 +7,7 @@ import { getMyBookings } from "@/lib/api/bookings";
 import { getMySuspension } from "@/lib/api/overdue";
 import { getMyOwnerVerification } from "@/lib/api/verification";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
-import { responseRatePercent } from "@/lib/verification";
+import { hasAnsweredRequests, responseRatePercent } from "@/lib/verification";
 import { getMyBundleBookings } from "@/lib/api/bundles";
 import { getMyWaitlist } from "@/lib/api/waitlist";
 import { getReviewEligibility } from "@/lib/api/reviews";
@@ -104,11 +104,15 @@ export default async function ProfilePage({
         </Badge>
         <VerifiedOwnerBadge verified={verification?.verified} />
       </p>
-      {verification?.verified && (
+      {/* Shown whether or not the badge is held: on your own profile this is
+          progress towards it, not a verdict. */}
+      {verification && (
         <p className="body-copy mt-2 text-sm">
           {verification.completed_rentals} completed{" "}
-          {verification.completed_rentals === 1 ? "rental" : "rentals"} · You answered{" "}
-          {responseRatePercent(verification)}% of booking requests
+          {verification.completed_rentals === 1 ? "rental" : "rentals"} ·{" "}
+          {hasAnsweredRequests(verification)
+            ? `You answered ${responseRatePercent(verification)}% of booking requests`
+            : "No booking requests yet"}
         </p>
       )}
 
