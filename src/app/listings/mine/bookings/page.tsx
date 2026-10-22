@@ -39,7 +39,7 @@ export default async function OwnerBookingsPage() {
           {requests.length === 0 ? (
             <p className="body-copy mt-2">No requests are waiting on you. New ones appear here, soonest deadline first.</p>
           ) : (
-            <ul className="mt-4 divide-y divide-line border border-line bg-white">
+            <ul className="mt-4 divide-y divide-line card overflow-hidden">
               {requests.map((request) => (
                 <li key={request.id}>
                   <Link
@@ -70,7 +70,7 @@ export default async function OwnerBookingsPage() {
       ) : booked.length > 0 && (
         <ul className="space-y-4">
           {booked.map((listing) => (
-            <li key={listing.id} className="border border-line bg-white p-5">
+            <li key={listing.id} className="card p-5">
               <h2 className="text-base font-semibold uppercase tracking-wide">
                 <Link href={`/listings/${listing.id}`} className="hover:underline">{listing.name}</Link>
               </h2>

@@ -14,9 +14,9 @@ export const CONVERSATION_ROLE_LABELS: Record<ConversationRole, string> = {
 };
 
 /** Badge colour for the other party's role, so Owner and Renter read as visually distinct at a glance. */
-export const CONVERSATION_ROLE_BADGE_VARIANT: Record<ConversationRole, "dark" | "accent"> = {
+export const CONVERSATION_ROLE_BADGE_VARIANT: Record<ConversationRole, "dark" | "info"> = {
   OWNER: "dark",
-  RENTER: "accent",
+  RENTER: "info",
 };
 
 export type Conversation = {

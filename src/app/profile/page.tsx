@@ -84,7 +84,7 @@ export default async function ProfilePage({
         {user.email}
         {/* About the email address, not the owner. Named in full so it cannot
             be read as the Verified Owner badge beside it (S4-01). */}
-        <Badge variant={isVerified ? "dark" : "accent"}>
+        <Badge variant={isVerified ? "success" : "warning"}>
           {isVerified ? "Verified account" : "Pending verification"}
         </Badge>
         <VerifiedOwnerBadge verified={verification?.verified} />

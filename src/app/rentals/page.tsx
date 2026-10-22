@@ -68,7 +68,7 @@ export default async function RentalsPage() {
             {actions.length === 0 ? (
               <p className="body-copy mt-2">You&apos;re all caught up.</p>
             ) : (
-              <ul className="mt-4 divide-y divide-line border border-line bg-white">
+              <ul className="mt-4 divide-y divide-line card overflow-hidden">
                 {actions.map((item, index) => (
                   <li key={`${item.rowId ?? item.name}-${index}`} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                     <div className="min-w-0">
@@ -120,7 +120,7 @@ async function heldInEscrow(): Promise<number | null> {
 
 function Stat({ label, value, href }: { label: string; value: string; href: Route }) {
   return (
-    <Link href={href} className="block border border-line bg-white p-4 transition-colors hover:border-ink">
+    <Link href={href} className="block card p-4 transition-colors hover:border-ink">
       <dt className="text-xs text-ink-soft">{label}</dt>
       <dd className="heading mt-1 text-2xl">{value}</dd>
     </Link>

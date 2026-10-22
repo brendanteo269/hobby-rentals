@@ -58,7 +58,7 @@ export function PassportTimeline({ entries }: { entries: PassportEntry[] }) {
                   <li key={name}>
                     <a href={url} target="_blank" rel="noreferrer" className="block">
                       {/* eslint-disable-next-line @next/next/no-img-element -- S3 URL, possibly short-lived presigned */}
-                      <img src={url} alt={label} className="aspect-square w-full border border-line object-cover" />
+                      <img src={url} alt={label} className="aspect-square w-full rounded-xl border border-line object-cover" />
                     </a>
                     <p className="mt-1 text-xs text-ink-soft">{label}</p>
                   </li>

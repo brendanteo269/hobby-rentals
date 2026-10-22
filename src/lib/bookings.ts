@@ -197,12 +197,13 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
 };
 
 /**
- * Badge colour for a booking's status: green once the item is out or about to
- * be, red while it waits on the owner, neutral for everything that is over.
+ * Badge colour for a booking's status: amber while it waits on the owner,
+ * blue once confirmed and coming up, green while the item is out, neutral for
+ * everything that is over. Red is kept for problems, which are flagged apart.
  */
-export const BOOKING_STATUS_BADGE_VARIANT: Record<BookingStatus, "accent" | "success" | "neutral"> = {
-  PENDING: "accent",
-  CONFIRMED: "success",
+export const BOOKING_STATUS_BADGE_VARIANT: Record<BookingStatus, "warning" | "info" | "success" | "neutral"> = {
+  PENDING: "warning",
+  CONFIRMED: "info",
   DECLINED: "neutral",
   CANCELLED: "neutral",
   EXPIRED: "neutral",

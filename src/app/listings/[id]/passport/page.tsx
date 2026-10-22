@@ -48,7 +48,7 @@ export default async function PassportPage({ params }: { params: Promise<{ id: s
           </div>
         )}
 
-        <dl className="mt-8 grid gap-4 border border-line bg-white p-5 text-sm sm:grid-cols-2">
+        <dl className="mt-8 grid gap-4 card p-5 text-sm sm:grid-cols-2">
           <div>
             <dt className="eyebrow">Serial number</dt>
             <dd className="mt-1">{serialSummary(passport.serial_status, passport.serial_number)}</dd>

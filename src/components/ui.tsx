@@ -223,7 +223,7 @@ export function SelectField({
   );
 }
 
-type BadgeVariant = "neutral" | "accent" | "accent-strong" | "dark" | "success";
+type BadgeVariant = "neutral" | "accent" | "accent-strong" | "dark" | "success" | "warning" | "info";
 
 const badgeVariants: Record<BadgeVariant, string> = {
   neutral: "border border-line bg-white/95 text-ink",
@@ -232,6 +232,10 @@ const badgeVariants: Record<BadgeVariant, string> = {
   "accent-strong": "bg-accent text-white",
   dark: "bg-ink text-white",
   success: "bg-success-soft text-success",
+  // Waiting on someone, and coming up: calm states that are not problems, so
+  // they leave red for the ones that are.
+  warning: "bg-warning-soft text-warning",
+  info: "bg-info-soft text-info",
 };
 
 /** Small pill label — location tags, filter chips, marketing ribbons. */

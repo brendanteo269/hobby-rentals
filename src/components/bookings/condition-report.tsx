@@ -183,7 +183,7 @@ function AngleReport({ angle }: { angle: ScanAngle }) {
             {angle.findings.map((finding) => (
               <li
                 key={finding.number}
-                className="flex gap-3 border border-line px-3 py-2 text-sm"
+                className="flex gap-3 rounded-lg border border-line px-3 py-2 text-sm"
               >
                 <span className="font-semibold">{finding.number}</span>
                 <span>
@@ -216,10 +216,10 @@ function Photo({ url, caption }: { url: string | null; caption: string }) {
         <img
           src={url}
           alt={caption}
-          className="aspect-[4/3] w-full border border-line bg-surface-muted object-contain"
+          className="aspect-[4/3] w-full rounded-xl border border-line bg-surface-muted object-contain"
         />
       ) : (
-        <div className="flex aspect-[4/3] items-center justify-center border border-line bg-surface-muted text-xs text-ink-soft">
+        <div className="flex aspect-[4/3] items-center justify-center rounded-xl border border-line bg-surface-muted text-xs text-ink-soft">
           Not available
         </div>
       )}

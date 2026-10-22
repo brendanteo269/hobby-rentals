@@ -1,8 +1,11 @@
 @import "tailwindcss";
 
 @theme {
-  /* Neutrals carry the page; accent (red) is the only color. */
-  --color-surface-muted: #f6f5f2;
+  /* Neutrals carry the page and red is the brand. Red also marks anything
+     that needs attention; amber and blue below carry the calmer states, so
+     red is not spent on every status pill. */
+  --color-canvas: #faf9f7;
+  --color-surface-muted: #f4f2ee;
   --color-line: #e6e4e0;
   --color-ink: #17171a;
   --color-ink-soft: #6b7078;
@@ -17,19 +20,35 @@
   --color-success: #16a34a;
   --color-success-soft: #dcfce7;
 
+  /* Waiting on someone (a request with the owner, a pending review). */
+  --color-warning: #b45309;
+  --color-warning-soft: #fef3c7;
+  /* Coming up: confirmed and not started. */
+  --color-info: #1d4ed8;
+  --color-info-soft: #dbeafe;
+
+  /* The pricing panel's tint, which was referenced but never defined. */
+  --color-sand: #f6f1e7;
+
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-jakarta), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-card: 0 1px 2px rgb(23 23 26 / 0.04), 0 4px 16px -4px rgb(23 23 26 / 0.06);
+  --shadow-card-hover: 0 2px 4px rgb(23 23 26 / 0.05), 0 12px 28px -8px rgb(23 23 26 / 0.12);
 }
 
+/* Warm off-white rather than pure white, so the white cards sit on it
+   instead of dissolving into it. */
 body {
-  background: #ffffff;
+  background: var(--color-canvas);
   color: var(--color-ink);
 }
 
-/* Heading type: bold sans, sentence case. */
+/* Heading type: the display face, tight and sentence case. */
 @utility heading {
-  font-family: var(--font-sans);
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 /* Secondary prose. Used often enough that the three-class combination was
@@ -54,6 +73,7 @@ body {
   border-radius: 1rem;
   border: 1px solid var(--color-line);
   background-color: #fff;
+  box-shadow: var(--shadow-card);
 }
 
 @keyframes toast-in {

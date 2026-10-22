@@ -37,7 +37,7 @@ export default async function ProtectionPage({ params }: { params: Promise<{ id:
         <p className="body-copy mt-3">HobbyShield is a simulated, platform-administered protection plan for your listed gear.</p>
         <ButtonLink href={`/listings/${id}`} variant="outline" className="mt-5 px-4 py-2 text-xs">← Back to listing</ButtonLink>
         {policy ? (
-          <section className="mt-8 border border-line bg-white p-6">
+          <section className="mt-8 card p-6">
             <p className="eyebrow">{scheduled ? "HobbyShield renewal scheduled" : "HobbyShield active"}</p><h2 className="heading mt-2 text-xl">{policy.policy_number}</h2>
             {scheduled ? <><p className="body-copy mt-2">Your HobbyShield coverage is continuous until {formatSingaporeDateTime(scheduled.effective_to)}.</p><p className="mt-3 text-sm text-ink-soft">Your current term ends {formatSingaporeDateTime(policy.effective_to)}; your next term begins immediately and runs until {formatSingaporeDateTime(scheduled.effective_to)}.</p></> : <><p className="body-copy mt-2">Coverage of up to {formatMoney(policy.coverage_cap_cents)} is active until {formatSingaporeDateTime(policy.effective_to)}.</p>{days >= 0 && days <= 7 && <p className="mt-3 text-sm text-amber-800">Expires in {days} {days === 1 ? "day" : "days"}. Renew now to keep coverage continuous.</p>}</>}
             {days >= 0 && days <= 7 && !scheduled && <OwnerProtectionCard listingId={id} quote={quote} renewal renewalStartsAt={renewalStartsAt} renewalEndsAt={renewalEndsAt} />}

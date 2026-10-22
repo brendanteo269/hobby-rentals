@@ -98,7 +98,7 @@ export function ExtendBookingButton({ bookingId, endDate }: { bookingId: string;
                       if (Number.isInteger(next) && next >= 1 && next <= 90) priceFor(next);
                       else setDays(next);
                     }}
-                    className="mt-3 w-24 border border-line px-3 py-2"
+                    className="mt-3 w-24 rounded-lg border border-line px-3 py-2"
                   />
                 </div>
                 {quoting && <p className="text-ink-soft">Checking those days…</p>}

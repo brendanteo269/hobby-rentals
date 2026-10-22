@@ -55,7 +55,7 @@ export function RenterBookingList({
           <li
             key={booking.id}
             id={rentalRowId("BUNDLE", booking.id)}
-            className="flex scroll-mt-24 flex-wrap items-center justify-between gap-3 border border-line bg-white p-4 data-[hash-target]:border-ink data-[hash-target]:ring-1 data-[hash-target]:ring-ink"
+            className="flex scroll-mt-24 flex-wrap items-center justify-between gap-3 card p-4 data-[hash-target]:border-ink data-[hash-target]:ring-1 data-[hash-target]:ring-ink"
           >
             <div>
               <Link href={`/bundles/${booking.bundle_id}`} className="font-medium hover:underline">
@@ -95,7 +95,7 @@ export function RenterBookingList({
           <li
             key={booking.id}
             id={rentalRowId("BOOKING", booking.id)}
-            className="flex scroll-mt-24 flex-wrap items-start justify-between gap-3 border border-line bg-white p-4 data-[hash-target]:border-ink data-[hash-target]:ring-1 data-[hash-target]:ring-ink"
+            className="flex scroll-mt-24 flex-wrap items-start justify-between gap-3 card p-4 data-[hash-target]:border-ink data-[hash-target]:ring-1 data-[hash-target]:ring-ink"
           >
             <div className="min-w-0 flex-1 basis-72">
               <Link href={`/listings/${booking.listing_id}`} className="font-medium hover:underline">

@@ -24,7 +24,7 @@ export function ScanChecklist({ scan }: { scan: ConditionScan }) {
           attention.
         </p>
       </div>
-      <div className="overflow-x-auto border border-line">
+      <div className="overflow-x-auto rounded-xl border border-line">
         <table className="w-full min-w-[40rem] text-left text-sm">
           <thead className="bg-surface-muted text-xs uppercase tracking-wide text-ink-soft">
             <tr>

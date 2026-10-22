@@ -33,7 +33,7 @@ export function ExtensionRequestDecision({ request }: { request: ExtensionReques
   }
 
   return (
-    <div className="mt-2 w-full border border-line bg-white px-3 py-2">
+    <div className="mt-2 w-full card px-3 py-2">
       <p className="text-sm text-ink">
         <span className="font-medium">Extension requested:</span> {request.additional_days} more{" "}
         {request.additional_days === 1 ? "day" : "days"}, to {formatDate(request.new_end_date)}.

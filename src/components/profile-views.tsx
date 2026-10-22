@@ -79,7 +79,7 @@ export function RatingsView({ profile }: { profile: PublicMemberProfile | null }
 
 function RatingSummary({ label, average, count }: { label: string; average: number | null; count: number }) {
   return (
-    <div className="border border-line bg-white p-4">
+    <div className="card p-4">
       <p className="text-xs text-ink-soft">{label}</p>
       <p className="heading mt-1 text-xl">
         {average === null ? "No ratings yet" : `${average.toFixed(1)} / 5`}

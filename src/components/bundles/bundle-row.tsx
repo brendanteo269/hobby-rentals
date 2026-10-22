@@ -13,10 +13,10 @@ import {
 } from "@/lib/bundles";
 import { LISTING_STATUS_LABELS } from "@/lib/listings";
 
-/** ACTIVE is the one status that should stand out; UNPUBLISHED wants attention. */
-const STATUS_BADGE_VARIANT: Record<BundleStatus, "neutral" | "accent" | "dark"> = {
-  ACTIVE: "dark",
-  UNPUBLISHED: "accent",
+/** Live in green, unpublished in amber (it wants the owner's attention, but nothing is wrong). */
+const STATUS_BADGE_VARIANT: Record<BundleStatus, "neutral" | "warning" | "success"> = {
+  ACTIVE: "success",
+  UNPUBLISHED: "warning",
   REMOVED: "neutral",
 };
 
@@ -36,7 +36,7 @@ export function BundleRow({
   const unavailable = bundle.items.filter((item) => item.status !== "ACTIVE");
 
   return (
-    <li className="border border-line bg-white p-5">
+    <li className="card p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="eyebrow">

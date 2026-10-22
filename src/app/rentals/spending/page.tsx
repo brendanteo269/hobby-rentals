@@ -69,7 +69,7 @@ export default async function RenterSpendingPage({ searchParams }: { searchParam
         ) : (
           <ul className="mt-4 space-y-3">
             {rentals.map((rental) => (
-              <li key={rental.key} className="border border-line bg-white p-4">
+              <li key={rental.key} className="card p-4">
                 <div className="flex flex-wrap items-baseline justify-between gap-3">
                   <div>
                     {rental.rowId ? (
@@ -110,7 +110,7 @@ export default async function RenterSpendingPage({ searchParams }: { searchParam
 
 function Figure({ label, value, detail }: { label: string; value: string; detail: string }) {
   return (
-    <div className="border border-line bg-white p-5">
+    <div className="card p-5">
       <dt className="text-sm font-semibold text-ink">{label}</dt>
       <dd className="heading mt-3 text-3xl">{value}</dd>
       <dd className="mt-2 text-xs text-ink-soft">{detail}</dd>

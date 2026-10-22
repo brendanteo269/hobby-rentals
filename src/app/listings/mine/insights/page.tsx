@@ -23,7 +23,7 @@ export default async function OwnerInsightsPage({ searchParams }: { searchParams
       {insights ? (
         <OwnerInsightsDashboard insights={insights} listings={listings} />
       ) : (
-        <p className="border border-line bg-surface-muted p-4 text-sm text-ink-soft">
+        <p className="rounded-xl border border-line bg-surface-muted p-4 text-sm text-ink-soft">
           Insights are temporarily unavailable. Please try again shortly.
         </p>
       )}

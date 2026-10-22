@@ -62,7 +62,7 @@ export function ReportEvidence({ report }: { report: UserReport }) {
           ) : (
             // Embedded, so a long conversation scrolls inside its own box instead
             // of lengthening the page. View only: it is the record, not a thread.
-            <div className="mt-3 border border-line bg-surface-muted">
+            <div className="mt-3 rounded-xl border border-line bg-surface-muted">
               <p className="border-b border-line bg-white px-4 py-2 text-xs text-ink-soft">
                 {report.messages.length} message{report.messages.length === 1 ? "" : "s"} · view only
               </p>

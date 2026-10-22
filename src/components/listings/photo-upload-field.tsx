@@ -204,7 +204,7 @@ export function PhotoUploadField({
   }
 
   return (
-    <fieldset className="border border-line bg-white p-5">
+    <fieldset className="card p-5">
       <legend className="px-2 text-sm font-medium">
         Photos
         <RequiredMark />
@@ -221,12 +221,12 @@ export function PhotoUploadField({
             photo.key === recroppingKey ? (
               <li
                 key={photo.key}
-                className="flex aspect-square items-center justify-center border border-dashed border-line bg-surface-muted text-xs text-ink-soft"
+                className="flex aspect-square items-center justify-center rounded-xl border border-dashed border-line bg-surface-muted text-xs text-ink-soft"
               >
                 Saving…
               </li>
             ) : (
-              <li key={photo.key} className="group relative aspect-square overflow-hidden border border-line">
+              <li key={photo.key} className="group relative aspect-square overflow-hidden rounded-xl border border-line">
                 {/* eslint-disable-next-line @next/next/no-img-element -- a local blob: URL or a short-lived presigned S3 URL; neither is an optimizable remote image */}
                 <img src={photo.previewUrl} alt="" className="h-full w-full object-cover" />
                 <div className="absolute right-1 top-1 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
@@ -255,7 +255,7 @@ export function PhotoUploadField({
           {uploading.map((slot) => (
             <li
               key={slot.id}
-              className="flex aspect-square items-center justify-center border border-dashed border-line bg-surface-muted text-xs text-ink-soft"
+              className="flex aspect-square items-center justify-center rounded-xl border border-dashed border-line bg-surface-muted text-xs text-ink-soft"
             >
               Uploading…
             </li>

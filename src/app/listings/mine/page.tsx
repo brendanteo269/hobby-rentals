@@ -159,13 +159,14 @@ export default async function MyListingsPage({ searchParams }: { searchParams: P
 }
 
 /**
- * Status -> emphasis on a listing row: ACTIVE is the one status that should
- * visually stand out, PENDING_REMOVAL gets the accent used for anything that
- * needs the owner's attention, and every other status is a plain neutral pill.
+ * Status -> emphasis on a listing row: ACTIVE is live and green,
+ * PENDING_REMOVAL and the admin and suspension states get the red used for
+ * anything that needs the owner's attention, and every other status is a
+ * plain neutral pill.
  */
-const STATUS_BADGE_VARIANT: Record<Listing["status"], "neutral" | "accent" | "dark"> = {
+const STATUS_BADGE_VARIANT: Record<Listing["status"], "neutral" | "accent" | "success"> = {
   DRAFT: "neutral",
-  ACTIVE: "dark",
+  ACTIVE: "success",
   ARCHIVED: "neutral",
   PENDING_REMOVAL: "accent",
   REMOVED: "neutral",
@@ -220,7 +221,7 @@ function ListingRow({ listing, bookings, history, policies }: { listing: OwnerLi
       ? { status: "Publish the listing to promote", tone: "muted" }
       : { status: "Not promoted", tone: "muted", action: <ButtonLink href={`/listings/${listing.id}/promotion`} variant="outline" className={tileButton}>Promote</ButtonLink> };
   return (
-    <li className="border border-line bg-white p-5">
+    <li className="card p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="eyebrow">{CATEGORY_LABELS[listing.category]} · {LOCATION_LABELS[listing.location_area]}</p>
@@ -284,7 +285,7 @@ const ADD_ON_TONE: Record<AddOnState["tone"], string> = {
 /** One paid add-on (HobbyShield, promotion) on a listing row: what it is, where it stands, and the one next step. */
 function AddOnTile({ icon: Icon, title, status, tone, action }: AddOnState & { icon: LucideIcon; title: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 border border-line bg-surface-muted px-4 py-3">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-muted px-4 py-3">
       <div className="flex min-w-0 items-center gap-3">
         <Icon className="h-5 w-5 shrink-0 text-ink" aria-hidden />
         <div className="min-w-0">

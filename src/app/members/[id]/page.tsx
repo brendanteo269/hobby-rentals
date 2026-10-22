@@ -7,7 +7,7 @@ import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { hasAnsweredRequests, responseRatePercent } from "@/lib/verification";
 
 function Rating({ label, summary }: { label: string; summary: { average: number | null; count: number } }) {
-  return <div className="border border-line bg-white p-4"><p className="text-xs text-ink-soft">{label}</p><p className="heading mt-1 text-xl">{summary.average === null ? "No ratings yet" : `${summary.average.toFixed(1)} / 5`}</p><p className="mt-1 text-xs text-ink-soft">{summary.count} {summary.count === 1 ? "review" : "reviews"}</p></div>;
+  return <div className="card p-4"><p className="text-xs text-ink-soft">{label}</p><p className="heading mt-1 text-xl">{summary.average === null ? "No ratings yet" : `${summary.average.toFixed(1)} / 5`}</p><p className="mt-1 text-xs text-ink-soft">{summary.count} {summary.count === 1 ? "review" : "reviews"}</p></div>;
 }
 
 export default async function MemberPage({ params }: { params: Promise<{ id: string }> }) {

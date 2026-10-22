@@ -40,7 +40,7 @@ export default async function OwnerEarningsPage() {
         />
       ) : (
         <div>
-          <div className="flex flex-wrap items-baseline justify-between gap-4 border border-line bg-white p-6">
+          <div className="flex flex-wrap items-baseline justify-between gap-4 card p-6">
             <div>
               <p className="eyebrow">Paid to your wallet</p>
               <p className="heading mt-2 text-3xl">{formatMoney(total)}</p>
@@ -51,7 +51,7 @@ export default async function OwnerEarningsPage() {
           </div>
           <ul className="mt-6 space-y-2">
             {earnings.map((tx) => (
-              <li key={tx.id} className="flex flex-wrap items-center justify-between gap-3 border border-line bg-white px-4 py-3 text-sm">
+              <li key={tx.id} className="flex flex-wrap items-center justify-between gap-3 card px-4 py-3 text-sm">
                 <div>
                   <p className="font-medium">{EARNING_LABELS[tx.type] ?? tx.type}</p>
                   <p className="mt-1 text-ink-soft">{tx.description}</p>

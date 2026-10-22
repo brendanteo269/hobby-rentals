@@ -14,7 +14,7 @@ export function ListingPromotionCard({ listingId, quote }: { listingId: string; 
   if (!quote.eligible) return <FormNotice message={quote.reason ?? "This listing cannot be promoted."} />;
   const shortfall = quote.wallet_shortfall_cents ?? 0;
   return (
-    <section className="mt-8 border border-line bg-white p-6">
+    <section className="mt-8 card p-6">
       <h2 className="heading text-xl">Promote this listing</h2>
       <p className="body-copy mt-2">Appear above similar listings in search, with a &ldquo;Promoted&rdquo; badge.</p>
       <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-2">

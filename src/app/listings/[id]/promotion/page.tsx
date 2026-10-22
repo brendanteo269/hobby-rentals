@@ -29,7 +29,7 @@ export default async function PromotionPage({ params }: { params: Promise<{ id: 
         <p className="body-copy mt-3">Get more renters to see your gear for a fixed fee, paid from your wallet.</p>
         <ButtonLink href={`/listings/${id}`} variant="outline" className="mt-5 px-4 py-2 text-xs">← Back to listing</ButtonLink>
         {quote.promoted_until ? (
-          <section className="mt-8 border border-line bg-white p-6">
+          <section className="mt-8 card p-6">
             <p className="eyebrow">Promotion active</p>
             <h2 className="heading mt-2 text-xl">Promoted until {formatSingaporeDateTime(quote.promoted_until)}</h2>
             <p className="body-copy mt-2">You can promote this listing again once the current promotion ends.</p>

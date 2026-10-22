@@ -75,7 +75,7 @@ export function RebuttalForm({ bookingId, onCancel }: { bookingId: string; onCan
           disabled={isPending}
           onChange={(event) => setRebuttal(event.target.value)}
           placeholder="Explain your reasons."
-          className="mt-2 w-full border border-line px-3 py-2 text-sm"
+          className="mt-2 w-full rounded-lg border border-line px-3 py-2 text-sm"
         />
       </div>
 
@@ -87,7 +87,7 @@ export function RebuttalForm({ bookingId, onCancel }: { bookingId: string; onCan
           <ul className="mt-2 flex flex-wrap gap-2">
             {photos.map((photo) => (
               <li key={photo.key} className="relative">
-                <Image src={photo.previewUrl} alt="" width={72} height={72} unoptimized className="h-18 w-18 border border-line object-cover" />
+                <Image src={photo.previewUrl} alt="" width={72} height={72} unoptimized className="h-18 w-18 rounded-xl border border-line object-cover" />
                 <button
                   type="button"
                   onClick={() => setPhotos((current) => current.filter((p) => p.key !== photo.key))}
