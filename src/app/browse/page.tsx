@@ -1,5 +1,6 @@
 import { Container, ButtonLink, EmptyState } from "@/components/ui";
 import { Pagination } from "@/components/pagination";
+import { MarketplaceHeader } from "@/components/browse/marketplace-header";
 import { ListingFilters } from "@/components/browse/listing-filters";
 import { ActiveFilters } from "@/components/browse/active-filters";
 import { ListingCard } from "@/components/browse/listing-card";
@@ -16,7 +17,7 @@ import {
 import type { BrowseListingsResponse } from "@/lib/listings";
 import { getCategoryDemandOverview } from "@/lib/api/analytics";
 
-export const metadata = { title: "Browse listings — HobbyRentals" };
+export const metadata = { title: "Browse marketplace — HobbyRentals" };
 
 export default async function BrowsePage({
   searchParams,
@@ -31,10 +32,9 @@ export default async function BrowsePage({
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   return (
-    <Container className="py-16">
-      <p className="eyebrow">Marketplace</p>
-      <h1 className="heading mt-3 text-3xl">Browse listings</h1>
-      <div className="mt-8">
+    <Container className="pb-16 pt-10">
+      <MarketplaceHeader active="items" filters={filters} activeCount={error ? null : total} />
+      <div className="mt-5">
         {/* Keyed on the applied filters: its inputs are uncontrolled (defaultValue/defaultChecked), so
             without a remount, removing a filter chip would leave the old value in the form for the next Apply. */}
         <ListingFilters key={JSON.stringify(filters)} filters={filters} highDemandCategories={[...highDemandCategories]} />

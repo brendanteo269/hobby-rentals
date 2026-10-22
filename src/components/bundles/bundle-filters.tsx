@@ -1,5 +1,6 @@
-import { Button, Input } from "@/components/ui";
 import { FilterSelect } from "@/components/browse/filter-select";
+import { DateRangeFilter } from "@/components/browse/date-range-filter";
+import { SearchBar } from "@/components/browse/filter-bar";
 import type { BundleBrowseFilters } from "@/lib/bundle-browse-params";
 import { CATEGORIES, CATEGORY_LABELS, LOCATION_AREAS, LOCATION_LABELS } from "@/lib/listings";
 
@@ -19,7 +20,7 @@ import { CATEGORIES, CATEGORY_LABELS, LOCATION_AREAS, LOCATION_LABELS } from "@/
  */
 export function BundleFilters({ filters }: { filters: BundleBrowseFilters }) {
   return (
-    <form method="get" action="/bundles" role="search" className="card p-5">
+    <form method="get" action="/bundles" role="search">
       {/* Filters already applied ride along as hidden fields, so submitting
           the keyword box narrows the current view instead of resetting it. */}
       {filters.category.map((value) => (
@@ -29,23 +30,10 @@ export function BundleFilters({ filters }: { filters: BundleBrowseFilters }) {
         <input key={value} type="hidden" name="location_area" value={value} />
       ))}
 
-      <div className="flex flex-wrap items-end gap-3">
-        <div className="min-w-56 flex-1">
-          <label htmlFor="q" className="block text-sm font-medium">
-            Search bundles
-          </label>
-          <Input
-            id="q"
-            name="q"
-            type="search"
-            defaultValue={filters.q}
-            placeholder="Bundle name, or an item inside it"
-            autoComplete="off"
-            className="mt-2"
-          />
-        </div>
+      <SearchBar label="Search bundles" placeholder="Search bundles by name, or an item inside one" defaultValue={filters.q} />
 
-        <FilterSelect id="category" label="Contains" placeholder="Any category">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <FilterSelect id="category" label="Contains a category" placeholder="Contains">
           {CATEGORIES.map((value) => (
             <option key={value} value={value}>
               {CATEGORY_LABELS[value]}
@@ -53,32 +41,19 @@ export function BundleFilters({ filters }: { filters: BundleBrowseFilters }) {
           ))}
         </FilterSelect>
 
-        <FilterSelect id="location_area" label="Area" placeholder="Anywhere">
+        <FilterSelect id="location_area" label="Collection area" placeholder="Area">
           {LOCATION_AREAS.map((value) => (
             <option key={value} value={value}>
               {LOCATION_LABELS[value]}
             </option>
           ))}
         </FilterSelect>
-      </div>
 
-      <div className="mt-4 flex flex-wrap items-end gap-3 border-t border-line pt-4">
-        <div className="min-w-40">
-          <label htmlFor="start_date" className="block text-sm font-medium">
-            From
-          </label>
-          <Input id="start_date" name="start_date" type="date" defaultValue={filters.start_date} className="mt-2" />
-        </div>
-        <div className="min-w-40">
-          <label htmlFor="end_date" className="block text-sm font-medium">
-            Until
-          </label>
-          <Input id="end_date" name="end_date" type="date" defaultValue={filters.end_date} className="mt-2" />
-        </div>
-        <p className="body-copy min-w-48 flex-1 pb-2.5">
-          Give both dates to show only bundles whose every item is free for all of them.
-        </p>
-        <Button type="submit">Apply</Button>
+        <DateRangeFilter
+          start={filters.start_date}
+          end={filters.end_date}
+          hint="Give both dates to show only bundles whose every item is free for all of them."
+        />
       </div>
     </form>
   );
