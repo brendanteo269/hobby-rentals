@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { RENTALS_PATH, RENTER_BOOKINGS_PATH } from "@/lib/routes";
 import { BackendApiError } from "@/lib/api/client";
 import {
   completeReturnInspection,
@@ -52,7 +53,7 @@ export async function completeInspection(
   const outcome = await attempt(() => completeReturnInspection(inspectionId, stage));
   if ("error" in outcome) return outcome;
   revalidatePath(`/bookings/${bookingId}/${stage}`);
-  revalidatePath("/profile");
+  revalidatePath(RENTALS_PATH); revalidatePath(RENTER_BOOKINGS_PATH);
   return { inspection: outcome.value };
 }
 
@@ -63,7 +64,7 @@ export async function completeInspection(
 export async function confirmReturn(bookingId: string): Promise<ConfirmReturnResult> {
   try {
     const confirmation = await confirmBookingReturn(bookingId);
-    revalidatePath("/profile");
+    revalidatePath(RENTALS_PATH); revalidatePath(RENTER_BOOKINGS_PATH);
     revalidatePath(`/bookings/${bookingId}/return`);
     return { confirmation };
   } catch (error) {

@@ -19,7 +19,7 @@ import { loginNotice } from "@/lib/session-policy";
 import {
   authErrorPath,
   checkEmailPath,
-  defaultProfileView,
+  defaultDashboardPath,
   isProfileView,
   loginPath,
   profilePath,
@@ -169,21 +169,21 @@ describe("requiresOnboarding", () => {
   );
 });
 
-describe("defaultProfileView", () => {
-  it("sends an owner-only member to the owning side", () => {
-    expect(defaultProfileView({ wantsToRent: false, wantsToOwn: true })).toBe("owner");
+describe("defaultDashboardPath", () => {
+  it("sends an owner-only member to their listings", () => {
+    expect(defaultDashboardPath({ wantsToRent: false, wantsToOwn: true })).toBe("/listings/mine");
   });
 
-  it("sends renters, and members who do both, to the renting side", () => {
-    expect(defaultProfileView({ wantsToRent: true, wantsToOwn: false })).toBe("renter");
-    expect(defaultProfileView({ wantsToRent: true, wantsToOwn: true })).toBe("renter");
+  it("sends renters, and members who do both, to their rentals", () => {
+    expect(defaultDashboardPath({ wantsToRent: true, wantsToOwn: false })).toBe("/rentals");
+    expect(defaultDashboardPath({ wantsToRent: true, wantsToOwn: true })).toBe("/rentals");
   });
 });
 
 describe("profilePath", () => {
   it("builds a path per panel, and a bare one with no view", () => {
     expect(profilePath()).toBe("/profile");
-    expect(profilePath("owner")).toBe("/profile?view=owner");
+    expect(profilePath("account")).toBe("/profile?view=account");
   });
 
   it("round-trips through isProfileView", () => {
@@ -195,6 +195,9 @@ describe("profilePath", () => {
 
   it("rejects a view that is not a panel", () => {
     expect(isProfileView("admin")).toBe(false);
+    // Renting and owning moved to their portals; /profile forwards them.
+    expect(isProfileView("renter")).toBe(false);
+    expect(isProfileView("owner")).toBe(false);
     expect(isProfileView(undefined)).toBe(false);
   });
 });

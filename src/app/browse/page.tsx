@@ -1,6 +1,5 @@
 import { Container, ButtonLink, EmptyState } from "@/components/ui";
 import { Pagination } from "@/components/pagination";
-import { RenterPortal, isRenting } from "@/components/renter-portal";
 import { ListingFilters } from "@/components/browse/listing-filters";
 import { ActiveFilters } from "@/components/browse/active-filters";
 import { ListingCard } from "@/components/browse/listing-card";
@@ -26,15 +25,16 @@ export default async function BrowsePage({
 }) {
   const filters = parseBrowseFilters(await searchParams);
   const { data, error } = await loadListings(filters);
-  const renting = await isRenting();
   const highDemandCategories = new Set((await getCategoryDemandOverview().catch(() => [])).filter((category) => category.is_high_demand).map((category) => category.category));
 
   const total = data?.total_count ?? 0;
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-  const results = (
-    <>
-      <div>
+  return (
+    <Container className="py-16">
+      <p className="eyebrow">Marketplace</p>
+      <h1 className="heading mt-3 text-3xl">Browse listings</h1>
+      <div className="mt-8">
         {/* Keyed on the applied filters: its inputs are uncontrolled (defaultValue/defaultChecked), so
             without a remount, removing a filter chip would leave the old value in the form for the next Apply. */}
         <ListingFilters key={JSON.stringify(filters)} filters={filters} highDemandCategories={[...highDemandCategories]} />
@@ -66,22 +66,6 @@ export default async function BrowsePage({
         lastPage={lastPage}
         hrefForPage={(page) => browsePageHref(filters, page)}
       />
-    </>
-  );
-
-  if (renting) {
-    return (
-      <RenterPortal active="Browse" title="Browse listings">
-        {results}
-      </RenterPortal>
-    );
-  }
-
-  return (
-    <Container className="py-16">
-      <p className="eyebrow">Marketplace</p>
-      <h1 className="heading mt-3 text-3xl">Browse listings</h1>
-      <div className="mt-8">{results}</div>
     </Container>
   );
 }

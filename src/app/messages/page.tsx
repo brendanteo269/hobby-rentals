@@ -3,6 +3,8 @@ import { MessagesShell } from "@/components/messages/messages-shell";
 import { ConversationList } from "@/components/messages/conversation-list";
 import { getMyConversations } from "@/lib/api/conversations";
 
+export const metadata = { title: "Messages — HobbyRentals" };
+
 export default async function MessagesPage() {
   const conversations = await getMyConversations();
 

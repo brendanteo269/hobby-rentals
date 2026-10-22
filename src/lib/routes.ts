@@ -16,6 +16,9 @@
  */
 
 import type { LoginNoticeReason } from "@/lib/session-policy";
+import type { InsightsPeriod } from "@/lib/owner-insights";
+import type { RentalFilter } from "@/lib/rentals";
+import type { SpendingPeriod } from "@/lib/spending";
 
 /** The login screen, optionally explaining why the member has landed there. */
 export function loginPath(
@@ -51,37 +54,78 @@ export function authErrorPath(code: AuthErrorCode): `/auth-error?reason=${AuthEr
  * The panels of the profile page, which are also the legal values of its
  * `?view=` parameter — hence living here rather than beside the tab markup.
  *
- * "renter" and "owner" are the two portal dashboards S1-02 sends a member to
- * once onboarding is done.
+ * Renting and owning are not panels: each lives in its own portal (My rentals,
+ * My listings), so the profile is only about the member themselves.
  */
-export type ProfileView = "renter" | "owner" | "ratings" | "wallet" | "account";
+export type ProfileView = "ratings" | "wallet" | "account";
 
-const PROFILE_VIEWS: readonly ProfileView[] = ["renter", "owner", "ratings", "wallet", "account"];
+const PROFILE_VIEWS: readonly ProfileView[] = ["ratings", "wallet", "account"];
 
 export function isProfileView(value: string | undefined): value is ProfileView {
   return PROFILE_VIEWS.includes(value as ProfileView);
 }
 
+/** The panel /profile opens on when no `?view=` names one. */
+export const DEFAULT_PROFILE_VIEW: ProfileView = "ratings";
+
+/** The profile page, optionally opened on a particular panel. */
+export function profilePath(view?: ProfileView): "/profile" | `/profile?view=${ProfileView}` {
+  return view ? `/profile?view=${view}` : "/profile";
+}
+
 /**
- * Which side of the marketplace to show a member by default.
- *
- * Someone who only owns lands on owning; everyone else — renters, and members
- * who do both — lands on renting. Used both to resolve an absent `?view=` and
- * to choose where onboarding sends them, so the two cannot disagree.
+ * The renter portal's home, the overview of what needs doing. Also where a
+ * member who has not switched renting on is offered to.
  */
-export function defaultProfileView({
+export const RENTALS_PATH = "/rentals";
+
+/**
+ * Every booking the renter has made, with its actions. Each row's id is what a
+ * notification's "#booking-<id>" fragment scrolls to, so those links land here.
+ */
+export const RENTER_BOOKINGS_PATH = "/rentals/bookings";
+
+/** The Bookings tab, optionally showing only one kind of booking. */
+export function renterBookingsPath(
+  filter?: RentalFilter,
+): typeof RENTER_BOOKINGS_PATH | `${typeof RENTER_BOOKINGS_PATH}?show=${RentalFilter}` {
+  return filter ? `${RENTER_BOOKINGS_PATH}?show=${filter}` : RENTER_BOOKINGS_PATH;
+}
+
+/** What renting has cost the member, from the wallet ledger, optionally over a particular period. */
+export function renterSpendingPath(
+  period?: SpendingPeriod,
+): "/rentals/spending" | `/rentals/spending?period=${SpendingPeriod}` {
+  return period ? `/rentals/spending?period=${period}` : "/rentals/spending";
+}
+
+/**
+ * The owner portal's home, the inventory. Also where a member who has not
+ * switched owning on is offered to.
+ */
+export const MY_LISTINGS_PATH = "/listings/mine";
+
+/** The owner portal's insights tab, optionally over a particular period. */
+export function ownerInsightsPath(
+  period?: InsightsPeriod,
+): "/listings/mine/insights" | `/listings/mine/insights?period=${InsightsPeriod}` {
+  return period ? `/listings/mine/insights?period=${period}` : "/listings/mine/insights";
+}
+
+/**
+ * Which portal to send a member to once onboarding is done.
+ *
+ * Someone who only owns lands on their listings; everyone else — renters, and
+ * members who do both — lands on their rentals.
+ */
+export function defaultDashboardPath({
   wantsToRent,
   wantsToOwn,
 }: {
   wantsToRent: boolean;
   wantsToOwn: boolean;
-}): ProfileView {
-  return wantsToOwn && !wantsToRent ? "owner" : "renter";
-}
-
-/** The profile page, optionally opened on a particular panel. */
-export function profilePath(view?: ProfileView): "/profile" | `/profile?view=${ProfileView}` {
-  return view ? `/profile?view=${view}` : "/profile";
+}): typeof RENTALS_PATH | typeof MY_LISTINGS_PATH {
+  return wantsToOwn && !wantsToRent ? MY_LISTINGS_PATH : RENTALS_PATH;
 }
 
 /** First-run setup. */

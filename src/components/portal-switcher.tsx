@@ -1,20 +1,20 @@
 import Link from "next/link";
-import { getOwnProfile } from "@/lib/profile";
+import { MY_LISTINGS_PATH, RENTALS_PATH } from "@/lib/routes";
 
 const PORTALS = [
-  { side: "renter", href: "/rentals", label: "Renting" },
-  { side: "owner", href: "/listings/mine", label: "Owning" },
+  { side: "renter", href: RENTALS_PATH, label: "Renting" },
+  { side: "owner", href: MY_LISTINGS_PATH, label: "Owning" },
 ] as const;
 
 /**
- * S3-13 Scenario 4: moves a member who both rents and owns between the two
- * portals. Plain links: the session cookie goes with them, so nobody signs in
- * again. Renders nothing for a member with only one side switched on.
+ * S3-13 Scenario 4: moves a member between the two halves of My dashboard.
+ * Plain links: the session cookie goes with them, so nobody signs in again.
+ *
+ * Shown to every member, not only those who do both: the header has one
+ * "My dashboard" link, so this is the only way to the other side, and each
+ * portal's home offers to switch that side on for a member who has not.
  */
-export async function PortalSwitcher({ active }: { active: "renter" | "owner" }) {
-  const profile = await getOwnProfile();
-  if (!profile?.wants_to_rent || !profile.wants_to_own) return null;
-
+export function PortalSwitcher({ active }: { active: "renter" | "owner" }) {
   return (
     <nav aria-label="Switch portal" className="inline-flex rounded-full bg-surface-muted p-1">
       {PORTALS.map((portal) => {

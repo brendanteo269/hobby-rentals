@@ -29,9 +29,9 @@ export type Roles = { wantsToRent: boolean; wantsToOwn: boolean };
 
 /**
  * The pickup-location rule, shared by every path that can make someone an
- * owner — onboarding, the Account tab, and "Start listing" on the profile's
- * Owning tab. A path that skipped it would produce an owner with nowhere to
- * hand gear over.
+ * owner — onboarding, the Account tab, and "Start listing" on My listings.
+ * A path that skipped it would produce an owner with nowhere to hand gear
+ * over.
  */
 export function validatePickupLocation(location: string): string | null {
   if (!location) return "Choose where you would usually hand gear over.";

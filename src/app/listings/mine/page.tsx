@@ -2,13 +2,14 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { Megaphone, ShieldCheck, type LucideIcon } from "lucide-react";
 import { Badge, ButtonLink, EmptyState } from "@/components/ui";
-import { OwnerPortal, requireOwner } from "@/components/owner-portal";
+import { EnableOwningPrompt, OwnerPortal } from "@/components/owner-portal";
 import { ListingLifecycleActions } from "@/components/listings/listing-lifecycle-actions";
 import { BundleRow } from "@/components/bundles/bundle-row";
 import { getListingHistory, getMyListings, type ListingHistory } from "@/lib/api/listings";
 import { getBundleEvents, getMyBundles, getOwnerBundleBookings } from "@/lib/api/bundles";
 import { getOwnerBookings } from "@/lib/api/bookings";
 import { getMyHobbyShieldPolicies } from "@/lib/api/owner-protection";
+import { getOwnProfile } from "@/lib/profile";
 import { formatDate, formatMoney } from "@/lib/format";
 import { daysUntilExpiry, policyIsCurrent, type HobbyShieldPolicy } from "@/lib/owner-protection";
 import {
@@ -38,9 +39,13 @@ export const metadata = { title: "My listings — HobbyRentals" };
  * section below. The status filter above applies to items only - a bundle
  * carries its own, different set of statuses - so the two sections are
  * labelled rather than left to run together.
+ *
+ * The other owner pages send a member who has not switched owning on here, so
+ * this is the one that offers to, rather than calling requireOwner.
  */
 export default async function MyListingsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
-  await requireOwner();
+  const profile = await getOwnProfile();
+  if (!profile?.wants_to_own) return <EnableOwningPrompt />;
   const { status } = await searchParams;
   const filter = status && status in LISTING_STATUS_LABELS ? (status as ListingStatus) : undefined;
   const [allListings, bookings, bundles, bundleBookings, protectionPolicies] = await Promise.all([
@@ -154,10 +159,9 @@ export default async function MyListingsPage({ searchParams }: { searchParams: P
 }
 
 /**
- * Same status -> emphasis mapping OwnerListingCard uses (profile-views.tsx):
- * ACTIVE is the one status that should visually stand out, PENDING_REMOVAL
- * gets the accent used for anything that needs the owner's attention, and
- * every other status is a plain neutral pill.
+ * Status -> emphasis on a listing row: ACTIVE is the one status that should
+ * visually stand out, PENDING_REMOVAL gets the accent used for anything that
+ * needs the owner's attention, and every other status is a plain neutral pill.
  */
 const STATUS_BADGE_VARIANT: Record<Listing["status"], "neutral" | "accent" | "dark"> = {
   DRAFT: "neutral",
