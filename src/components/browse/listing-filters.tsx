@@ -79,6 +79,15 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
 
         <DateRangeFilter start={filters.start_date} end={filters.end_date} />
 
+        <label className="inline-flex h-10 items-center gap-2 rounded-full border border-line bg-white px-4 text-sm text-ink">
+          <span className="sr-only">Minimum daily price</span>
+          <span className="text-ink-soft">S$</span>
+          <input name="min_price" type="number" min="0" step="0.01" defaultValue={filters.min_price} placeholder="Min/day" className="w-20 bg-transparent outline-none placeholder:text-ink-soft" />
+          <span className="text-ink-soft">–</span>
+          <span className="sr-only">Maximum daily price</span>
+          <input name="max_price" type="number" min="0" step="0.01" defaultValue={filters.max_price} placeholder="Max/day" className="w-20 bg-transparent outline-none placeholder:text-ink-soft" />
+        </label>
+
         {/* A toggle, unlike the selects, so it shows its applied state and
             unticking it clears it. The box itself is visually hidden; the
             pill around it is what changes. */}

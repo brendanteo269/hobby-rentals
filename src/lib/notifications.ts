@@ -63,6 +63,7 @@ export type NotificationType =
   // one lifecycle change the owner did not initiate themselves.
   | "LISTING_DEACTIVATED"
   | "LISTING_REACTIVATED"
+  | "SAVED_SEARCH_MATCH"
   // S3-21: the owner's listing was reported and is under review.
   | "LISTING_REPORTED_OWNER"
   | "ACCOUNT_REPORTED"
@@ -181,6 +182,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   MEETUP_ACCEPTED: "Meetup confirmed",
   LISTING_DEACTIVATED: "Listing deactivated",
   LISTING_REACTIVATED: "Listing reactivated",
+  SAVED_SEARCH_MATCH: "Saved search match",
   HOBBYSHIELD_EXPIRING_7_DAYS: "HobbyShield expires in seven days",
   HOBBYSHIELD_EXPIRING_3_DAYS: "HobbyShield expires in three days",
   HOBBYSHIELD_EXPIRING_TODAY: "HobbyShield expires today",

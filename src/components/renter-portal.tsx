@@ -4,7 +4,7 @@ import { Button, EmptyState } from "@/components/ui";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { enableRenting } from "@/app/profile/actions";
 import { getOwnProfile, type Profile } from "@/lib/profile";
-import { RENTALS_PATH, RENTER_BOOKINGS_PATH, renterSpendingPath } from "@/lib/routes";
+import { RENTALS_PATH, RENTER_BOOKINGS_PATH, SAVED_SEARCHES_PATH, renterSpendingPath } from "@/lib/routes";
 import { ShoppingBag } from "lucide-react";
 
 // Only what is about renting: Browse is in the site nav, and the wallet and
@@ -13,6 +13,7 @@ const SECTIONS = [
   { href: RENTALS_PATH, label: "Overview" },
   { href: RENTER_BOOKINGS_PATH, label: "Bookings" },
   { href: renterSpendingPath(), label: "Spending" },
+  { href: SAVED_SEARCHES_PATH, label: "Saved searches" },
 ] as const;
 
 export type RenterSection = (typeof SECTIONS)[number]["label"];

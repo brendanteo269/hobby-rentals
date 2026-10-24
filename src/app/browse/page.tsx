@@ -17,6 +17,7 @@ import {
 import type { BrowseListingsResponse } from "@/lib/listings";
 import { getCategoryDemandOverview } from "@/lib/api/analytics";
 import { CloudOff, SearchX, Tag } from "lucide-react";
+import { SaveSearchButton } from "@/components/saved-searches/save-search-button";
 
 export const metadata = { title: "Browse marketplace — HobbyRentals" };
 
@@ -46,7 +47,10 @@ export default async function BrowsePage({
       </div>
 
       <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-        <ResultsSort filters={filters} />
+        <div className="flex flex-wrap items-center gap-3">
+          <SaveSearchButton filters={filters} />
+          <ResultsSort filters={filters} />
+        </div>
         <p className="body-copy" aria-live="polite">{resultSummary(total, error)}</p>
       </div>
 
@@ -92,6 +96,8 @@ async function loadListings(
       start_date: filters.start_date || undefined,
       end_date: filters.end_date || undefined,
       verified_only: filters.verified,
+      min_daily_price: filters.min_price || undefined,
+      max_daily_price: filters.max_price || undefined,
       origin_lat: filters.origin_lat ?? undefined,
       origin_lng: filters.origin_lng ?? undefined,
       radius_km: filters.radius_km ?? undefined,
@@ -126,11 +132,12 @@ function NoResults({ filters, error }: { filters: BrowseFilters; error: string |
     return (
       <EmptyState icon={SearchX}
         title="Nothing matches those filters"
-        body="Try widening the dates, choosing another area, or searching for something broader."
+        body="Try widening the dates, choosing another area, or searching for something broader. You can also save this search and we’ll alert you when matching gear arrives."
         action={
-          <ButtonLink href="/browse" variant="outline">
-            Clear all filters
-          </ButtonLink>
+          <div className="flex flex-wrap justify-center gap-3">
+            <SaveSearchButton filters={filters} prominent />
+            <ButtonLink href="/browse" variant="outline">Clear all filters</ButtonLink>
+          </div>
         }
       />
     );
