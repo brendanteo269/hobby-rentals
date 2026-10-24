@@ -65,6 +65,12 @@ export function ActiveFilters({ filters }: { filters: BrowseFilters }) {
     chips.push({ key: "verified", label: "Serial verified", href: without({ verified: false }) });
   }
 
+  if (filters.min_price || filters.max_price) {
+    const min = filters.min_price ? `S$${filters.min_price}` : "Any";
+    const max = filters.max_price ? `S$${filters.max_price}` : "Any";
+    chips.push({ key: "price", label: `${min} – ${max} / day`, href: without({ min_price: "", max_price: "" }) });
+  }
+
   // The two dates only filter as a pair, so they are removed as one chip —
   // clearing just the end date would silently stop the whole date filter.
   if (filters.start_date || filters.end_date) {

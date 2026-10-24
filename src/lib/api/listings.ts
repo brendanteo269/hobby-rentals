@@ -54,6 +54,8 @@ export type BrowseListingsParams = {
   end_date?: string;
   /** S2-30: serial-verified listings only. */
   verified_only?: boolean;
+  min_daily_price?: string;
+  max_daily_price?: string;
   origin_lat?: number;
   origin_lng?: number;
   radius_km?: number;
@@ -78,6 +80,8 @@ function browseQuery(params: BrowseListingsParams): string {
   if (params.start_date) search.set("start_date", params.start_date);
   if (params.end_date) search.set("end_date", params.end_date);
   if (params.verified_only) search.set("verified_only", "true");
+  if (params.min_daily_price) search.set("min_daily_price", params.min_daily_price);
+  if (params.max_daily_price) search.set("max_daily_price", params.max_daily_price);
   if (params.origin_lat !== undefined && params.origin_lng !== undefined && params.radius_km !== undefined) {
     search.set("origin_lat", String(params.origin_lat));
     search.set("origin_lng", String(params.origin_lng));

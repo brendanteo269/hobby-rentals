@@ -79,6 +79,9 @@ export function profilePath(view?: ProfileView): "/profile" | `/profile?view=${P
  */
 export const RENTALS_PATH = "/rentals";
 
+/** Immutable marketplace searches a renter has saved for discovery alerts. */
+export const SAVED_SEARCHES_PATH = "/rentals/saved-searches";
+
 /**
  * Every booking the renter has made, with its actions. Each row's id is what a
  * notification's "#booking-<id>" fragment scrolls to, so those links land here.

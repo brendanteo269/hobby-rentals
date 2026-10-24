@@ -24,3 +24,12 @@ describe("radius browse parameters", () => {
     });
   });
 });
+
+describe("daily price browse parameters", () => {
+  it("keeps valid daily price bounds in the URL and drops invalid ones", () => {
+    const filters = parseBrowseFilters({ min_price: "12.50", max_price: "40" });
+    expect(filters).toMatchObject({ min_price: "12.5", max_price: "40" });
+    expect(browseHref(filters)).toContain("min_price=12.5");
+    expect(parseBrowseFilters({ min_price: "-1", max_price: "nope" })).toMatchObject({ min_price: "", max_price: "" });
+  });
+});
