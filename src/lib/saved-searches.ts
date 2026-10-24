@@ -22,11 +22,13 @@ export function savedCriteriaFromBrowse(filters: BrowseFilters) {
     verified_only: filters.verified,
     min_daily_price: filters.min_price || null,
     max_daily_price: filters.max_price || null,
+    origin_lat: filters.origin_lat,
+    origin_lng: filters.origin_lng,
   };
 }
 
 export function hasSavedCriteria(filters: BrowseFilters): boolean {
-  return Boolean(filters.q || filters.category.length || filters.condition.length || filters.location_area.length || filters.verified || filters.min_price || filters.max_price);
+  return Boolean(filters.q || filters.category.length || filters.condition.length || filters.location_area.length || filters.origin_lat !== null || filters.verified || filters.min_price || filters.max_price);
 }
 
 export function savedSearchLabel(criteria: SavedSearchCriteria): string {

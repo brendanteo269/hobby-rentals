@@ -5,6 +5,7 @@ import { useTransition } from "react";
 import { saveSearch } from "@/app/saved-searches/actions";
 import { useToast } from "@/components/toast";
 import { hasSavedCriteria, savedCriteriaFromBrowse } from "@/lib/saved-searches";
+import { LOCATION_LABELS } from "@/lib/listings";
 import type { BrowseFilters } from "@/lib/browse-params";
 
 export function SaveSearchButton({ filters, prominent = false }: { filters: BrowseFilters; prominent?: boolean }) {
@@ -15,7 +16,11 @@ export function SaveSearchButton({ filters, prominent = false }: { filters: Brow
     startTransition(async () => {
       const result = await saveSearch(savedCriteriaFromBrowse(filters));
       if ("error" in result) show(result.error, "error");
-      else show(result.created ? "Search saved. We’ll alert you when a listing matches." : "This search is already saved.");
+      else {
+        const area = result.search.criteria.location_area[0];
+        const areaNote = filters.origin_lat !== null && filters.location_area.length === 0 && area ? ` Saved for ${LOCATION_LABELS[area as keyof typeof LOCATION_LABELS] ?? area}.` : "";
+        show(result.created ? `Search saved. We’ll alert you when a listing matches.${areaNote}` : "This search is already saved.");
+      }
     });
   }
   return <button type="button" disabled={!enabled || pending} onClick={save} title={enabled ? undefined : "Add a keyword or supported filter to save this search."} className={`inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-medium transition-colors disabled:cursor-not-allowed ${prominent ? "bg-accent text-white hover:bg-accent-dark disabled:bg-surface-muted disabled:text-ink-soft" : "border border-line bg-white text-ink hover:border-ink disabled:text-ink-soft"}`}>
