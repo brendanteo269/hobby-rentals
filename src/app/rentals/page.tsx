@@ -1,69 +1,157 @@
 import Link from "next/link";
-import { Badge, ButtonLink, EmptyState } from "@/components/ui";
-import { RenterPortal, requireRenter } from "@/components/renter-portal";
-import { getMyBookings } from "@/lib/api/bookings";
-import { getMyBundleBookings } from "@/lib/api/bundles";
+import { unstable_rethrow } from "next/navigation";
+import type { ReactNode } from "react";
+import { Badge, ButtonLink, EmptyState, StatTile } from "@/components/ui";
+import { CalendarClock, Hourglass, Lock, PackageCheck, ShoppingBag } from "lucide-react";
+import { EnableRentingPrompt, RenterPortal } from "@/components/renter-portal";
+import { ConfirmHandoverButton } from "@/components/bookings/confirm-handover-button";
+import { ConfirmReturnButton } from "@/components/bookings/confirm-return-button";
+import { HandoverTracker } from "@/components/bookings/handover-tracker";
+import { SuspensionBanner } from "@/components/bookings/suspension-banner";
+import { backendRequest } from "@/lib/api/client";
+import { getRenterActivity } from "@/lib/api/rentals";
 import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_LABELS } from "@/lib/bookings";
 import { formatDate, formatMoney } from "@/lib/format";
-import { renterDashboard, type RentalCard } from "@/lib/rentals";
-import { profilePath } from "@/lib/routes";
+import { getOwnProfile } from "@/lib/profile";
+import { renterActionItems, renterDashboard, type RentalCard, type RenterActionItem } from "@/lib/rentals";
+import { profilePath, renterBookingsPath } from "@/lib/routes";
+import { mapWalletResponse } from "@/lib/wallet";
 
 export const metadata = { title: "My rentals — HobbyRentals" };
 
 /**
- * S3-13: the renter's dashboard - what they have out now and what they are
- * about to collect. The full history, and every action on a booking, stays on
- * the profile's Renting tab, which each card links to.
+ * S3-13: the renter's overview - what is waiting on them, what they have out
+ * now and what they are about to collect. The full history, with every action
+ * on a booking, is the Bookings tab, which each card links to.
+ *
+ * The other renter pages send a member who has not switched renting on here,
+ * so this is the one that offers to, rather than calling requireRenter.
  */
 export default async function RentalsPage() {
-  await requireRenter();
-  const [bookings, bundleBookings] = await Promise.all([getMyBookings(), getMyBundleBookings()]);
+  const profile = await getOwnProfile();
+  if (!profile?.wants_to_rent) return <EnableRentingPrompt />;
+
+  const [activity, heldCents] = await Promise.all([
+    getRenterActivity(),
+    heldInEscrow(),
+  ]);
+  const { bookings, bundleBookings, waitlist, suspension } = activity;
   const { active, upcoming, pendingCount, hasAnyBooking } = renterDashboard(bookings, bundleBookings);
+  const actions = renterActionItems(activity);
 
   return (
-    <RenterPortal active="My Rentals" title="My rentals">
-      {active.length === 0 && upcoming.length === 0 ? (
+    <RenterPortal active="Overview" title="My rentals">
+      {suspension && <SuspensionBanner status={suspension} />}
+      {!hasAnyBooking && waitlist.length === 0 ? (
         // Scenario 3.
-        <EmptyState
-          title={hasAnyBooking ? "Nothing rented right now" : "You haven't rented anything yet"}
-          body={
-            hasAnyBooking
-              ? "Your active and upcoming rentals show here. Find something for your next session."
-              : "Find gear from people nearby. Your active and upcoming rentals will show here."
-          }
+        <EmptyState icon={ShoppingBag}
+          title="You haven't rented anything yet"
+          body="Find gear from people nearby. Your active and upcoming rentals will show here."
           action={<ButtonLink href="/browse">Browse the marketplace</ButtonLink>}
         />
       ) : (
         <div className="space-y-12">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            <StatTile icon={PackageCheck} tone="success" label="Active" value={String(active.length)} detail="Out with you now" href={renterBookingsPath("active")} />
+            <StatTile icon={CalendarClock} tone="info" label="Upcoming" value={String(upcoming.length)} detail="Confirmed, not yet collected" href={renterBookingsPath("upcoming")} />
+            <StatTile icon={Hourglass} tone="warning" label="Awaiting owner" value={String(pendingCount)} detail="Requests not answered yet" href={renterBookingsPath("requests")} />
+            <StatTile
+              icon={Lock}
+              label="Held in escrow"
+              value={heldCents === null ? "—" : formatMoney(heldCents)}
+              detail="Comes back after each rental"
+              href={profilePath("wallet")}
+            />
+          </div>
+
+          <section aria-labelledby="actions-heading">
+            <h2 id="actions-heading" className="heading text-xl">
+              Needs your action
+            </h2>
+            {actions.length === 0 ? (
+              <p className="body-copy mt-2">You&apos;re all caught up.</p>
+            ) : (
+              <ul className="mt-4 divide-y divide-line card overflow-hidden">
+                {actions.map((item, index) => (
+                  <li key={`${item.rowId ?? item.name}-${index}`} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium">
+                        {item.title}
+                        <span className="font-normal text-ink-soft"> · {item.name}</span>
+                      </p>
+                      {item.detail && (
+                        <p className={`mt-0.5 text-xs ${item.urgent ? "text-accent-dark" : "text-ink-soft"}`}>{item.detail}</p>
+                      )}
+                    </div>
+                    <ActionControl item={item} />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
           <RentalSection
             id="active"
             title="Active rentals"
             empty="Nothing is out with you right now."
             cards={active}
+            actions={actions}
           />
           <RentalSection
             id="upcoming"
             title="Upcoming rentals"
             empty="No confirmed rentals coming up."
             cards={upcoming}
+            actions={actions}
           />
         </div>
-      )}
-
-      {(pendingCount > 0 || hasAnyBooking) && (
-        <p className="body-copy mt-10 text-sm">
-          {pendingCount > 0 &&
-            `${pendingCount} ${pendingCount === 1 ? "request is" : "requests are"} waiting on an owner. `}
-          <Link href={profilePath("renter")} className="font-medium text-ink underline underline-offset-4">
-            See all your bookings
-          </Link>
-        </p>
       )}
     </RenterPortal>
   );
 }
 
-function RentalSection({ id, title, empty, cards }: { id: string; title: string; empty: string; cards: RentalCard[] }) {
+/** What the renter has on hold, or null when the wallet cannot be read: a hiccup there costs the one figure, not the page. */
+async function heldInEscrow(): Promise<number | null> {
+  try {
+    return mapWalletResponse(await backendRequest("/wallet", { cache: "no-store" })).heldCents;
+  } catch (error) {
+    // A redirect (the session ended) is Next's control flow, not a failure.
+    unstable_rethrow(error);
+    return null;
+  }
+}
+
+
+/** The one control that settles an action item: a link, or the confirm button its booking row has too. */
+function ActionControl({ item }: { item: RenterActionItem }): ReactNode {
+  const { action } = item;
+  if (action.kind !== "link") {
+    return action.kind === "confirm-handover" ? (
+      <ConfirmHandoverButton bookingId={action.bookingId} />
+    ) : (
+      <ConfirmReturnButton bookingId={action.bookingId} />
+    );
+  }
+  return (
+    <ButtonLink href={action.href} variant={item.urgent ? "accent" : "outline"} className="px-3 py-1.5 text-xs">
+      {action.label}
+    </ButtonLink>
+  );
+}
+
+function RentalSection({
+  id,
+  title,
+  empty,
+  cards,
+  actions,
+}: {
+  id: string;
+  title: string;
+  empty: string;
+  cards: RentalCard[];
+  actions: RenterActionItem[];
+}) {
   return (
     <section aria-labelledby={`${id}-heading`}>
       <h2 id={`${id}-heading`} className="heading text-xl">
@@ -75,7 +163,7 @@ function RentalSection({ id, title, empty, cards }: { id: string; title: string;
         <ul className="mt-4 grid gap-4 md:grid-cols-2">
           {cards.map((card) => (
             <li key={`${card.kind}-${card.id}`}>
-              <RentalCardView card={card} />
+              <RentalCardView card={card} nextAction={actions.find((item) => item.rowId === card.rowId)} />
             </li>
           ))}
         </ul>
@@ -84,7 +172,7 @@ function RentalSection({ id, title, empty, cards }: { id: string; title: string;
   );
 }
 
-function RentalCardView({ card }: { card: RentalCard }) {
+function RentalCardView({ card, nextAction }: { card: RentalCard; nextAction?: RenterActionItem }) {
   const fallbackName = card.kind === "BUNDLE" ? "Bundle" : "Listing";
 
   return (
@@ -119,9 +207,25 @@ function RentalCardView({ card }: { card: RentalCard }) {
         </div>
       </dl>
 
-      <Link href={card.detailsHref} className="mt-auto text-sm font-medium text-ink underline underline-offset-4">
-        View booking
-      </Link>
+      {card.meetup && <p className="text-sm text-ink-soft">Meetup: {card.meetup}</p>}
+
+      {/* The same pickup progress the booking's row shows, so an upcoming
+          rental says how close it is to being collected. */}
+      {card.status === "CONFIRMED" && card.handover && (
+        <div className="border-t border-line pt-4">
+          <HandoverTracker
+            booking={{ start_date: card.startDate, end_date: card.endDate, handover_state: card.handover }}
+            viewer="renter"
+          />
+        </div>
+      )}
+
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-3">
+        <Link href={card.detailsHref} className="text-sm font-medium text-ink underline underline-offset-4">
+          View booking
+        </Link>
+        {nextAction && <ActionControl item={nextAction} />}
+      </div>
     </article>
   );
 }

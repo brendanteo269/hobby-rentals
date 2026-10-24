@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { RENTALS_PATH, RENTER_BOOKINGS_PATH } from "@/lib/routes";
 import { joinWaitlist, leaveWaitlist, WaitlistApiError } from "@/lib/api/waitlist";
 import type { WaitlistEntry } from "@/lib/waitlist";
 
@@ -16,7 +17,7 @@ export type WaitlistActionResult = { error: string } | { entry: WaitlistEntry };
 async function run(action: () => Promise<WaitlistEntry>): Promise<WaitlistActionResult> {
   try {
     const entry = await action();
-    revalidatePath("/profile");
+    revalidatePath(RENTALS_PATH); revalidatePath(RENTER_BOOKINGS_PATH);
     revalidatePath(`/listings/${entry.listing_id}`);
     return { entry };
   } catch (error) {

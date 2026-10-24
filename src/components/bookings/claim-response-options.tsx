@@ -59,7 +59,7 @@ export function ClaimResponseOptions({
   }
 
   return (
-    <section aria-labelledby="claim-response-heading" className="space-y-3 border border-line px-4 py-4">
+    <section aria-labelledby="claim-response-heading" className="space-y-3 rounded-xl border border-line px-4 py-4">
       <h2 id="claim-response-heading" className="heading text-xl">
         {disputing ? "Renter dispute form submission" : "Your response"}
       </h2>

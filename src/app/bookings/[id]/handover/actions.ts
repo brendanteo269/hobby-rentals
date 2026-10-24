@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { RENTALS_PATH, RENTER_BOOKINGS_PATH } from "@/lib/routes";
 import { BackendApiError } from "@/lib/api/client";
 import { confirmBookingHandover } from "@/lib/api/handover";
 import type { HandoverConfirmation } from "@/lib/handover";
@@ -16,7 +17,7 @@ export type ConfirmHandoverResult = { error: string; code?: string } | { confirm
 export async function confirmHandover(bookingId: string): Promise<ConfirmHandoverResult> {
   try {
     const confirmation = await confirmBookingHandover(bookingId);
-    revalidatePath("/profile");
+    revalidatePath(RENTALS_PATH); revalidatePath(RENTER_BOOKINGS_PATH);
     revalidatePath("/listings/mine/bookings");
     return { confirmation };
   } catch (error) {

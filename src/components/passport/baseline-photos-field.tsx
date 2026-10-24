@@ -64,7 +64,7 @@ export function BaselinePhotosField({ error }: { error?: string }) {
                   {label}
                   <RequiredMark />
                 </span>
-                <span className="mt-2 flex aspect-square items-center justify-center overflow-hidden border border-dashed border-line bg-surface-muted text-xs text-ink-soft">
+                <span className="mt-2 flex aspect-square items-center justify-center overflow-hidden rounded-xl border border-dashed border-line bg-surface-muted text-xs text-ink-soft">
                   {slot === "uploading" ? (
                     "Uploading…"
                   ) : slot ? (

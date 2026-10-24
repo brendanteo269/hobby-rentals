@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { ownerInsightsPath } from "@/lib/routes";
 import { BackendApiError } from "@/lib/api/client";
 import { purchaseListingPromotion } from "@/lib/api/listing-promotions";
 
@@ -16,6 +17,6 @@ export async function buyListingPromotion(listingId: string, _previous: { error?
   revalidatePath(`/listings/${listingId}`);
   revalidatePath("/listings/mine");
   revalidatePath("/browse");
-  revalidatePath("/profile");
+  revalidatePath(ownerInsightsPath());
   return { purchased: true };
 }

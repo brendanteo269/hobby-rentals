@@ -16,7 +16,7 @@ export function PublishedReviewCard({ review, showRental = true }: { review: Pub
   const rentalName = rental?.name ?? review.rental_name_snapshot;
 
   return (
-    <article className="border border-line bg-white p-4">
+    <article className="card p-4">
       <div className="flex min-w-0 items-start gap-2">
           <PersonAvatar name={reviewerName} size="md" />
           <div className="min-w-0">

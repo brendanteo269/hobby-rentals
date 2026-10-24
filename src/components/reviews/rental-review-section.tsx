@@ -18,7 +18,7 @@ export function RentalReviewSection({
       <h2 className="heading text-lg">{title}</h2>
       {reviews.count === 0 ? (
         <div className="mt-5">
-          <EmptyState title="No reviews yet" body={emptyBody} />
+          <EmptyState icon={Star} title="No reviews yet" body={emptyBody} />
         </div>
       ) : (
         <>

@@ -46,7 +46,7 @@ export default async function ConditionReportPage({ params }: { params: Promise<
     );
   } else if (booking.status === "ACTIVE") {
     action = (
-      <p className="body-copy border border-line px-4 py-3">
+      <p className="body-copy rounded-xl border border-line px-4 py-3">
         You can make a damage claim once you and the renter have both confirmed the return.
       </p>
     );

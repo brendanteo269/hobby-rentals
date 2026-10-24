@@ -15,6 +15,7 @@ import {
   type SearchParams,
 } from "@/lib/notification-params";
 import { toNotificationView, type NotificationPage } from "@/lib/notifications";
+import { Bell } from "lucide-react";
 
 export const metadata = { title: "Notifications — HobbyRentals" };
 
@@ -69,7 +70,7 @@ export default async function NotificationsPage({
           {isFiltered(filters) ? (
             <p className="body-copy">No notifications match these filters.</p>
           ) : (
-            <EmptyState
+            <EmptyState icon={Bell}
               title="No notifications yet"
               body="When one of your bookings changes, you will hear about it here and by email."
             />

@@ -15,6 +15,7 @@ import { quoteBooking, requestBooking } from "@/app/bookings/actions";
 import type { BookingQuote } from "@/lib/api/bookings";
 import type { Booking } from "@/lib/bookings";
 import { formatDate, formatMoney } from "@/lib/format";
+import { RENTALS_PATH } from "@/lib/routes";
 import {
   rentalDurationLimits,
   UNAVAILABLE_REASON_LABELS,
@@ -261,7 +262,7 @@ export function BookingRequestForm({
         <Notice className="mt-3">
           <span className="font-medium">New bookings are paused on your account.</span>{" "}
           You owe {formatMoney(overdueDebtCents)} in overdue return fees.{" "}
-          <Link href="/profile?view=renter" className="underline underline-offset-4">
+          <Link href={RENTALS_PATH} className="underline underline-offset-4">
             Settle them to book again
           </Link>
           .

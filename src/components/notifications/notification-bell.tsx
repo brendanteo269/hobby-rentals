@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Bell } from "lucide-react";
+import { headerIconButton } from "@/components/ui";
 import { recentNotifications } from "@/app/notifications/actions";
 import type { NotificationView } from "@/lib/notifications";
 import { NOTIFICATIONS_PATH } from "@/lib/routes";
@@ -76,7 +77,7 @@ export function NotificationBell({
         aria-haspopup="true"
         aria-expanded={open}
         aria-label={label}
-        className="relative flex size-9 items-center justify-center rounded-full text-ink-soft outline-none transition-colors hover:bg-surface-muted hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2"
+        className={headerIconButton}
       >
         <Bell className="size-5" aria-hidden="true" />
         {!!unreadCount && (

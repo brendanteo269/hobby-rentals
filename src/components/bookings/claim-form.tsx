@@ -74,7 +74,7 @@ export function ClaimForm({
   }
 
   return (
-    <section aria-labelledby="claim-heading" className="space-y-4 border border-line px-4 py-4">
+    <section aria-labelledby="claim-heading" className="space-y-4 rounded-xl border border-line px-4 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="claim-heading" className="heading text-xl">
           Make a damage claim
@@ -119,7 +119,7 @@ export function ClaimForm({
             {evidence.map((photo) => (
               <li key={photo.key} className="relative">
                 {/* eslint-disable-next-line @next/next/no-img-element -- a local blob: preview */}
-                <img src={photo.previewUrl} alt="Evidence photo" className="aspect-square w-full border border-line object-cover" />
+                <img src={photo.previewUrl} alt="Evidence photo" className="aspect-square w-full rounded-xl border border-line object-cover" />
                 <button
                   type="button"
                   className="absolute right-1 top-1 rounded-full bg-white/90 px-1.5 text-xs"

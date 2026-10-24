@@ -80,7 +80,7 @@ export function SerialField({ error }: { error?: string }) {
       {noSerial && <input type="hidden" name="no_serial" value="true" />}
       <label className="block cursor-pointer">
         <span className="text-sm font-medium">{noSerial ? "Distinguishing marks" : "Serial number label"}</span>
-        <span className="mt-2 flex aspect-[4/3] max-w-sm items-center justify-center overflow-hidden border border-dashed border-line bg-surface-muted text-xs text-ink-soft">
+        <span className="mt-2 flex aspect-[4/3] max-w-sm items-center justify-center overflow-hidden rounded-xl border border-dashed border-line bg-surface-muted text-xs text-ink-soft">
           {photo === "uploading" ? (
             "Uploading…"
           ) : ready ? (

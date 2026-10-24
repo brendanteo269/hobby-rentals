@@ -10,7 +10,7 @@ import {
   validateDisplayName,
   validatePickupLocation,
 } from "@/lib/contact-details";
-import { defaultProfileView, profilePath } from "@/lib/routes";
+import { defaultDashboardPath, MY_LISTINGS_PATH, RENTALS_PATH } from "@/lib/routes";
 import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/login-attempts";
 import type { FieldErrors } from "@/lib/api/client";
 
@@ -126,7 +126,7 @@ export async function completeOnboarding(
   }
 
   revalidatePath("/profile");
-  redirect(profilePath(defaultProfileView({ wantsToRent, wantsToOwn })));
+  redirect(defaultDashboardPath({ wantsToRent, wantsToOwn }));
 }
 
 /**
@@ -193,7 +193,10 @@ async function enableSide(
   const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
   if (error) return { error: error.message };
 
-  revalidatePath("/profile");
+  // Each portal's home is where its side is switched on, and the header and
+  // the other portal's switcher change with it.
+  revalidatePath(column === "wants_to_rent" ? RENTALS_PATH : MY_LISTINGS_PATH);
+  revalidatePath("/", "layout");
   return undefined;
 }
 
@@ -227,7 +230,6 @@ export async function updateDisplayName(
   if (error) return { error: error.message };
 
   revalidatePath("/profile");
-  revalidatePath("/rentals/profile");
   return { success: "Display name updated." };
 }
 
@@ -279,7 +281,6 @@ export async function updateContactDetails(
   if (error) return { error: error.message };
 
   revalidatePath("/profile");
-  revalidatePath("/rentals/profile");
   return { success: "Contact details updated." };
 }
 

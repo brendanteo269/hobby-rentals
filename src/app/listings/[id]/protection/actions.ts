@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { ownerInsightsPath } from "@/lib/routes";
 import { BackendApiError } from "@/lib/api/client";
 import { purchaseHobbyShield } from "@/lib/api/owner-protection";
 
@@ -15,6 +16,6 @@ export async function buyHobbyShield(listingId: string, _previous: { error?: str
   revalidatePath(`/listings/${listingId}/protection`);
   revalidatePath(`/listings/${listingId}`);
   revalidatePath("/listings/mine");
-  revalidatePath("/profile");
+  revalidatePath(ownerInsightsPath());
   return { purchased: true };
 }

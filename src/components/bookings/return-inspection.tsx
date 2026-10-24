@@ -286,7 +286,7 @@ function Preview({
           <img
             src={angle.baseline_overlay_url}
             alt={`The owner's ${angle.label} photo`}
-            className="aspect-[4/3] w-full border border-line bg-surface-muted object-contain"
+            className="aspect-[4/3] w-full rounded-xl border border-line bg-surface-muted object-contain"
           />
         </>
       ) : (
@@ -327,10 +327,10 @@ function Review({
             <img
               src={angle.baseline_overlay_url}
               alt={`The owner's ${angle.label} photo`}
-              className="mt-2 aspect-[4/3] w-full border border-line bg-surface-muted object-contain"
+              className="mt-2 aspect-[4/3] w-full rounded-xl border border-line bg-surface-muted object-contain"
             />
           ) : (
-            <p className="mt-2 flex aspect-[4/3] items-center justify-center border border-line bg-surface-muted text-sm text-ink-soft">
+            <p className="mt-2 flex aspect-[4/3] items-center justify-center rounded-xl border border-line bg-surface-muted text-sm text-ink-soft">
               No owner photo
             </p>
           )}
@@ -341,7 +341,7 @@ function Review({
           <img
             src={previewUrl}
             alt={`Your ${angle.label} photo`}
-            className="mt-2 aspect-[4/3] w-full border border-line bg-surface-muted object-contain"
+            className="mt-2 aspect-[4/3] w-full rounded-xl border border-line bg-surface-muted object-contain"
           />
         </figure>
       </div>
@@ -493,7 +493,7 @@ function Camera({
           <img
             src={angle.baseline_overlay_url}
             alt={`The owner's ${angle.label} photo`}
-            className="aspect-[4/3] w-full border border-line object-contain"
+            className="aspect-[4/3] w-full rounded-xl border border-line object-contain"
           />
         )}
         <label className="inline-block cursor-pointer">
@@ -577,7 +577,7 @@ function Completed({
       />
       {/* S3-04: the photos are the first half of returning; both sides then confirm. */}
       {rentalActive && !confirmedAt && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border border-line px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line px-4 py-3">
           <p className="body-copy">
             Last step: once the owner has the item, confirm the return. The rental is returned when you and the
             owner have both confirmed.
@@ -600,7 +600,7 @@ function Completed({
               <img
                 src={angle.accepted_photo.photo_url}
                 alt={`Your ${angle.label} return photo`}
-                className="mt-2 aspect-square w-full border border-line object-cover"
+                className="mt-2 aspect-square w-full rounded-xl border border-line object-cover"
               />
             )}
           </li>
@@ -632,7 +632,7 @@ function PickupCompleted({ inspection }: { inspection: Inspection }) {
               <img
                 src={angle.accepted_photo.photo_url}
                 alt={`Your ${angle.label} pickup photo`}
-                className="mt-2 aspect-square w-full border border-line object-cover"
+                className="mt-2 aspect-square w-full rounded-xl border border-line object-cover"
               />
             )}
           </li>

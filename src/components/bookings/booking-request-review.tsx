@@ -52,11 +52,11 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <section className="border border-line bg-white p-5" aria-labelledby="renter-heading">
+        <section className="card p-5" aria-labelledby="renter-heading">
           <p id="renter-heading" className="eyebrow">Renter</p>
           <p className="mt-2 text-lg font-semibold">{renter.display_name ?? "Unnamed member"}</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <Badge variant={renter.email_verified ? "accent" : "neutral"}>
+            <Badge variant={renter.email_verified ? "success" : "neutral"}>
               {renter.email_verified ? "Email verified" : "Email not verified"}
             </Badge>
           </div>
@@ -73,7 +73,7 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
           {renter.bio && <p className="body-copy mt-4">{renter.bio}</p>}
         </section>
 
-        <section className="border border-line bg-white p-5" aria-labelledby="earnings-heading">
+        <section className="card p-5" aria-labelledby="earnings-heading">
           <p id="earnings-heading" className="eyebrow">Rental and earnings</p>
           <p className="mt-2 text-sm">
             {formatDate(period.start_date)} – {formatDate(period.end_date)}

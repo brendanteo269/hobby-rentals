@@ -23,7 +23,7 @@ export function FavouriteListingCard({ listing }: { listing: FavouriteListing })
   );
 
   return (
-    <li className={`overflow-hidden card ${active ? "transition-colors hover:border-ink-soft" : "border-dashed bg-surface-muted"}`}>
+    <li className={`overflow-hidden card ${active ? "card-lift" : "border-dashed bg-surface-muted"}`}>
       <div>{content}</div>
       <div className="flex items-center justify-end border-t border-line px-3 py-1">
         <FavouriteButton

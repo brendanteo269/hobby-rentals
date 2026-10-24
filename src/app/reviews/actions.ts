@@ -1,5 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
+import { RENTALS_PATH, RENTER_BOOKINGS_PATH } from "@/lib/routes";
 import { BackendApiError } from "@/lib/api/client";
 import { submitReview } from "@/lib/api/reviews";
 
@@ -14,7 +15,7 @@ export async function submitRentalReview(_previous: SubmitReviewState, form: For
   if (body.split(/\s+/).length > 100) return { error: "Keep your review to 100 words." };
   try {
     await submitReview({ ...(bookingId ? { booking_id: bookingId } : { bundle_booking_id: bundleBookingId }), rating, body });
-    revalidatePath("/profile"); revalidatePath("/messages"); revalidatePath("/notifications");
+    revalidatePath("/profile"); revalidatePath(RENTALS_PATH); revalidatePath(RENTER_BOOKINGS_PATH); revalidatePath("/messages"); revalidatePath("/notifications");
     return { success: true };
   } catch (error) { return { error: error instanceof BackendApiError ? error.message : "Could not submit your review." }; }
 }

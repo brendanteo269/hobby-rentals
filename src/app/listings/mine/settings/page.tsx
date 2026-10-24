@@ -18,7 +18,7 @@ export default async function OwnerSettingsPage() {
     <OwnerPortal active="Settings" title="Owner settings">
       <div className="space-y-6">
         <ProfileAvailabilityCard availableDays={availability.available_days} action={saveProfileAvailability} />
-        <section className="border border-line bg-white p-5">
+        <section className="card p-5">
           <p className="eyebrow">Default pickup location</p>
           <p className="body-copy mt-1">
             {pickup ? (isLocationArea(pickup) ? LOCATION_LABELS[pickup] : pickup) : "Not set"}

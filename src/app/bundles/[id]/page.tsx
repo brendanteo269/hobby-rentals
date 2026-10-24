@@ -56,7 +56,7 @@ export default async function BundlePage({ params }: { params: Promise<{ id: str
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <BundleFavouriteButton bundleId={bundle.id} initiallySaved={bundle.is_favourited} initialCount={bundle.favourite_count} />
-            {!published && <Badge variant="accent">{BUNDLE_STATUS_LABELS[bundle.status]}</Badge>}
+            {!published && <Badge variant="warning">{BUNDLE_STATUS_LABELS[bundle.status]}</Badge>}
             {isOwner && bundle.status !== "REMOVED" && (
               <ButtonLink variant="outline" href={`/listings/mine/bundles/${bundle.id}/edit`} className="px-3 py-1.5 text-xs">
                 Edit bundle

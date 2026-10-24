@@ -1,39 +1,40 @@
-import type { ComponentProps, ReactNode } from "react";
-import { Select } from "@/components/ui";
+"use client";
+
+import type { ReactNode } from "react";
+import { PillSelect } from "./filter-bar";
 
 /**
- * One filter dropdown on a browse form.
+ * One filter dropdown in the marketplace's filter row, applied as soon as a
+ * value is picked. The form's Search button applies it too, so the filter
+ * still works without client JavaScript.
  *
  * Left uncontrolled and blank on every render: the applied values are shown
  * as removable chips above the results, so repeating them as a selection here
  * would offer two ways to change one thing. Choosing again appends another
  * value rather than replacing the current one, which is how a member builds a
- * multi-value filter without any client JavaScript.
+ * multi-value filter.
  */
 export function FilterSelect({
   id,
   label,
   placeholder,
-  disabled = false,
-  onChange,
   children,
 }: {
   id: string;
+  /** Read by screen readers; the placeholder is what shows. */
   label: string;
   placeholder: string;
-  disabled?: boolean;
-  onChange?: ComponentProps<"select">["onChange"];
   children: ReactNode;
 }) {
   return (
-    <div className="min-w-44">
-      <label htmlFor={id} className="block text-sm font-medium">
+    <>
+      <label htmlFor={id} className="sr-only">
         {label}
       </label>
-      <Select id={id} name={id} defaultValue="" disabled={disabled} onChange={onChange} className="mt-2">
+      <PillSelect id={id} name={id} defaultValue="" onChange={(event) => event.currentTarget.form?.requestSubmit()}>
         <option value="">{placeholder}</option>
         {children}
-      </Select>
-    </div>
+      </PillSelect>
+    </>
   );
 }

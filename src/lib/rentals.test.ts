@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { Booking, BookingStatus } from "@/lib/bookings";
 import type { BundleBooking } from "@/lib/bundles";
-import { renterDashboard } from "@/lib/rentals";
+import { isRentalFilter, matchesRentalFilter, renterActionItems, renterDashboard } from "@/lib/rentals";
 
 function booking(id: string, status: BookingStatus, start: string, end: string, extra: Partial<Booking> = {}): Booking {
   return {
@@ -74,7 +74,7 @@ describe("renterDashboard", () => {
       status: "ACTIVE",
       depositCents: 5000,
       href: "/listings/listing-a1",
-      detailsHref: "/profile?view=renter#booking-a1",
+      detailsHref: "/rentals/bookings#booking-a1",
     });
   });
 
@@ -87,7 +87,7 @@ describe("renterDashboard", () => {
       ownerName: "Ben",
       depositCents: 12000,
       href: "/bundles/bundle-b1",
-      detailsHref: "/profile?view=renter#bundle-booking-b1",
+      detailsHref: "/rentals/bookings#bundle-booking-b1",
     });
   });
 
@@ -119,5 +119,106 @@ describe("renterDashboard", () => {
 
     expect(card.overdueSince).toBe("2026-10-16");
     expect(card.depositCents).toBe(0);
+  });
+});
+
+describe("matchesRentalFilter", () => {
+  it("shows every booking with no filter", () => {
+    expect(matchesRentalFilter("DECLINED", undefined)).toBe(true);
+  });
+
+  it("files declined, cancelled and lapsed requests under Cancelled", () => {
+    expect(matchesRentalFilter("DECLINED", "cancelled")).toBe(true);
+    expect(matchesRentalFilter("EXPIRED", "cancelled")).toBe(true);
+    expect(matchesRentalFilter("COMPLETED", "cancelled")).toBe(false);
+  });
+
+  it("only accepts the filters the tab offers", () => {
+    expect(isRentalFilter("past")).toBe(true);
+    expect(isRentalFilter("overdue")).toBe(false);
+  });
+});
+
+describe("renterActionItems", () => {
+  const today = "2026-10-20";
+  const now = new Date("2026-10-20T09:00:00Z");
+  const none = { bookings: [], bundleBookings: [], waitlist: [], reviewEligibility: [] };
+
+  it("asks for return photos once a rental is due back, and flags it when late", () => {
+    const [due] = renterActionItems({ ...none, bookings: [booking("a1", "ACTIVE", "2026-10-15", "2026-10-20")] }, today, now);
+    expect(due).toMatchObject({ rowId: "booking-a1", title: "Take the return photos", detail: "Due back today", urgent: false });
+
+    const [late] = renterActionItems(
+      { ...none, bookings: [booking("a2", "ACTIVE", "2026-10-10", "2026-10-15", { overdue_since: "2026-10-16" })] },
+      today,
+      now,
+    );
+    expect(late.urgent).toBe(true);
+  });
+
+  it("does not nag about a rental that is not due back yet", () => {
+    expect(renterActionItems({ ...none, bookings: [booking("a1", "ACTIVE", "2026-10-15", "2026-10-25")] }, today, now)).toEqual([]);
+  });
+
+  it("asks for pickup photos from the start date, not before", () => {
+    const early = renterActionItems({ ...none, bookings: [booking("u1", "CONFIRMED", "2026-10-22", "2026-10-25")] }, today, now);
+    expect(early).toEqual([]);
+
+    const [pickup] = renterActionItems({ ...none, bookings: [booking("u2", "CONFIRMED", "2026-10-20", "2026-10-25")] }, today, now);
+    expect(pickup).toMatchObject({ title: "Take the pickup photos", detail: "Collecting today" });
+  });
+
+  it("offers the confirm button once the return photos are in", () => {
+    const items = renterActionItems(
+      {
+        ...none,
+        bookings: [
+          booking("a1", "ACTIVE", "2026-10-15", "2026-10-20", {
+            return_state: { inspection_status: "COMPLETED", renter_confirmed_at: null, owner_confirmed_at: null },
+          }),
+        ],
+      },
+      today,
+      now,
+    );
+    expect(items).toEqual([expect.objectContaining({ action: { kind: "confirm-return", bookingId: "a1" } })]);
+  });
+
+  it("lists only the renter's own reviews of owners, after anything urgent", () => {
+    const review = (bookingId: string, role: "OWNER" | "RENTER") => ({
+      booking_id: bookingId,
+      bundle_booking_id: null,
+      rental_name: `Item ${bookingId}`,
+      reviewed_role: role,
+      settled_at: "2026-10-18T00:00:00Z",
+      expires_at: "2026-11-01T00:00:00Z",
+    });
+    const items = renterActionItems(
+      {
+        ...none,
+        bookings: [
+          booking("c1", "COMPLETED", "2026-10-01", "2026-10-02"),
+          booking("a2", "ACTIVE", "2026-10-10", "2026-10-15", { overdue_since: "2026-10-16" }),
+        ],
+        // "x9" is a rental the member owned: reviewing that renter is not a renting task.
+        reviewEligibility: [review("c1", "OWNER"), review("x9", "RENTER")],
+      },
+      today,
+      now,
+    );
+    expect(items.map((item) => item.title)).toEqual(["Take the return photos", "Rate the owner"]);
+  });
+});
+
+describe("renterDashboard handover", () => {
+  it("carries a confirmed booking's handover state to its card, for the progress tracker", () => {
+    const handover_state = { inspection_status: "COMPLETED" as const, renter_confirmed_at: null, owner_confirmed_at: null };
+    const [card] = renterDashboard([booking("u1", "CONFIRMED", "2026-11-01", "2026-11-03", { handover_state })], []).upcoming;
+    expect(card.handover).toEqual(handover_state);
+  });
+
+  it("has no handover on a bundle's card", () => {
+    const [card] = renterDashboard([], [bundle("b1", "CONFIRMED", "2026-11-01", "2026-11-03")]).upcoming;
+    expect(card.handover).toBeNull();
   });
 });

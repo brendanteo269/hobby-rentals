@@ -49,7 +49,7 @@ export function PurchaseProofForm({ listingId }: { listingId: string }) {
       <input type="hidden" name="photo_key" value={photo?.key ?? ""} />
       <label className="block w-40 cursor-pointer">
         <span className="sr-only">Receipt photo</span>
-        <span className="flex aspect-square items-center justify-center border border-dashed border-line bg-surface-muted text-xs text-ink-soft">
+        <span className="flex aspect-square items-center justify-center rounded-xl border border-dashed border-line bg-surface-muted text-xs text-ink-soft">
           {photo ? (
             // eslint-disable-next-line @next/next/no-img-element -- a local blob: preview
             <img src={photo.previewUrl} alt="Receipt" className="h-full w-full object-contain" />

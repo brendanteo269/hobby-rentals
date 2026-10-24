@@ -1,4 +1,5 @@
 import { ButtonLink, Container, EmptyState } from "@/components/ui";
+import { SearchX } from "lucide-react";
 
 /**
  * S2-07 Scenario 5. The API answers 404 alike for a listing that never
@@ -8,7 +9,7 @@ import { ButtonLink, Container, EmptyState } from "@/components/ui";
 export default function ListingNotFound() {
   return (
     <Container className="py-16">
-      <EmptyState
+      <EmptyState icon={SearchX}
         title="This listing is no longer available"
         body="It may have been archived or removed by its owner, or the link may be wrong."
         action={<ButtonLink href="/browse">Browse available gear</ButtonLink>}

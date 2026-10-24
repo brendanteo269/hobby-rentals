@@ -32,7 +32,7 @@ export default async function ReportPage({ params }: { params: Promise<{ id: str
             : `${USER_REPORT_STATUS_LINES[report.status]} This page is read-only.`}
         </p>
         {report.viewer === "REPORTED" && (
-          <section aria-label="What we ask of you" className="mt-8 border border-line bg-surface-muted px-5 py-4 text-sm">
+          <section aria-label="What we ask of you" className="mt-8 rounded-xl border border-line bg-surface-muted px-5 py-4 text-sm">
             <p className="font-medium">What we ask of you</p>
             <p className="mt-2">{USER_REPORT_ADVICE}</p>
             <p className="mt-2 text-ink-soft">{USER_REPORT_ADVICE_CLOSING}</p>

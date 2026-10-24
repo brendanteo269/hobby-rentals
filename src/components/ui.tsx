@@ -1,8 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Route } from "next";
-import { X } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
+import { Inbox, X, type LucideIcon } from "lucide-react";
+import type { ComponentProps, CSSProperties, ReactNode } from "react";
 
 /** Page-width container for the marketplace's wider card grids. */
 export function Container({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -66,6 +66,10 @@ export function ButtonLink<T extends string>({
     </Link>
   );
 }
+
+/** The round, borderless icon control in the site header (favourites, messages, notifications), so the icons there line up. */
+export const headerIconButton =
+  "relative flex size-9 items-center justify-center rounded-full text-ink-soft outline-none transition-colors hover:bg-surface-muted hover:text-ink focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2";
 
 export const inputBase =
   "w-full border border-line bg-white px-3 py-2.5 text-sm outline-none focus:border-ink placeholder:text-ink-soft/70 disabled:cursor-not-allowed disabled:bg-surface-muted disabled:text-ink-soft";
@@ -219,7 +223,7 @@ export function SelectField({
   );
 }
 
-type BadgeVariant = "neutral" | "accent" | "accent-strong" | "dark" | "success";
+type BadgeVariant = "neutral" | "accent" | "accent-strong" | "dark" | "success" | "warning" | "info";
 
 const badgeVariants: Record<BadgeVariant, string> = {
   neutral: "border border-line bg-white/95 text-ink",
@@ -228,6 +232,10 @@ const badgeVariants: Record<BadgeVariant, string> = {
   "accent-strong": "bg-accent text-white",
   dark: "bg-ink text-white",
   success: "bg-success-soft text-success",
+  // Waiting on someone, and coming up: calm states that are not problems, so
+  // they leave red for the ones that are.
+  warning: "bg-warning-soft text-warning",
+  info: "bg-info-soft text-info",
 };
 
 /** Small pill label — location tags, filter chips, marketing ribbons. */
@@ -310,14 +318,20 @@ export function EmptyState({
   title,
   body,
   action,
+  icon: Icon = Inbox,
 }: {
   title: string;
   body: string;
   action?: ReactNode;
+  /** What the empty thing is, drawn above the title. A generic inbox when the caller has nothing more specific. */
+  icon?: LucideIcon;
 }) {
   return (
-    <div className="card px-6 py-16 text-center">
-      <p className="heading text-base">{title}</p>
+    <div className="card px-6 py-14 text-center">
+      <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-accent-soft text-accent">
+        <Icon className="size-6" aria-hidden="true" />
+      </span>
+      <p className="heading mt-5 text-lg">{title}</p>
       <p className="body-copy mx-auto mt-2 max-w-sm">{body}</p>
       {action && <div className="mt-6 flex justify-center">{action}</div>}
     </div>
@@ -448,5 +462,81 @@ export function ImageSlot({
     <div className={`flex overflow-hidden bg-surface-muted ${position} ${className}`}>
       <span className="line-clamp-3 text-center text-xs text-ink-soft">{label}</span>
     </div>
+  );
+}
+
+/** A grey placeholder block that pulses while a page loads; size and shape it with className. */
+export function Skeleton({ className = "", style }: { className?: string; style?: CSSProperties }) {
+  return <div aria-hidden="true" className={`animate-pulse rounded-lg bg-surface-muted ${className}`} style={style} />;
+}
+
+export type StatTone = "accent" | "success" | "warning" | "info" | "neutral";
+
+const statToneClasses: Record<StatTone, string> = {
+  accent: "bg-accent-soft text-accent",
+  success: "bg-success-soft text-success",
+  warning: "bg-warning-soft text-warning",
+  info: "bg-info-soft text-info",
+  neutral: "bg-surface-muted text-ink",
+};
+
+/**
+ * One figure on a dashboard: an icon in a tinted circle, the label, the
+ * value, and an optional line of context. With `href` the whole tile is a
+ * link and lifts on hover, so it reads as the way into that number.
+ */
+export function StatTile({
+  icon: Icon,
+  label,
+  value,
+  detail,
+  tone = "neutral",
+  href,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  detail?: string;
+  tone?: StatTone;
+  href?: Route;
+}) {
+  const body = (
+    <>
+      <div className="flex items-center gap-3">
+        <span className={`flex size-9 shrink-0 items-center justify-center rounded-full ${statToneClasses[tone]}`}>
+          <Icon className="size-4" aria-hidden="true" />
+        </span>
+        <p className="text-sm font-medium text-ink-soft">{label}</p>
+      </div>
+      <p className="heading mt-4 text-3xl">{value}</p>
+      {detail && <p className="mt-1 text-xs text-ink-soft">{detail}</p>}
+    </>
+  );
+  return href ? (
+    <Link href={href} className="card card-lift block p-5">
+      {body}
+    </Link>
+  ) : (
+    <div className="card p-5">{body}</div>
+  );
+}
+
+/** A generic page skeleton - a title and a few content blocks - for pages without a shape of their own. */
+export function PageSkeleton() {
+  return (
+    <Container className="py-16">
+      <span className="sr-only" role="status">Loading</span>
+      <Skeleton className="h-9 w-64" />
+      <Skeleton className="mt-3 h-4 w-96 max-w-full" />
+      <div className="mt-10 grid gap-6 lg:grid-cols-2">
+        <Skeleton className="aspect-[4/3] w-full rounded-2xl" />
+        <div className="space-y-4">
+          <Skeleton className="h-6 w-3/4" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-5/6" />
+          <Skeleton className="h-11 w-40 rounded-full" />
+        </div>
+      </div>
+    </Container>
   );
 }

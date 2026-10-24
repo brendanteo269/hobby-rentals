@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ImageSlot } from "@/components/ui";
+import { Layers } from "lucide-react";
+import { Badge, ImageSlot } from "@/components/ui";
 import { formatMoney } from "@/lib/format";
 import type { Bundle, FeaturedBundleCard } from "@/lib/bundles";
 import { BundleFavouriteButton } from "./bundle-favourite-button";
@@ -22,9 +23,15 @@ export function BundleCard({ bundle, className = "", onFavouriteRemoved }: {
   const favouriteCount = "favourite_count" in bundle ? bundle.favourite_count : undefined;
   const favourited = "is_favourited" in bundle ? bundle.is_favourited : undefined;
   return (
-    <li className={`group overflow-hidden card transition-colors hover:border-ink-soft ${className}`}>
-      <Link href={`/bundles/${bundle.id}`} className="block">
+    <li className={`group overflow-hidden card card-lift ${className}`}>
+      <Link href={`/bundles/${bundle.id}`} className="relative block overflow-hidden">
         <ImageSlot label={bundle.name} src={firstPhoto(bundle)} className="aspect-[4/3] w-full transition-transform duration-300 ease-out group-hover:scale-105" />
+        {/* Dark where an item card's location pill is white, so a bundle
+            reads as a different kind of thing at a glance. */}
+        <Badge variant="dark" className="absolute left-3 top-3 gap-1">
+          <Layers className="size-3" aria-hidden="true" />
+          Bundle
+        </Badge>
       </Link>
       <div className="p-5">
         <p className="eyebrow">Gear bundle · {"item_count" in bundle ? bundle.item_count : bundle.items.length} {("item_count" in bundle ? bundle.item_count : bundle.items.length) === 1 ? "item" : "items"}</p>

@@ -55,7 +55,7 @@ export function ConditionUpdateForm({ listingId }: { listingId: string }) {
         {photos.map((photo, index) => (
           <li key={photo.key} className="relative">
             {/* eslint-disable-next-line @next/next/no-img-element -- a local blob: preview */}
-            <img src={photo.previewUrl} alt={`Photo ${index + 1}`} className="aspect-square w-full border border-line object-cover" />
+            <img src={photo.previewUrl} alt={`Photo ${index + 1}`} className="aspect-square w-full rounded-xl border border-line object-cover" />
             <button
               type="button"
               onClick={() => setPhotos((current) => current.filter((p) => p.key !== photo.key))}
@@ -67,7 +67,7 @@ export function ConditionUpdateForm({ listingId }: { listingId: string }) {
         ))}
         {photos.length < MAX_CONDITION_UPDATE_PHOTOS && (
           <li>
-            <label className="flex aspect-square cursor-pointer items-center justify-center border border-dashed border-line bg-surface-muted text-xs text-ink-soft">
+            <label className="flex aspect-square cursor-pointer items-center justify-center rounded-xl border border-dashed border-line bg-surface-muted text-xs text-ink-soft">
               {uploading ? "Uploading…" : "Add photo"}
               <input
                 type="file"

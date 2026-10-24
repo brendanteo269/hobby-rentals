@@ -11,7 +11,7 @@ export function ClaimSummary({ claim, viewer }: { claim: DamageClaim; viewer: "o
   const pending = claimPendingRenter(claim);
   const secondsLeft = claim.respond_by ? secondsUntil(claim.respond_by) : null;
   return (
-    <section aria-labelledby="claim-summary-heading" className="space-y-4 border border-line px-4 py-4">
+    <section aria-labelledby="claim-summary-heading" className="space-y-4 rounded-xl border border-line px-4 py-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="claim-summary-heading" className="heading text-xl">
           {viewer === "owner" ? "Your damage claim" : `${claim.owner_name ?? "The owner"}'s damage claim`}
@@ -54,7 +54,7 @@ export function ClaimSummary({ claim, viewer }: { claim: DamageClaim; viewer: "o
               <li key={url}>
                 <a href={url} target="_blank" rel="noreferrer">
                   {/* eslint-disable-next-line @next/next/no-img-element -- a short-lived presigned URL */}
-                  <img src={url} alt={`Evidence photo ${index + 1}`} className="aspect-square w-full border border-line object-cover" />
+                  <img src={url} alt={`Evidence photo ${index + 1}`} className="aspect-square w-full rounded-xl border border-line object-cover" />
                 </a>
               </li>
             ))}

@@ -5,6 +5,7 @@ import { Check, ChevronDown, Crosshair, MapPin } from "lucide-react";
 import { Input, Select } from "@/components/ui";
 import { LOCATION_AREAS, LOCATION_LABELS, type LocationArea } from "@/lib/listings";
 import type { BrowseFilters } from "@/lib/browse-params";
+import { filterPill } from "./filter-bar";
 
 type LocationState = { mode: "near" | "area" | null; postalCode?: string; lat?: number; lng?: number; radiusKm: number; planningArea?: LocationArea; label?: string };
 type PostalResult = { latitude: number; longitude: number; address?: string };
@@ -91,13 +92,11 @@ export function RadiusSearch({ filters }: { filters: BrowseFilters }) {
   const nearUsesGps = near && !location.postalCode;
   const label = near ? `${location.postalCode || location.label || "Current location"} · within ${location.radiusKm} km` : location.mode === "area" ? LOCATION_LABELS[location.planningArea!] : "Anywhere";
 
-  return <div className="relative w-full sm:w-[440px]">
-    <label className="block text-sm font-medium">Location</label>
-    <button ref={triggerRef} type="button" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)} className="mt-2 flex h-12 w-full items-center justify-between rounded-lg border border-line bg-white px-3 text-sm">
-      <span className="flex min-w-0 items-center gap-2 truncate"><MapPin className="size-4 shrink-0" aria-hidden="true" />{label}</span><ChevronDown className="size-4 shrink-0" aria-hidden="true" />
+  return <div className="relative">
+    <button ref={triggerRef} type="button" aria-haspopup="dialog" aria-expanded={open} aria-label={`Location: ${label}`} title={location.mode ? undefined : "Set a location to sort by closest"} onClick={() => setOpen(true)} className={`${filterPill} max-w-72 ${location.mode ? "border-ink" : ""}`}>
+      <MapPin className="size-4 shrink-0" aria-hidden="true" /><span className="min-w-0 truncate">{label}</span><ChevronDown className="size-4 shrink-0 text-ink-soft" aria-hidden="true" />
     </button>
-    {!location.mode && <p className="mt-2 text-xs text-ink-soft sm:absolute sm:left-[456px] sm:top-7 sm:w-52">Set a location to sort by closest.</p>}
-    {open && <><div className="fixed inset-0 z-40 bg-ink/25 sm:hidden" onClick={close} /><div ref={panelRef} role="dialog" aria-modal="true" aria-label="Choose location" onKeyDown={keydown} className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border border-[#e7e5e4] bg-white p-5 shadow-[0_12px_32px_rgba(28,25,23,.16)] sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-[76px] sm:w-[440px] sm:rounded-2xl">
+    {open && <><div className="fixed inset-0 z-40 bg-ink/25 sm:hidden" onClick={close} /><div ref={panelRef} role="dialog" aria-modal="true" aria-label="Choose location" onKeyDown={keydown} className="fixed inset-x-0 bottom-0 z-50 rounded-t-2xl border border-[#e7e5e4] bg-white p-5 shadow-[0_12px_32px_rgba(28,25,23,.16)] sm:absolute sm:inset-x-auto sm:bottom-auto sm:left-0 sm:top-12 sm:w-[440px] sm:rounded-2xl">
       <div role="tablist" aria-label="Location method" className="grid grid-cols-2 rounded-lg bg-surface-muted p-1">
         {(["near", "area"] as const).map((item) => <button type="button" key={item} id={`location-tab-${item}`} role="tab" aria-selected={tab === item} tabIndex={tab === item ? 0 : -1} onClick={() => switchTab(item)} className={`min-h-11 rounded-md text-sm ${tab === item ? "bg-white font-semibold shadow-sm" : "text-ink-soft"}`}>{item === "near" ? "Near me" : "Collection area"}</button>)}
       </div>

@@ -1,14 +1,15 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Megaphone, ShieldCheck, type LucideIcon } from "lucide-react";
+import { Layers, Megaphone, SearchX, ShieldCheck, Tag, type LucideIcon } from "lucide-react";
 import { Badge, ButtonLink, EmptyState } from "@/components/ui";
-import { OwnerPortal, requireOwner } from "@/components/owner-portal";
+import { EnableOwningPrompt, OwnerPortal } from "@/components/owner-portal";
 import { ListingLifecycleActions } from "@/components/listings/listing-lifecycle-actions";
 import { BundleRow } from "@/components/bundles/bundle-row";
 import { getListingHistory, getMyListings, type ListingHistory } from "@/lib/api/listings";
 import { getBundleEvents, getMyBundles, getOwnerBundleBookings } from "@/lib/api/bundles";
 import { getOwnerBookings } from "@/lib/api/bookings";
 import { getMyHobbyShieldPolicies } from "@/lib/api/owner-protection";
+import { getOwnProfile } from "@/lib/profile";
 import { formatDate, formatMoney } from "@/lib/format";
 import { daysUntilExpiry, policyIsCurrent, type HobbyShieldPolicy } from "@/lib/owner-protection";
 import {
@@ -38,9 +39,13 @@ export const metadata = { title: "My listings — HobbyRentals" };
  * section below. The status filter above applies to items only - a bundle
  * carries its own, different set of statuses - so the two sections are
  * labelled rather than left to run together.
+ *
+ * The other owner pages send a member who has not switched owning on here, so
+ * this is the one that offers to, rather than calling requireOwner.
  */
 export default async function MyListingsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
-  await requireOwner();
+  const profile = await getOwnProfile();
+  if (!profile?.wants_to_own) return <EnableOwningPrompt />;
   const { status } = await searchParams;
   const filter = status && status in LISTING_STATUS_LABELS ? (status as ListingStatus) : undefined;
   const [allListings, bookings, bundles, bundleBookings, protectionPolicies] = await Promise.all([
@@ -97,13 +102,13 @@ export default async function MyListingsPage({ searchParams }: { searchParams: P
         <h2 className="eyebrow">Items</h2>
         <div className="mt-3">
           {allListings.length === 0 ? (
-            <EmptyState
+            <EmptyState icon={Tag}
               title="No listings yet"
               body="Once you list a piece of gear, it'll show up here so you can manage its availability, archive it, or remove it."
               action={<ButtonLink href="/listings/new">Create your first listing</ButtonLink>}
             />
           ) : listings.length === 0 ? (
-            <EmptyState
+            <EmptyState icon={SearchX}
               title={`No ${LISTING_STATUS_LABELS[filter!].toLowerCase()} listings`}
               body="Try another status, or show all your listings."
               action={<ButtonLink href="/listings/mine" variant="outline">Show all</ButtonLink>}
@@ -129,7 +134,7 @@ export default async function MyListingsPage({ searchParams }: { searchParams: P
 
         <div className="mt-4">
           {bundles.length === 0 ? (
-            <EmptyState
+            <EmptyState icon={Layers}
               title="No bundles yet"
               body="Bundle two or more of your published listings so renters can book a common set of gear in one go."
               action={<ButtonLink href="/listings/mine/bundles/new">Create your first bundle</ButtonLink>}
@@ -154,14 +159,14 @@ export default async function MyListingsPage({ searchParams }: { searchParams: P
 }
 
 /**
- * Same status -> emphasis mapping OwnerListingCard uses (profile-views.tsx):
- * ACTIVE is the one status that should visually stand out, PENDING_REMOVAL
- * gets the accent used for anything that needs the owner's attention, and
- * every other status is a plain neutral pill.
+ * Status -> emphasis on a listing row: ACTIVE is live and green,
+ * PENDING_REMOVAL and the admin and suspension states get the red used for
+ * anything that needs the owner's attention, and every other status is a
+ * plain neutral pill.
  */
-const STATUS_BADGE_VARIANT: Record<Listing["status"], "neutral" | "accent" | "dark"> = {
+const STATUS_BADGE_VARIANT: Record<Listing["status"], "neutral" | "accent" | "success"> = {
   DRAFT: "neutral",
-  ACTIVE: "dark",
+  ACTIVE: "success",
   ARCHIVED: "neutral",
   PENDING_REMOVAL: "accent",
   REMOVED: "neutral",
@@ -216,7 +221,7 @@ function ListingRow({ listing, bookings, history, policies }: { listing: OwnerLi
       ? { status: "Publish the listing to promote", tone: "muted" }
       : { status: "Not promoted", tone: "muted", action: <ButtonLink href={`/listings/${listing.id}/promotion`} variant="outline" className={tileButton}>Promote</ButtonLink> };
   return (
-    <li className="border border-line bg-white p-5">
+    <li className="card p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="eyebrow">{CATEGORY_LABELS[listing.category]} · {LOCATION_LABELS[listing.location_area]}</p>
@@ -280,7 +285,7 @@ const ADD_ON_TONE: Record<AddOnState["tone"], string> = {
 /** One paid add-on (HobbyShield, promotion) on a listing row: what it is, where it stands, and the one next step. */
 function AddOnTile({ icon: Icon, title, status, tone, action }: AddOnState & { icon: LucideIcon; title: string }) {
   return (
-    <div className="flex items-center justify-between gap-3 border border-line bg-surface-muted px-4 py-3">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-line bg-surface-muted px-4 py-3">
       <div className="flex min-w-0 items-center gap-3">
         <Icon className="h-5 w-5 shrink-0 text-ink" aria-hidden />
         <div className="min-w-0">

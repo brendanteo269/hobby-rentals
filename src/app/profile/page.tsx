@@ -2,39 +2,33 @@ import { redirect } from "next/navigation";
 import { MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/lib/profile";
-import { getMyListings } from "@/lib/api/listings";
-import { getMyBookings } from "@/lib/api/bookings";
-import { getMySuspension } from "@/lib/api/overdue";
 import { getMyOwnerVerification } from "@/lib/api/verification";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { hasAnsweredRequests, responseRatePercent } from "@/lib/verification";
-import { getMyBundleBookings } from "@/lib/api/bundles";
-import { getMyWaitlist } from "@/lib/api/waitlist";
-import { getReviewEligibility } from "@/lib/api/reviews";
 import { Badge, Container } from "@/components/ui";
 import { isLocationArea, LOCATION_LABELS } from "@/lib/listings";
-import { ViewTabs, RenterView, OwnerView, RatingsView } from "@/components/profile-views";
+import { ViewTabs, RatingsView } from "@/components/profile-views";
 import {
-  defaultProfileView,
+  DEFAULT_PROFILE_VIEW,
   isProfileView,
+  ownerInsightsPath,
+  RENTER_BOOKINGS_PATH,
   type ProfileView,
 } from "@/lib/routes";
 import type { Roles } from "@/lib/contact-details";
 import { AccountSettings } from "@/components/account-settings";
 import { CreditWallet } from "@/components/credit-wallet";
 import { getPublicMember } from "@/lib/api/reviews";
-import { getOwnerInsights } from "@/lib/api/owner-insights";
-import { isInsightsPeriod, type InsightsPeriod } from "@/lib/owner-insights";
+import { isInsightsPeriod } from "@/lib/owner-insights";
 
 export const metadata = { title: "Your profile — HobbyRentals" };
 
 /**
  * The view lives in the URL rather than client state, so it survives a reload
- * and can be linked to. An absent or unrecognised value falls back to the same
- * rule onboarding uses to choose where to send a member, so the two agree.
+ * and can be linked to. An absent or unrecognised value opens the first tab.
  */
-function resolveView(requested: string | undefined, roles: Roles): ProfileView {
-  return isProfileView(requested) ? requested : defaultProfileView(roles);
+function resolveView(requested: string | undefined): ProfileView {
+  return isProfileView(requested) ? requested : DEFAULT_PROFILE_VIEW;
 }
 
 export default async function ProfilePage({
@@ -57,13 +51,19 @@ export default async function ProfilePage({
   // from silently rendering a half-configured profile.
   if (!profile?.onboarded_at) redirect("/onboarding");
 
-  const { view, period: requestedPeriod } = await searchParams;
-  const insightsPeriod: InsightsPeriod = isInsightsPeriod(requestedPeriod) ? requestedPeriod : "30d";
+  const { view, period } = await searchParams;
+  // Renting and owning used to be tabs here, and links already sent - the
+  // backend's notifications, emails - still name them. Their panels now live
+  // in the portals, so forward there. A redirect without a fragment of its own
+  // keeps the original one, so "#booking-<id>" still lands on its booking.
+  if (view === "renter") redirect(RENTER_BOOKINGS_PATH);
+  if (view === "owner") redirect(ownerInsightsPath(isInsightsPeriod(period) ? period : undefined));
+
   const roles: Roles = {
     wantsToRent: profile.wants_to_rent,
     wantsToOwn: profile.wants_to_own,
   };
-  const active: ProfileView = resolveView(view, roles);
+  const active: ProfileView = resolveView(view);
   const ratings = active === "ratings" ? await getPublicMember(user.id).catch(() => null) : null;
 
   const memberSince = new Date(profile.created_at).toLocaleDateString("en-SG", {
@@ -71,25 +71,10 @@ export default async function ProfilePage({
     year: "numeric",
   });
   const isVerified = Boolean(user.email_confirmed_at);
-  const [myListings, myBookings, myBundleBookings, myWaitlist, reviewEligibility, verification, suspension, ownerInsights] = await Promise.all([
-    getMyListings(),
-    getMyBookings(),
-    getMyBundleBookings(),
-    getMyWaitlist(true),
-    getReviewEligibility().catch(() => []),
-    // S4-01: the owner's own badge standing. Swallowed like the suspension
-    // below - a badge missing from your own profile must not cost you the
-    // page, and it says nothing a renter cannot already see.
-    getMyOwnerVerification().catch(() => undefined),
-    // S3-18: unpaid late fees pause new bookings; the banner is how the
-    // renter learns that and settles up. Failures are swallowed on purpose:
-    // this is a banner beside the bookings, and losing it must never cost
-    // the renter sight of the bookings themselves. Nothing is let through by
-    // hiding it either - the database refuses a suspended renter's booking
-    // whatever this page managed to show.
-    getMySuspension().catch(() => undefined),
-    getOwnerInsights(insightsPeriod).catch(() => null),
-  ]);
+  // S4-01: the owner's own badge standing. Swallowed - a badge missing from
+  // your own profile must not cost you the page, and it says nothing a renter
+  // cannot already see.
+  const verification = await getMyOwnerVerification().catch(() => undefined);
 
   return (
     <Container className="py-16">
@@ -99,7 +84,7 @@ export default async function ProfilePage({
         {user.email}
         {/* About the email address, not the owner. Named in full so it cannot
             be read as the Verified Owner badge beside it (S4-01). */}
-        <Badge variant={isVerified ? "dark" : "accent"}>
+        <Badge variant={isVerified ? "success" : "warning"}>
           {isVerified ? "Verified account" : "Pending verification"}
         </Badge>
         <VerifiedOwnerBadge verified={verification?.verified} />
@@ -133,14 +118,6 @@ export default async function ProfilePage({
       <div className="mt-10">
         <ViewTabs active={active} />
         <div className="mt-8">
-          {active === "renter" && <RenterView enabled={profile.wants_to_rent} bookings={myBookings} bundleBookings={myBundleBookings} waitlist={myWaitlist} reviewEligibility={reviewEligibility} suspension={suspension} />}
-          {active === "owner" && (
-            <OwnerView
-              enabled={profile.wants_to_own}
-              listings={myListings}
-              insights={ownerInsights}
-            />
-          )}
           {active === "ratings" && <RatingsView profile={ratings} />}
           {active === "wallet" && <CreditWallet />}
           {active === "account" && (

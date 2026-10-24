@@ -1,5 +1,6 @@
 import { ButtonLink, Container, EmptyState } from "@/components/ui";
 import { Pagination } from "@/components/pagination";
+import { MarketplaceHeader } from "@/components/browse/marketplace-header";
 import { BundleFilters } from "@/components/bundles/bundle-filters";
 import { ActiveBundleFilters } from "@/components/bundles/active-bundle-filters";
 import { browseBundles, BundleApiError } from "@/lib/api/bundles";
@@ -13,11 +14,13 @@ import {
 import type { BrowseBundlesResponse } from "@/lib/bundles";
 import type { SearchParams } from "@/lib/browse-params";
 import { BundleCard } from "@/components/bundles/bundle-card";
+import { CloudOff, Layers, SearchX } from "lucide-react";
 
-export const metadata = { title: "Gear bundles — HobbyRentals" };
+export const metadata = { title: "Bundles · Browse marketplace — HobbyRentals" };
 
 /**
- * S2-20: the published-bundle marketplace, searchable the same way /browse is.
+ * S2-20: the bundles side of the marketplace, searchable the same way the
+ * items side (/browse) is and switched to with the toggle both share.
  *
  * A bundle whose component stopped being available is absent rather than
  * shown as unbookable (Scenario 6) - the backend never returns it - while
@@ -31,15 +34,10 @@ export default async function BundlesPage({ searchParams }: { searchParams: Prom
   const lastPage = Math.max(1, Math.ceil(total / BUNDLE_PAGE_SIZE));
 
   return (
-    <Container className="py-16">
-      <p className="eyebrow">Marketplace</p>
-      <h1 className="heading mt-3 text-3xl">Gear bundles</h1>
-      <p className="body-copy mt-3 max-w-2xl">
-        Sets of gear an owner rents out together at a package rate. A bundle is only offered on
-        dates every item in it is free at the same time.
-      </p>
+    <Container className="pb-16 pt-10">
+      <MarketplaceHeader active="bundles" filters={filters} activeCount={error ? null : total} />
 
-      <div className="mt-8">
+      <div className="mt-5">
         <BundleFilters filters={filters} />
       </div>
 
@@ -108,7 +106,7 @@ function resultSummary(total: number, error: string | null): string {
 function NoResults({ filters, error }: { filters: BundleBrowseFilters; error: string | null }) {
   if (error) {
     return (
-      <EmptyState
+      <EmptyState icon={CloudOff}
         title="Bundles could not be loaded"
         body="Something went wrong reaching the marketplace. Try again in a moment."
       />
@@ -117,7 +115,7 @@ function NoResults({ filters, error }: { filters: BundleBrowseFilters; error: st
 
   if (hasActiveBundleFilters(filters)) {
     return (
-      <EmptyState
+      <EmptyState icon={SearchX}
         title="Nothing matches those filters"
         body="Try widening the dates, choosing another area, or searching for something broader."
         action={
@@ -130,10 +128,10 @@ function NoResults({ filters, error }: { filters: BundleBrowseFilters; error: st
   }
 
   return (
-    <EmptyState
+    <EmptyState icon={Layers}
       title="No bundles yet"
       body="No owner has published a gear bundle yet. Browse individual listings in the meantime."
-      action={<ButtonLink href="/browse" variant="outline">Browse listings</ButtonLink>}
+      action={<ButtonLink href="/browse" variant="outline">Browse items</ButtonLink>}
     />
   );
 }

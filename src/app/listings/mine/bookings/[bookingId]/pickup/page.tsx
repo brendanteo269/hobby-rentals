@@ -45,7 +45,7 @@ export default async function OwnerPickupPhotosPage({ params }: { params: Promis
               <img
                 src={angle.accepted_photo.photo_url}
                 alt={`${angle.label} pickup photo`}
-                className="mt-2 aspect-square w-full border border-line object-cover"
+                className="mt-2 aspect-square w-full rounded-xl border border-line object-cover"
               />
             )}
           </li>
