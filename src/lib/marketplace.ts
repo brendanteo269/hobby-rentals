@@ -23,5 +23,6 @@ export function marketplaceHref(kind: MarketplaceKind, filters: SharedMarketplac
   const shared = sharedFilters(filters);
   return kind === "bundles"
     ? bundleBrowseHref({ ...shared, page: 1 })
-    : browseHref({ ...parseBrowseFilters({}), ...shared, page: 1 });
+    // Parsed with the query, so the sort is that search's default rather than pinned to newest.
+    : browseHref({ ...parseBrowseFilters({ q: shared.q }), ...shared, page: 1 });
 }

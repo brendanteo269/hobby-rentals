@@ -12,6 +12,8 @@
  * reminder that it needs a label too.
  */
 
+import { formatDate } from "@/lib/format";
+
 export type ListingCategory = string;
 
 export type ListingCondition = "NEW" | "GOOD" | "FAIR" | "POOR";
@@ -119,6 +121,33 @@ export type ListingCard = {
   distance_km?: number | null;
   /** S3-28: server-computed; drives the "Promoted" badge. */
   is_promoted?: boolean;
+  /** The listing's availability window, as ISO dates; until is null when open-ended. */
+  available_from?: string | null;
+  available_until?: string | null;
+  /** Present, and true, only when the renter searched with both dates. */
+  available_for_dates?: boolean;
+  /**
+   * With a semantic search: "exact" when the listing carries a brand or model
+   * the renter typed (those rank first), "semantic" when matched on meaning.
+   */
+  match?: "exact" | "semantic";
+};
+
+/** A filter the backend says would find something if removed (the no-results state). */
+export type RelaxableFilter =
+  | "category"
+  | "condition"
+  | "brand"
+  | "location_area"
+  | "price"
+  | "dates"
+  | "radius"
+  | "verified_only";
+
+export type SearchSuggestions = {
+  /** Most results first; filters whose removal still finds nothing are left out. */
+  relax_filters: { filter: RelaxableFilter; result_count: number }[];
+  related_categories: { category: string; label: string }[];
 };
 
 export type BrowseListingsResponse = {
@@ -127,6 +156,13 @@ export type BrowseListingsResponse = {
   total_count: number;
   page: number;
   page_size: number;
+  /**
+   * Present with a query. "keyword" when semantic search was off or fell
+   * back; the results are good either way, so it is never shown as an error.
+   */
+  search_mode?: "semantic" | "keyword";
+  /** Present when a query found nothing. */
+  suggestions?: SearchSuggestions;
 };
 
 /** Public landing-page card enriched with the category-level demand badge. */
@@ -659,4 +695,20 @@ export function isCondition(value: string): value is ListingCondition {
 
 export function isLocationArea(value: string): value is LocationArea {
   return value in LOCATION_LABELS;
+}
+
+/**
+ * The browse card's availability line (Scenario 1). With the renter's dates
+ * every listing shown has passed the date filter, so it says so; otherwise
+ * it says when the listing's window opens or closes. `today` is an ISO date,
+ * passed in so the line is the same on the server and in tests.
+ */
+export function availabilityLine(
+  card: Pick<ListingCard, "available_from" | "available_until" | "available_for_dates">,
+  today: string,
+): string {
+  if (card.available_for_dates) return "Available for your dates";
+  if (card.available_from && card.available_from > today) return `Available from ${formatDate(card.available_from)}`;
+  if (card.available_until) return `Available until ${formatDate(card.available_until)}`;
+  return "Available now";
 }

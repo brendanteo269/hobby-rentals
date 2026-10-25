@@ -15,10 +15,12 @@ import {
   type ListingCategory,
   type ListingCondition,
   type LocationArea,
+  type RelaxableFilter,
 } from "@/lib/listings";
 
 export const PAGE_SIZE = 12;
-export type BrowseSort = "newest" | "nearest";
+/** Relevance only means something with a query; it is the default then, newest otherwise. */
+export type BrowseSort = "relevance" | "newest" | "nearest";
 
 export type BrowseFilters = {
   q: string;
@@ -75,6 +77,11 @@ function price(value: string): string {
   return Number.isFinite(parsed) && parsed >= 0 ? String(parsed) : "";
 }
 
+/** What the results are sorted by when the URL says nothing. */
+export function defaultSort(q: string): BrowseSort {
+  return q ? "relevance" : "newest";
+}
+
 /**
  * Reads filters from the URL, dropping anything unrecognised.
  *
@@ -86,8 +93,10 @@ export function parseBrowseFilters(params: SearchParams): BrowseFilters {
   const originLng = coordinate(first(params.origin_lng));
   const radius = coordinate(first(params.radius_km));
   const hasValidOrigin = originLat !== null && originLng !== null && radius !== null && originLat >= -90 && originLat <= 90 && originLng >= -180 && originLng <= 180 && radius >= 1 && radius <= 20;
+  const q = first(params.q);
+  const sort = first(params.sort);
   return {
-    q: first(params.q),
+    q,
     category: toList(params.category).filter(isCategory),
     condition: toList(params.condition).filter(isCondition),
     brand: toList(params.brand).map((brand) => brand.trim()).filter(Boolean),
@@ -100,7 +109,11 @@ export function parseBrowseFilters(params: SearchParams): BrowseFilters {
     origin_lat: hasValidOrigin ? originLat : null,
     origin_lng: hasValidOrigin ? originLng : null,
     radius_km: hasValidOrigin ? radius : null,
-    sort: hasValidOrigin && first(params.sort) === "nearest" ? "nearest" : "newest",
+    sort:
+      sort === "nearest" && hasValidOrigin ? "nearest"
+      : sort === "newest" ? "newest"
+      : sort === "relevance" && q ? "relevance"
+      : defaultSort(q),
     page: Math.max(1, Number(first(params.page)) || 1),
   };
 }
@@ -117,8 +130,8 @@ export function hasActiveFilters(filters: BrowseFilters): boolean {
     filters.end_date !== "" ||
     filters.verified ||
     filters.min_price !== "" ||
-    filters.max_price !== ""
-    || filters.origin_lat !== null
+    filters.max_price !== "" ||
+    filters.origin_lat !== null
   );
 }
 
@@ -141,12 +154,20 @@ export function browseHref(filters: BrowseFilters): string {
   if (filters.verified) search.set("verified", "1");
   if (filters.min_price) search.set("min_price", filters.min_price);
   if (filters.max_price) search.set("max_price", filters.max_price);
-  if (filters.origin_lat !== null && filters.origin_lng !== null && filters.radius_km !== null) {
+  const hasOrigin = filters.origin_lat !== null && filters.origin_lng !== null && filters.radius_km !== null;
+  if (hasOrigin) {
     search.set("origin_lat", String(filters.origin_lat));
     search.set("origin_lng", String(filters.origin_lng));
     search.set("radius_km", String(filters.radius_km));
-    if (filters.sort === "nearest") search.set("sort", "nearest");
   }
+  // Nearest needs an origin and relevance a query; without them each falls
+  // back to the default. Only a sort other than the default is written, so
+  // the default stays a clean URL.
+  const usable =
+    (filters.sort === "nearest" && !hasOrigin) || (filters.sort === "relevance" && !filters.q)
+      ? defaultSort(filters.q)
+      : filters.sort;
+  if (usable !== defaultSort(filters.q)) search.set("sort", usable);
   if (filters.page > 1) search.set("page", String(filters.page));
 
   const query = search.toString();
@@ -161,4 +182,39 @@ export function browseHref(filters: BrowseFilters): string {
  */
 export function browsePageHref(filters: BrowseFilters, page: number): string {
   return browseHref({ ...filters, page });
+}
+
+/** What each filter the no-results state offers to remove is called on its button. */
+export const RELAX_FILTER_LABELS: Record<RelaxableFilter, string> = {
+  dates: "Any dates",
+  price: "Any price",
+  category: "Any category",
+  radius: "Anywhere, not just nearby",
+  location_area: "Any area",
+  condition: "Any condition",
+  brand: "Any brand",
+  verified_only: "Include unverified serials",
+};
+
+/**
+ * The same search with one filter removed, for the no-results state's
+ * suggestions (Scenario 4). Mirrors what the backend counted for it.
+ */
+export function relaxedHref(filters: BrowseFilters, filter: RelaxableFilter): string {
+  const changes: Record<RelaxableFilter, Partial<BrowseFilters>> = {
+    dates: { start_date: "", end_date: "" },
+    price: { min_price: "", max_price: "" },
+    category: { category: [] },
+    radius: { origin_lat: null, origin_lng: null, radius_km: null, sort: defaultSort(filters.q) },
+    location_area: { location_area: [] },
+    condition: { condition: [] },
+    brand: { brand: [] },
+    verified_only: { verified: false },
+  };
+  return browseHref({ ...filters, ...changes[filter], page: 1 });
+}
+
+/** A related category to browse instead: that category on its own, no search or other filters. */
+export function relatedCategoryHref(category: string): string {
+  return browseHref({ ...parseBrowseFilters({}), category: isCategory(category) ? [category] : [] });
 }

@@ -59,7 +59,8 @@ export type BrowseListingsParams = {
   origin_lat?: number;
   origin_lng?: number;
   radius_km?: number;
-  sort?: "newest" | "nearest";
+  /** Left out, the API sorts by relevance with a query and by newest without. */
+  sort?: "relevance" | "newest" | "nearest";
   page?: number;
   page_size?: number;
 };
@@ -82,12 +83,14 @@ function browseQuery(params: BrowseListingsParams): string {
   if (params.verified_only) search.set("verified_only", "true");
   if (params.min_daily_price) search.set("min_daily_price", params.min_daily_price);
   if (params.max_daily_price) search.set("max_daily_price", params.max_daily_price);
-  if (params.origin_lat !== undefined && params.origin_lng !== undefined && params.radius_km !== undefined) {
+  const hasOrigin = params.origin_lat !== undefined && params.origin_lng !== undefined && params.radius_km !== undefined;
+  if (hasOrigin) {
     search.set("origin_lat", String(params.origin_lat));
     search.set("origin_lng", String(params.origin_lng));
     search.set("radius_km", String(params.radius_km));
-    if (params.sort === "nearest") search.set("sort", "nearest");
   }
+  // Nearest needs an origin, which the API checks; the other two are always valid.
+  if (params.sort && (params.sort !== "nearest" || hasOrigin)) search.set("sort", params.sort);
   if (params.page && params.page > 1) search.set("page", String(params.page));
   if (params.page_size) search.set("page_size", String(params.page_size));
 

@@ -56,7 +56,15 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
         <input key={value} type="hidden" name="brand" value={value} />
       ))}
 
-      <SearchBar label="Search listings" placeholder="Search gear by name, description or brand" defaultValue={filters.q} />
+      {/* Kept across a new search, so the results stay in the order the member chose. */}
+      {filters.sort === "newest" && filters.q && <input type="hidden" name="sort" value="newest" />}
+
+      {/* Semantic search: a member describes what they are doing, not what the item is called. */}
+      <SearchBar
+        label="Search listings"
+        placeholder="Describe what you're doing, e.g. camping on a rainy weekend"
+        defaultValue={filters.q}
+      />
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <FilterSelect id="category" label="Category" placeholder="Category">

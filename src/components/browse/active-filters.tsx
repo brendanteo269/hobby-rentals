@@ -1,5 +1,5 @@
 import { FilterChips, dateRangeLabel, type FilterChip } from "@/components/browse/filter-chips";
-import { browseHref, hasActiveFilters, type BrowseFilters } from "@/lib/browse-params";
+import { browseHref, defaultSort, hasActiveFilters, type BrowseFilters } from "@/lib/browse-params";
 import {
   CATEGORY_LABELS,
   CONDITION_LABELS,
@@ -49,7 +49,7 @@ export function ActiveFilters({ filters }: { filters: BrowseFilters }) {
     chips.push({
       key: "near-me",
       label: `Near me · ${filters.radius_km} km`,
-      href: without({ origin_lat: null, origin_lng: null, radius_km: null, sort: "newest" }),
+      href: without({ origin_lat: null, origin_lng: null, radius_km: null, sort: defaultSort(filters.q) }),
     });
   }
 

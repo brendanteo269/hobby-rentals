@@ -1,3 +1,5 @@
+import Link from "next/link";
+import type { Route } from "next";
 import { Container, ButtonLink, EmptyState } from "@/components/ui";
 import { Pagination } from "@/components/pagination";
 import { MarketplaceHeader } from "@/components/browse/marketplace-header";
@@ -8,13 +10,16 @@ import { ResultsSort } from "@/components/browse/results-sort";
 import { browseListings, ListingApiError } from "@/lib/api/listings";
 import {
   PAGE_SIZE,
+  RELAX_FILTER_LABELS,
   browsePageHref,
   hasActiveFilters,
   parseBrowseFilters,
+  relatedCategoryHref,
+  relaxedHref,
   type BrowseFilters,
   type SearchParams,
 } from "@/lib/browse-params";
-import type { BrowseListingsResponse } from "@/lib/listings";
+import type { BrowseListingsResponse, SearchSuggestions } from "@/lib/listings";
 import { getCategoryDemandOverview } from "@/lib/api/analytics";
 import { CloudOff, SearchX, Tag } from "lucide-react";
 import { SaveSearchButton } from "@/components/saved-searches/save-search-button";
@@ -32,6 +37,7 @@ export default async function BrowsePage({
 
   const total = data?.total_count ?? 0;
   const lastPage = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const onlySearched = filters.q !== "" && !hasActiveFilters({ ...filters, q: "" });
 
   return (
     <Container className="pb-16 pt-10">
@@ -51,7 +57,7 @@ export default async function BrowsePage({
           <SaveSearchButton filters={filters} />
           <ResultsSort filters={filters} />
         </div>
-        <p className="body-copy" aria-live="polite">{resultSummary(total, error)}</p>
+        <p className="body-copy" aria-live="polite">{resultSummary(total, error, onlySearched)}</p>
       </div>
 
       <div className="mt-6">
@@ -62,7 +68,7 @@ export default async function BrowsePage({
             ))}
           </ul>
         ) : (
-          <NoResults filters={filters} error={error} />
+          <NoResults filters={filters} error={error} suggestions={data?.suggestions} />
         )}
       </div>
 
@@ -112,13 +118,25 @@ async function loadListings(
   }
 }
 
-function resultSummary(total: number, error: string | null): string {
+function resultSummary(total: number, error: string | null, onlySearched: boolean): string {
   if (error) return error;
-  if (total === 0) return "No listings match these filters.";
+  if (total === 0) return onlySearched ? "No listings match this search." : "No listings match these filters.";
   return `${total} listing${total === 1 ? "" : "s"} available.`;
 }
 
-function NoResults({ filters, error }: { filters: BrowseFilters; error: string | null }) {
+function NoResults({
+  filters,
+  error,
+  suggestions,
+}: {
+  filters: BrowseFilters;
+  error: string | null;
+  suggestions?: SearchSuggestions;
+}) {
+  if (!error && filters.q && suggestions) {
+    return <NothingRelevant filters={filters} suggestions={suggestions} />;
+  }
+
   if (error) {
     return (
       <EmptyState icon={CloudOff}
@@ -149,5 +167,55 @@ function NoResults({ filters, error }: { filters: BrowseFilters; error: string |
       body="Nothing is available to rent right now. Be the first to list something."
       action={<ButtonLink href="/listings/new">Create a listing</ButtonLink>}
     />
+  );
+}
+
+/**
+ * Scenario 4: a search that found nothing relevant. Listings that were not
+ * close enough are never shown here; instead, each filter that would find
+ * something if removed (with how many), and categories to browse instead.
+ */
+function NothingRelevant({ filters, suggestions }: { filters: BrowseFilters; suggestions: SearchSuggestions }) {
+  const { relax_filters, related_categories } = suggestions;
+  return (
+    <div className="card px-6 py-14 text-center">
+      <span className="mx-auto flex size-14 items-center justify-center rounded-full bg-accent-soft text-accent">
+        <SearchX className="size-6" aria-hidden="true" />
+      </span>
+      <p className="heading mt-5 text-lg">No gear matches that yet</p>
+      <p className="body-copy mx-auto mt-2 max-w-md">
+        Nothing listed is close enough to &ldquo;{filters.q}&rdquo;.
+        {relax_filters.length > 0
+          ? " Removing a filter would find some gear, or try a broader description."
+          : " Try describing it another way, or browse a related category."}
+      </p>
+
+      {relax_filters.length > 0 && (
+        <div className="mt-6 flex flex-wrap justify-center gap-2">
+          {relax_filters.map(({ filter, result_count }) => (
+            <ButtonLink key={filter} href={relaxedHref(filters, filter) as Route} variant="outline">
+              {RELAX_FILTER_LABELS[filter]} · {result_count} result{result_count === 1 ? "" : "s"}
+            </ButtonLink>
+          ))}
+        </div>
+      )}
+
+      {related_categories.length > 0 && (
+        <div className="mt-6">
+          <p className="text-sm text-ink-soft">Browse a related category</p>
+          <div className="mt-2 flex flex-wrap justify-center gap-2">
+            {related_categories.map(({ category, label }) => (
+              <Link
+                key={category}
+                href={relatedCategoryHref(category) as Route}
+                className="rounded-full bg-surface-muted px-3 py-1 text-sm text-ink-soft transition-colors hover:bg-accent-soft hover:text-accent-dark"
+              >
+                {label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
