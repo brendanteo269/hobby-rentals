@@ -83,14 +83,6 @@ export function updateBookingStatus(bookingId: string, nextStatus: BookingStatus
   });
 }
 
-/** S3-10: the owner reports damage on a returned booking, holding its settlement. */
-export function reportBookingDamage(bookingId: string, description: string, claimedCents: number) {
-  return backendRequest<RentalDispute>(`/bookings/${encodeURIComponent(bookingId)}/disputes`, {
-    method: "POST",
-    body: JSON.stringify({ description, claimed_cents: claimedCents }),
-  });
-}
-
 /** S3-08: the renter rebuts the claim; the case goes to arbitration and the deposit stays frozen. */
 export function disputeDamageClaim(bookingId: string, rebuttal: string, photoKeys: string[]) {
   return backendRequest<RentalDispute>(`/bookings/${encodeURIComponent(bookingId)}/claim/dispute`, {

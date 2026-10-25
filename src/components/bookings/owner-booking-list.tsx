@@ -7,7 +7,6 @@ import { changeBookingStatus, type BookingActionResult } from "@/app/bookings/ac
 import { MessageButton } from "@/components/messages/message-button";
 import { ExtensionRequestDecision } from "@/components/bookings/extension-request-decision";
 import { OverdueNotice } from "@/components/bookings/overdue-notice";
-import { ReportDamageButton } from "@/components/bookings/report-damage-button";
 import { ConfirmReturnButton } from "@/components/bookings/confirm-return-button";
 import {
   BOOKING_STATUS_LABELS,
@@ -36,6 +35,19 @@ import { reviewPath, type ReviewEligibility } from "@/lib/reviews";
 /** Who asked, for an owner reading a list of requests on one listing. */
 export function requesterName(booking: Pick<Booking, "renter_name">): string {
   return booking.renter_name || "A renter";
+}
+
+/**
+ * What the link to a returned booking's condition page says, or null when it
+ * has nothing to show. The damage claim (S3-06) is made and followed there
+ * whether or not the AI checked the return, so a booking without a scan still
+ * links once a claim can be made or has been.
+ */
+function conditionPageLabel(booking: Booking): string | null {
+  if (booking.condition_scan) return "Condition report";
+  if (booking.settlement_state?.dispute) return "View claim";
+  if (canReportDamage(booking.settlement_state)) return "Report damage";
+  return null;
 }
 
 export function OwnerBookingList({ bookings, reviewEligibility = [] }: { bookings: Booking[]; reviewEligibility?: ReviewEligibility[] }) {
@@ -109,9 +121,9 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
               )}
               {canConfirmHandover(booking, "owner") && <ConfirmHandoverButton bookingId={booking.id} />}
               {canConfirmReturn(booking, "owner") && <ConfirmReturnButton bookingId={booking.id} />}
-              {booking.condition_scan && (
+              {conditionPageLabel(booking) && (
                 <ButtonLink href={ownerConditionReportPath(booking.id)} variant="outline" className="px-3 py-1.5 text-xs">
-                  Condition report
+                  {conditionPageLabel(booking)}
                 </ButtonLink>
               )}
               {booking.status === "PENDING" && <ButtonLink href={requestReviewPath("BOOKING", booking.id)} className="px-3 py-1.5 text-xs">Review request</ButtonLink>}
@@ -121,10 +133,6 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
                 ) : (
                   <Button variant="outline" className="px-3 py-1.5 text-xs" disabled={isPending} onClick={() => update(booking.id, "CANCELLED")}>Cancel booking</Button>
                 ))}
-              {/* With an AI condition report, the claim (S3-06) is made from the report page instead. */}
-              {canReportDamage(booking.settlement_state) && booking.settlement_state?.claim_window_ends_at && !booking.condition_scan && (
-                <ReportDamageButton kind="booking" id={booking.id} windowEndsAt={booking.settlement_state.claim_window_ends_at} />
-              )}
               {reviewEligibility.find((item) => item.booking_id === booking.id) && <ButtonLink href={reviewPath(reviewEligibility.find((item) => item.booking_id === booking.id)!)} variant="accent" className="px-3 py-1.5 text-xs">Rate renter</ButtonLink>}
               {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
                 <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />

@@ -106,7 +106,6 @@ export function OwnerBundleBookingList({ bookings }: { bookings: BundleBooking[]
                   )}
                   {canReportDamage(booking.settlement_state) && booking.settlement_state?.claim_window_ends_at && (
                     <ReportDamageButton
-                      kind="bundle"
                       id={booking.id}
                       windowEndsAt={booking.settlement_state.claim_window_ends_at}
                       items={booking.items}

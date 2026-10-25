@@ -3,29 +3,27 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Field, FormNotice, Modal, SelectField, TextareaField } from "@/components/ui";
-import { reportDamage } from "@/app/bookings/actions";
+import { reportBundleDamageAction } from "@/app/bookings/actions";
 import { dollarsToCents, formatDateTime } from "@/lib/format";
 
 /**
- * S3-10: the owner reports damage on a returned rental while its claim window
- * is open. Reporting holds the whole rental - the owner's payout and the
- * renter's deposit - until an admin decides, which the dialog says before the
- * owner confirms.
- *
- * For a bundle the owner picks the damaged item, whose passport records the
- * outcome; a single booking is about its own listing.
+ * S3-10: the owner reports damage to a returned bundle while its claim window
+ * is open, picking the damaged item, whose passport records the outcome.
+ * Reporting holds the whole bundle - the owner's payout and the renter's
+ * deposit - until an admin decides, which the dialog says before the owner
+ * confirms. Bundles only: a single booking is claimed from its condition
+ * page, where the renter can accept or dispute.
  */
 export function ReportDamageButton({
-  kind,
   id,
   windowEndsAt,
-  items = [],
+  items,
 }: {
-  kind: "booking" | "bundle";
+  /** The bundle booking. */
   id: string;
   windowEndsAt: string;
-  /** A bundle's items, to choose the damaged one from. */
-  items?: { listing_id: string; listing_name: string | null }[];
+  /** The bundle's items, to choose the damaged one from. */
+  items: { listing_id: string; listing_name: string | null }[];
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -43,7 +41,7 @@ export function ReportDamageButton({
     }
     setError(null);
     startTransition(async () => {
-      const result = await reportDamage(kind, id, description.trim(), claimedCents, kind === "bundle" ? listingId : undefined);
+      const result = await reportBundleDamageAction(id, listingId, description.trim(), claimedCents);
       if ("error" in result) {
         setError(result.error);
         return;
@@ -65,7 +63,7 @@ export function ReportDamageButton({
               Reporting holds this rental&apos;s funds - your payout and the renter&apos;s deposit - until the platform
               reviews the claim and decides the damage value. You can report until {formatDateTime(windowEndsAt)}.
             </p>
-            {kind === "bundle" && items.length > 0 && (
+            {items.length > 0 && (
               <SelectField
                 id="damage-item"
                 label="Damaged item"

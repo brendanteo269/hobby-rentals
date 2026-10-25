@@ -16,7 +16,8 @@ type Evidence = { key: string; previewUrl: string };
 
 /**
  * S3-06 Scenario 2: the owner's damage claim - the reason, the repair cost,
- * and their own evidence photos - next to the AI report it rests on. The
+ * and their own evidence photos - next to the AI report it rests on, when the
+ * AI checked the return. The
  * claim window's countdown sits by the button; the page stops offering the
  * form once the window closes.
  */
@@ -25,12 +26,15 @@ export function ClaimForm({
   windowEndsAt,
   windowSecondsLeft,
   depositCents,
+  hasScan,
 }: {
   bookingId: string;
   windowEndsAt: string;
   /** Worked out on the server, so a browser with a wrong clock still counts down to the real deadline. */
   windowSecondsLeft: number;
   depositCents: number | null;
+  /** Whether the AI checked the return, so its report goes with the claim. */
+  hasScan: boolean;
 }) {
   const router = useRouter();
   const [description, setDescription] = useState("");
@@ -85,9 +89,9 @@ export function ClaimForm({
         </p>
       </div>
       <p className="text-sm text-ink-soft">
-        Check the item against the AI report first. Claiming keeps the renter&apos;s deposit
+        {hasScan && "Check the item against the AI report first. "}Claiming keeps the renter&apos;s deposit
         {depositCents ? ` (${formatMoney(depositCents)})` : ""} and your payout on hold while the renter reviews
-        it; they can accept or dispute it. The AI report is attached to your claim.
+        it; they can accept or dispute it.{hasScan && " The AI report is attached to your claim."}
       </p>
       <TextareaField
         id="claim-reason"
