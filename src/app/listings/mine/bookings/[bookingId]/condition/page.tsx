@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { OwnerPortal, requireOwner } from "@/components/owner-portal";
 import { ConditionReport } from "@/components/bookings/condition-report";
@@ -9,7 +10,27 @@ import { getDamageClaim, getOwnerBookings } from "@/lib/api/bookings";
 import { getConditionScan } from "@/lib/api/returns";
 import { canReportDamage, secondsUntil } from "@/lib/settlement";
 
-export const metadata = { title: "Condition report — HobbyRentals" };
+/**
+ * The owner's booking and its AI scan (null when the AI did not check the
+ * return), shared by the title and the page so they are fetched once. The
+ * owner's own bookings only: anyone else is a 404.
+ */
+const loadBooking = cache(async (bookingId: string) => {
+  const booking = (await getOwnerBookings()).find((candidate) => candidate.id === bookingId);
+  if (!booking) notFound();
+  try {
+    return { booking, scan: await getConditionScan(bookingId) };
+  } catch (error) {
+    if (!(error instanceof BackendApiError && error.status === 404)) throw error;
+    return { booking, scan: null };
+  }
+});
+
+/** Named like the page's heading: a return the AI did not check is only its claim. */
+export async function generateMetadata({ params }: { params: Promise<{ bookingId: string }> }) {
+  const { scan } = await loadBooking((await params).bookingId);
+  return { title: `${scan ? "Condition report" : "Damage claim"} — HobbyRentals` };
+}
 
 /**
  * S3-05: the AI's check of a returned booking, for its owner - and S3-06:
@@ -20,15 +41,7 @@ export const metadata = { title: "Condition report — HobbyRentals" };
 export default async function ConditionReportPage({ params }: { params: Promise<{ bookingId: string }> }) {
   await requireOwner();
   const { bookingId } = await params;
-  // The owner's own bookings only: anyone else is a 404.
-  const booking = (await getOwnerBookings()).find((candidate) => candidate.id === bookingId);
-  if (!booking) notFound();
-  let scan = null;
-  try {
-    scan = await getConditionScan(bookingId);
-  } catch (error) {
-    if (!(error instanceof BackendApiError && error.status === 404)) throw error;
-  }
+  const { booking, scan } = await loadBooking(bookingId);
 
   const state = booking.settlement_state;
   const windowEndsAt = state?.claim_window_ends_at;
