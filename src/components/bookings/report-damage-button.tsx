@@ -3,17 +3,20 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Field, FormNotice, Modal, SelectField, TextareaField } from "@/components/ui";
-import { reportDamage } from "@/app/bookings/actions";
+import { reportDamage, submitClaim } from "@/app/bookings/actions";
 import { dollarsToCents, formatDateTime } from "@/lib/format";
 
 /**
- * S3-10: the owner reports damage on a returned rental while its claim window
- * is open. Reporting holds the whole rental - the owner's payout and the
- * renter's deposit - until an admin decides, which the dialog says before the
- * owner confirms.
+ * The owner reports damage on a returned rental while its claim window is
+ * open, from the bookings list. Everything held for the rental - the owner's
+ * payout and the renter's deposit - stays held, which the dialog says before
+ * the owner confirms.
  *
- * For a bundle the owner picks the damaged item, whose passport records the
- * outcome; a single booking is about its own listing.
+ * A single booking files an S3-06 claim, the same one the condition report
+ * page makes, so the renter gets a deadline to accept or dispute it whether or
+ * not the AI checked the return. A bundle has no claim flow yet, so it is an
+ * S3-10 report an admin decides; the owner picks the damaged item, whose
+ * passport records the outcome.
  */
 export function ReportDamageButton({
   kind,
@@ -43,7 +46,10 @@ export function ReportDamageButton({
     }
     setError(null);
     startTransition(async () => {
-      const result = await reportDamage(kind, id, description.trim(), claimedCents, kind === "bundle" ? listingId : undefined);
+      const result =
+        kind === "bundle"
+          ? await reportDamage(kind, id, description.trim(), claimedCents, listingId)
+          : await submitClaim(id, description.trim(), claimedCents, []);
       if ("error" in result) {
         setError(result.error);
         return;
@@ -62,8 +68,10 @@ export function ReportDamageButton({
         <Modal title="Report damage" onClose={() => setOpen(false)}>
           <div className="mt-4 space-y-4 text-sm">
             <p className="text-ink-soft">
-              Reporting holds this rental&apos;s funds - your payout and the renter&apos;s deposit - until the platform
-              reviews the claim and decides the damage value. You can report until {formatDateTime(windowEndsAt)}.
+              {kind === "bundle"
+                ? "Reporting holds this rental's funds - your payout and the renter's deposit - until the platform reviews the claim and decides the damage value."
+                : "Reporting holds this rental's funds - your payout and the renter's deposit - while the renter reviews your claim. They can accept it, or dispute it for the platform to decide."}{" "}
+              You can report until {formatDateTime(windowEndsAt)}.
             </p>
             {kind === "bundle" && items.length > 0 && (
               <SelectField
@@ -92,7 +100,7 @@ export function ReportDamageButton({
             <Field
               id="damage-amount"
               label="Repair or replacement cost (S$)"
-              hint="Your estimate. The platform decides the final figure."
+              hint={kind === "bundle" ? "Your estimate. The platform decides the final figure." : "What it would cost to put right. The renter sees this figure."}
               type="number"
               inputMode="decimal"
               min="0.01"
