@@ -7,7 +7,6 @@ import {
   declineBooking,
   getBookingCancellationPreview,
   getBookingQuote,
-  reportBookingDamage,
   submitDamageClaim,
   updateBookingStatus,
 } from "@/lib/api/bookings";
@@ -246,22 +245,18 @@ export async function denyExtensionRequest(requestId: string): Promise<Extension
 export type ReportDamageResult = { error: string } | { dispute: RentalDispute };
 
 /**
- * S3-10: the owner reports damage on a returned rental. For a bundle,
- * listingId names the damaged item. The rental's money stays held until an
- * admin decides.
+ * S3-10: the owner reports damage to one item of a returned bundle; listingId
+ * names it. The bundle's money stays held until an admin decides. A single
+ * booking is claimed with submitClaim instead, so its renter can respond.
  */
-export async function reportDamage(
-  kind: "booking" | "bundle",
-  id: string,
+export async function reportBundleDamageAction(
+  bundleBookingId: string,
+  listingId: string,
   description: string,
   claimedCents: number,
-  listingId?: string,
 ): Promise<ReportDamageResult> {
   try {
-    const dispute =
-      kind === "bundle"
-        ? await reportBundleDamage(id, listingId ?? "", description, claimedCents)
-        : await reportBookingDamage(id, description, claimedCents);
+    const dispute = await reportBundleDamage(bundleBookingId, listingId, description, claimedCents);
     revalidatePath("/", "layout");
     return { dispute };
   } catch (error) {
