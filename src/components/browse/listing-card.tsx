@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, todayIso } from "@/lib/format";
 import { Badge } from "@/components/ui";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { PromotedBadge } from "@/components/listings/promoted-badge";
@@ -9,6 +9,7 @@ import { HighDemandBadge } from "@/components/listings/high-demand-badge";
 import {
   CATEGORY_LABELS,
   LOCATION_LABELS,
+  availabilityLine,
   passportBadge,
   type ListingCard as ListingCardData,
 } from "@/lib/listings";
@@ -63,6 +64,13 @@ export function ListingCard({ listing, highDemand = false, className = "", onFav
             <RateLine listing={listing} className="heading text-lg" />
           </Link>
         </div>
+        {listing.available_from !== undefined && (
+          // Compared with today's date, which the server and the browser may
+          // see differently around midnight; the browser's reading wins.
+          <p className="mt-1 text-sm text-ink-soft" suppressHydrationWarning>
+            {availabilityLine(listing, todayIso())}
+          </p>
+        )}
         <div className="mt-1 flex items-center justify-between gap-2">
           <p className="body-copy">{formatMoney(listing.deposit_cents)} deposit</p>
           {listing.favourite_count !== undefined && listing.is_favourited !== undefined && (

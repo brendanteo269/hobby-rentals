@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  availabilityLine,
   rentalDays,
   rentalDurationLimits,
   rentalQuote,
@@ -138,5 +139,26 @@ describe("rentalDurationLimits", () => {
 
   it("gets the singular right", () => {
     expect(limits(1, 1)).toBe("1 day");
+  });
+});
+
+describe("availabilityLine", () => {
+  const TODAY = "2026-10-24";
+
+  it("says the listing is free for the renter's dates when they searched with some", () => {
+    expect(availabilityLine({ available_for_dates: true, available_from: "2026-12-01" }, TODAY)).toBe("Available for your dates");
+  });
+
+  it("says when a listing opens if that is still ahead", () => {
+    expect(availabilityLine({ available_from: "2026-11-03", available_until: null }, TODAY)).toBe(`Available from ${new Date("2026-11-03").toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" })}`);
+  });
+
+  it("says when an open listing closes", () => {
+    expect(availabilityLine({ available_from: "2026-01-01", available_until: "2026-12-31" }, TODAY)).toMatch(/^Available until /);
+  });
+
+  it("is simply available otherwise, from today on", () => {
+    expect(availabilityLine({ available_from: TODAY, available_until: null }, TODAY)).toBe("Available now");
+    expect(availabilityLine({ available_from: null, available_until: null }, TODAY)).toBe("Available now");
   });
 });
