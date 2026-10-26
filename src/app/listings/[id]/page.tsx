@@ -242,11 +242,10 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
           </div>
         </section>
       )}
-      {listing.status === "ACTIVE" && (
-        <Suspense fallback={<SimilarListingsFallback />}>
-          <SimilarListings listingId={listing.id} />
-        </Suspense>
-      )}
+      {/* Shown for any status: a listing with nothing to compare says so rather than leaving a gap. */}
+      <Suspense fallback={<SimilarListingsFallback />}>
+        <SimilarListings listingId={listing.id} />
+      </Suspense>
       <RentalReviewSection title="Reviews for this listing" reviews={reviews} emptyBody="This listing has not received any reviews yet." />
     </Container>
   );

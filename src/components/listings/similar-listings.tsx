@@ -1,6 +1,7 @@
 import { ListingCard } from "@/components/browse/listing-card";
 import { CardCarousel } from "@/components/listings/card-carousel";
 import { getSimilarListings } from "@/lib/api/listings";
+import { loadOrEmpty } from "@/lib/similar-listings";
 
 /** Compact fixed-width cards, so as many fit as the page allows and the next one peeks in on narrow screens. */
 const CARD_WIDTH = "h-auto! w-52 shrink-0 snap-start sm:w-56";
@@ -11,7 +12,7 @@ const CARD_WIDTH = "h-auto! w-52 shrink-0 snap-start sm:w-56";
  * rest of the page.
  */
 export async function SimilarListings({ listingId }: { listingId: string }) {
-  const listings = await getSimilarListings(listingId).catch(() => []);
+  const listings = await loadOrEmpty(() => getSimilarListings(listingId));
   return (
     <section className="mt-16 border-t border-line pt-10">
       {listings.length === 0 ? (
