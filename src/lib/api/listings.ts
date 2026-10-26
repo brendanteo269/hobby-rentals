@@ -251,6 +251,18 @@ export function addListingBlackout(listingId: string, start_date: string, end_da
   );
 }
 
+/**
+ * Moves an existing blackout's dates. The way to free part of a range: a
+ * delete followed by a shorter add leaves the whole range open in between,
+ * and an availability alert fires on that gap.
+ */
+export function updateListingBlackout(listingId: string, blackoutId: string, start_date: string, end_date: string) {
+  return backendRequest<{ id: string; cancelled_bookings: Booking[] }>(
+    `/listings/${encodeURIComponent(listingId)}/blackouts/${encodeURIComponent(blackoutId)}`,
+    { method: "PATCH", body: JSON.stringify({ start_date, end_date, reason: null }) },
+  );
+}
+
 export function deleteListingBlackout(listingId: string, blackoutId: string) {
   return backendRequest(`/listings/${encodeURIComponent(listingId)}/blackouts/${encodeURIComponent(blackoutId)}`, { method: "DELETE" });
 }

@@ -56,6 +56,11 @@ export type NotificationType =
   | "WAITLIST_OFFERED"
   | "WAITLIST_OFFER_EXPIRED"
   | "WAITLIST_JOINED_OWNER"
+  // S4-07: a watch on dates the owner blocked out - set, then fulfilled when
+  // any of them are freed. Unlike a waitlist offer nothing is held, so
+  // neither of these expires.
+  | "AVAILABILITY_ALERT_SET"
+  | "AVAILABILITY_ALERT_FULFILLED"
   // S2-19: handover meetup coordination on a confirmed booking.
   | "MEETUP_PROPOSED"
   | "MEETUP_ACCEPTED"
@@ -177,6 +182,8 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   WAITLIST_OFFERED: "Waitlist dates free",
   WAITLIST_OFFER_EXPIRED: "Waitlist offer closed",
   WAITLIST_JOINED_OWNER: "New waitlist interest",
+  AVAILABILITY_ALERT_SET: "Date alert set",
+  AVAILABILITY_ALERT_FULFILLED: "Watched dates free",
   MEETUP_PROPOSED: "Meetup proposed",
   MEETUP_ACCEPTED: "Meetup confirmed",
   LISTING_DEACTIVATED: "Listing deactivated",

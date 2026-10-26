@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { Container, Button, ButtonLink, Field } from "@/components/ui";
 import { getListingAvailability } from "@/lib/api/listings";
-import { addBlackout, removeBlackout, saveListingAvailability } from "./actions";
+import { addBlackout, editBlackout, removeBlackout, saveListingAvailability } from "./actions";
 import { WEEKDAY_LABELS } from "@/lib/listings";
 
 export default async function ListingAvailabilityPage({ params }: { params: Promise<{ id: string }> }) {
@@ -96,10 +96,43 @@ export default async function ListingAvailabilityPage({ params }: { params: Prom
         </form>
 
         <h3 className="mt-6 font-medium">Blackout dates</h3>
+        <p className="mt-1 text-sm text-ink-soft">
+          To free part of a range, change its dates here rather than deleting it and adding a
+          shorter one &mdash; renters watching those dates are told the whole range is free in
+          between.
+        </p>
         <ul className="mt-2 space-y-2">
           {availability.blackouts.map((item) => (
-            <li key={item.id} className="flex items-center justify-between rounded-lg border border-line p-3 text-sm">
-              {item.start_date} to {item.end_date}
+            <li key={item.id} className="flex flex-wrap items-end justify-between gap-3 rounded-lg border border-line p-3 text-sm">
+              <form
+                action={async (formData) => {
+                  "use server";
+                  await editBlackout(id, item.id, formData);
+                }}
+                className="flex flex-wrap items-end gap-3"
+              >
+                <Field
+                  label="Start"
+                  id={`blackout_start_${item.id}`}
+                  required
+                  type="date"
+                  name="start_date"
+                  defaultValue={item.start_date}
+                  className="w-auto"
+                />
+                <Field
+                  label="End"
+                  id={`blackout_end_${item.id}`}
+                  required
+                  type="date"
+                  name="end_date"
+                  defaultValue={item.end_date}
+                  className="w-auto"
+                />
+                <Button variant="outline" className="px-4 py-2 text-xs">
+                  Save dates
+                </Button>
+              </form>
               <form action={removeBlackout.bind(null, id, item.id)}>
                 <button className="text-ink-soft underline transition-colors hover:text-ink">Delete</button>
               </form>
