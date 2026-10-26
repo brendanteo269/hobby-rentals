@@ -24,6 +24,8 @@ import { getMyAvailabilityAlerts } from "@/lib/api/availability-alerts";
 import { FavouriteButton } from "@/components/listings/favourite-button";
 import { getListingReviews } from "@/lib/api/reviews";
 import { RentalReviewSection } from "@/components/reviews/rental-review-section";
+import { Suspense } from "react";
+import { SimilarListings, SimilarListingsFallback } from "@/components/listings/similar-listings";
 import Link from "next/link";
 import type { Route } from "next";
 import { PersonAvatar } from "@/components/messages/person-avatar";
@@ -239,6 +241,11 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             <PassportTimeline entries={passport.entries} />
           </div>
         </section>
+      )}
+      {listing.status === "ACTIVE" && (
+        <Suspense fallback={<SimilarListingsFallback />}>
+          <SimilarListings listingId={listing.id} />
+        </Suspense>
       )}
       <RentalReviewSection title="Reviews for this listing" reviews={reviews} emptyBody="This listing has not received any reviews yet." />
     </Container>

@@ -26,6 +26,7 @@ import type {
   RecentlyViewedListing,
   LocationArea,
   Passport,
+  PopularListingCard,
   PopularListingsResponse,
   PhotoKind,
   PresignPhotoResponse,
@@ -179,6 +180,11 @@ export function getRecentlyViewed() {
 
 export function recordListingView(listingId: string) {
   return backendRequest<void>(`/listings/${encodeURIComponent(listingId)}/view`, { method: "PUT" });
+}
+
+/** S4-10: up to 6 other active listings, most similar first; empty when there is nothing to recommend. */
+export function getSimilarListings(listingId: string) {
+  return backendRequest<PopularListingCard[]>(`/listings/${encodeURIComponent(listingId)}/similar`);
 }
 
 export function saveFavourite(listingId: string) {
