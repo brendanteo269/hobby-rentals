@@ -14,6 +14,7 @@ import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { PromotedBadge } from "@/components/listings/promoted-badge";
 import { HighDemandBadge } from "@/components/listings/high-demand-badge";
 import { ListingViewTelemetry } from "@/components/analytics/listing-view-telemetry";
+import { ListingViewRecorder } from "@/components/listings/listing-view-recorder";
 import { WaitlistPanel } from "@/components/bookings/waitlist-panel";
 import { AvailabilityAlertPanel } from "@/components/bookings/availability-alert-panel";
 import { MessageButton } from "@/components/messages/message-button";
@@ -89,6 +90,8 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   return (
     <Container className="py-16">
       {listing.status === "ACTIVE" && user && user.id !== listing.owner_id && <ListingViewTelemetry listingId={listing.id} category={listing.category} />}
+      {/* S4-14: the same audience as the telemetry - the member's own history skips their own listings. */}
+      {listing.status === "ACTIVE" && user && user.id !== listing.owner_id && <ListingViewRecorder listingId={listing.id} />}
       <div className="grid gap-10 lg:grid-cols-2">
         <ListingGallery photoUrls={listing.photo_urls} name={listing.name} />
 

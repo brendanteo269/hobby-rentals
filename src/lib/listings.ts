@@ -228,6 +228,11 @@ export type FavouriteListing = ListingCard & {
 
 export type FavouriteMutation = { saved: boolean; favourite_count: number };
 
+/** S4-14: a card in the member's recently viewed list, newest view first. */
+export type RecentlyViewedListing = ListingCard & {
+  viewed_at: string;
+};
+
 export const ALLOWED_PHOTO_CONTENT_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
 
 export const MAX_LISTING_PHOTOS = 8;
