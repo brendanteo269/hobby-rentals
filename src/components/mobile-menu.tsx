@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { usePathname } from "next/navigation";
 import { useCallback, useRef, useState } from "react";
-import { Heart, Menu, MessageCircle, X } from "lucide-react";
+import { Clock, Heart, Menu, MessageCircle, X } from "lucide-react";
 import { headerIconButton } from "./ui";
 import { useDismiss } from "./use-dismiss";
 import { CREATE_OPTIONS } from "./create-menu";
@@ -72,6 +72,10 @@ export function MobileMenu({ dashboardPath }: { dashboardPath: Route }) {
             <Link href="/favourites" onClick={close} className={`${rowClass} text-ink`}>
               <Heart className="size-4 text-ink-soft" aria-hidden="true" />
               Favourites
+            </Link>
+            <Link href="/recently-viewed" onClick={close} className={`${rowClass} text-ink`}>
+              <Clock className="size-4 text-ink-soft" aria-hidden="true" />
+              Recently viewed
             </Link>
             <Link href="/messages" onClick={close} className={`${rowClass} text-ink`}>
               <MessageCircle className="size-4 text-ink-soft" aria-hidden="true" />

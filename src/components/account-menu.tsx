@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
-import { LogOut, UserRound } from "lucide-react";
+import { Clock, LogOut, UserRound } from "lucide-react";
 import { useDismiss } from "./use-dismiss";
 
 /**
@@ -59,6 +59,17 @@ export function AccountMenu({
             >
               <UserRound className="size-4" aria-hidden="true" />
               Manage your profile
+            </Link>
+          </div>
+          <div className="border-t border-line p-1.5">
+            <Link
+              href="/recently-viewed"
+              role="menuitem"
+              onClick={close}
+              className="flex w-full items-center gap-2 rounded-lg px-3.5 py-2 text-left text-sm text-ink transition-colors hover:bg-surface-muted"
+            >
+              <Clock className="size-4 text-ink-soft" aria-hidden="true" />
+              Recently viewed
             </Link>
           </div>
           <form action={signOutAction} className="border-t border-line p-1.5">

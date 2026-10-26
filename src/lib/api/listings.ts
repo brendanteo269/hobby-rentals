@@ -23,6 +23,7 @@ import type {
   CategoryAttributeDefinition,
   FavouriteListing,
   FavouriteMutation,
+  RecentlyViewedListing,
   LocationArea,
   Passport,
   PopularListingsResponse,
@@ -169,6 +170,15 @@ export function getListing(listingId: string) {
 /** Saved listings include unavailable rows so a member can see and remove them. */
 export function getFavourites() {
   return backendRequest<FavouriteListing[]>("/listings/favourites");
+}
+
+/** S4-14: the signed-in member's own history, newest first, active listings only. */
+export function getRecentlyViewed() {
+  return backendRequest<RecentlyViewedListing[]>("/listings/recently-viewed");
+}
+
+export function recordListingView(listingId: string) {
+  return backendRequest<void>(`/listings/${encodeURIComponent(listingId)}/view`, { method: "PUT" });
 }
 
 export function saveFavourite(listingId: string) {
