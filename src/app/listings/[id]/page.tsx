@@ -15,9 +15,11 @@ import { PromotedBadge } from "@/components/listings/promoted-badge";
 import { HighDemandBadge } from "@/components/listings/high-demand-badge";
 import { ListingViewTelemetry } from "@/components/analytics/listing-view-telemetry";
 import { WaitlistPanel } from "@/components/bookings/waitlist-panel";
+import { AvailabilityAlertPanel } from "@/components/bookings/availability-alert-panel";
 import { MessageButton } from "@/components/messages/message-button";
 import { ReportListingButton } from "@/components/listings/report-listing-button";
 import { getMyWaitlist } from "@/lib/api/waitlist";
+import { getMyAvailabilityAlerts } from "@/lib/api/availability-alerts";
 import { FavouriteButton } from "@/components/listings/favourite-button";
 import { getListingReviews } from "@/lib/api/reviews";
 import { RentalReviewSection } from "@/components/reviews/rental-review-section";
@@ -47,6 +49,13 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
 
   const canBook = listing.status === "ACTIVE" && user && user.id !== listing.owner_id;
   const bookingAvailability = canBook ? await getBookingAvailability(listing.id) : null;
+
+  // S4-07: the renter's own alerts on this listing's blocked-out dates, so
+  // the panel can offer to cancel one rather than set it twice. Swallowed
+  // like the waitlist below - a missing panel must not cost them the page.
+  const availabilityAlerts = canBook
+    ? await getMyAvailabilityAlerts(listing.id).catch(() => [])
+    : [];
 
   // S2-15: the renter's own queue places on this listing, so the panel can
   // show "you are waiting" rather than offering to join again. Supplementary -
@@ -186,6 +195,13 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               listingId={listing.id}
               unavailableDates={bookingAvailability?.unavailable_dates ?? []}
               entries={waitlistEntries}
+            />
+          )}
+          {canBook && (
+            <AvailabilityAlertPanel
+              listingId={listing.id}
+              unavailableDates={bookingAvailability?.unavailable_dates ?? []}
+              alerts={availabilityAlerts}
             />
           )}
           {listing.status === "ACTIVE" && user && user.id !== listing.owner_id && (
