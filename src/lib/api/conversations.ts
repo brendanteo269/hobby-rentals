@@ -1,7 +1,7 @@
 import "server-only";
 
 import { backendRequest } from "@/lib/api/client";
-import type { Conversation, ConversationLimits, Message, MessagePage } from "@/lib/conversations";
+import type { Conversation, ConversationLimits, Message, MessagePage, NeedsConfirmation } from "@/lib/conversations";
 
 /** Mirrors the FastAPI routes in app/routers/conversations.py. */
 
@@ -30,26 +30,32 @@ export function getConversationLimits() {
   return backendRequest<ConversationLimits>("/conversations/limits");
 }
 
+/**
+ * The three send calls below answer with what was sent, or - when the safety checks
+ * (S4-15) raised a concern - with a NeedsConfirmation and nothing sent. Passing the
+ * `confirmationId` it carried, with the same text and attachments, sends the message.
+ */
+
 /** Opens (or reuses) the enquiry thread for a listing and sends its first message. */
-export function sendListingMessage(listingId: string, text: string, attachmentKeys: string[] = []) {
-  return backendRequest<Conversation>(`/conversations/listing/${encodeURIComponent(listingId)}/messages`, {
+export function sendListingMessage(listingId: string, text: string, attachmentKeys: string[] = [], confirmationId?: string) {
+  return backendRequest<Conversation | NeedsConfirmation>(`/conversations/listing/${encodeURIComponent(listingId)}/messages`, {
     method: "POST",
-    body: JSON.stringify({ text, attachment_keys: attachmentKeys }),
+    body: JSON.stringify({ text, attachment_keys: attachmentKeys, confirmation_id: confirmationId }),
   });
 }
 
 /** Opens (or reuses) the thread for a booking and sends its first message. */
-export function sendBookingMessage(bookingId: string, text: string, attachmentKeys: string[] = []) {
-  return backendRequest<Conversation>(`/conversations/booking/${encodeURIComponent(bookingId)}/messages`, {
+export function sendBookingMessage(bookingId: string, text: string, attachmentKeys: string[] = [], confirmationId?: string) {
+  return backendRequest<Conversation | NeedsConfirmation>(`/conversations/booking/${encodeURIComponent(bookingId)}/messages`, {
     method: "POST",
-    body: JSON.stringify({ text, attachment_keys: attachmentKeys }),
+    body: JSON.stringify({ text, attachment_keys: attachmentKeys, confirmation_id: confirmationId }),
   });
 }
 
-export function sendMessage(conversationId: string, text: string, attachmentKeys: string[] = []) {
-  return backendRequest<Message>(`/conversations/${encodeURIComponent(conversationId)}/messages`, {
+export function sendMessage(conversationId: string, text: string, attachmentKeys: string[] = [], confirmationId?: string) {
+  return backendRequest<Message | NeedsConfirmation>(`/conversations/${encodeURIComponent(conversationId)}/messages`, {
     method: "POST",
-    body: JSON.stringify({ text, attachment_keys: attachmentKeys }),
+    body: JSON.stringify({ text, attachment_keys: attachmentKeys, confirmation_id: confirmationId }),
   });
 }
 

@@ -3,11 +3,11 @@
 import { useRef, useState, type ReactNode } from "react";
 import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Paperclip } from "lucide-react";
+import { Paperclip, ShieldAlert } from "lucide-react";
 import { Button, inputBase } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { replyToConversation, startBookingConversation, startListingConversation } from "@/app/messages/actions";
-import { MAX_MESSAGE_ATTACHMENTS, type ConversationLimits, type Message } from "@/lib/conversations";
+import { MAX_MESSAGE_ATTACHMENTS, type ConversationLimits, type Message, type NeedsConfirmation } from "@/lib/conversations";
 import { AttachmentCropModal } from "./attachment-crop-modal";
 
 type Target =
@@ -16,6 +16,8 @@ type Target =
   | { kind: "booking"; bookingId: string };
 
 type Attachment = { key: string; previewUrl: string; fileName: string };
+/** S4-15: a message the safety checks held, exactly as it was checked, until its sender decides. */
+type HeldMessage = { value: string; attachmentKeys: string[]; confirmation: NeedsConfirmation };
 type UploadingSlot = { id: string; fileName: string };
 
 /** Only blob: URLs are ours to free; nothing else is held here. */
@@ -110,6 +112,7 @@ export function MessageComposer({
   // it: picking a file is not the same as deciding to send it.
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [held, setHeld] = useState<HeldMessage | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const remainingSlots = MAX_MESSAGE_ATTACHMENTS - attachments.length - uploading.length;
@@ -139,6 +142,7 @@ export function MessageComposer({
     try {
       const key = await putAttachmentToS3(file);
       setAttachments((current) => [...current, { key, previewUrl: URL.createObjectURL(file), fileName: file.name }]);
+      setHeld(null); // a changed message is checked again
     } catch (caught) {
       setAttachmentError(caught instanceof Error ? caught.message : `${file.name} failed to upload.`);
     } finally {
@@ -147,6 +151,7 @@ export function MessageComposer({
   }
 
   function removeAttachment(key: string) {
+    setHeld(null);
     setAttachments((current) => {
       const target = current.find((attachment) => attachment.key === key);
       if (target) releasePreview(target.previewUrl);
@@ -154,16 +159,23 @@ export function MessageComposer({
     });
   }
 
-  function submit() {
-    const value = text.trim();
-    const attachmentKeys = attachments.map((attachment) => attachment.key);
+  /**
+   * Sends the message, or - when the safety checks (S4-15) raise a concern - holds it
+   * for the sender to confirm. Confirming sends the held message exactly as it was
+   * checked, with the confirmation the server issued for it; any edit clears the hold,
+   * so the revised text is checked again.
+   */
+  function send(confirmed?: HeldMessage) {
+    const value = confirmed ? confirmed.value : text.trim();
+    const attachmentKeys = confirmed ? confirmed.attachmentKeys : attachments.map((attachment) => attachment.key);
+    const confirmationId = confirmed?.confirmation.confirmation_id;
     if (!value && attachmentKeys.length === 0) return;
 
     setIsSending(true);
     void (async () => {
       try {
         if (target.kind === "reply") {
-          const result = await replyToConversation(target.conversationId, value, attachmentKeys);
+          const result = await replyToConversation(target.conversationId, value, attachmentKeys, confirmationId);
           // Forced to commit and paint on its own, ahead of appending the
           // message below: the button must stop showing "Sending…" before
           // the new bubble appears, not in the same update as it - plain
@@ -172,9 +184,15 @@ export function MessageComposer({
           // this one's own pending flag.
           flushSync(() => setIsSending(false));
           if ("error" in result) {
+            setHeld(null);
             show(result.error, "error");
             return;
           }
+          if ("confirmation" in result) {
+            setHeld({ value, attachmentKeys, confirmation: result.confirmation });
+            return;
+          }
+          setHeld(null);
           setText("");
           attachments.forEach((attachment) => releasePreview(attachment.previewUrl));
           setAttachments([]);
@@ -184,11 +202,16 @@ export function MessageComposer({
 
         const result =
           target.kind === "listing"
-            ? await startListingConversation(target.listingId, value, attachmentKeys)
-            : await startBookingConversation(target.bookingId, value, attachmentKeys);
+            ? await startListingConversation(target.listingId, value, attachmentKeys, confirmationId)
+            : await startBookingConversation(target.bookingId, value, attachmentKeys, confirmationId);
         setIsSending(false);
         if ("error" in result) {
+          setHeld(null);
           show(result.error, "error");
+          return;
+        }
+        if ("confirmation" in result) {
+          setHeld({ value, attachmentKeys, confirmation: result.confirmation });
           return;
         }
         router.push(`/messages/${result.conversation.id}`);
@@ -199,7 +222,12 @@ export function MessageComposer({
     })();
   }
 
-  const canSend = !isSending && uploading.length === 0 && (text.trim().length > 0 || attachments.length > 0);
+  function submit() {
+    if (held) return; // decided with the buttons in the warning, not with Enter
+    send();
+  }
+
+  const canSend = !held && !isSending && uploading.length === 0 && (text.trim().length > 0 || attachments.length > 0);
 
   return (
     <div className="flex flex-col gap-2">
@@ -261,7 +289,10 @@ export function MessageComposer({
           name="text"
           rows={1}
           value={text}
-          onChange={(event) => setText(event.target.value)}
+          onChange={(event) => {
+            setText(event.target.value);
+            setHeld(null); // an edited message is a new message: it is checked again
+          }}
           maxLength={attachmentLimits?.max_message_length}
           onKeyDown={(event) => {
             // Enter sends, like every chat app; Shift+Enter still inserts a
@@ -278,6 +309,33 @@ export function MessageComposer({
           {isSending ? "Sending…" : submitLabel}
         </Button>
       </div>
+
+      {held && (
+        <div role="alert" className="rounded-xl border border-accent/40 bg-accent-soft/40 p-4 text-sm">
+          <div className="flex items-start gap-2.5">
+            <ShieldAlert className="mt-0.5 size-4 shrink-0 text-accent-dark" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <ul className="space-y-3">
+                {held.confirmation.warnings.map((warning) => (
+                  <li key={warning.kind}>
+                    <p className="font-medium text-ink">{warning.title}</p>
+                    <p className="mt-0.5 text-ink-soft">{warning.detail}</p>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-xs text-ink-soft">Your message has not been sent.</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button type="button" variant="outline" className="px-3 py-1.5 text-xs" disabled={isSending} onClick={() => setHeld(null)}>
+                  Edit message
+                </Button>
+                <Button type="button" className="px-3 py-1.5 text-xs" disabled={isSending} onClick={() => send(held)}>
+                  {isSending ? "Sending…" : "Send anyway"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {attachmentError && (
         <p role="alert" className="text-xs text-accent-dark">

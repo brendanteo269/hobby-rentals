@@ -44,6 +44,8 @@ export type Conversation = {
   other_party_unavailable: boolean;
   /** Which, when the other party is unavailable. */
   other_party_enforcement?: "SUSPENSION" | "BAN" | null;
+  /** S4-15: a claim has been opened on the booking, so the thread is kept as it is - no new messages, nothing editable. */
+  read_only: boolean;
   unread: boolean;
   updated_at: string;
 };
@@ -135,4 +137,26 @@ export function conversationPriceLocationLine(conversation: Conversation): strin
     location_area: conversation.listing_location_area,
   });
   return conversation.scope === "BOOKING" ? [line, "Booking"].filter(Boolean).join(" · ") : line;
+}
+
+/** S4-15: one concern the safety checks raised about a message before it was sent. */
+export type MessageWarning = {
+  kind: "CONTACT_DETAILS" | "AI_CONCERN" | "AI_UNAVAILABLE";
+  title: string;
+  detail: string;
+};
+
+/**
+ * S4-15: what sending answers when a message was checked and held. Nothing was
+ * sent: send the same message again with `confirmation_id` to send it as it is.
+ * Any edit is checked afresh.
+ */
+export type NeedsConfirmation = {
+  status: "needs_confirmation";
+  confirmation_id: string;
+  warnings: MessageWarning[];
+};
+
+export function needsConfirmation(result: object): result is NeedsConfirmation {
+  return "status" in result && result.status === "needs_confirmation";
 }

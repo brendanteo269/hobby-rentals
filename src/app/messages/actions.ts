@@ -4,15 +4,18 @@ import { revalidatePath } from "next/cache";
 import { getMessages, sendBookingMessage, sendListingMessage, sendMessage } from "@/lib/api/conversations";
 import { acceptMeetup, proposeMeetup } from "@/lib/api/meetups";
 import { BackendApiError } from "@/lib/api/client";
-import type { Conversation, Message, MessagePage } from "@/lib/conversations";
+import { needsConfirmation, type Conversation, type Message, type MessagePage, type NeedsConfirmation } from "@/lib/conversations";
 
-export type ConversationActionResult = { error: string } | { conversation: Conversation };
+/** `confirmation`: the safety checks held the message (S4-15); nothing was sent. */
+export type ConversationActionResult = { error: string } | { conversation: Conversation } | { confirmation: NeedsConfirmation };
 export type MessageActionResult = { error: string } | { message: Message };
+export type CheckedMessageActionResult = MessageActionResult | { confirmation: NeedsConfirmation };
 export type MessagePageActionResult = { error: string } | MessagePage;
 
-async function runConversation(action: () => Promise<Conversation>): Promise<ConversationActionResult> {
+async function runConversation(action: () => Promise<Conversation | NeedsConfirmation>): Promise<ConversationActionResult> {
   try {
     const conversation = await action();
+    if (needsConfirmation(conversation)) return { confirmation: conversation };
     revalidatePath("/messages");
     revalidatePath(`/messages/${conversation.id}`);
     return { conversation };
@@ -43,16 +46,28 @@ async function runMessage(action: () => Promise<Message>): Promise<MessageAction
   }
 }
 
-export async function startListingConversation(listingId: string, text: string, attachmentKeys: string[] = []) {
-  return runConversation(() => sendListingMessage(listingId, text, attachmentKeys));
+/** A reply goes through the safety checks (S4-15), so it may be held for confirmation instead of sent. */
+async function runCheckedMessage(action: () => Promise<Message | NeedsConfirmation>): Promise<CheckedMessageActionResult> {
+  try {
+    const answer = await action();
+    // As runMessage: no revalidatePath, the composer appends the sent message itself.
+    return needsConfirmation(answer) ? { confirmation: answer } : { message: answer };
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
 }
 
-export async function startBookingConversation(bookingId: string, text: string, attachmentKeys: string[] = []) {
-  return runConversation(() => sendBookingMessage(bookingId, text, attachmentKeys));
+export async function startListingConversation(listingId: string, text: string, attachmentKeys: string[] = [], confirmationId?: string) {
+  return runConversation(() => sendListingMessage(listingId, text, attachmentKeys, confirmationId));
 }
 
-export async function replyToConversation(conversationId: string, text: string, attachmentKeys: string[] = []) {
-  return runMessage(() => sendMessage(conversationId, text, attachmentKeys));
+export async function startBookingConversation(bookingId: string, text: string, attachmentKeys: string[] = [], confirmationId?: string) {
+  return runConversation(() => sendBookingMessage(bookingId, text, attachmentKeys, confirmationId));
+}
+
+export async function replyToConversation(conversationId: string, text: string, attachmentKeys: string[] = [], confirmationId?: string) {
+  return runCheckedMessage(() => sendMessage(conversationId, text, attachmentKeys, confirmationId));
 }
 
 /** S2-16: the page of messages just before `before` (the oldest one already loaded), for a "load earlier messages" control. */
