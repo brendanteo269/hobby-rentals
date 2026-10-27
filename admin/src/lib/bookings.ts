@@ -135,6 +135,9 @@ export async function searchBookings(
   statuses: string[],
   page = 1,
   holdStates: string[] = [],
+  // Singapore dates the booking was made between (S4-05), inclusive; "" for no bound.
+  createdFrom = "",
+  createdTo = "",
 ): Promise<BookingSearchResult> {
   const supabase = createAdminClient();
 
@@ -164,6 +167,8 @@ export async function searchBookings(
       result_limit: PAGE_SIZE,
       result_offset: 0,
       hold_state_filter: holdStates,
+      created_from: createdFrom || null,
+      created_to: createdTo || null,
     });
     if (!firstPageError) total = ((firstPage ?? []) as SearchRow[])[0]?.total_count ?? 0;
   }

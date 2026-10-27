@@ -1,12 +1,21 @@
 import { MetricHelp } from "@/components/metric-help";
+import { PlatformMetricsPanel } from "@/components/platform-metrics";
 import { Container } from "@/components/ui";
 import { requirePortalSession } from "@/lib/admin";
-import { getAdminCategoryDemand } from "@/lib/analytics";
+import { getAdminCategoryDemand, getPlatformMetrics, lastThirtyDays } from "@/lib/analytics";
 
-export const metadata = { title: "Category demand — HobbyRentals Admin" };
+export const metadata = { title: "Analytics — HobbyRentals Admin" };
 
-export default async function AnalyticsPage() {
+export default async function AnalyticsPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string }> }) {
   await requirePortalSession();
+  const defaults = lastThirtyDays();
+  const { from = defaults.from, to = defaults.to } = await searchParams;
+  let platform = null;
+  try {
+    platform = await getPlatformMetrics(from, to);
+  } catch {
+    // Shown as an error in the panel; category demand below still loads.
+  }
   let rows = null;
   try {
     rows = await getAdminCategoryDemand();
@@ -16,7 +25,9 @@ export default async function AnalyticsPage() {
 
   return <Container className="py-12">
     <p className="eyebrow">Admin</p>
-    <h1 className="display-caps mt-3 text-3xl">Category activity & demand</h1>
+    <h1 className="display-caps mt-3 text-3xl">Analytics</h1>
+    <div className="mt-8"><PlatformMetricsPanel from={from} to={to} result={platform} /></div>
+    <h2 className="display-caps mt-12 text-2xl">Category activity & demand</h2>
     {rows ? <div className="mt-8 overflow-x-auto border border-line bg-white">
       <table className="min-w-full text-left text-sm">
         <thead className="border-b border-line bg-sand text-ink-soft">
