@@ -1,3 +1,4 @@
+import { RepairEstimateBreakdown } from "@/components/bookings/repair-estimate";
 import { RequestCountdown } from "@/components/bookings/request-countdown";
 import { claimPendingRenter, secondsUntil, type DamageClaim } from "@/lib/settlement";
 import { formatDateTime, formatMoney } from "@/lib/format";
@@ -5,7 +6,8 @@ import { formatDateTime, formatMoney } from "@/lib/format";
 /**
  * S3-06: a submitted claim as either party reads it - what the owner says is
  * damaged, what they claim, the deposit it holds, their evidence photos, and
- * where it stands.
+ * where it stands. S4-08: the AI estimate it was made against, with the
+ * owner's figure beside it and the web prices behind it, and any repair quote.
  */
 export function ClaimSummary({ claim, viewer }: { claim: DamageClaim; viewer: "owner" | "renter" }) {
   const pending = claimPendingRenter(claim);
@@ -60,6 +62,24 @@ export function ClaimSummary({ claim, viewer }: { claim: DamageClaim; viewer: "o
             ))}
           </ul>
         </div>
+      )}
+      {claim.repair_quote_urls?.length > 0 && (
+        <div>
+          <p className="text-sm text-ink-soft">{viewer === "owner" ? "Your" : "The owner's"} repair quote or receipt</p>
+          <ul className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-6">
+            {claim.repair_quote_urls.map((url, index) => (
+              <li key={url}>
+                <a href={url} target="_blank" rel="noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- a short-lived presigned URL */}
+                  <img src={url} alt={`Repair quote ${index + 1}`} className="aspect-square w-full rounded-xl border border-line object-cover" />
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {claim.ai_estimate && (
+        <RepairEstimateBreakdown estimate={claim.ai_estimate} scan={claim.scan} claimedCents={claim.claimed_cents} />
       )}
       <p className="text-sm text-ink-soft">
         {pending

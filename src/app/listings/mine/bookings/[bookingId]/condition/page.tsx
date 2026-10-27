@@ -56,7 +56,7 @@ export default async function ConditionReportPage({ params }: { params: Promise<
         windowEndsAt={windowEndsAt}
         windowSecondsLeft={secondsUntil(windowEndsAt)}
         depositCents={booking.deposit_cents ?? null}
-        hasScan={scan !== null}
+        scan={scan}
       />
     );
   } else if (booking.status === "ACTIVE") {

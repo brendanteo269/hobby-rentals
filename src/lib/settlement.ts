@@ -1,4 +1,4 @@
-import type { ConditionScan } from "@/lib/condition-scans";
+import type { ConditionScan, DamageType, Severity } from "@/lib/condition-scans";
 import { formatDateTime, formatMoney } from "@/lib/format";
 
 /**
@@ -47,6 +47,52 @@ export type DamageClaim = RentalDispute & {
   end_date: string | null;
   evidence_photo_urls: string[];
   scan: ConditionScan | null;
+  /** S4-08: the AI repair-cost estimate as the owner saw it when claiming. */
+  ai_estimate: RepairEstimate | null;
+  /** S4-08: the repair quote or receipt backing a claim well above the estimate. */
+  repair_quote_urls: string[];
+};
+
+/** S4-08: a price found on the web - a repair quote or a second-hand listing. */
+export type PriceSource = { title: string; url: string; site: string; price_cents: number };
+
+export type EstimateItem = {
+  angle: string;
+  number: number;
+  damage_type: DamageType;
+  severity: Severity | null;
+  summary: string;
+  /** Wear and tear: costs nothing, shown as not claimable. */
+  is_wear: boolean;
+  cost_cents: number;
+  low_cents: number;
+  high_cents: number;
+  sources: PriceSource[];
+  /** False when the cost is the AI's own range because the web had no prices. */
+  from_web: boolean;
+  /** The repair the AI assumed when it guessed the cost. */
+  work?: string | null;
+};
+
+/** S4-08: what the AI reckons the damage costs to put right, and what the item is worth. */
+export type RepairEstimate = {
+  item: string;
+  total_cents: number;
+  low_cents: number;
+  high_cents: number;
+  items: EstimateItem[];
+  condition: string;
+  condition_note: string | null;
+  replacement_value_cents: number | null;
+  cap_note: string | null;
+  market_value_cents: number | null;
+  comparables: PriceSource[];
+  /** Repair would cost more than a used replacement. */
+  uneconomical: boolean;
+  web_prices_found: boolean;
+  /** Claiming above this needs a repair quote or receipt. */
+  quote_required_above_cents: number;
+  created_at: string;
 };
 
 /**

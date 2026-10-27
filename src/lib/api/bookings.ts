@@ -10,7 +10,7 @@ import type {
   DeclineReason,
 } from "@/lib/bookings";
 import type { CancellationPreview, CancellationRecord } from "@/lib/cancellations";
-import type { ClaimSettlement, DamageClaim, RentalDispute } from "@/lib/settlement";
+import type { ClaimSettlement, DamageClaim, RentalDispute, RepairEstimate } from "@/lib/settlement";
 
 // Re-exported so existing callers keep importing the quote from here.
 export type { BookingQuote } from "@/lib/bookings";
@@ -99,14 +99,30 @@ export function acceptDamageClaim(bookingId: string) {
 }
 
 /** S3-06: the owner's damage claim on a returned booking, with evidence photo keys (presign kind "claim"). */
-export function submitDamageClaim(bookingId: string, description: string, claimedCents: number, evidencePhotoKeys: string[]) {
+export function submitDamageClaim(
+  bookingId: string,
+  description: string,
+  claimedCents: number,
+  evidencePhotoKeys: string[],
+  repairQuoteKeys: string[] = [],
+) {
   return backendRequest<RentalDispute>(`/bookings/${encodeURIComponent(bookingId)}/claims`, {
     method: "POST",
-    body: JSON.stringify({ description, claimed_cents: claimedCents, evidence_photo_keys: evidencePhotoKeys }),
+    body: JSON.stringify({
+      description,
+      claimed_cents: claimedCents,
+      evidence_photo_keys: evidencePhotoKeys,
+      repair_quote_keys: repairQuoteKeys,
+    }),
   });
 }
 
 /** S3-06: the booking's damage claim, for its owner or renter. 404 when there is none. */
+/** S4-08: the AI repair-cost estimate for the owner's claim form; the first call can take up to a minute. */
+export function getRepairEstimate(bookingId: string) {
+  return backendRequest<RepairEstimate>(`/bookings/${encodeURIComponent(bookingId)}/repair-estimate`);
+}
+
 export function getDamageClaim(bookingId: string) {
   return backendRequest<DamageClaim>(`/bookings/${encodeURIComponent(bookingId)}/claim`);
 }
