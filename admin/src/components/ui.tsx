@@ -105,15 +105,19 @@ export function Panel({
   description,
   actions,
   children,
+  className = "",
+  headerClassName = "",
 }: {
   title: string;
   description?: string;
   actions?: ReactNode;
   children: ReactNode;
+  className?: string;
+  headerClassName?: string;
 }) {
   return (
-    <section className="border border-line bg-white">
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-line px-6 py-4">
+    <section className={`border border-line bg-white ${className}`}>
+      <header className={`flex flex-wrap items-start justify-between gap-3 border-b border-line px-6 py-4 ${headerClassName}`}>
         <div>
           <h2 className="display-caps text-lg">{title}</h2>
           {description && <p className="body-copy mt-1">{description}</p>}
