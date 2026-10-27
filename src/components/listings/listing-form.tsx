@@ -110,6 +110,9 @@ export function ListingForm({
   const [drafting, setDrafting] = useState(false);
   const [draftNotice, setDraftNotice] = useState<string | null>(null);
   const draftGeneration = useRef(0);
+  // Values set by AI are distinct from owner input. A later Front photo may
+  // replace these suggestions, but never anything the owner has touched.
+  const aiAppliedFields = useRef<Set<string>>(new Set());
 
   // Pricing state for PricePerBlockField and PricingRecommendationPanel
   const initialPrice = listing
@@ -159,16 +162,33 @@ export function ListingForm({
     if (response.status === "in_progress") { setDraftNotice("Drafting is still in progress. Please wait a moment."); return; }
     const draft = response.draft;
     if (!Object.keys(draft).length) { setDrafting(false); setDraftNotice("We couldn’t draft details from this photo. You can continue manually."); return; }
-    if (draft.name && !touchedRef.current.has("name")) setFields((current) => current.name ? current : { ...current, name: draft.name! });
-    if (draft.brand && !touchedRef.current.has("brand")) setFields((current) => current.brand ? current : { ...current, brand: draft.brand! });
-    if (draft.description && !touchedRef.current.has("description")) setFields((current) => current.description ? current : { ...current, description: draft.description! });
+    const priorAiFields = aiAppliedFields.current;
+    setFields((current) => {
+      const next = { ...current };
+      for (const key of ["name", "brand", "description", "category"] as const) {
+        if (priorAiFields.has(key) && !touchedRef.current.has(key)) next[key] = "";
+      }
+      for (const key of ["name", "brand", "description"] as const) {
+        if (draft[key] && !touchedRef.current.has(key)) {
+          next[key] = draft[key];
+          priorAiFields.add(key);
+        }
+      }
+      return next;
+    });
+    setAttributeValues((current) => Object.fromEntries(
+      Object.entries(current).filter(([key]) => !priorAiFields.has(`attributes.${key}`) || touchedRef.current.has(`attributes.${key}`)),
+    ));
     if (draft.category && !touchedRef.current.has("category")) {
+      priorAiFields.add("category");
       setFields((current) => ({ ...current, category: draft.category! }));
       try {
         const definitions = await getCategoryAttributes(draft.category);
         if (generation !== draftGeneration.current) return;
         const allowed = new Set(definitions.map((definition) => definition.attribute_key));
-        setAttributeValues((current) => ({ ...current, ...Object.fromEntries(Object.entries(draft.attributes ?? {}).filter(([key]) => allowed.has(key) && !touchedRef.current.has(`attributes.${key}`))) }));
+        const attributes = Object.fromEntries(Object.entries(draft.attributes ?? {}).filter(([key]) => allowed.has(key) && !touchedRef.current.has(`attributes.${key}`)));
+        Object.keys(attributes).forEach((key) => priorAiFields.add(`attributes.${key}`));
+        setAttributeValues((current) => ({ ...current, ...attributes }));
       } catch { /* existing category UI shows loading failure if it matters */ }
     }
     setDrafting(false); setDraftNotice("Suggestions added. Review and edit them before saving.");
