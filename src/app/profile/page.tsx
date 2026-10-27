@@ -2,9 +2,11 @@ import { redirect } from "next/navigation";
 import { MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/lib/profile";
-import { getMyOwnerVerification } from "@/lib/api/verification";
+import { getMyOwnerVerification, getMyRenterTrust } from "@/lib/api/verification";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { hasAnsweredRequests, responseRatePercent } from "@/lib/verification";
+import { TrustedRenterBadge } from "@/components/bookings/trusted-renter-badge";
+import { hasCompletedRentals, onTimeRatePercent } from "@/lib/renter-trust";
 import { Badge, Container } from "@/components/ui";
 import { isLocationArea, LOCATION_LABELS } from "@/lib/listings";
 import { ViewTabs, RatingsView } from "@/components/profile-views";
@@ -74,7 +76,12 @@ export default async function ProfilePage({
   // S4-01: the owner's own badge standing. Swallowed - a badge missing from
   // your own profile must not cost you the page, and it says nothing a renter
   // cannot already see.
-  const verification = await getMyOwnerVerification().catch(() => undefined);
+  const [verification, renterTrust] = await Promise.all([
+    getMyOwnerVerification().catch(() => undefined),
+    // S4-06, swallowed for the same reason: a badge missing from your own
+    // profile must not cost you the page.
+    getMyRenterTrust().catch(() => undefined),
+  ]);
 
   return (
     <Container className="py-16">
@@ -88,16 +95,28 @@ export default async function ProfilePage({
           {isVerified ? "Verified account" : "Pending verification"}
         </Badge>
         <VerifiedOwnerBadge verified={verification?.verified} />
+        <TrustedRenterBadge trusted={renterTrust?.trusted} />
       </p>
       {/* Shown whether or not the badge is held: on your own profile this is
           progress towards it, not a verdict. */}
       {verification && (
         <p className="body-copy mt-2 text-sm">
           {verification.completed_rentals} completed{" "}
-          {verification.completed_rentals === 1 ? "rental" : "rentals"} ·{" "}
+          {verification.completed_rentals === 1 ? "rental" : "rentals"} as an owner ·{" "}
           {hasAnsweredRequests(verification)
             ? `You answered ${responseRatePercent(verification)}% of booking requests`
             : "No booking requests yet"}
+        </p>
+      )}
+      {/* S4-06: what you have done as a renter, which is a different record
+          from the one above and earns a different badge. */}
+      {renterTrust && (
+        <p className="body-copy mt-1 text-sm">
+          {renterTrust.completed_rentals} completed{" "}
+          {renterTrust.completed_rentals === 1 ? "rental" : "rentals"} as a renter ·{" "}
+          {hasCompletedRentals(renterTrust)
+            ? `You returned ${onTimeRatePercent(renterTrust)}% on time`
+            : "Nothing returned yet"}
         </p>
       )}
 

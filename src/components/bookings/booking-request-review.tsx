@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge, EmptyState } from "@/components/ui";
 import { BookingRequestDecision } from "@/components/bookings/booking-request-decision";
+import { TrustedRenterBadge } from "@/components/bookings/trusted-renter-badge";
 import { RequestCountdown } from "@/components/bookings/request-countdown";
 import { BOOKING_STATUS_LABELS, type BookingRequestDetail } from "@/lib/bookings";
 import { cancellationOutcomeLine } from "@/lib/cancellations";
@@ -56,6 +57,10 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
           <p id="renter-heading" className="eyebrow">Renter</p>
           <p className="mt-2 text-lg font-semibold">{renter.display_name ?? "Unnamed member"}</p>
           <div className="mt-2 flex flex-wrap gap-2">
+            {/* S4-06 Scenario 3. First of the two: it is the one about how
+                this person has treated other people's gear, which is what the
+                owner is deciding on. */}
+            <TrustedRenterBadge trusted={renter.trusted} />
             <Badge variant={renter.email_verified ? "success" : "neutral"}>
               {renter.email_verified ? "Email verified" : "Email not verified"}
             </Badge>
