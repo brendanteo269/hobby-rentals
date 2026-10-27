@@ -148,6 +148,17 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
             ) : undefined
           }
           replaceComposerWith={
+            // S4-15: a claim freezes the thread as the record for arbitration - everything stays
+            // readable, nothing new can be sent. This outranks the notices below.
+            conversation.read_only ? (
+              <div className="space-y-1 rounded-2xl border border-line bg-surface-muted px-4 py-3 text-sm text-ink">
+                <p className="font-medium">This conversation is read-only</p>
+                <p className="text-ink-soft">
+                  A claim has been opened on this booking, so the conversation is kept exactly as it is. You can still read
+                  every message, but new messages can&apos;t be sent.
+                </p>
+              </div>
+            ) :
             // S3-24: no more messages to or from a suspended or banned member, and
             // a booking the platform cancelled says so.
             conversation.other_party_unavailable || platformCancellation ? (
