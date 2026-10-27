@@ -71,9 +71,55 @@ export type DisputeSettlement = {
   settled_at: string;
 };
 
+export type EvidencePhoto = {
+  angle: string | null;
+  captured_at: string | null;
+  photo_url: string | null;
+  baseline_photo_url: string | null;
+};
+
+export type EvidenceAttachment = { url: string; is_image: boolean };
+
+export type ArbitrationEvidenceBundle = {
+  assembled_at: string | null;
+  pickup_photos: EvidencePhoto[];
+  return_photos: EvidencePhoto[];
+  condition_scan: {
+    id?: string;
+    status?: string;
+    verdict?: string | null;
+    anomaly_score?: number | null;
+    threshold?: number | null;
+    summary?: string | null;
+    model_version?: string | null;
+    angles: Array<{
+      angle?: string;
+      label?: string;
+      status?: string;
+      reference?: string | null;
+      return_photo_url?: string | null;
+      reference_photo_url?: string | null;
+      diff_map_url?: string | null;
+      anomaly_score?: number | null;
+      findings?: Array<{
+        number?: number;
+        damage_type?: string | null;
+        severity?: string | null;
+        is_wear?: boolean;
+        summary?: string;
+        confidence?: number | null;
+      }>;
+      note?: string | null;
+    }>;
+  } | null;
+  status_timeline: Array<{ from_status?: string | null; to_status?: string; actor_role?: string | null; at?: string }>;
+  chat_history: Array<{ sender_id?: string; body?: string; sent_at?: string; attachments: EvidenceAttachment[] }>;
+};
+
 export type AdminDisputeDetail = AdminDispute & {
   rental: DisputeRental | null;
   settlement: DisputeSettlement | null;
+  evidence_bundle: ArbitrationEvidenceBundle | null;
 };
 
 async function apiError(response: Response, fallback: string): Promise<string> {
