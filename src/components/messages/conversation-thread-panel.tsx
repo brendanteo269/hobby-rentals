@@ -91,6 +91,8 @@ export function ConversationThreadPanel({
   bookingEndDate?: string | null;
 }) {
   const { show, dismiss } = useToast();
+  // The inner chat window, where the composer's safety warning is shown (S4-15).
+  const [warningHost, setWarningHost] = useState<HTMLElement | null>(null);
   // Set when the tab is hidden; cleared by the first successful check made
   // once it's visible again. Only then are newly-found messages ones the viewer missed.
   const wasAway = useRef(false);
@@ -226,19 +228,23 @@ export function ConversationThreadPanel({
         />
       )}
 
-      <div ref={scrollRef} className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
-        <MessageThread
-          messages={messages}
-          currentUserId={currentUserId}
-          otherPartyName={otherPartyName}
-          hasMore={hasMore}
-          isLoadingMore={isLoadingMore}
-          onLoadEarlier={loadEarlier}
-          pendingMeetupProposalId={meetupState.pending?.id ?? null}
-          confirmedMeetupProposalId={meetupState.confirmed?.id ?? null}
-          onMeetupAccepted={appendMessage}
-          onMeetupRejected={() => setShowMeetupModal(true)}
-        />
+      {/* relative and not scrolling itself: the composer's safety warning (S4-15) is shown over this
+          inner chat window only, and stays put while the messages scroll beneath it. */}
+      <div ref={setWarningHost} className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+        <div ref={scrollRef} className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">
+          <MessageThread
+            messages={messages}
+            currentUserId={currentUserId}
+            otherPartyName={otherPartyName}
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            onLoadEarlier={loadEarlier}
+            pendingMeetupProposalId={meetupState.pending?.id ?? null}
+            confirmedMeetupProposalId={meetupState.confirmed?.id ?? null}
+            onMeetupAccepted={appendMessage}
+            onMeetupRejected={() => setShowMeetupModal(true)}
+          />
+        </div>
       </div>
 
       {footerBanner}
@@ -251,6 +257,7 @@ export function ConversationThreadPanel({
             placeholder="Write a reply…"
             attachmentLimits={attachmentLimits}
             onSent={appendMessage}
+            warningHost={warningHost}
             extraButton={
               bookingId && meetupEligible ? (
                 <Button
