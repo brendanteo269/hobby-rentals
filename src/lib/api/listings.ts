@@ -28,6 +28,8 @@ import type {
   PopularListingsResponse,
   PhotoKind,
   PresignPhotoResponse,
+  ListingDraftPhotoSession,
+  ListingDraftResponse,
   SerialClaim,
   SerialExtraction,
   UnavailableDate,
@@ -270,6 +272,16 @@ export function presignListingPhoto(contentType: string, kind: PhotoKind = "list
     method: "POST",
     body: JSON.stringify({ content_type: contentType, kind }),
   });
+}
+
+export function startListingDraftPhoto(contentType: string, replacesSessionId?: string) {
+  return backendRequest<ListingDraftPhotoSession>("/listing-draft-photos", { method: "POST", body: JSON.stringify({ content_type: contentType, replaces_session_id: replacesSessionId }) });
+}
+export function confirmListingDraftPhoto(sessionId: string) {
+  return backendRequest<{ photo_key: string }>(`/listing-draft-photos/${encodeURIComponent(sessionId)}/confirm`, { method: "POST" });
+}
+export function draftListingFromPhoto(sessionId: string) {
+  return backendRequest<ListingDraftResponse>(`/listing-draft-photos/${encodeURIComponent(sessionId)}/draft`, { method: "POST" });
 }
 
 /** S2-04: appends the BASELINE passport entry. Keys come from presignListingPhoto(_, "passport"). */
