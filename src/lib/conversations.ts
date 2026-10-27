@@ -141,7 +141,7 @@ export function conversationPriceLocationLine(conversation: Conversation): strin
 
 /** S4-15: one concern the safety checks raised about a message before it was sent. */
 export type MessageWarning = {
-  kind: "CONTACT_DETAILS" | "AI_CONCERN" | "AI_UNAVAILABLE";
+  kind: "CONTACT_DETAILS" | "AI_CONCERN";
   title: string;
   detail: string;
 };

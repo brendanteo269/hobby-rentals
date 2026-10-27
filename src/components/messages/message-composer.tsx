@@ -1,14 +1,16 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
-import { Paperclip, ShieldAlert } from "lucide-react";
+import { Paperclip } from "lucide-react";
 import { Button, inputBase } from "@/components/ui";
 import { useToast } from "@/components/toast";
 import { replyToConversation, startBookingConversation, startListingConversation } from "@/app/messages/actions";
 import { MAX_MESSAGE_ATTACHMENTS, type ConversationLimits, type Message, type NeedsConfirmation } from "@/lib/conversations";
 import { AttachmentCropModal } from "./attachment-crop-modal";
+import { MessageWarningModal } from "./message-warning-modal";
 
 type Target =
   | { kind: "reply"; conversationId: string }
@@ -83,6 +85,7 @@ export function MessageComposer({
   attachmentLimits,
   extraButton,
   onSent,
+  warningHost,
 }: {
   target: Target;
   label?: string;
@@ -99,6 +102,12 @@ export function MessageComposer({
    * which loads its own messages.
    */
   onSent?: (message: Message) => void;
+  /**
+   * S4-15: where a held message's warning is shown - the open conversation's inner
+   * chat window, so it covers that and nothing else. Without one (starting a new
+   * conversation) the warning covers the screen.
+   */
+  warningHost?: HTMLElement | null;
 }) {
   const router = useRouter();
   const { show } = useToast();
@@ -227,6 +236,19 @@ export function MessageComposer({
     send();
   }
 
+  function warningModal(heldMessage: HeldMessage) {
+    const modal = (
+      <MessageWarningModal
+        warnings={heldMessage.confirmation.warnings}
+        isSending={isSending}
+        contained={Boolean(warningHost)}
+        onEdit={() => setHeld(null)}
+        onSend={() => send(heldMessage)}
+      />
+    );
+    return warningHost ? createPortal(modal, warningHost) : modal;
+  }
+
   const canSend = !held && !isSending && uploading.length === 0 && (text.trim().length > 0 || attachments.length > 0);
 
   return (
@@ -310,32 +332,7 @@ export function MessageComposer({
         </Button>
       </div>
 
-      {held && (
-        <div role="alert" className="rounded-xl border border-accent/40 bg-accent-soft/40 p-4 text-sm">
-          <div className="flex items-start gap-2.5">
-            <ShieldAlert className="mt-0.5 size-4 shrink-0 text-accent-dark" aria-hidden="true" />
-            <div className="min-w-0 flex-1">
-              <ul className="space-y-3">
-                {held.confirmation.warnings.map((warning) => (
-                  <li key={warning.kind}>
-                    <p className="font-medium text-ink">{warning.title}</p>
-                    <p className="mt-0.5 text-ink-soft">{warning.detail}</p>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-3 text-xs text-ink-soft">Your message has not been sent.</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button type="button" variant="outline" className="px-3 py-1.5 text-xs" disabled={isSending} onClick={() => setHeld(null)}>
-                  Edit message
-                </Button>
-                <Button type="button" className="px-3 py-1.5 text-xs" disabled={isSending} onClick={() => send(held)}>
-                  {isSending ? "Sending…" : "Send anyway"}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {held && warningModal(held)}
 
       {attachmentError && (
         <p role="alert" className="text-xs text-accent-dark">
