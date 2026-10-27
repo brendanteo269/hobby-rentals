@@ -7,6 +7,7 @@ import {
   declineBooking,
   getBookingCancellationPreview,
   getBookingQuote,
+  getRepairEstimate,
   submitDamageClaim,
   updateBookingStatus,
 } from "@/lib/api/bookings";
@@ -30,7 +31,7 @@ import type { Booking, BookingQuote, BookingStatus, DeclineReason } from "@/lib/
 import type { BundleBooking, BundleQuote } from "@/lib/bundles";
 import type { CancellableKind, CancellationPreview, CancellationRecord } from "@/lib/cancellations";
 import type { ExtensionQuote, ExtensionRequest } from "@/lib/extensions";
-import type { RentalDispute } from "@/lib/settlement";
+import type { RentalDispute, RepairEstimate } from "@/lib/settlement";
 
 export type BookingActionResult =
   | { error: string; code?: string; shortfallCents?: number }
@@ -276,11 +277,27 @@ export async function submitClaim(
   description: string,
   claimedCents: number,
   evidencePhotoKeys: string[],
+  repairQuoteKeys: string[] = [],
 ): Promise<ReportDamageResult> {
   try {
-    const dispute = await submitDamageClaim(bookingId, description, claimedCents, evidencePhotoKeys);
+    const dispute = await submitDamageClaim(bookingId, description, claimedCents, evidencePhotoKeys, repairQuoteKeys);
     revalidatePath("/", "layout");
     return { dispute };
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
+}
+
+
+/**
+ * S4-08: the AI repair-cost estimate for the claim form. Called from the form
+ * after it renders, because the first estimate searches the web and can take
+ * up to a minute. An error is Scenario 9: the owner enters the amount.
+ */
+export async function loadRepairEstimate(bookingId: string): Promise<{ estimate: RepairEstimate } | { error: string }> {
+  try {
+    return { estimate: await getRepairEstimate(bookingId) };
   } catch (error) {
     if (error instanceof BackendApiError) return { error: error.message };
     throw error;
