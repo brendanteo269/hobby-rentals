@@ -42,7 +42,7 @@ export default async function DisputeDetailPage({ params }: { params: Promise<{ 
       <div className="mt-10 grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <section aria-label="Parties' evidence" className="grid gap-6 xl:grid-cols-2">
-            <Panel title="Owner's claim" description={`Claimed ${formatMoney(dispute.claimed_cents)} · reported ${formatDateTime(dispute.created_at)}`}>
+            <Panel className="h-full" headerClassName="min-h-24" title="Owner's claim" description={`Claimed ${formatMoney(dispute.claimed_cents)} · reported ${formatDateTime(dispute.created_at)}`}>
               <p className="body-copy whitespace-pre-line">{dispute.description}</p>
               <EvidencePhotos urls={dispute.evidence_photo_urls} label="Owner's evidence photos" />
               <p className="mt-5 text-sm text-ink-soft">
@@ -51,6 +51,8 @@ export default async function DisputeDetailPage({ params }: { params: Promise<{ 
             </Panel>
 
             <Panel
+              className="h-full"
+              headerClassName="min-h-24"
               title="Renter's response"
               description={dispute.rebutted_at ? `Disputed ${formatDateTime(dispute.rebutted_at)}` : "No escalation submitted"}
             >
@@ -171,9 +173,19 @@ function ObjectiveEvidence({ bundle, ownerId, renterId }: { bundle: ArbitrationE
         <p className="body-copy mt-2">This is the read-only evidence snapshot assembled when the renter escalated the case.</p>
       </div>
       <Panel title="Condition photos" description="Compare the documented handover and return condition before weighing either party’s account.">
-        <div className="grid gap-6 xl:grid-cols-2">
-          <SnapshotPhotos photos={bundle.pickup_photos} title="Pickup photos" />
-          <SnapshotPhotos photos={bundle.return_photos} title="Return photos" />
+        <div className="grid overflow-hidden border border-line xl:grid-cols-2">
+          <SnapshotPhotos
+            photos={bundle.pickup_photos}
+            title="Pickup condition"
+            description="Documented at handover"
+            className="border-b border-line bg-sand/40 xl:border-b-0 xl:border-r"
+          />
+          <SnapshotPhotos
+            photos={bundle.return_photos}
+            title="Return condition"
+            description="Documented when the item came back"
+            className="bg-white"
+          />
         </div>
       </Panel>
       <ScanEvidence scan={bundle.condition_scan} />
@@ -185,10 +197,24 @@ function ObjectiveEvidence({ bundle, ownerId, renterId }: { bundle: ArbitrationE
   );
 }
 
-function SnapshotPhotos({ photos, title }: { photos: EvidencePhoto[]; title: string }) {
+function SnapshotPhotos({
+  photos,
+  title,
+  description,
+  className = "",
+}: {
+  photos: EvidencePhoto[];
+  title: string;
+  description: string;
+  className?: string;
+}) {
   return (
-    <div>
-      <h3 className="text-sm font-medium">{title}</h3>
+    <section className={className}>
+      <header className="border-b border-line px-4 py-3">
+        <p className="eyebrow">{description}</p>
+        <h3 className="mt-1 text-base font-medium">{title}</h3>
+      </header>
+      <div className="p-4">
       {photos.length ? (
         <ul className="mt-3 grid grid-cols-2 gap-3">
           {photos.map((photo, index) => photo.photo_url && (
@@ -198,20 +224,26 @@ function SnapshotPhotos({ photos, title }: { photos: EvidencePhoto[]; title: str
                 <img src={photo.photo_url} alt={`${title}: ${photo.angle ?? "condition"}`} className="aspect-square w-full border border-line object-cover" />
               </a>
               <p className="mt-1 text-xs text-ink-soft">{photo.angle ?? "Condition photo"}{photo.captured_at && ` · ${formatDateTime(photo.captured_at)}`}</p>
-              {photo.baseline_photo_url && <a href={photo.baseline_photo_url} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs underline underline-offset-4">View the captured baseline reference</a>}
             </li>
           ))}
         </ul>
-      ) : <p className="mt-2 text-sm text-ink-soft">No accepted photos were captured.</p>}
-    </div>
+      ) : <p className="text-sm text-ink-soft">No accepted photos were captured.</p>}
+      </div>
+    </section>
   );
 }
 
 function ScanEvidence({ scan }: { scan: ArbitrationEvidenceBundle["condition_scan"] }) {
   if (!scan) return <Panel title="AI condition scan"><p className="body-copy text-ink-soft">No scan was available when the case was escalated.</p></Panel>;
+  const verdict = scan.verdict === "CLEAR" ? "Clear" : scan.verdict === "DAMAGE_DETECTED" ? "Possible damage detected" : scan.status ?? "No verdict";
+  const verdictTone = scan.verdict === "CLEAR" ? "border-ok" : scan.verdict === "DAMAGE_DETECTED" ? "border-warn" : "border-line";
   return (
     <Panel title="AI condition scan" description={scan.summary ?? "Recorded condition comparison."}>
-      <p className="text-sm text-ink-soft">{scan.verdict ?? scan.status ?? "No verdict"}{scan.anomaly_score != null && ` · anomaly score ${Math.round(scan.anomaly_score * 100)}%`}</p>
+      <div className={`border-l-4 bg-sand px-4 py-3 ${verdictTone}`}>
+        <p className="eyebrow">AI verdict</p>
+        <p className="mt-1 text-lg font-medium text-ink">{verdict}</p>
+        {scan.anomaly_score != null && <p className="mt-1 text-sm text-ink-soft">Anomaly score: {Math.round(scan.anomaly_score * 100)}%</p>}
+      </div>
       <ul className="mt-5 space-y-6">
         {scan.angles.map((angle, index) => (
           <li key={`${angle.angle}-${index}`} className="border-t border-line pt-5 first:border-t-0 first:pt-0">
