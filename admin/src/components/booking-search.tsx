@@ -9,11 +9,18 @@ import { BOOKING_STATUSES, BOOKING_STATUS_LABELS, ESCROW_FILTERS, ESCROW_FILTER_
 
 const QUERY_DEBOUNCE_MS = 350;
 
-function buildSearch(q: string, statuses: string[], escrow: string[]): string {
+/** Singapore dates a booking was made between (S4-05); "" for no bound. */
+export type BookingDates = { from: string; to: string };
+
+const NO_DATES: BookingDates = { from: "", to: "" };
+
+function buildSearch(q: string, statuses: string[], escrow: string[], dates: BookingDates): string {
   const params = new URLSearchParams();
   if (q) params.set("q", q);
   statuses.forEach((s) => params.append("status", s));
   escrow.forEach((e) => params.append("escrow", e));
+  if (dates.from) params.set("from", dates.from);
+  if (dates.to) params.set("to", dates.to);
   // Omitted on purpose: any change here is a new search, so it always starts
   // back at page one rather than wherever the previous search's pages left off.
   const search = params.toString();
@@ -35,10 +42,12 @@ export function BookingSearch({
   query,
   statuses: initialStatuses,
   escrow: initialEscrow,
+  dates: initialDates,
 }: {
   query: string;
   statuses: string[];
   escrow: string[];
+  dates: BookingDates;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -46,13 +55,14 @@ export function BookingSearch({
   const [q, setQ] = useState(query);
   const [statuses, setStatuses] = useState(initialStatuses);
   const [escrow, setEscrow] = useState(initialEscrow);
+  const [dates, setDates] = useState(initialDates);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function navigate(nextQ: string, nextStatuses: string[], nextEscrow: string[]) {
+  function navigate(nextQ: string, nextStatuses: string[], nextEscrow: string[], nextDates = dates) {
     // typedRoutes can't verify a string built from arbitrary filter values
     // against the route tree - this one is always /bookings plus a query
     // string, never a different path, so the cast is safe.
-    router.replace(`${pathname}${buildSearch(nextQ, nextStatuses, nextEscrow)}` as Route, { scroll: false });
+    router.replace(`${pathname}${buildSearch(nextQ, nextStatuses, nextEscrow, nextDates)}` as Route, { scroll: false });
   }
 
   function onQueryChange(value: string) {
@@ -71,13 +81,18 @@ export function BookingSearch({
     navigate(q, statuses, value);
   }
 
+  function onDatesChange(value: BookingDates) {
+    setDates(value);
+    navigate(q, statuses, escrow, value);
+  }
+
   // Flushes any pending debounce on unmount, so a quick type-then-navigate-away
   // doesn't fire a now-pointless update after the page is already gone.
   useEffect(() => () => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
   }, []);
 
-  const hasFilters = Boolean(q || statuses.length > 0 || escrow.length > 0);
+  const hasFilters = Boolean(q || statuses.length > 0 || escrow.length > 0 || dates.from || dates.to);
 
   return (
     <form
@@ -126,6 +141,15 @@ export function BookingSearch({
         noun="escrow filters"
       />
 
+      <div>
+        <label htmlFor="booking-from" className="block text-sm font-medium">Made from</label>
+        <Input id="booking-from" type="date" value={dates.from} max={dates.to || undefined} onChange={(event) => onDatesChange({ ...dates, from: event.target.value })} className="mt-2 w-auto" />
+      </div>
+      <div>
+        <label htmlFor="booking-to" className="block text-sm font-medium">Made to</label>
+        <Input id="booking-to" type="date" value={dates.to} min={dates.from || undefined} onChange={(event) => onDatesChange({ ...dates, to: event.target.value })} className="mt-2 w-auto" />
+      </div>
+
       {hasFilters && (
         <button
           type="button"
@@ -133,8 +157,9 @@ export function BookingSearch({
             setQ("");
             setStatuses([]);
             setEscrow([]);
+            setDates(NO_DATES);
             if (debounceRef.current) clearTimeout(debounceRef.current);
-            navigate("", [], []);
+            navigate("", [], [], NO_DATES);
           }}
           className="px-1 pb-3 text-sm text-ink-soft underline underline-offset-4 hover:text-ink"
         >
