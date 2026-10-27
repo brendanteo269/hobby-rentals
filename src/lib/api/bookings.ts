@@ -143,3 +143,16 @@ export function cancelBooking(bookingId: string, idempotency_key: string, expect
     { method: "POST", body: JSON.stringify({ idempotency_key, expected_refund_cents }) },
   );
 }
+
+/** S4-16: one confirmed rental as an .ics file. Bundle bookings have their own route. */
+export type BookingCalendar = { filename: string; ics: string };
+
+export function getBookingCalendar(kind: "single" | "bundle", bookingId: string) {
+  const id = encodeURIComponent(bookingId);
+  return backendRequest<BookingCalendar>(kind === "bundle" ? `/bundles/bookings/${id}/calendar` : `/bookings/${id}/calendar`);
+}
+
+/** S4-16: the booking's agreed meetup as a timed .ics event, for either party. */
+export function getMeetupCalendar(bookingId: string) {
+  return backendRequest<BookingCalendar>(`/bookings/${encodeURIComponent(bookingId)}/meetup-calendar`);
+}

@@ -1,4 +1,5 @@
 import { MapPin, ExternalLink } from "lucide-react";
+import { AddToCalendarButton } from "@/components/bookings/add-to-calendar-button";
 import { meetupMapsSearchUrl } from "@/lib/meetups";
 import { formatDateTime } from "@/lib/format";
 import type { MeetupProposal } from "@/lib/conversations";
@@ -13,9 +14,12 @@ import type { MeetupProposal } from "@/lib/conversations";
 export function ConfirmedMeetupBar({
   confirmed,
   rescheduleProposed,
+  booking,
 }: {
   confirmed: MeetupProposal;
   rescheduleProposed: boolean;
+  /** S4-16: the booking this thread is about, with its status; absent for an enquiry thread, which has no booking to export. */
+  booking?: { id: string; status: string; end_date: string };
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-line px-4 py-2.5 text-xs">
@@ -32,6 +36,13 @@ export function ConfirmedMeetupBar({
         View on map
         <ExternalLink className="size-3" aria-hidden="true" />
       </a>
+      {booking && (
+        <AddToCalendarButton
+          booking={{ ...booking, confirmed_meetup_time: confirmed.accepted_time }}
+          className="ml-auto"
+          menuAlign="right"
+        />
+      )}
       {rescheduleProposed && (
         <span className="rounded-full bg-accent-soft px-2 py-0.5 font-semibold uppercase tracking-wide text-accent-dark">
           Reschedule proposed

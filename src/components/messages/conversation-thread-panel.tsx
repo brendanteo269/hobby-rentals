@@ -48,6 +48,7 @@ export function ConversationThreadPanel({
   meetupEligible = false,
   defaultLocationArea = null,
   bookingStartDate = null,
+  bookingEndDate = null,
 }: {
   conversationId: string;
   initialMessages: Message[];
@@ -86,6 +87,8 @@ export function ConversationThreadPanel({
    * guarantees the item is this renter's to collect on it, not after.
    */
   bookingStartDate?: string | null;
+  /** S4-16: the booking's last day, so the calendar menu knows whether its rental dates can still be added. */
+  bookingEndDate?: string | null;
 }) {
   const { show, dismiss } = useToast();
   // Set when the tab is hidden; cleared by the first successful check made
@@ -215,7 +218,12 @@ export function ConversationThreadPanel({
   return (
     <>
       {meetupState.confirmed && (
-        <ConfirmedMeetupBar confirmed={meetupState.confirmed} rescheduleProposed={meetupState.pending !== null} />
+        <ConfirmedMeetupBar
+          confirmed={meetupState.confirmed}
+          rescheduleProposed={meetupState.pending !== null}
+          // meetupEligible is "the booking is CONFIRMED", the only state with a meetup file to offer.
+          booking={bookingId && meetupEligible && bookingEndDate ? { id: bookingId, status: "CONFIRMED", end_date: bookingEndDate } : undefined}
+        />
       )}
 
       <div ref={scrollRef} className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto">

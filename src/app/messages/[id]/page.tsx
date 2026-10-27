@@ -134,6 +134,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
           meetupEligible={conversation.scope === "BOOKING" && conversation.booking_status === "CONFIRMED"}
           defaultLocationArea={conversation.listing_location_area}
           bookingStartDate={conversation.scope === "BOOKING" ? conversation.booking_start_date : null}
+          bookingEndDate={conversation.scope === "BOOKING" ? conversation.booking_end_date : null}
           footerBanner={
             conversation.scope === "LISTING" ? (
               <EnquiryBookingStatus
