@@ -38,6 +38,8 @@ export type Booking = {
   renter_id: string;
   /** Who asked. Null when that member has not set a display name. */
   renter_name?: string | null;
+  /** S4-06: whether they hold the Trusted Renter badge. Owner's list only. */
+  renter_trusted?: boolean;
   owner_id: string;
   /** Whose item it is. Set on the renter's list only; null when the owner has no display name. */
   owner_name?: string | null;
@@ -287,6 +289,8 @@ export type BookingRequestDetail = {
     rating: number | null;
     review_count: number;
     completed_rentals: number;
+    /** S4-06 Scenario 3: the Trusted Renter badge, shown beside the request. */
+    trusted: boolean;
   };
   period: { start_date: string; end_date: string; rental_days: number | null };
   /** Set on a cancelled request: who cancelled it, and why if a member's account was suspended or banned. */

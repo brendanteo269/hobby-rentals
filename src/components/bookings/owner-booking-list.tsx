@@ -8,6 +8,7 @@ import { MessageButton } from "@/components/messages/message-button";
 import { ExtensionRequestDecision } from "@/components/bookings/extension-request-decision";
 import { OverdueNotice } from "@/components/bookings/overdue-notice";
 import { ConfirmReturnButton } from "@/components/bookings/confirm-return-button";
+import { TrustedRenterBadge } from "@/components/bookings/trusted-renter-badge";
 import {
   BOOKING_STATUS_LABELS,
   MESSAGEABLE_BOOKING_STATUSES,
@@ -86,7 +87,10 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
           // (owner_booking_list_path in the backend's catalog).
           return <li key={booking.id} id={`booking-${booking.id}`} className="flex scroll-mt-24 flex-wrap items-center justify-between gap-2 bg-surface-muted px-3 py-2 text-sm data-[hash-target]:ring-1 data-[hash-target]:ring-ink">
             <span>
-              <span className="font-medium">{requesterName(booking)}</span> <span className="text-ink-soft">· {formatDate(booking.start_date)} – {formatDate(booking.end_date)} · {BOOKING_STATUS_LABELS[booking.status]}{booking.settlement_state?.settlement ? " · Settled" : booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}</span>
+              <span className="font-medium">{requesterName(booking)}</span>
+              {/* S4-06: beside the name, so an owner scanning a list of
+                  requests can see who is trusted without opening each one. */}
+              <TrustedRenterBadge trusted={booking.renter_trusted} className="ml-2 align-middle" /> <span className="text-ink-soft">· {formatDate(booking.start_date)} – {formatDate(booking.end_date)} · {BOOKING_STATUS_LABELS[booking.status]}{booking.settlement_state?.settlement ? " · Settled" : booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}</span>
               {booking.confirmed_meetup_location && (
                 <span className="block text-ink-soft">
                   Meetup: {booking.confirmed_meetup_location}
