@@ -1,14 +1,24 @@
 "use server";
 
-import { getCalendarExport, type CalendarExport } from "@/lib/api/bookings";
+import { getBookingCalendar, getMeetupCalendar, type BookingCalendar } from "@/lib/api/bookings";
 import { BackendApiError } from "@/lib/api/client";
 
-export type CalendarExportResult = { error: string } | { export: CalendarExport };
+export type BookingCalendarResult = { error: string } | { calendar: BookingCalendar };
 
-/** S4-16: the backend scopes the export to the signed-in member's own bookings for the role asked. */
-export async function exportCalendar(role: "owner" | "renter"): Promise<CalendarExportResult> {
+/** S4-16: the backend only answers for a party to the booking, and only while it is confirmed and has not ended. */
+export async function fetchBookingCalendar(kind: "single" | "bundle", bookingId: string): Promise<BookingCalendarResult> {
   try {
-    return { export: await getCalendarExport(role) };
+    return { calendar: await getBookingCalendar(kind, bookingId) };
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
+}
+
+/** S4-16: the agreed meetup, which both the owner and the renter of the booking may add. */
+export async function fetchMeetupCalendar(bookingId: string): Promise<BookingCalendarResult> {
+  try {
+    return { calendar: await getMeetupCalendar(bookingId) };
   } catch (error) {
     if (error instanceof BackendApiError) return { error: error.message };
     throw error;

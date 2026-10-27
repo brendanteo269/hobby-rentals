@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Button, ButtonLink } from "@/components/ui";
 import { changeBookingStatus, type BookingActionResult } from "@/app/bookings/actions";
+import { AddToCalendarButton } from "@/components/bookings/add-to-calendar-button";
 import { MessageButton } from "@/components/messages/message-button";
 import { ExtensionRequestDecision } from "@/components/bookings/extension-request-decision";
 import { OverdueNotice } from "@/components/bookings/overdue-notice";
@@ -118,6 +119,7 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
               )}
             </span>
             <span className="flex gap-2">
+              <AddToCalendarButton booking={booking} />
               {booking.status === "CONFIRMED" && booking.handover_state?.inspection_status === "COMPLETED" && (
                 <ButtonLink href={ownerPickupPhotosPath(booking.id)} variant="outline" className="px-3 py-1.5 text-xs">
                   Pickup photos

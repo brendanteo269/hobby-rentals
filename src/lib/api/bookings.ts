@@ -144,9 +144,15 @@ export function cancelBooking(bookingId: string, idempotency_key: string, expect
   );
 }
 
-/** S4-16: the member's confirmed, unended rentals as an .ics snapshot. event_count 0 means nothing to export. */
-export type CalendarExport = { event_count: number; filename: string; ics: string };
+/** S4-16: one confirmed rental as an .ics file. Bundle bookings have their own route. */
+export type BookingCalendar = { filename: string; ics: string };
 
-export function getCalendarExport(role: "owner" | "renter") {
-  return backendRequest<CalendarExport>(role === "owner" ? "/bookings/owner/calendar" : "/bookings/mine/calendar");
+export function getBookingCalendar(kind: "single" | "bundle", bookingId: string) {
+  const id = encodeURIComponent(bookingId);
+  return backendRequest<BookingCalendar>(kind === "bundle" ? `/bundles/bookings/${id}/calendar` : `/bookings/${id}/calendar`);
+}
+
+/** S4-16: the booking's agreed meetup as a timed .ics event, for either party. */
+export function getMeetupCalendar(bookingId: string) {
+  return backendRequest<BookingCalendar>(`/bookings/${encodeURIComponent(bookingId)}/meetup-calendar`);
 }

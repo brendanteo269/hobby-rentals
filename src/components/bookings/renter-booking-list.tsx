@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { Badge, ButtonLink } from "@/components/ui";
+import { AddToCalendarButton } from "@/components/bookings/add-to-calendar-button";
 import { MessageButton } from "@/components/messages/message-button";
 import { hasLiveOffer, WAITLIST_STATUS_LABELS, type WaitlistEntry } from "@/lib/waitlist";
 import {
@@ -80,6 +81,7 @@ export function RenterBookingList({
             <div className="flex flex-col items-end gap-2">
               <Badge variant={BOOKING_STATUS_BADGE_VARIANT[booking.status]}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
               <CancelBookingButton kind="bundle" id={booking.id} status={booking.status} />
+              <AddToCalendarButton kind="bundle" booking={booking} />
               {reviewEligibility.find((item) => item.bundle_booking_id === booking.id) && <ButtonLink href={reviewPath(reviewEligibility.find((item) => item.bundle_booking_id === booking.id)!)} variant="accent" className="px-3 py-1.5 text-xs">Rate owner</ButtonLink>}
               {booking.status === "COMPLETED" && (
                 <ButtonLink href={`/bundles/${booking.bundle_id}`} variant="outline" className="px-3 py-1.5 text-xs">
@@ -142,6 +144,8 @@ export function RenterBookingList({
             {/* One row of actions under the details. Only the next step is
                 accent; the rest are outline so it is obvious what to do. */}
             <div className="flex w-full flex-wrap items-center justify-end gap-2 border-t border-line pt-3 empty:hidden">
+              {/* S4-16: first in the row, at its left edge, apart from the actions that move the booking on. */}
+              <AddToCalendarButton booking={booking} className="mr-auto" />
               {cancelBlockedReason(booking) ? (
                 <BlockedCancelButton label="Cancel booking" reason={cancelBlockedReason(booking)!} />
               ) : (
