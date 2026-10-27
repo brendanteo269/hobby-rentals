@@ -2,6 +2,7 @@ import Link from "next/link";
 import { EmptyState } from "@/components/ui";
 import { OwnerPortal, requireOwner } from "@/components/owner-portal";
 import { OwnerBookingList } from "@/components/bookings/owner-booking-list";
+import { ExportCalendarButton } from "@/components/bookings/export-calendar-button";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
 import { RequestCountdown } from "@/components/bookings/request-countdown";
 import { getOwnerBookingRequests, getOwnerBookings } from "@/lib/api/bookings";
@@ -33,6 +34,9 @@ export default async function OwnerBookingsPage() {
     <OwnerPortal active="Bookings" title="Bookings">
       {/* An extension notification links to one booking in the list below. */}
       <HashTargetHighlight />
+      <div className="mb-6 flex justify-end">
+        <ExportCalendarButton role="owner" />
+      </div>
       {!nothingYet && (
         <section className="mb-10" aria-labelledby="requests-heading">
           <h2 id="requests-heading" className="heading text-xl">Booking requests</h2>

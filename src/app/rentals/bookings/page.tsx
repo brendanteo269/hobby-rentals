@@ -1,6 +1,7 @@
 import { ButtonLink, EmptyState } from "@/components/ui";
 import { RenterPortal, requireRenter } from "@/components/renter-portal";
 import { RenterBookingList, RenterWaitlist } from "@/components/bookings/renter-booking-list";
+import { ExportCalendarButton } from "@/components/bookings/export-calendar-button";
 import { SuspensionBanner } from "@/components/bookings/suspension-banner";
 import { getRenterActivity } from "@/lib/api/rentals";
 import { isRentalFilter, matchesRentalFilter, RENTAL_FILTERS, type RentalFilter } from "@/lib/rentals";
@@ -40,6 +41,9 @@ export default async function RenterBookingsPage({ searchParams }: { searchParam
   return (
     <RenterPortal active="Bookings" title="Bookings">
       {suspension && <SuspensionBanner status={suspension} />}
+      <div className="mb-6 flex justify-end">
+        <ExportCalendarButton role="renter" />
+      </div>
       {!hasAnything ? (
         <EmptyState icon={ShoppingBag}
           title="You haven't rented anything yet"

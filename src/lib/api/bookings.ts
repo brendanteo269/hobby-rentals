@@ -143,3 +143,10 @@ export function cancelBooking(bookingId: string, idempotency_key: string, expect
     { method: "POST", body: JSON.stringify({ idempotency_key, expected_refund_cents }) },
   );
 }
+
+/** S4-16: the member's confirmed, unended rentals as an .ics snapshot. event_count 0 means nothing to export. */
+export type CalendarExport = { event_count: number; filename: string; ics: string };
+
+export function getCalendarExport(role: "owner" | "renter") {
+  return backendRequest<CalendarExport>(role === "owner" ? "/bookings/owner/calendar" : "/bookings/mine/calendar");
+}
