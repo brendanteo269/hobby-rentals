@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
+import { LoaderCircle } from "lucide-react";
 import { Button, ButtonLink, Field, FormError, FormSection, Modal, SelectField, TextareaField } from "@/components/ui";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
 import { WeeklyAvailabilityField } from "@/components/listings/weekly-availability-field";
@@ -27,6 +28,7 @@ import {
   type ListingCategoryOption,
 } from "@/lib/listings";
 import { getCategoryAttributes } from "@/lib/category-attributes";
+import { draftFromFrontPhoto } from "@/app/listings/actions";
 
 type FieldValues = {
   name: string;
@@ -103,6 +105,14 @@ export function ListingForm({
     )),
   );
   const [attributeLoadError, setAttributeLoadError] = useState<string | null>(null);
+  const [touched, setTouched] = useState<Set<string>>(new Set());
+  const touchedRef = useRef<Set<string>>(new Set());
+  const [drafting, setDrafting] = useState(false);
+  const [draftNotice, setDraftNotice] = useState<string | null>(null);
+  const draftGeneration = useRef(0);
+  // Values set by AI are distinct from owner input. A later Front photo may
+  // replace these suggestions, but never anything the owner has touched.
+  const aiAppliedFields = useRef<Set<string>>(new Set());
 
   // Pricing state for PricePerBlockField and PricingRecommendationPanel
   const initialPrice = listing
@@ -140,8 +150,51 @@ export function ListingForm({
         setAttributeValues({});
         setAttributeLoadError(null);
       }
+      setTouched((current) => { const next = new Set(current).add(key); touchedRef.current = next; return next; });
       setFields((current) => ({ ...current, [key]: event.target.value }));
     };
+
+  async function draftFrontPhoto(sessionId: string) {
+    const generation = ++draftGeneration.current;
+    setDrafting(true); setDraftNotice(null);
+    const response = await draftFromFrontPhoto(sessionId);
+    if (generation !== draftGeneration.current) return;
+    if (response.status === "in_progress") { setDraftNotice("Drafting is still in progress. Please wait a moment."); return; }
+    const draft = response.draft;
+    if (!Object.keys(draft).length) { setDrafting(false); setDraftNotice("We couldn’t draft details from this photo. You can continue manually."); return; }
+    const priorAiFields = aiAppliedFields.current;
+    setFields((current) => {
+      const next = { ...current };
+      for (const key of ["name", "brand", "description", "category"] as const) {
+        if (priorAiFields.has(key) && !touchedRef.current.has(key)) next[key] = "";
+      }
+      for (const key of ["name", "brand", "description"] as const) {
+        if (draft[key] && !touchedRef.current.has(key)) {
+          next[key] = draft[key];
+          priorAiFields.add(key);
+        }
+      }
+      return next;
+    });
+    setAttributeValues((current) => Object.fromEntries(
+      Object.entries(current).filter(([key]) => !priorAiFields.has(`attributes.${key}`) || touchedRef.current.has(`attributes.${key}`)),
+    ));
+    if (draft.category && !touchedRef.current.has("category")) {
+      priorAiFields.add("category");
+      setFields((current) => ({ ...current, category: draft.category! }));
+      try {
+        const definitions = await getCategoryAttributes(draft.category);
+        if (generation !== draftGeneration.current) return;
+        const allowed = new Set(definitions.map((definition) => definition.attribute_key));
+        const attributes = Object.fromEntries(Object.entries(draft.attributes ?? {}).filter(([key]) => allowed.has(key) && !touchedRef.current.has(`attributes.${key}`)));
+        Object.keys(attributes).forEach((key) => priorAiFields.add(`attributes.${key}`));
+        setAttributeValues((current) => ({ ...current, ...attributes }));
+      } catch { /* existing category UI shows loading failure if it matters */ }
+    }
+    setDrafting(false); setDraftNotice("Suggestions added. Review and edit them before saving.");
+  }
+
+  function stopDrafting() { draftGeneration.current += 1; setDrafting(false); setDraftNotice("Drafting stopped. You can continue manually."); }
 
   const [dismissedNotice, setDismissedNotice] = useState<ListingFormState>(undefined);
   const saved = state?.success;
@@ -151,6 +204,37 @@ export function ListingForm({
   return (
     <form action={formAction} className="space-y-6">
       <HashTargetHighlight autoClearMs={8_000} />
+      <FormSection title="Photos">
+        {editing ? (
+          <PhotoUploadField
+            error={errors.photo_keys}
+            initialPhotos={listing.photo_keys.map((key, index) => ({ key, url: listing.photo_urls[index] }))}
+          />
+        ) : (
+          <>
+            <BaselinePhotosField
+              error={errors.baseline_photos}
+              onFrontReplacementStarted={() => { draftGeneration.current += 1; setDrafting(false); }}
+              onFrontReady={(sessionId) => { void draftFrontPhoto(sessionId); }}
+            />
+            {drafting && (
+              <div className="mt-4 flex items-start gap-3 text-sm text-ink-soft" role="status">
+                <LoaderCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0 animate-spin" />
+                <p>
+                  Drafting details from your Front photo…<br />
+                  You can keep completing the form. Anything you edit will be kept.
+                </p>
+                <button type="button" className="ml-auto shrink-0 text-sm font-medium text-ink underline-offset-4 hover:underline" onClick={stopDrafting}>
+                  Stop drafting
+                </button>
+              </div>
+            )}
+            {!drafting && draftNotice && (
+              <p className="mt-4 text-sm text-ink-soft" role="status">{draftNotice}</p>
+            )}
+          </>
+        )}
+      </FormSection>
       <FormSection title="The item">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
@@ -236,10 +320,11 @@ export function ListingForm({
               {attributeDefinitions.map((definition) => {
                 const name = `attributes.${definition.attribute_key}`;
                 const value = attributeValues[definition.attribute_key] ?? "";
-                const setValue = (next: string) => setAttributeValues((current) => ({
-                  ...current,
-                  [definition.attribute_key]: definition.data_type === "number" && next !== "" ? Number(next) : next,
-                }));
+                const setValue = (next: string) => {
+                  const key = `attributes.${definition.attribute_key}`;
+                  setTouched((current) => { const updated = new Set(current).add(key); touchedRef.current = updated; return updated; });
+                  setAttributeValues((current) => ({ ...current, [definition.attribute_key]: definition.data_type === "number" && next !== "" ? Number(next) : next }));
+                };
                 return definition.data_type === "select" ? (
                   <SelectField key={definition.id} label={definition.label} id={name} required={definition.is_required} error={errors[name]} value={value} onChange={(event) => setValue(event.target.value)}>
                     <option value="">Choose one</option>
@@ -265,17 +350,6 @@ export function ListingForm({
           onValueChange={setPickupLocation}
           error={errors.location_area}
         />
-      </FormSection>
-
-      <FormSection title="Photos">
-        {editing ? (
-          <PhotoUploadField
-            error={errors.photo_keys}
-            initialPhotos={listing.photo_keys.map((key, index) => ({ key, url: listing.photo_urls[index] }))}
-          />
-        ) : (
-          <BaselinePhotosField error={errors.baseline_photos} />
-        )}
       </FormSection>
 
       {!editing && (

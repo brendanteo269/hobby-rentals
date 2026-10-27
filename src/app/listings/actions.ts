@@ -14,6 +14,7 @@ import {
   recordBaseline,
   updateListing as patchListing,
   updateListingAvailability,
+  draftListingFromPhoto,
 } from "@/lib/api/listings";
 import { getPricingRecommendation } from "@/lib/api/pricing";
 import type { PricingRecommendation, PricingRecommendationRequest } from "@/lib/pricing";
@@ -42,6 +43,7 @@ import {
   type DateRange,
   type Listing,
   type SerialExtraction,
+  type ListingDraftResponse,
   type UpdateListingRequest,
 } from "@/lib/listings";
 
@@ -51,6 +53,15 @@ export async function readSerial(photoKey: string): Promise<SerialExtraction> {
     return await extractSerial(photoKey);
   } catch (caught) {
     if (caught instanceof ListingApiError) return { serial: null, confidence: 0, readable: false };
+    throw caught;
+  }
+}
+
+/** Best-effort bridge for Front-photo drafting. A failure never blocks the form. */
+export async function draftFromFrontPhoto(sessionId: string): Promise<ListingDraftResponse> {
+  try { return await draftListingFromPhoto(sessionId); }
+  catch (caught) {
+    if (caught instanceof ListingApiError) return { status: "completed", draft: {} };
     throw caught;
   }
 }

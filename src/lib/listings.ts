@@ -405,6 +405,10 @@ export type PresignPhotoResponse = {
   photo_key: string;
 };
 
+export type ListingDraftPhotoSession = { session_id: string; upload_url: string; expires_at: string };
+export type ListingPhotoDraft = { name?: string; brand?: string; description?: string; category?: string; attributes?: Record<string, string | number> };
+export type ListingDraftResponse = { status: "in_progress" | "completed"; draft: ListingPhotoDraft };
+
 export type CreateListingRequest = {
   name: string;
   description: string;

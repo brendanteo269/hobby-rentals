@@ -18,9 +18,10 @@ type Slot = { key: string; previewUrl: string } | "uploading";
  * `photo_keys` so the create form uses the same four as the listing's photos.
  * They go under the public listings/ prefix for that reason.
  */
-export function BaselinePhotosField({ error }: { error?: string }) {
+export function BaselinePhotosField({ error, onFrontReady, onFrontReplacementStarted }: { error?: string; onFrontReady?: (sessionId: string) => void; onFrontReplacementStarted?: () => void }) {
   const [slots, setSlots] = useState<Partial<Record<BaselineAngle, Slot>>>({});
   const [uploadError, setUploadError] = useState<string>();
+  const [frontSession, setFrontSession] = useState<string>();
 
   async function upload(angle: BaselineAngle, file: File | undefined) {
     if (!file) return;
@@ -28,10 +29,27 @@ export function BaselinePhotosField({ error }: { error?: string }) {
       setUploadError(`${file.name}: unsupported file type. Use JPEG, PNG or WebP.`);
       return;
     }
+    // Invalidate an earlier Front analysis before any network work for its
+    // replacement begins. Otherwise A can land while B is still uploading.
+    if (angle === "front") onFrontReplacementStarted?.();
     setUploadError(undefined);
     setSlots((current) => ({ ...current, [angle]: "uploading" }));
     try {
-      const key = await putPhotoToS3(file);
+      let key: string;
+      if (angle === "front") {
+        const start = await fetch("/api/listing-drafts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content_type: file.type, replaces_session_id: frontSession }) });
+        if (!start.ok) throw new Error("Could not prepare the Front photo.");
+        const session = await start.json() as { session_id: string; upload_url: string };
+        const put = await fetch(session.upload_url, { method: "PUT", headers: { "Content-Type": file.type }, body: file });
+        if (!put.ok) throw new Error("Front photo failed to upload. Try again.");
+        const confirmed = await fetch(`/api/listing-drafts/${encodeURIComponent(session.session_id)}/confirm`, { method: "POST" });
+        if (!confirmed.ok) throw new Error("Could not confirm the Front photo. Try again.");
+        key = (await confirmed.json() as { photo_key: string }).photo_key;
+        setFrontSession(session.session_id);
+        onFrontReady?.(session.session_id);
+      } else {
+        key = await putPhotoToS3(file);
+      }
       setSlots((current) => ({ ...current, [angle]: { key, previewUrl: URL.createObjectURL(file) } }));
     } catch (caught) {
       setSlots((current) => ({ ...current, [angle]: undefined }));
