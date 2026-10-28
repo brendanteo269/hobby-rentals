@@ -212,6 +212,118 @@ export function settlementLine(state: SettlementState, viewer: "renter" | "owner
   return viewer === "renter" ? "Your deposit is being returned." : "Your payout is being processed.";
 }
 
+export type SettlementStepState = "done" | "current" | "held" | "upcoming";
+
+export type SettlementStep = {
+  key: "returned" | "window" | "settled";
+  label: string;
+  detail?: string;
+  state: SettlementStepState;
+};
+
+/**
+ * The three steps a returned rental's money goes through, for the tracker on
+ * the booking rows: returned, the claim window, settled. A damage claim
+ * replaces the window step and holds it ("held"), since the settlement job
+ * skips the rental until the claim process settles it.
+ */
+export function settlementSteps(state: SettlementState, now: Date = new Date()): SettlementStep[] {
+  const { returned_at, claim_window_ends_at: windowEnds, dispute, settlement } = state;
+  const windowOpen = Boolean(windowEnds) && now < new Date(windowEnds!);
+  const returned: SettlementStep = {
+    key: "returned",
+    label: "Returned",
+    detail: returned_at ? formatDateTime(returned_at) : undefined,
+    state: "done",
+  };
+
+  let window: SettlementStep;
+  if (dispute) {
+    window = settlement
+      ? { key: "window", label: "Damage claim", detail: "Settled by the claim", state: "done" }
+      : { key: "window", label: "Damage claim", detail: "Funds held for the claim", state: "held" };
+  } else if (settlement || !windowOpen) {
+    window = { key: "window", label: "Claim window", detail: windowEnds ? `Closed ${formatDateTime(windowEnds)}` : undefined, state: "done" };
+  } else {
+    window = { key: "window", label: "Claim window", detail: `Closes ${formatDateTime(windowEnds!)}`, state: "current" };
+  }
+
+  let settled: SettlementStep;
+  if (settlement) {
+    settled = { key: "settled", label: "Settled", detail: formatDateTime(settlement.settled_at), state: "done" };
+  } else if (window.state === "done") {
+    settled = { key: "settled", label: "Settled", detail: "Being processed", state: "current" };
+  } else {
+    settled = {
+      key: "settled",
+      label: "Settled",
+      detail: window.state === "held" ? "Once the claim is settled" : "After the window closes",
+      state: "upcoming",
+    };
+  }
+  return [returned, window, settled];
+}
+
+/** What a returned rental's row knows about the money it put in escrow. */
+export type EscrowAmounts = {
+  rental_subtotal_cents?: number | null;
+  platform_fee_cents?: number | null;
+  damage_protection_fee_cents?: number | null;
+  deposit_cents?: number | null;
+};
+
+/**
+ * What is still held in escrow for a returned rental that is not settled,
+ * worded for the reader: the renter's whole charge, or the owner's rent. Null
+ * once it is settled, or when the row does not carry the amounts.
+ */
+export function heldInEscrowLine(state: SettlementState, amounts: EscrowAmounts, viewer: "renter" | "owner"): string | null {
+  if (state.settlement || amounts.rental_subtotal_cents == null) return null;
+  const deposit = amounts.deposit_cents ?? 0;
+  const rent =
+    viewer === "renter"
+      ? amounts.rental_subtotal_cents + (amounts.platform_fee_cents ?? 0) + (amounts.damage_protection_fee_cents ?? 0)
+      : amounts.rental_subtotal_cents;
+  const what = viewer === "renter" ? "rental charge" : "rent";
+  const depositPart = deposit > 0 ? ` and ${viewer === "renter" ? "your" : "the renter's"} ${formatMoney(deposit)} deposit` : "";
+  return `${formatMoney(rent)} ${what}${depositPart} held in escrow.`;
+}
+
+export type ReceiptLine = { label: string; cents: number; total?: boolean };
+
+/**
+ * A settlement as each party reads it, line by line, ending in what reached
+ * their wallet: the owner's rent less commission plus anything the deposit or
+ * protection paid them, the renter's deposit less what was taken from it.
+ * Empty for a booking from before wallet holds, which moved nothing.
+ */
+export function settlementReceipt(settlement: RentalSettlement, viewer: "renter" | "owner"): ReceiptLine[] {
+  if (settlement.owner_total_payout_cents === 0 && settlement.rental_subtotal_cents === 0 && settlement.deposit_refund_cents === 0) {
+    return [];
+  }
+  if (viewer === "renter") {
+    return [
+      { label: "Deposit held", cents: settlement.deposit_held_cents + settlement.overdue_fee_cents },
+      ...(settlement.overdue_fee_cents > 0 ? [{ label: "Overdue fee", cents: -settlement.overdue_fee_cents }] : []),
+      ...(settlement.damage_deduction_cents > 0 ? [{ label: "Damage deducted", cents: -settlement.damage_deduction_cents }] : []),
+      { label: "Returned to your wallet", cents: settlement.deposit_refund_cents, total: true },
+    ];
+  }
+  const damage = settlement.damage_deduction_cents + settlement.protection_payout_cents;
+  return [
+    { label: "Rent", cents: settlement.rental_subtotal_cents },
+    { label: `Platform commission (${settlement.commission_bps / 100}%)`, cents: -settlement.commission_cents },
+    ...(settlement.overdue_fee_cents > 0 ? [{ label: "Overdue fee", cents: settlement.overdue_fee_cents }] : []),
+    ...(damage > 0 ? [{ label: "Damage compensation", cents: damage }] : []),
+    { label: "Paid to your wallet", cents: settlement.owner_total_payout_cents, total: true },
+  ];
+}
+
+/** A short, stable reference for a settlement: the same on every view and every rerun of the job. */
+export function settlementReference(settlement: Pick<RentalSettlement, "id">): string {
+  return `#${settlement.id.replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+}
+
 
 /**
  * S3-07: what accepting a damage claim moved.

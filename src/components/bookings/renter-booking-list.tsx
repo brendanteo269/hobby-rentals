@@ -17,7 +17,8 @@ import type { BundleBooking } from "@/lib/bundles";
 import { BlockedCancelButton, CancelBookingButton } from "@/components/bookings/cancel-booking-button";
 import { OverdueNotice } from "@/components/bookings/overdue-notice";
 import { cancellationOutcomeLine } from "@/lib/cancellations";
-import { claimPendingRenter, renterClaimPath, settlementLine } from "@/lib/settlement";
+import { claimPendingRenter, renterClaimPath } from "@/lib/settlement";
+import { SettlementTracker } from "@/components/bookings/settlement-tracker";
 import { ExtendBookingButton } from "@/components/bookings/extend-booking-button";
 import { canConfirmHandover, cancelBlockedReason } from "@/lib/handover";
 import { HandoverTracker } from "@/components/bookings/handover-tracker";
@@ -70,13 +71,17 @@ export function RenterBookingList({
               <p className="mt-1 text-xs text-ink-soft">
                 {booking.items.length} items · {booking.items.map((item) => item.listing_name ?? "an item").join(", ")}
               </p>
-              <p className="mt-1 text-sm text-ink">
-                {booking.cancellation_outcome
-                  ? cancellationOutcomeLine(booking.cancellation_outcome, "renter")
-                  : booking.settlement_state
-                    ? settlementLine(booking.settlement_state, "renter")
+              {booking.settlement_state && !booking.cancellation_outcome ? (
+                <div className="mt-3">
+                  <SettlementTracker state={booking.settlement_state} amounts={booking} viewer="renter" />
+                </div>
+              ) : (
+                <p className="mt-1 text-sm text-ink">
+                  {booking.cancellation_outcome
+                    ? cancellationOutcomeLine(booking.cancellation_outcome, "renter")
                     : BUNDLE_STATUS_NEXT_STEP[booking.status]}
-              </p>
+                </p>
+              )}
             </div>
             <div className="flex flex-col items-end gap-2">
               <Badge variant={BOOKING_STATUS_BADGE_VARIANT[booking.status]}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
@@ -108,14 +113,19 @@ export function RenterBookingList({
                 {booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}
               </p>
               {/* A confirmed booking with its handover tracker says what is next there. */}
-              {!(booking.status === "CONFIRMED" && booking.handover_state) && (
-                <p className="mt-1 text-sm text-ink">
-                  {booking.cancellation_outcome
-                    ? cancellationOutcomeLine(booking.cancellation_outcome, "renter")
-                    : booking.settlement_state
-                      ? settlementLine(booking.settlement_state, "renter")
+              {/* A returned one has its settlement tracker (S3-10) instead. */}
+              {booking.settlement_state && !booking.cancellation_outcome ? (
+                <div className="mt-3">
+                  <SettlementTracker state={booking.settlement_state} amounts={booking} viewer="renter" />
+                </div>
+              ) : (
+                !(booking.status === "CONFIRMED" && booking.handover_state) && (
+                  <p className="mt-1 text-sm text-ink">
+                    {booking.cancellation_outcome
+                      ? cancellationOutcomeLine(booking.cancellation_outcome, "renter")
                       : BOOKING_STATUS_NEXT_STEP[booking.status]}
-                </p>
+                  </p>
+                )
               )}
               {booking.confirmed_meetup_location && (
                 <p className="mt-1 text-sm text-ink-soft">

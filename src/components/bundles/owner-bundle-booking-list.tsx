@@ -11,7 +11,8 @@ import { BOOKING_STATUS_LABELS, requestReviewPath, type BookingStatus } from "@/
 import type { BundleBooking } from "@/lib/bundles";
 import { cancellationOutcomeLine, HANDED_OVER_NOTE } from "@/lib/cancellations";
 import { formatDate, formatMoney } from "@/lib/format";
-import { canReportDamage, settlementLine } from "@/lib/settlement";
+import { canReportDamage } from "@/lib/settlement";
+import { SettlementTracker } from "@/components/bookings/settlement-tracker";
 import { SUPPORT_EMAIL, SUPPORT_MAILTO } from "@/lib/support";
 
 /**
@@ -130,7 +131,9 @@ export function OwnerBundleBookingList({ bookings }: { bookings: BundleBooking[]
                 <p className="mt-1 text-xs text-ink-soft">{cancellationOutcomeLine(booking.cancellation_outcome, "owner")}</p>
               )}
               {booking.settlement_state && (
-                <p className="mt-1 text-xs text-ink-soft">{settlementLine(booking.settlement_state, "owner")}</p>
+                <div className="mt-2">
+                  <SettlementTracker state={booking.settlement_state} amounts={booking} viewer="owner" />
+                </div>
               )}
             </li>
           );

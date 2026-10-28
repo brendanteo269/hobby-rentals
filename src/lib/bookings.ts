@@ -53,6 +53,8 @@ export type Booking = {
   platform_fee_bps?: number | null;
   platform_fee_cents?: number | null;
   deposit_cents?: number | null;
+  /** What the renter paid for damage protection, when they chose it. */
+  damage_protection_fee_cents?: number | null;
   total_amount_cents?: number | null;
   payment_status?: PaymentStatus | null;
   /** When an unanswered request lapses; set on every request. */
