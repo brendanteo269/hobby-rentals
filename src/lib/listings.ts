@@ -358,6 +358,17 @@ export function parseSerialClaim(formData: FormData): SerialClaim | null {
 export const SERIAL_INCOMPLETE =
   "Photograph the serial number label and confirm the serial, or mark the item as having no serial.";
 
+/**
+ * Why parseSerialClaim came back empty, in words that fit what the owner did.
+ * Ticking "no serial" without the marks photo is incomplete too, and telling
+ * them to mark the item as having no serial reads as if the tick was lost.
+ */
+export function serialIncompleteMessage(formData: FormData): string {
+  return formData.get("no_serial") === "true"
+    ? "Add a photo of the item's distinguishing marks, such as scratches, stickers, engraving or wear."
+    : SERIAL_INCOMPLETE;
+}
+
 export const PASSPORT_ENTRY_LABELS: Record<string, string> = {
   BASELINE: "Baseline condition",
   // Recorded, not verified: a duplicate is recorded too. The badge says how far it's trusted.

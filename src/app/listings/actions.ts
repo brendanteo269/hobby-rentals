@@ -35,7 +35,7 @@ import {
   BASELINE_INCOMPLETE,
   parseBaselinePhotos,
   parseSerialClaim,
-  SERIAL_INCOMPLETE,
+  serialIncompleteMessage,
   isCondition,
   isLocationArea,
   type BlackoutDate,
@@ -255,7 +255,7 @@ export async function submitListing(
       fieldErrors: {
         ...Object.fromEntries(Object.entries(parsed.fieldErrors ?? {}).filter(([name]) => name !== "photo_keys")),
         ...(draft || baseline ? {} : { baseline_photos: BASELINE_INCOMPLETE }),
-        ...(draft || serial ? {} : { serial: SERIAL_INCOMPLETE }),
+        ...(draft || serial ? {} : { serial: serialIncompleteMessage(formData) }),
       },
     };
   }

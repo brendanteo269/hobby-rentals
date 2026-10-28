@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { confirmSerial, ListingApiError, publishIfComplete } from "@/lib/api/listings";
-import { parseSerialClaim, SERIAL_INCOMPLETE } from "@/lib/listings";
+import { parseSerialClaim, serialIncompleteMessage } from "@/lib/listings";
 
 /** For a listing created before serials were required. Publishes it if it's a draft with its baseline already on record. */
 export async function saveSerial(
@@ -12,7 +12,7 @@ export async function saveSerial(
   formData: FormData,
 ): Promise<{ error?: string }> {
   const claim = parseSerialClaim(formData);
-  if (!claim) return { error: SERIAL_INCOMPLETE };
+  if (!claim) return { error: serialIncompleteMessage(formData) };
 
   let draft: boolean;
   try {
