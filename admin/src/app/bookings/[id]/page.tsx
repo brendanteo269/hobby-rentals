@@ -11,6 +11,7 @@ import {
   getBookingById,
   getHandoverDetails,
   isHandoverOverridable,
+  isRentalEndable,
   paymentStatusLabel,
   paymentStatusTone,
 } from "@/lib/bookings";
@@ -18,6 +19,7 @@ import { Badge, Container, DescriptionList, EmptyState, Panel } from "@/componen
 import { AuditTrail } from "@/components/audit-trail";
 import { HandoverDetailsPanel } from "@/components/handover-details-panel";
 import { HandoverResolveForm } from "@/components/handover-resolve-form";
+import { EndRentalForm } from "@/components/end-rental-form";
 import { BookingEscrowPanels } from "@/components/booking-escrow-panels";
 import { getEscrowRecordById } from "@/lib/escrow";
 
@@ -63,7 +65,8 @@ function ReceiptRow({
  * references, rental period and amount, security deposit, escrow hold/
  * release records, damage protection ("insurance") terms, and admin
  * activity. Nothing on this page writes to a booking, except that a confirmed
- * one can be started or cancelled by an administrator (S3-02).
+ * one can be started or cancelled by an administrator (S3-02), and an active
+ * one ended (S3-11).
  */
 export default async function BookingDetailPage({
   params,
@@ -92,6 +95,8 @@ export default async function BookingDetailPage({
   // Only a confirmed, single booking whose start date and confirmation window have
   // passed without both parties confirming; the database holds the rule.
   const canResolveHandover = booking.status === "CONFIRMED" && (await isHandoverOverridable(id));
+  // S3-11: an active, single rental - neither party can cancel it, so support ends it.
+  const canEndRental = booking.status === "ACTIVE" && (await isRentalEndable(id));
 
   // The escrow, fold of the wallet ledger: a bundle component's is held on its bundle.
   const escrowRecord = booking.bundle_booking_id ? null : await getEscrowRecordById(id);
@@ -132,6 +137,11 @@ export default async function BookingDetailPage({
       {canResolveHandover && (
         <div className="mt-6">
           <HandoverResolveForm bookingId={booking.id} updatedAt={booking.updated_at} />
+        </div>
+      )}
+      {canEndRental && (
+        <div className="mt-6">
+          <EndRentalForm bookingId={booking.id} updatedAt={booking.updated_at} />
         </div>
       )}
 

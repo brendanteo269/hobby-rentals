@@ -54,3 +54,44 @@ export async function resolveUnconfirmedHandover(
   revalidatePath(ROUTES.bookings);
   return { success: SUCCESS_BY_INTENT[intent] };
 }
+
+export type EndRentalState = { error?: string; success?: string } | undefined;
+
+const END_SUCCESS = {
+  REFUND_RENTER: "Rental ended and every hold released to the renter. The renter and the owner have been told.",
+  CLOSE_AS_RETURNED:
+    "Rental marked as returned. The claim window is open and it settles as usual. The renter and the owner have been told.",
+} as const;
+
+/**
+ * S3-11: ends an active rental that the return process cannot - neither party
+ * can cancel it once it is handed over, so platform support decides. Refund
+ * the renter in full, or close it as returned so the claim window and
+ * settlement run as usual. As with the handover resolution, the database does
+ * the work in one transaction and this only parses the form.
+ */
+export async function endActiveRental(_prev: EndRentalState, formData: FormData): Promise<EndRentalState> {
+  await requirePortalSession();
+
+  const bookingId = String(formData.get("booking_id") ?? "");
+  const outcome = String(formData.get("outcome") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+  const expectedUpdatedAt = String(formData.get("expected_updated_at") ?? "") || null;
+
+  if (outcome !== "REFUND_RENTER" && outcome !== "CLOSE_AS_RETURNED") {
+    return { error: "Choose whether to refund the renter or close the rental as returned." };
+  }
+  if (!reason) return { error: "A reason is required." };
+
+  const { error } = await createAdminClient().rpc("admin_end_active_rental", {
+    p_booking_id: bookingId,
+    p_outcome: outcome,
+    p_reason: reason,
+    p_expected_updated_at: expectedUpdatedAt,
+  });
+  if (error) return { error: error.message.replace(ERROR_CODE_PREFIX, "") };
+
+  revalidatePath(ROUTES.booking(bookingId));
+  revalidatePath(ROUTES.bookings);
+  return { success: END_SUCCESS[outcome] };
+}

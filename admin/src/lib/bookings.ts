@@ -236,6 +236,19 @@ export async function isHandoverOverridable(bookingId: string): Promise<boolean>
   return data === true;
 }
 
+/**
+ * S3-11: whether an administrator may end this rental - an active, single
+ * booking. The database holds the rule and re-checks it when the form is sent.
+ */
+export async function isRentalEndable(bookingId: string): Promise<boolean> {
+  const { data, error } = await createAdminClient().rpc("admin_rental_endable", { p_booking_id: bookingId });
+  if (error) {
+    console.error("End-rental check failed:", error.message);
+    return false;
+  }
+  return data === true;
+}
+
 /** A booking an enforcement against one of its members (S3-24) left for an administrator. */
 export type EnforcementFlaggedBooking = {
   id: string;
