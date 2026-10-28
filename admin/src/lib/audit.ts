@@ -33,6 +33,8 @@ export const AUDIT_ACTIONS = {
   user_report_dismissed: "User report dismissed",
   handover_started_by_admin: "Rental started (handover not confirmed)",
   unconfirmed_booking_cancelled_by_admin: "Booking cancelled (handover not confirmed)",
+  active_rental_refunded_by_admin: "Active rental ended, renter refunded in full",
+  active_rental_returned_by_admin: "Active rental closed as returned",
 } as const;
 
 export type AuditAction = keyof typeof AUDIT_ACTIONS;
