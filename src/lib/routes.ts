@@ -57,9 +57,9 @@ export function authErrorPath(code: AuthErrorCode): `/auth-error?reason=${AuthEr
  * Renting and owning are not panels: each lives in its own portal (My rentals,
  * My listings), so the profile is only about the member themselves.
  */
-export type ProfileView = "ratings" | "wallet" | "account";
+export type ProfileView = "ratings" | "wallet" | "notifications" | "account";
 
-const PROFILE_VIEWS: readonly ProfileView[] = ["ratings", "wallet", "account"];
+const PROFILE_VIEWS: readonly ProfileView[] = ["ratings", "wallet", "notifications", "account"];
 
 export function isProfileView(value: string | undefined): value is ProfileView {
   return PROFILE_VIEWS.includes(value as ProfileView);

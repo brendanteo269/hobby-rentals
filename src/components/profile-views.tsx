@@ -10,6 +10,7 @@ export type { ProfileView } from "@/lib/routes";
 const TABS: { view: ProfileView; label: string }[] = [
   { view: "ratings", label: "Ratings" },
   { view: "wallet", label: "Wallet" },
+  { view: "notifications", label: "Notifications" },
   { view: "account", label: "Account" },
 ];
 
