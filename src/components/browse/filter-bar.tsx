@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { ChevronDown, Search } from "lucide-react";
+import { ChevronDown, Search, type LucideIcon } from "lucide-react";
 
 /**
  * One compact control in the marketplace's filter row - a dropdown, the
@@ -31,14 +31,25 @@ export function PillSelect({ className = "", children, ...props }: ComponentProp
  * The marketplace's keyword box: one pill with its submit button inside, so
  * the search reads as the main control and the filters below as refinements.
  * Rendered inside the page's GET form, whose other fields it submits too.
+ * `icon` replaces the magnifier, e.g. to mark a search that reads meaning.
  */
-export function SearchBar({ label, placeholder, defaultValue }: { label: string; placeholder: string; defaultValue: string }) {
+export function SearchBar({
+  label,
+  placeholder,
+  defaultValue,
+  icon: Icon = Search,
+}: {
+  label: string;
+  placeholder: string;
+  defaultValue: string;
+  icon?: LucideIcon;
+}) {
   return (
     <div className="relative">
       <label htmlFor="q" className="sr-only">
         {label}
       </label>
-      <Search className="pointer-events-none absolute left-5 top-1/2 size-5 -translate-y-1/2 text-ink-soft" aria-hidden="true" />
+      <Icon className="pointer-events-none absolute left-5 top-1/2 size-5 -translate-y-1/2 text-ink-soft" aria-hidden="true" />
       <input
         id="q"
         name="q"

@@ -1,5 +1,7 @@
 import { Container, Button, Input, Select, ImageSlot } from "@/components/ui";
 import { ShieldCheck, BadgeCheck, Handshake, Camera } from "lucide-react";
+import { SearchExamples, SmartSearchNote } from "@/components/browse/search-examples";
+import { browseHref, defaultSort, parseBrowseFilters } from "@/lib/browse-params";
 import { HERO_IMAGE } from "@/lib/mock-images";
 import { LOCATION_AREAS, LOCATION_LABELS, isLocationArea } from "@/lib/listings";
 
@@ -8,6 +10,10 @@ const TRUST_LINE = [
   { icon: BadgeCheck, label: "Product Passport" },
   { icon: Handshake, label: "Guided handover" },
 ];
+
+function exampleHref(q: string): string {
+  return browseHref({ ...parseBrowseFilters({}), q, sort: defaultSort(q) });
+}
 
 /**
  * Opening section: search card on the left, a showcase image on the right.
@@ -42,7 +48,7 @@ export function Hero({ defaultLocation }: { defaultLocation: string | null }) {
             id="search"
             name="q"
             pill
-            placeholder="Search listings"
+            placeholder="Describe what you need, e.g. coffee like a barista"
             className="w-full border-transparent"
           />
           <div className="flex flex-wrap gap-2">
@@ -87,6 +93,10 @@ export function Hero({ defaultLocation }: { defaultLocation: string | null }) {
           <Button type="submit" className="w-full">
             Search
           </Button>
+          <div className="space-y-2 px-1 pt-1">
+            <SmartSearchNote />
+            <SearchExamples hrefFor={exampleHref} />
+          </div>
         </form>
 
         <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2">

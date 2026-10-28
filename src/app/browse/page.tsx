@@ -57,7 +57,7 @@ export default async function BrowsePage({
           <SaveSearchButton filters={filters} />
           <ResultsSort filters={filters} />
         </div>
-        <p className="body-copy" aria-live="polite">{resultSummary(total, error, onlySearched)}</p>
+        <p className="body-copy" aria-live="polite">{resultSummary(total, error, onlySearched, data?.search_mode)}</p>
       </div>
 
       <div className="mt-6">
@@ -118,10 +118,19 @@ async function loadListings(
   }
 }
 
-function resultSummary(total: number, error: string | null, onlySearched: boolean): string {
+function resultSummary(
+  total: number,
+  error: string | null,
+  onlySearched: boolean,
+  searchMode: BrowseListingsResponse["search_mode"],
+): string {
   if (error) return error;
   if (total === 0) return onlySearched ? "No listings match this search." : "No listings match these filters.";
-  return `${total} listing${total === 1 ? "" : "s"} available.`;
+  const count = `${total} listing${total === 1 ? "" : "s"}`;
+  // Says how a query was read, so a match that shares no word with it makes sense.
+  if (searchMode === "semantic") return `${count} matching what you described, best match first.`;
+  if (searchMode === "keyword") return `${count} matching your words. Smart search is catching up, so try again shortly for matches by meaning.`;
+  return `${count} available.`;
 }
 
 function NoResults({

@@ -4,13 +4,14 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Flame, ShieldCheck } from "lucide-react";
+import { Flame, ShieldCheck, Sparkles } from "lucide-react";
 import { emitActivityEvent } from "@/app/analytics/actions";
 import { FilterSelect } from "@/components/browse/filter-select";
 import { RadiusSearch } from "@/components/browse/radius-search";
 import { DateRangeFilter } from "@/components/browse/date-range-filter";
 import { SearchBar, filterPill } from "@/components/browse/filter-bar";
-import { browseHref, type BrowseFilters } from "@/lib/browse-params";
+import { SearchExamples, SmartSearchNote } from "@/components/browse/search-examples";
+import { browseHref, defaultSort, type BrowseFilters } from "@/lib/browse-params";
 import {
   CATEGORIES,
   CATEGORY_LABELS,
@@ -64,7 +65,13 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
         label="Search listings"
         placeholder="Describe what you're doing, e.g. camping on a rainy weekend"
         defaultValue={filters.q}
+        icon={Sparkles}
       />
+      <div className="mt-3 space-y-2 px-2">
+        <SmartSearchNote />
+        {/* Only before a search: once there are results, the chips would crowd them. */}
+        {!filters.q && <SearchExamples hrefFor={(q) => browseHref({ ...filters, q, sort: defaultSort(q), page: 1 })} />}
+      </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <FilterSelect id="category" label="Category" placeholder="Category">
