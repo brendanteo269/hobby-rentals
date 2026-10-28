@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   availabilityLine,
+  parseSerialClaim,
   rentalDays,
   rentalDurationLimits,
   rentalQuote,
   rentalSubtotalCents,
+  SERIAL_INCOMPLETE,
+  serialIncompleteMessage,
   type Listing,
 } from "@/lib/listings";
 
@@ -160,5 +163,34 @@ describe("availabilityLine", () => {
   it("is simply available otherwise, from today on", () => {
     expect(availabilityLine({ available_from: TODAY, available_until: null }, TODAY)).toBe("Available now");
     expect(availabilityLine({ available_from: null, available_until: null }, TODAY)).toBe("Available now");
+  });
+});
+
+describe("serial claims", () => {
+  function form(fields: Record<string, string>) {
+    const data = new FormData();
+    for (const [name, value] of Object.entries(fields)) data.set(name, value);
+    return data;
+  }
+
+  it("records no serial once the distinguishing-marks photo is there", () => {
+    expect(parseSerialClaim(form({ no_serial: "true", serial_photo_key: "passports/u/marks.jpg" }))).toEqual({
+      photo_key: "passports/u/marks.jpg",
+      no_serial: true,
+      serial: null,
+      extracted: null,
+      confidence: null,
+    });
+  });
+
+  it("asks for the marks photo, not the tick, when no serial is ticked without one", () => {
+    const ticked = form({ no_serial: "true" });
+
+    expect(parseSerialClaim(ticked)).toBeNull();
+    expect(serialIncompleteMessage(ticked)).toMatch(/distinguishing marks/);
+  });
+
+  it("asks for the label or the tick when neither is there", () => {
+    expect(serialIncompleteMessage(form({}))).toBe(SERIAL_INCOMPLETE);
   });
 });

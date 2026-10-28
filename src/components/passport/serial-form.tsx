@@ -9,6 +9,9 @@ import { ALLOWED_PHOTO_CONTENT_TYPES, type SerialExtraction } from "@/lib/listin
 
 type Photo = { key: string; previewUrl: string; reading: SerialExtraction | "reading" };
 
+/** An id no form has, which leaves a control without a form owner. */
+const NO_FORM = "serial-field-no-form";
+
 /**
  * S2-05: photo of the serial label -> suggested serial -> owner confirms or
  * corrects it. Read by parseSerialClaim. The photo goes under the private
@@ -66,6 +69,12 @@ export function SerialField({ error }: { error?: string }) {
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
+          // Owned by no form, so the reset React 19 runs on the surrounding
+          // form once its action returns cannot untick it: a refused publish
+          // left the box looking cleared while noSerial, the hidden field
+          // below and the copy above still said "no serial". It carries no
+          // value of its own; the hidden no_serial input does.
+          form={NO_FORM}
           checked={noSerial}
           disabled={photo === "uploading" || (photo !== undefined && photo.reading === "reading")}
           onChange={(event) => {
