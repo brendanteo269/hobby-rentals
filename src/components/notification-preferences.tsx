@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
-import { MailCheck } from "lucide-react";
+import { Info } from "lucide-react";
 import { Button, FormError } from "./ui";
 import { useToast } from "./toast";
 import { saveNotificationPreferences, type FormState } from "@/app/profile/actions";
@@ -38,21 +38,12 @@ export function NotificationPreferences({ preferences }: { preferences: Notifica
         <ul className="divide-y divide-line rounded-lg border border-line">
           {NOTIFICATION_CATEGORIES.map((category) => {
             const preference = byCategory.get(category);
-            const alwaysEmailed = preference?.always_emailed ?? [];
             return (
               <li key={category}>
                 <label className="flex cursor-pointer items-start justify-between gap-4 p-4">
                   <span>
                     <span className="block text-sm font-medium">{CATEGORY_COPY[category].label}</span>
                     <span className="body-copy mt-1 block">{CATEGORY_COPY[category].description}</span>
-                    {/* Scenario 3: said beside the switch, so nobody turns it
-                        off expecting silence. */}
-                    {alwaysEmailed.length > 0 && (
-                      <span className="mt-2 flex gap-1.5 text-xs text-ink-soft">
-                        <MailCheck className="mt-px size-3.5 shrink-0" aria-hidden="true" />
-                        <span>Always emailed: {alwaysEmailed.join(", ").toLowerCase()}.</span>
-                      </span>
-                    )}
                   </span>
                   <input
                     type="checkbox"
@@ -67,6 +58,16 @@ export function NotificationPreferences({ preferences }: { preferences: Notifica
             );
           })}
         </ul>
+
+        {/* Turning a category off silences all of its emails. Anything a
+            member must hear about regardless, our team emails them itself. */}
+        <p className="mt-4 flex gap-2 text-sm text-ink-soft">
+          <Info className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <span>
+            Turning a category off stops all of its emails. If something important needs your attention, such as a
+            damage claim, a payment or your account&apos;s standing, our team will email you about it directly.
+          </span>
+        </p>
 
         <FormError message={state?.error} />
         <Button type="submit" className="mt-6" disabled={pending}>

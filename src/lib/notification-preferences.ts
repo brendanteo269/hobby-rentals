@@ -7,16 +7,11 @@ import type { NotificationCategory } from "@/lib/notifications";
 export type NotificationPreference = {
   category: NotificationCategory;
   email_enabled: boolean;
-  /**
-   * What in this category is emailed whatever is chosen (Scenario 3), named by
-   * app/notification_catalog.py ALWAYS_EMAILED. Empty when the switch covers it all.
-   */
-  always_emailed: string[];
 };
 
 /** What each category covers, in the words the settings page uses. */
 export const CATEGORY_COPY: Record<NotificationCategory, { label: string; description: string }> = {
-  BOOKING: { label: "Bookings", description: "Requests, approvals, handovers, returns and reviews." },
+  BOOKING: { label: "Bookings", description: "Requests, approvals, handovers, returns, claims, payouts and reviews." },
   MESSAGE: { label: "Messages", description: "New messages from the people you rent with." },
   MEETUP: { label: "Meetups", description: "Proposed and accepted handover times and places." },
   EXTENSION: { label: "Extensions", description: "Requests to keep an item longer, and their answers." },
@@ -26,8 +21,7 @@ export const CATEGORY_COPY: Record<NotificationCategory, { label: string; descri
     description:
       "Saved-search matches, availability alerts, HobbyShield reminders, and reports or changes to your listings.",
   },
-  // Everything else in this category is always emailed, and listed as such.
-  ACCOUNT: { label: "Account", description: "The outcome of reports you've made." },
+  ACCOUNT: { label: "Account", description: "Reports you've made or that were made about you, and suspensions." },
 };
 
 /** Every category, in the order the settings page lists them. */

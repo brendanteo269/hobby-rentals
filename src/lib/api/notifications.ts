@@ -75,7 +75,7 @@ export function getNotificationPreferences() {
   return backendRequest<NotificationPreference[]>("/notifications/preferences");
 }
 
-export function updateNotificationPreferences(preferences: Pick<NotificationPreference, "category" | "email_enabled">[]) {
+export function updateNotificationPreferences(preferences: NotificationPreference[]) {
   return backendRequest<NotificationPreference[]>("/notifications/preferences", {
     method: "PUT",
     body: JSON.stringify({ preferences }),
