@@ -12,7 +12,9 @@ import {
 } from "@/lib/contact-details";
 import { defaultDashboardPath, MY_LISTINGS_PATH, RENTALS_PATH } from "@/lib/routes";
 import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/login-attempts";
-import type { FieldErrors } from "@/lib/api/client";
+import { BackendApiError, type FieldErrors } from "@/lib/api/client";
+import { updateNotificationPreferences } from "@/lib/api/notifications";
+import { NOTIFICATION_CATEGORIES, preferenceFieldName } from "@/lib/notification-preferences";
 
 /**
  * What the member typed, handed back so a rejected submission can be
@@ -334,4 +336,23 @@ export async function changePassword(_prev: FormState, formData: FormData): Prom
   if (error) return { error: error.message };
 
   return { success: "Password changed." };
+}
+
+/**
+ * S4-XX: saves the email choice for every category at once. An unticked box
+ * is absent from the form, which is what "email off" looks like.
+ */
+export async function saveNotificationPreferences(_prev: FormState, formData: FormData): Promise<FormState> {
+  const preferences = NOTIFICATION_CATEGORIES.map((category) => ({
+    category,
+    email_enabled: formData.get(preferenceFieldName(category)) === "on",
+  }));
+  try {
+    await updateNotificationPreferences(preferences);
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
+  revalidatePath("/profile");
+  return { success: "Notification preferences saved." };
 }

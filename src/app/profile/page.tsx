@@ -20,6 +20,8 @@ import {
 import type { Roles } from "@/lib/contact-details";
 import { AccountSettings } from "@/components/account-settings";
 import { CreditWallet } from "@/components/credit-wallet";
+import { NotificationPreferences } from "@/components/notification-preferences";
+import { getNotificationPreferences } from "@/lib/api/notifications";
 import { getPublicMember } from "@/lib/api/reviews";
 import { isInsightsPeriod } from "@/lib/owner-insights";
 
@@ -67,6 +69,7 @@ export default async function ProfilePage({
   };
   const active: ProfileView = resolveView(view);
   const ratings = active === "ratings" ? await getPublicMember(user.id).catch(() => null) : null;
+  const preferences = active === "notifications" ? await getNotificationPreferences() : null;
 
   const memberSince = new Date(profile.created_at).toLocaleDateString("en-SG", {
     month: "long",
@@ -139,6 +142,7 @@ export default async function ProfilePage({
         <div className="mt-8">
           {active === "ratings" && <RatingsView profile={ratings} />}
           {active === "wallet" && <CreditWallet />}
+          {preferences && <NotificationPreferences preferences={preferences} />}
           {active === "account" && (
             <AccountSettings
               email={user.email ?? ""}

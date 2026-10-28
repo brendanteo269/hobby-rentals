@@ -7,6 +7,7 @@ import type {
   NotificationPage,
   OpenedNotification,
 } from "@/lib/notifications";
+import type { NotificationPreference } from "@/lib/notification-preferences";
 
 export const NOTIFICATIONS_PAGE_SIZE = 20;
 
@@ -67,4 +68,16 @@ export async function archiveAllNotifications(filters: FilteredNotificationActio
     body: filteredBody(filters),
   });
   return updated;
+}
+
+/** S4-XX: the member's email choice for every category, on unless they turned it off. */
+export function getNotificationPreferences() {
+  return backendRequest<NotificationPreference[]>("/notifications/preferences");
+}
+
+export function updateNotificationPreferences(preferences: NotificationPreference[]) {
+  return backendRequest<NotificationPreference[]>("/notifications/preferences", {
+    method: "PUT",
+    body: JSON.stringify({ preferences }),
+  });
 }

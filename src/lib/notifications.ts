@@ -88,10 +88,20 @@ export type NotificationType =
   // S2-16: the other party sent a plain text/attachment message.
   | "MESSAGE_RECEIVED";
 
+/** Mirrors app/notification_catalog.py NotificationCategory. */
+export type NotificationCategory =
+  | "BOOKING"
+  | "WAITLIST"
+  | "MEETUP"
+  | "LISTING"
+  | "MESSAGE"
+  | "EXTENSION"
+  | "ACCOUNT";
+
 export type AppNotification = {
   id: string;
   type: NotificationType;
-  category: "BOOKING" | "WAITLIST" | "MEETUP" | "LISTING" | "MESSAGE";
+  category: NotificationCategory;
   title: string;
   body: string;
   /** What the member can expect to happen next. */
