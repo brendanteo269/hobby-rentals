@@ -42,8 +42,12 @@ export default async function DisputeDetailPage({ params }: { params: Promise<{ 
       <div className="mt-10 grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           <section aria-label="Parties' evidence" className="grid gap-6 xl:grid-cols-2">
-            <Panel className="h-full" headerClassName="min-h-24" title="Owner's claim" description={`Claimed ${formatMoney(dispute.claimed_cents)} · reported ${formatDateTime(dispute.created_at)}`}>
-              <p className="body-copy whitespace-pre-line">{dispute.description}</p>
+            <Panel className="h-full" headerClassName="min-h-24" title="Owner's claim" description={`Reported ${formatDateTime(dispute.created_at)}`}>
+              <div className="border-l-4 border-clay bg-sand px-4 py-3">
+                <p className="eyebrow">Amount claimed</p>
+                <p className="mt-1 text-2xl font-semibold text-ink">{formatMoney(dispute.claimed_cents)}</p>
+              </div>
+              <p className="body-copy mt-5 whitespace-pre-line">{dispute.description}</p>
               <EvidencePhotos urls={dispute.evidence_photo_urls} label="Owner's evidence photos" />
               <p className="mt-5 text-sm text-ink-soft">
                 Owner: <Link href={ROUTES.user(dispute.owner_id)} className="underline underline-offset-4">{dispute.owner_name ?? "No name"}</Link>
