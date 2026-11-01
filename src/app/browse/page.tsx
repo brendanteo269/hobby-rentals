@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { Container, ButtonLink, EmptyState } from "@/components/ui";
+import { getMyRenterTrust } from "@/lib/api/verification";
 import { Pagination } from "@/components/pagination";
 import { MarketplaceHeader } from "@/components/browse/marketplace-header";
 import { ListingFilters } from "@/components/browse/listing-filters";
@@ -12,6 +13,7 @@ import {
   PAGE_SIZE,
   RELAX_FILTER_LABELS,
   browsePageHref,
+  browseHref,
   hasActiveFilters,
   parseBrowseFilters,
   relatedCategoryHref,
@@ -21,7 +23,7 @@ import {
 } from "@/lib/browse-params";
 import type { BrowseListingsResponse, SearchSuggestions } from "@/lib/listings";
 import { getCategoryDemandOverview } from "@/lib/api/analytics";
-import { CloudOff, SearchX, Tag } from "lucide-react";
+import { CloudOff, SearchX, Tag, Zap } from "lucide-react";
 import { SaveSearchButton } from "@/components/saved-searches/save-search-button";
 
 export const metadata = { title: "Browse marketplace — HobbyRentals" };
@@ -33,6 +35,11 @@ export default async function BrowsePage({
 }) {
   const filters = parseBrowseFilters(await searchParams);
   const { data, error } = await loadListings(filters);
+  // S5-11: only when the filter is on, and only to explain an empty page -
+  // the backend has already decided what this renter qualifies for.
+  const instantBookEligible = filters.instant_book
+    ? ((await getMyRenterTrust().catch(() => undefined))?.trusted ?? undefined)
+    : undefined;
   const highDemandCategories = new Set((await getCategoryDemandOverview().catch(() => [])).filter((category) => category.is_high_demand).map((category) => category.category));
 
   const total = data?.total_count ?? 0;
@@ -59,6 +66,20 @@ export default async function BrowsePage({
         </div>
         <p className="body-copy" aria-live="polite">{resultSummary(total, error, onlySearched, data?.search_mode)}</p>
       </div>
+
+      {/* S5-11: these listings are shown to every renter, so the one who has
+          not earned the badge yet is told what booking one will actually do -
+          before they pick a listing, not after they press the button. */}
+      {filters.instant_book && instantBookEligible === false && (
+        <p className="mt-4 flex items-start gap-2 bg-surface-muted px-4 py-3 text-sm text-ink-soft">
+          <Zap className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+          <span>
+            These listings confirm the booking request of Trusted Renters straight away. As you do not hold that badge yet, so
+            yours will go to the owner as a request to review. The Trusted Renter badge comes with 3 completed
+            rentals, 95% of them returned on time, and no more than one upheld damage claim.
+          </span>
+        </p>
+      )}
 
       <div className="mt-6">
         {data && data.results.length > 0 ? (
@@ -102,6 +123,7 @@ async function loadListings(
       start_date: filters.start_date || undefined,
       end_date: filters.end_date || undefined,
       verified_only: filters.verified,
+      instant_book: filters.instant_book,
       min_daily_price: filters.min_price || undefined,
       max_daily_price: filters.max_price || undefined,
       origin_lat: filters.origin_lat ?? undefined,
