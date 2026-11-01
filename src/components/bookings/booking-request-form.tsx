@@ -42,6 +42,10 @@ type Props = {
    * was never the problem.
    */
   overdueDebtCents?: number;
+  /** S5-11: whether this listing takes instant bookings at all... */
+  instantBook?: boolean;
+  /** ...and whether this renter is one of the ones it takes them from. */
+  instantBookEligible?: boolean;
 };
 
 export function BookingRequestForm({
@@ -54,6 +58,8 @@ export function BookingRequestForm({
   onSuccess,
   hideHeading,
   overdueDebtCents = 0,
+  instantBook = false,
+  instantBookEligible = false,
 }: Props) {
   const paused = overdueDebtCents > 0;
   const availableSet = useMemo(() => new Set(availableDates), [availableDates]);
@@ -184,9 +190,19 @@ export function BookingRequestForm({
       }
       else {
         const held = result.booking.total_amount_cents;
+        // S5-11 Scenario 2: an Instant Book listing confirms on the spot, so
+        // the renter must not be told to wait for an answer that is not
+        // coming. The status the API returns is what decides - whether the
+        // renter qualified is settled in the database, not here.
+        const confirmed = result.booking.status === "CONFIRMED";
+        const dates = `${formatDate(startDate)} – ${formatDate(endDate)}`;
         setMessage(
-          `Request sent for ${formatDate(startDate)} – ${formatDate(endDate)}.` +
-            (held ? ` ${formatMoney(held)} is on hold in your wallet until the owner responds.` : ""),
+          confirmed
+            ? `Booked for ${dates}. Confirmed straight away — this owner lets Trusted Renters skip the approval step.` +
+                (held ? ` ${formatMoney(held)} is held in your wallet.` : "") +
+                " Arrange the handover from your bookings."
+            : `Request sent for ${dates}.` +
+                (held ? ` ${formatMoney(held)} is on hold in your wallet until the owner responds.` : ""),
         );
         onSuccess?.(result.booking);
       }
@@ -206,6 +222,18 @@ export function BookingRequestForm({
   return (
     <div className={hideHeading ? "" : "mt-8 border-t border-line pt-6"}>
       {!hideHeading && <h2 className="text-base font-semibold uppercase tracking-wide">Request to book</h2>}
+      {/* S5-11 Scenario 2 and 3, said before the renter commits rather than
+          after: what pressing the button will actually do. A renter who does
+          not qualify is told the ordinary thing happens, not that they fell
+          short - the badge is explained on their profile, not here. */}
+      {instantBook && (
+        <p className="mt-3 text-sm font-medium text-ink">
+          {instantBookEligible
+            ? "You hold the Trusted Renter badge, so these dates are yours as soon as you book."
+            : "This owner lets Trusted Renters book instantly. As you are not a trusted renter yet, yours goes to them as a request to review."}
+        </p>
+      )}
+
       <p className="body-copy mt-1">
         Select an available start date, then an available end date.
         {durationLimits && ` This listing rents for ${durationLimits}.`}

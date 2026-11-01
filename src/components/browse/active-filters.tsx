@@ -65,6 +65,10 @@ export function ActiveFilters({ filters }: { filters: BrowseFilters }) {
     chips.push({ key: "verified", label: "Serial verified", href: without({ verified: false }) });
   }
 
+  if (filters.instant_book) {
+    chips.push({ key: "instant_book", label: "Instant Book", href: without({ instant_book: false }) });
+  }
+
   if (filters.min_price || filters.max_price) {
     const min = filters.min_price ? `S$${filters.min_price}` : "Any";
     const max = filters.max_price ? `S$${filters.max_price}` : "Any";
