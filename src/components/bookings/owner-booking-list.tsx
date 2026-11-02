@@ -20,7 +20,8 @@ import {
 } from "@/lib/bookings";
 import { cancellationOutcomeLine, HANDED_OVER_NOTE } from "@/lib/cancellations";
 import { formatDate, formatDateTime } from "@/lib/format";
-import { canReportDamage, settlementLine } from "@/lib/settlement";
+import { canReportDamage } from "@/lib/settlement";
+import { SettlementTracker } from "@/components/bookings/settlement-tracker";
 import { canConfirmReturn, returnStatusLine } from "@/lib/returns";
 import { canConfirmHandover, cancelBlockedReason, ownerPickupPhotosPath } from "@/lib/handover";
 import { HandoverTracker } from "@/components/bookings/handover-tracker";
@@ -109,9 +110,6 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
               {booking.cancellation_outcome && (
                 <span className="block text-ink-soft">{cancellationOutcomeLine(booking.cancellation_outcome, "owner")}</span>
               )}
-              {booking.settlement_state && (
-                <span className="block text-ink-soft">{settlementLine(booking.settlement_state, "owner")}</span>
-              )}
               {booking.condition_scan && (
                 <Badge variant={scanBadge(booking.condition_scan).tone} className="mt-1">
                   {scanBadge(booking.condition_scan).label}
@@ -149,6 +147,12 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
             {booking.status === "CONFIRMED" && booking.handover_state && (
               <div className="w-full py-2">
                 <HandoverTracker booking={booking} viewer="owner" />
+              </div>
+            )}
+            {/* S3-10: on its own line, like the handover tracker above. */}
+            {booking.settlement_state && (
+              <div className="w-full py-2">
+                <SettlementTracker state={booking.settlement_state} amounts={booking} viewer="owner" />
               </div>
             )}
             <span className="w-full"><OverdueNotice booking={booking} side="owner" /></span>

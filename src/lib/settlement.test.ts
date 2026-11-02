@@ -3,9 +3,13 @@ import { formatDateTime, formatMoney } from "@/lib/format";
 import {
   canReportDamage,
   claimPendingRenter,
+  heldInEscrowLine,
   renterClaimPath,
   secondsUntil,
   settlementLine,
+  settlementReceipt,
+  settlementReference,
+  settlementSteps,
   type RentalDispute,
   type RentalSettlement,
   type SettlementState,
@@ -158,5 +162,112 @@ describe("S3-06 claims", () => {
     expect(secondsUntil("2026-10-17T12:01:00Z", NOW)).toBe(60);
     expect(secondsUntil("2026-10-17T11:59:00Z", NOW)).toBe(-60);
     expect(renterClaimPath("b1")).toBe("/bookings/b1/claim");
+  });
+});
+
+
+describe("S3-10 settlement tracker", () => {
+  const states = (state: SettlementState, now = NOW) => settlementSteps(state, now).map((step) => step.state);
+
+  it("shows the claim window in progress after the return, with when it closes", () => {
+    const steps = settlementSteps(returned, NOW);
+    expect(steps.map((step) => step.state)).toEqual(["done", "current", "upcoming"]);
+    expect(steps[0].detail).toBe(formatDateTime(returned.returned_at!));
+    expect(steps[1].detail).toBe(`Closes ${formatDateTime(WINDOW_ENDS)}`);
+  });
+
+  it("is being processed once the window has closed with no claim", () => {
+    expect(states(returned, new Date("2026-10-18T09:00:01Z"))).toEqual(["done", "done", "current"]);
+  });
+
+  it("holds the rental while a claim is open, whatever the window", () => {
+    const steps = settlementSteps({ ...returned, dispute }, NOW);
+    expect(steps.map((step) => step.state)).toEqual(["done", "held", "upcoming"]);
+    expect(steps[1].label).toBe("Damage claim");
+    expect(states({ ...returned, dispute }, new Date("2026-10-19T00:00:00Z"))).toEqual(["done", "held", "upcoming"]);
+  });
+
+  it("is done throughout once settled, with or without a claim", () => {
+    expect(states({ ...returned, settlement }, NOW)).toEqual(["done", "done", "done"]);
+    const resolved = { ...returned, settlement, dispute: { ...dispute, status: "RESOLVED" as const } };
+    expect(states(resolved, NOW)).toEqual(["done", "done", "done"]);
+    expect(settlementSteps({ ...returned, settlement }, NOW)[2].detail).toBe(formatDateTime(settlement.settled_at));
+  });
+});
+
+describe("S3-10 held in escrow", () => {
+  const amounts = { rental_subtotal_cents: 1000, platform_fee_cents: 100, damage_protection_fee_cents: 200, deposit_cents: 5000 };
+
+  it("gives the renter their whole charge and deposit, and the owner the rent", () => {
+    expect(heldInEscrowLine(returned, amounts, "renter")).toBe(
+      `${formatMoney(1300)} rental charge and your ${formatMoney(5000)} deposit held in escrow.`,
+    );
+    expect(heldInEscrowLine(returned, amounts, "owner")).toBe(
+      `${formatMoney(1000)} rent and the renter's ${formatMoney(5000)} deposit held in escrow.`,
+    );
+  });
+
+  it("leaves out a deposit that was never taken", () => {
+    expect(heldInEscrowLine(returned, { ...amounts, deposit_cents: 0 }, "owner")).toBe(`${formatMoney(1000)} rent held in escrow.`);
+  });
+
+  it("says nothing once settled, or without the amounts", () => {
+    expect(heldInEscrowLine({ ...returned, settlement }, amounts, "renter")).toBeNull();
+    expect(heldInEscrowLine(returned, {}, "renter")).toBeNull();
+  });
+});
+
+describe("S3-10 settlement receipt", () => {
+  const sum = (lines: { cents: number; total?: boolean }[]) =>
+    lines.filter((line) => !line.total).reduce((total, line) => total + line.cents, 0);
+
+  it("takes the owner from the rent, less commission, to the payout", () => {
+    const lines = settlementReceipt(settlement, "owner");
+    expect(lines).toEqual([
+      { label: "Rent", cents: 2000 },
+      { label: "Platform commission (10%)", cents: -200 },
+      { label: "Paid to your wallet", cents: 1800, total: true },
+    ]);
+  });
+
+  it("gives the renter their full deposit back when nothing was taken", () => {
+    expect(settlementReceipt(settlement, "renter")).toEqual([
+      { label: "Deposit held", cents: 2500 },
+      { label: "Returned to your wallet", cents: 2500, total: true },
+    ]);
+  });
+
+  it("adds up to the total with an overdue fee and damage on both sides", () => {
+    const taken: RentalSettlement = {
+      ...settlement,
+      overdue_fee_cents: 300,
+      deposit_held_cents: 2200,
+      damage_deduction_cents: 700,
+      protection_payout_cents: 400,
+      deposit_refund_cents: 1500,
+      owner_total_payout_cents: 1800 + 300 + 700 + 400,
+    };
+    for (const viewer of ["owner", "renter"] as const) {
+      const lines = settlementReceipt(taken, viewer);
+      expect(sum(lines)).toBe(lines[lines.length - 1].cents);
+    }
+    expect(settlementReceipt(taken, "renter").map((line) => line.label)).toEqual([
+      "Deposit held",
+      "Overdue fee",
+      "Damage deducted",
+      "Returned to your wallet",
+    ]);
+  });
+
+  it("shows a fractional commission rate and nothing for a booking that moved no money", () => {
+    expect(settlementReceipt({ ...settlement, commission_bps: 750, commission_cents: 150 }, "owner")[1].label).toBe(
+      "Platform commission (7.5%)",
+    );
+    const empty = { ...settlement, rental_subtotal_cents: 0, owner_total_payout_cents: 0, deposit_refund_cents: 0 };
+    expect(settlementReceipt(empty, "owner")).toEqual([]);
+  });
+
+  it("gives a settlement a short reference that does not change", () => {
+    expect(settlementReference({ id: "a1b2c3d4-e5f6-7890-abcd-ef1234567890" })).toBe("#A1B2C3D4");
   });
 });

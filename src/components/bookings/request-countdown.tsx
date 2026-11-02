@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 /** "2d 4h", "5h 12m", "12m" - coarse enough to read at a glance. */
-function remaining(seconds: number): string {
+export function remaining(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
