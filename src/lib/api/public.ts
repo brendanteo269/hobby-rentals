@@ -1,7 +1,8 @@
 import "server-only";
 
 import { cache } from "react";
-import type { PublicBundle, PublicListing } from "@/lib/gear";
+import { apiBaseUrl } from "@/lib/env";
+import type { PublicBundle, PublicListing, SitemapEntries } from "@/lib/gear";
 
 /**
  * S5-01: the public API needs no session, so this skips backendRequest, which
@@ -9,8 +10,7 @@ import type { PublicBundle, PublicListing } from "@/lib/gear";
  * not live, or a malformed reference all look the same from outside.
  */
 async function publicGet<T>(path: string): Promise<T | null> {
-  const apiBase = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
-  const res = await fetch(`${apiBase}${path}`, { cache: "no-store" });
+  const res = await fetch(`${apiBaseUrl()}${path}`, { cache: "no-store" });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`Public API request failed (${res.status})`);
   return (await res.json()) as T;
@@ -20,3 +20,10 @@ async function publicGet<T>(path: string): Promise<T | null> {
 export const getPublicListing = cache((ref: string) => publicGet<PublicListing>(`/public/listings/${encodeURIComponent(ref)}`));
 
 export const getPublicBundle = cache((ref: string) => publicGet<PublicBundle>(`/public/bundles/${encodeURIComponent(ref)}`));
+
+/** S5-02: every live listing and bundle, for /sitemap.xml. Throws if the API is down, so a broken sitemap is an error rather than an empty one. */
+export async function getSitemapEntries(): Promise<SitemapEntries> {
+  const entries = await publicGet<SitemapEntries>("/public/sitemap");
+  if (!entries) throw new Error("Sitemap entries not found");
+  return entries;
+}

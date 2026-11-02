@@ -5,7 +5,8 @@ import { ButtonLink, Container, ImageSlot } from "@/components/ui";
 import { RentalReviewSection } from "@/components/reviews/rental-review-section";
 import { getPublicBundle } from "@/lib/api/public";
 import { formatMoney } from "@/lib/format";
-import { gearBundlePath, gearPath, loginToAct, shortIdFrom, siteUrl } from "@/lib/gear";
+import { siteUrl } from "@/lib/env";
+import { gearBundlePath, gearPath, loginToAct, shortIdFrom } from "@/lib/gear";
 import { CATEGORY_LABELS } from "@/lib/listings";
 import { createClient } from "@/lib/supabase/server";
 

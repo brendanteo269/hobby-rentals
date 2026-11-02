@@ -9,6 +9,7 @@
 import "server-only";
 
 import { backendRequest } from "@/lib/api/client";
+import { apiBaseUrl } from "@/lib/env";
 import type { ListingCategory, LocationArea } from "@/lib/listings";
 import type {
   BrowseBundlesResponse,
@@ -196,10 +197,7 @@ export function updateBundleBookingStatus(bundleBookingId: string, nextStatus: B
  * showcased on the next load rather than on the next deploy.
  */
 export async function getFeaturedBundles(limit = 8): Promise<FeaturedBundleCard[]> {
-  const apiBase = (
-    process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-  ).replace(/\/+$/, "");
-  const response = await fetch(`${apiBase}/bundles/featured?limit=${limit}`, { cache: "no-store" });
+  const response = await fetch(`${apiBaseUrl()}/bundles/featured?limit=${limit}`, { cache: "no-store" });
   if (!response.ok) throw new Error("Featured bundles are temporarily unavailable.");
   return response.json() as Promise<FeaturedBundleCard[]>;
 }

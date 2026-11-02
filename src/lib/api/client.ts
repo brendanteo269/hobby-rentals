@@ -19,6 +19,7 @@ import "server-only";
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { apiBaseUrl } from "@/lib/env";
 
 /** Field path ("max_rental_days") to the message FastAPI returned for it. */
 export type FieldErrors = Record<string, string>;
@@ -103,11 +104,7 @@ export async function backendRequest<T>(
 
   if (sessionError || !session?.access_token) redirect("/login");
 
-  const apiBase = (
-    process.env.API_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    "http://localhost:8000"
-  ).replace(/\/+$/, "");
+  const apiBase = apiBaseUrl();
 
   const headers = new Headers(options.headers);
   headers.set("Authorization", `Bearer ${session.access_token}`);

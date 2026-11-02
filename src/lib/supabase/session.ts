@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { supabaseEnv } from "@/lib/env";
+import { apiBaseUrl, supabaseEnv } from "@/lib/env";
 import { ACTIVITY_COOKIE, idleTimeoutMs, type LoginNoticeReason } from "@/lib/session-policy";
 import { ONBOARDING_PATH, checkEmailPath, loginPath } from "@/lib/routes";
 import { requiresOnboarding, requiresSignIn, requiresVerifiedEmail } from "@/lib/route-policy";
@@ -50,9 +50,8 @@ const OLD_DETAIL_PATH = /^\/(listings|bundles)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f
 async function publicPathFor(pathname: string): Promise<string | null> {
   const match = OLD_DETAIL_PATH.exec(pathname);
   if (!match) return null;
-  const apiBase = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
   try {
-    const res = await fetch(`${apiBase}/public/${match[1]}/${match[2].toLowerCase()}`, { cache: "no-store" });
+    const res = await fetch(`${apiBaseUrl()}/public/${match[1]}/${match[2].toLowerCase()}`, { cache: "no-store" });
     if (!res.ok) return null;
     const item = (await res.json()) as { name: string; short_id: string };
     return match[1] === "listings" ? gearPath(item) : gearBundlePath(item);

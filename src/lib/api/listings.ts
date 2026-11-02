@@ -9,6 +9,7 @@
 import "server-only";
 
 import { backendRequest } from "@/lib/api/client";
+import { apiBaseUrl } from "@/lib/env";
 import type { ListingReport, ListingReportReason } from "@/lib/reports";
 import type { Booking } from "@/lib/bookings";
 import type {
@@ -117,8 +118,7 @@ export function browseListings(params: BrowseListingsParams = {}) {
  * inventory threshold change cannot leave the landing page on a stale state.
  */
 export async function getPopularListings() {
-  const apiBase = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
-  const response = await fetch(`${apiBase}/listings/popular`, { cache: "no-store" });
+  const response = await fetch(`${apiBaseUrl()}/listings/popular`, { cache: "no-store" });
   if (!response.ok) throw new Error("Popular listings are temporarily unavailable.");
   return response.json() as Promise<PopularListingsResponse>;
 }

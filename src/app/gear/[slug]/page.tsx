@@ -8,7 +8,8 @@ import { InstantBookBadge } from "@/components/listings/instant-book-badge";
 import { RentalReviewSection } from "@/components/reviews/rental-review-section";
 import { getPublicListing } from "@/lib/api/public";
 import { formatDate, formatMoney } from "@/lib/format";
-import { gearPath, loginToAct, shortIdFrom, siteUrl } from "@/lib/gear";
+import { siteUrl } from "@/lib/env";
+import { gearPath, loginToAct, shortIdFrom } from "@/lib/gear";
 import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS, passportBadge } from "@/lib/listings";
 import { createClient } from "@/lib/supabase/server";
 
