@@ -1,8 +1,10 @@
 import "server-only";
 
+import { getAway } from "@/lib/api/away";
 import { getListingLimits, getMyListings } from "@/lib/api/listings";
 import { getProfileAvailability } from "@/lib/api/profile-availability";
 import type { SelectableListing } from "@/components/bundles/bundle-form";
+import type { AwayPeriod } from "@/lib/away";
 
 /**
  * The owner-level defaults the bundle form needs, loaded the same way for
@@ -18,9 +20,16 @@ export async function getBundleFormContext(): Promise<{
   activeListings: SelectableListing[];
   profileAvailableDays: number[];
   depositCapBps: number;
+  awayPeriod: AwayPeriod | null;
 }> {
-  const [listings, { available_days: profileAvailableDays }, { deposit_cap_bps: depositCapBps }] =
-    await Promise.all([getMyListings(), getProfileAvailability(), getListingLimits()]);
+  const [listings, { available_days: profileAvailableDays }, { deposit_cap_bps: depositCapBps }, awayPeriod] =
+    await Promise.all([
+      getMyListings(),
+      getProfileAvailability(),
+      getListingLimits(),
+      // S5-15: supplementary - the form works the same without the reminder.
+      getAway().catch(() => null),
+    ]);
 
   return {
     activeListings: listings
@@ -35,5 +44,6 @@ export async function getBundleFormContext(): Promise<{
       })),
     profileAvailableDays,
     depositCapBps,
+    awayPeriod,
   };
 }

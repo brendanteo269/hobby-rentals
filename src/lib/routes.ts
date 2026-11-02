@@ -108,6 +108,9 @@ export function renterSpendingPath(
  */
 export const MY_LISTINGS_PATH = "/listings/mine";
 
+/** The owner portal's settings tab, where Away mode is managed (S5-15). */
+export const OWNER_SETTINGS_PATH = "/listings/mine/settings";
+
 /** The owner portal's insights tab, optionally over a particular period. */
 export function ownerInsightsPath(
   period?: InsightsPeriod,

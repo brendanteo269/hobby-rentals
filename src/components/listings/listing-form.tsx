@@ -4,6 +4,8 @@ import { useActionState, useEffect, useRef, useState } from "react";
 import type { ChangeEvent } from "react";
 import { LoaderCircle } from "lucide-react";
 import { Button, ButtonLink, Field, FormError, FormSection, Modal, SelectField, TextareaField } from "@/components/ui";
+import { AwayModeReminder } from "@/components/away-mode-reminder";
+import type { AwayPeriod } from "@/lib/away";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
 import { InstantBookField } from "@/components/listings/instant-book-field";
 import { WeeklyAvailabilityField } from "@/components/listings/weekly-availability-field";
@@ -65,6 +67,7 @@ export function ListingForm({
   profileDefaultLocation,
   depositCapBps,
   categories,
+  awayPeriod = null,
 }: {
   action: (prev: ListingFormState, formData: FormData) => Promise<ListingFormState>;
   listing?: Listing;
@@ -73,6 +76,8 @@ export function ListingForm({
   profileDefaultLocation: LocationArea | null;
   depositCapBps: number;
   categories: ListingCategoryOption[];
+  /** S5-15: the owner's away period, which pauses this listing whatever is set below. */
+  awayPeriod?: AwayPeriod | null;
 }) {
   const editing = listing !== undefined;
   const [state, formAction, pending] = useActionState<ListingFormState, FormData>(action, undefined);
@@ -404,6 +409,7 @@ export function ListingForm({
       </FormSection>
 
       <FormSection title="Availability" id="availability">
+        {awayPeriod && <AwayModeReminder period={awayPeriod} today={today} />}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
             label="Available from"
