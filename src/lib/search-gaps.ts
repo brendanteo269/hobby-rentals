@@ -8,6 +8,8 @@ export type SearchGapTopic = {
   /** A category attribute key, or "description". */
   fix: string;
   fix_label: string;
+  /** What to state if it is true, with an example. Advice to the owner, never listing text. */
+  hint: string;
 };
 
 export type SearchGapResult = {
@@ -19,6 +21,8 @@ export type SearchGapResult = {
   missing: SearchGapTopic[];
   covered: SearchGapTopic[];
   checked_at: string;
+  /** Searches the listing's name already answers ("4 person tent"). */
+  answered_by_name: number;
 };
 
 export type SearchVisibilityRow = {
