@@ -43,6 +43,8 @@ export type Booking = {
   owner_id: string;
   /** Whose item it is. Set on the renter's list only; null when the owner has no display name. */
   owner_name?: string | null;
+  /** S5-05: how the renter sent it. Set on the renter's list only. */
+  booking_source?: "WEBSITE" | "AI_ASSISTANT" | null;
   start_date: string;
   end_date: string;
   status: BookingStatus;

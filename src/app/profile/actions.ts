@@ -14,6 +14,8 @@ import { defaultDashboardPath, MY_LISTINGS_PATH, RENTALS_PATH } from "@/lib/rout
 import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/login-attempts";
 import { BackendApiError, type FieldErrors } from "@/lib/api/client";
 import { updateNotificationPreferences } from "@/lib/api/notifications";
+import { createAssistantToken, revokeAssistantToken } from "@/lib/api/assistant-tokens";
+import { validateAssistantTokenName, type CreatedAssistantToken } from "@/lib/assistant-tokens";
 import { NOTIFICATION_CATEGORIES, preferenceFieldName } from "@/lib/notification-preferences";
 
 /**
@@ -355,4 +357,31 @@ export async function saveNotificationPreferences(_prev: FormState, formData: Fo
   }
   revalidatePath("/profile");
   return { success: "Notification preferences saved." };
+}
+
+export type AssistantTokenState = { error?: string; created?: CreatedAssistantToken } | undefined;
+
+/** S5-05: the new token comes back here once, for the form to show. */
+export async function createAssistantTokenAction(_prev: AssistantTokenState, formData: FormData): Promise<AssistantTokenState> {
+  const validated = validateAssistantTokenName(formData.get("name"));
+  if ("error" in validated) return { error: validated.error };
+  try {
+    const created = await createAssistantToken(validated.name);
+    revalidatePath("/profile");
+    return { created };
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
+}
+
+/** S5-05: takes effect at once, because the backend checks a token on every use. */
+export async function revokeAssistantTokenAction(tokenId: string): Promise<{ error?: string } | undefined> {
+  try {
+    await revokeAssistantToken(tokenId);
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
+  revalidatePath("/profile");
 }

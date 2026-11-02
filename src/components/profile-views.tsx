@@ -12,12 +12,13 @@ const TABS: { view: ProfileView; label: string }[] = [
   { view: "wallet", label: "Wallet" },
   { view: "notifications", label: "Notifications" },
   { view: "account", label: "Account" },
+  { view: "connected-apps", label: "Connected apps" },
 ];
 
 /** Switches between the profile's panels. Renting and owning live in their portals, not here. */
 export function ViewTabs({ active }: { active: ProfileView }) {
   return (
-    <nav className="flex gap-6 border-b border-line" aria-label="Profile view">
+    <nav className="flex gap-6 overflow-x-auto whitespace-nowrap border-b border-line" aria-label="Profile view">
       {TABS.map((tab) => {
         const isActive = tab.view === active;
         return (

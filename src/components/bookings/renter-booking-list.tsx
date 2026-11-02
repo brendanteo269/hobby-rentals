@@ -107,6 +107,9 @@ export function RenterBookingList({
                 {formatDate(booking.start_date)} – {formatDate(booking.end_date)}
                 {booking.payment_status && ` · ${PAYMENT_STATUS_LABELS[booking.payment_status]}`}
               </p>
+              {booking.booking_source === "AI_ASSISTANT" && (
+                <p className="mt-1 text-sm text-ink-soft">Requested via AI assistant</p>
+              )}
               {/* A confirmed booking with its handover tracker says what is next there. */}
               {!(booking.status === "CONFIRMED" && booking.handover_state) && (
                 <p className="mt-1 text-sm text-ink">

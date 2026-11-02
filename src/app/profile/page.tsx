@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { MapPin } from "lucide-react";
+import { CloudOff, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getOwnProfile } from "@/lib/profile";
 import { getMyOwnerVerification, getMyRenterTrust } from "@/lib/api/verification";
@@ -7,7 +7,7 @@ import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { hasAnsweredRequests, responseRatePercent } from "@/lib/verification";
 import { TrustedRenterBadge } from "@/components/bookings/trusted-renter-badge";
 import { hasCompletedRentals, onTimeRatePercent } from "@/lib/renter-trust";
-import { Badge, Container } from "@/components/ui";
+import { Badge, Container, EmptyState } from "@/components/ui";
 import { isLocationArea, LOCATION_LABELS } from "@/lib/listings";
 import { ViewTabs, RatingsView } from "@/components/profile-views";
 import {
@@ -22,6 +22,9 @@ import { AccountSettings } from "@/components/account-settings";
 import { CreditWallet } from "@/components/credit-wallet";
 import { NotificationPreferences } from "@/components/notification-preferences";
 import { getNotificationPreferences } from "@/lib/api/notifications";
+import { ConnectedApps } from "@/components/connected-apps";
+import { getAssistantTokens } from "@/lib/api/assistant-tokens";
+import { BackendApiError } from "@/lib/api/client";
 import { getPublicMember } from "@/lib/api/reviews";
 import { isInsightsPeriod } from "@/lib/owner-insights";
 
@@ -70,6 +73,15 @@ export default async function ProfilePage({
   const active: ProfileView = resolveView(view);
   const ratings = active === "ratings" ? await getPublicMember(user.id).catch(() => null) : null;
   const preferences = active === "notifications" ? await getNotificationPreferences() : null;
+  // Only a backend refusal is swallowed: backendRequest signs a member out by
+  // throwing a redirect, which has to keep travelling.
+  const assistantTokens =
+    active === "connected-apps"
+      ? await getAssistantTokens().catch((error) => {
+          if (error instanceof BackendApiError) return null;
+          throw error;
+        })
+      : null;
 
   const memberSince = new Date(profile.created_at).toLocaleDateString("en-SG", {
     month: "long",
@@ -143,6 +155,16 @@ export default async function ProfilePage({
           {active === "ratings" && <RatingsView profile={ratings} />}
           {active === "wallet" && <CreditWallet />}
           {preferences && <NotificationPreferences preferences={preferences} />}
+          {active === "connected-apps" &&
+            (assistantTokens ? (
+              <ConnectedApps tokens={assistantTokens} />
+            ) : (
+              <EmptyState
+                icon={CloudOff}
+                title="Connected apps could not be loaded"
+                body="Try refreshing this page in a moment."
+              />
+            ))}
           {active === "account" && (
             <AccountSettings
               email={user.email ?? ""}
