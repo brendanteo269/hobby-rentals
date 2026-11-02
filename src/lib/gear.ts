@@ -10,6 +10,7 @@
 
 import type { Route } from "next";
 import type { ListingCondition, LocationArea, SerialStatus } from "@/lib/listings";
+import type { PublicQuestion } from "@/lib/listing-questions";
 import type { ReviewCollection } from "@/lib/reviews";
 
 export type PublicListing = {
@@ -35,6 +36,8 @@ export type PublicListing = {
   owner_verified: boolean;
   serial_status: SerialStatus | null;
   reviews: ReviewCollection;
+  /** S5-07: questions the owner answered and chose to show; renters are never named. */
+  questions?: PublicQuestion[];
   updated_at: string;
 };
 

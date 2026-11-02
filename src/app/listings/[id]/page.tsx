@@ -31,6 +31,10 @@ import { SimilarListings, SimilarListingsFallback } from "@/components/listings/
 import Link from "next/link";
 import type { Route } from "next";
 import { PersonAvatar } from "@/components/messages/person-avatar";
+import { AskAboutItem } from "@/components/listings/ask-about-item";
+import { ListingQuestionsSection } from "@/components/listings/listing-questions-section";
+import { OwnerQuestionsPanel } from "@/components/listings/owner-questions-panel";
+import { getOwnerQuestions, getPublicQuestions } from "@/lib/api/listing-questions";
 
 function fallbackAttributeLabel(key: string) {
   return key.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -108,6 +112,10 @@ export default async function ListingDetailPage({
   const badge = passportBadge(passport?.serial_status);
   const categoryDemand = listing.status === "ACTIVE" ? await getCategoryDemand(listing.category).catch(() => null) : null;
   const reviews = await getListingReviews(listing.id).catch(() => ({ average: null, count: 0, reviews: [] }));
+  // S5-07: supplementary like the reviews - a failure hides the section, never the page.
+  const isOwner = Boolean(user && user.id === listing.owner_id);
+  const publicQuestions = listing.status === "ACTIVE" ? await getPublicQuestions(listing.id).catch(() => []) : [];
+  const ownerQuestions = isOwner ? await getOwnerQuestions(listing.id).catch(() => null) : null;
 
   return (
     <Container className="py-16">
@@ -196,6 +204,9 @@ export default async function ListingDetailPage({
             </section>
           )}
 
+          {listing.status === "ACTIVE" && user && !isOwner && <AskAboutItem listingId={listing.id} />}
+          {ownerQuestions && <OwnerQuestionsPanel listingId={listing.id} data={ownerQuestions} />}
+
           {listing.status === "ACTIVE" && user && user.id === listing.owner_id && (
             <section className="mt-6 border-t border-line pt-6">
               <h2 className="heading text-lg">Review your pricing</h2>
@@ -274,6 +285,7 @@ export default async function ListingDetailPage({
       <Suspense fallback={<SimilarListingsFallback />}>
         <SimilarListings listingId={listing.id} />
       </Suspense>
+      <ListingQuestionsSection questions={publicQuestions} />
       <RentalReviewSection title="Reviews for this listing" reviews={reviews} emptyBody="This listing has not received any reviews yet." />
     </Container>
   );
