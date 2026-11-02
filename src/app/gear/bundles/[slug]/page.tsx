@@ -3,8 +3,9 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ButtonLink, Container, ImageSlot } from "@/components/ui";
 import { RentalReviewSection } from "@/components/reviews/rental-review-section";
+import { BookingPauseNotice } from "@/components/listings/booking-pause-notice";
 import { getPublicBundle } from "@/lib/api/public";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, todayIso } from "@/lib/format";
 import { siteUrl } from "@/lib/env";
 import { gearBundlePath, gearPath, loginToAct, shortIdFrom } from "@/lib/gear";
 import { CATEGORY_LABELS } from "@/lib/listings";
@@ -100,6 +101,11 @@ export default async function PublicBundlePage({ params }: Props) {
           </dl>
         </section>
 
+        {bundle.booking_pause && (
+          <div className="mt-8">
+            <BookingPauseNotice pause={bundle.booking_pause} today={todayIso()} />
+          </div>
+        )}
         <div className="mt-8 flex flex-wrap gap-3 border-t border-line pt-6">
           <ButtonLink href={act}>Request to book</ButtonLink>
           <ButtonLink href={act} variant="outline">Save</ButtonLink>

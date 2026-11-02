@@ -42,6 +42,11 @@ export function bookingPauseHeadline(pause: BookingPause, today: string): string
     : `Not taking bookings ${formatDateRange(pause.start_date, pause.end_date)}`;
 }
 
+/** The browse card's availability line while the owner is away: "Unavailable until 3 Jan". */
+export function unavailableUntilLabel(endDate: string): string {
+  return `Unavailable until ${formatDayMonth(endDate)}`;
+}
+
 /** A neutral suggestion for the owner's message, dated to the period they picked. */
 export function awayMessagePlaceholder(endDate: string): string {
   return endDate

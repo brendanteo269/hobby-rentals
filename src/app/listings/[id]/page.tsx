@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Badge, ButtonLink, Container } from "@/components/ui";
+import { BookingPauseNotice } from "@/components/listings/booking-pause-notice";
 import { ListingGallery } from "@/components/listings/listing-gallery";
 import { RateLine } from "@/components/browse/listing-card";
 import { PassportTimeline } from "@/components/passport/passport-timeline";
@@ -7,7 +8,7 @@ import { getBookingAvailability, getListing, getListingCategoryAttributes, getPa
 import { getMySuspension } from "@/lib/api/overdue";
 import { getCategoryDemand } from "@/lib/api/analytics";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, todayIso } from "@/lib/format";
 import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS, passportBadge } from "@/lib/listings";
 import { BookingRequestForm } from "@/components/bookings/booking-request-form";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
@@ -217,6 +218,13 @@ export default async function ListingDetailPage({
             </section>
           )}
 
+          {/* S5-15 Scenario 2: above the dates, so the renter knows why a run
+              of them is unavailable before they try to pick it. */}
+          {bookingAvailability?.booking_pause && (
+            <div className="mt-6">
+              <BookingPauseNotice pause={bookingAvailability.booking_pause} today={todayIso()} />
+            </div>
+          )}
           {listing.status === "ACTIVE" && user && user.id !== listing.owner_id && (
             <BookingRequestForm
               listingId={listing.id}

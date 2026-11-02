@@ -11,6 +11,7 @@ import "server-only";
 import { backendRequest } from "@/lib/api/client";
 import { apiBaseUrl } from "@/lib/env";
 import type { ListingReport, ListingReportReason } from "@/lib/reports";
+import type { BookingPause } from "@/lib/away";
 import type { Booking } from "@/lib/bookings";
 import type {
   BaselineAngle,
@@ -251,6 +252,8 @@ export type ListingAvailability = {
 export type BookingAvailability = {
   available_dates: string[];
   unavailable_dates: UnavailableDate[];
+  /** S5-15: the owner's away period, shown as "Not taking bookings ...". */
+  booking_pause?: BookingPause | null;
 };
 
 /** Dates a renter can currently select, including the listing's schedule and reserved dates. */

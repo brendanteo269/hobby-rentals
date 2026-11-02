@@ -2,13 +2,14 @@ import type { Metadata, Route } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Badge, ButtonLink, Container } from "@/components/ui";
 import { ListingGallery } from "@/components/listings/listing-gallery";
+import { BookingPauseNotice } from "@/components/listings/booking-pause-notice";
 import { RateLine } from "@/components/browse/listing-card";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { InstantBookBadge } from "@/components/listings/instant-book-badge";
 import { RentalReviewSection } from "@/components/reviews/rental-review-section";
 import { ListingQuestionsSection } from "@/components/listings/listing-questions-section";
 import { getPublicListing } from "@/lib/api/public";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, todayIso } from "@/lib/format";
 import { siteUrl } from "@/lib/env";
 import { gearPath, loginToAct, shortIdFrom } from "@/lib/gear";
 import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS, passportBadge } from "@/lib/listings";
@@ -122,6 +123,11 @@ export default async function PublicListingPage({ params }: Props) {
             </section>
           )}
 
+          {listing.booking_pause && (
+            <div className="mt-8">
+              <BookingPauseNotice pause={listing.booking_pause} today={todayIso()} />
+            </div>
+          )}
           <div className="mt-8 flex flex-wrap gap-3 border-t border-line pt-6">
             <ButtonLink href={act}>Request to book</ButtonLink>
             <ButtonLink href={act} variant="outline">Message owner</ButtonLink>
