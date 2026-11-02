@@ -221,7 +221,9 @@ function ListingRow({ listing, bookings, history, policies }: { listing: OwnerLi
       ? { status: "Publish the listing to promote", tone: "muted" }
       : { status: "Not promoted", tone: "muted", action: <ButtonLink href={`/listings/${listing.id}/promotion`} variant="outline" className={tileButton}>Promote</ButtonLink> };
   return (
-    <li className="card p-5">
+    // The id is what the Gear Requests restore prompt scrolls to
+    // (S5-13: an archived listing cannot be booked until it is back).
+    <li id={`listing-${listing.id}`} className="card scroll-mt-24 p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="eyebrow">{CATEGORY_LABELS[listing.category]} · {LOCATION_LABELS[listing.location_area]}</p>

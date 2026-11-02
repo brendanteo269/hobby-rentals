@@ -8,7 +8,13 @@
 import { browseHref, parseBrowseFilters } from "@/lib/browse-params";
 import { bundleBrowseHref, type BundleBrowseFilters } from "@/lib/bundle-browse-params";
 
-export type MarketplaceKind = "items" | "bundles";
+/**
+ * S5-13 adds a third view: requests, where renters post what the first two
+ * did not have. It takes none of the shared filters - a board of a dozen
+ * asks does not need narrowing, and carrying a search there would suggest
+ * it did.
+ */
+export type MarketplaceKind = "items" | "bundles" | "requests";
 
 export type SharedMarketplaceFilters = Pick<BundleBrowseFilters, "q" | "category" | "location_area" | "start_date" | "end_date">;
 
@@ -20,6 +26,7 @@ export function sharedFilters(filters: SharedMarketplaceFilters): SharedMarketpl
 
 /** One side of the marketplace with the shared filters applied, from page one. */
 export function marketplaceHref(kind: MarketplaceKind, filters: SharedMarketplaceFilters): string {
+  if (kind === "requests") return "/requests";
   const shared = sharedFilters(filters);
   return kind === "bundles"
     ? bundleBrowseHref({ ...shared, page: 1 })

@@ -55,6 +55,26 @@ export function formatDate(iso: string): string {
   });
 }
 
+/**
+ * "11 – 17 Nov 2026", collapsing whatever the two dates share: the month and
+ * year when they fall in one month, the year when they do not. The long form
+ * printed twice is most of a line for a fact that is two numbers.
+ */
+export function formatDateRange(startIso: string, endIso: string): string {
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const sameMonth = sameYear && start.getMonth() === end.getMonth();
+  if (sameMonth) {
+    return `${start.toLocaleDateString(LOCALE, { day: "numeric" })} – ${formatDate(endIso)}`;
+  }
+  if (sameYear) {
+    const from = start.toLocaleDateString(LOCALE, { day: "numeric", month: "short" });
+    return `${from} – ${formatDate(endIso)}`;
+  }
+  return `${formatDate(startIso)} – ${formatDate(endIso)}`;
+}
+
 /** "September 2026" — a coarse join date, not a precise timestamp. */
 export function formatMonthYear(iso: string): string {
   return new Date(iso).toLocaleDateString(LOCALE, { month: "long", year: "numeric" });
