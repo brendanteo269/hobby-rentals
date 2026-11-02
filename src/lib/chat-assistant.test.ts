@@ -69,6 +69,15 @@ describe("applyEvent", () => {
     expect(message.actions?.[0].label).toBe("Contact support");
   });
 
+  it("offers browsing once when a gear question then becomes unavailable", () => {
+    const message = apply([
+      { event: "listings", data: { cards: [], browse: { label: "Browse listings", href: "/browse" } } },
+      { event: "unavailable", data: {} },
+    ]);
+    expect(message.browse).toBeUndefined();
+    expect(message.actions).toEqual(UNAVAILABLE_LINKS);
+  });
+
   it("shows unavailable with links to browse and help (Scenario 7)", () => {
     const message = apply([{ event: "unavailable", data: {} }, { event: "done", data: { turn_id: null } }]);
     expect(message).toMatchObject({ kind: "unavailable", text: "The assistant is unavailable right now.", actions: UNAVAILABLE_LINKS, turnId: null });

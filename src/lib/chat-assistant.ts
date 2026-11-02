@@ -132,7 +132,8 @@ export function applyEvent(message: ChatMessage, { event, data }: ChatEvent): Ch
 
 /** The client's own "unavailable", for a network failure or no reply in time (Scenario 7). */
 export function unavailable(message: ChatMessage): ChatMessage {
-  return { ...message, kind: "unavailable", text: UNAVAILABLE_TEXT, actions: UNAVAILABLE_LINKS, cards: undefined, sources: undefined, pending: false };
+  // `browse` goes too: the links below already offer browsing, and two would show.
+  return { ...message, kind: "unavailable", text: UNAVAILABLE_TEXT, actions: UNAVAILABLE_LINKS, cards: undefined, browse: undefined, sources: undefined, pending: false };
 }
 
 /** A reply that stopped part-way: what arrived stays, or it becomes "unavailable" if nothing did. */
