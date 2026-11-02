@@ -119,6 +119,7 @@ export function SearchGapPanel({ listingId }: { listingId: string }) {
                     <span>
                       <span className="text-ink">{topic.label}</span>: {searches(topic.search_count)}, e.g.{" "}
                       {topic.examples.slice(0, 2).map((example) => `“${example}”`).join(", ")}
+                      {topic.evidence && <span className="mt-0.5 block text-xs">Your listing says: “{topic.evidence}”</span>}
                     </span>
                   </li>
                 ))}

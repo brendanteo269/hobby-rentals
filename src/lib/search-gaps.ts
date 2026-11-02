@@ -10,6 +10,8 @@ export type SearchGapTopic = {
   fix_label: string;
   /** What to state if it is true, with an example. Advice to the owner, never listing text. */
   hint: string;
+  /** For a covered topic: the words in the listing that cover it. */
+  evidence: string;
 };
 
 export type SearchGapResult = {
