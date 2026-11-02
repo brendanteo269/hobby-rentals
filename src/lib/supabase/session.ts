@@ -5,6 +5,7 @@ import { ACTIVITY_COOKIE, idleTimeoutMs, type LoginNoticeReason } from "@/lib/se
 import { ONBOARDING_PATH, checkEmailPath, loginPath } from "@/lib/routes";
 import { requiresOnboarding, requiresSignIn, requiresVerifiedEmail } from "@/lib/route-policy";
 import { NextResponse, type NextRequest } from "next/server";
+import { gearBundlePath, gearPath } from "@/lib/gear";
 
 /**
  * Clears every cookie holding auth state.
@@ -38,6 +39,26 @@ function loginRedirect(
   if (reason) loginUrl.searchParams.set("reason", reason);
   if (next) loginUrl.searchParams.set("next", next);
   return NextResponse.redirect(loginUrl);
+}
+
+const OLD_DETAIL_PATH = /^\/(listings|bundles)\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i;
+
+/**
+ * The /gear page for an old /listings/<uuid> or /bundles/<uuid> path, if that
+ * listing or bundle is live; null otherwise (the login wall then applies as before).
+ */
+async function publicPathFor(pathname: string): Promise<string | null> {
+  const match = OLD_DETAIL_PATH.exec(pathname);
+  if (!match) return null;
+  const apiBase = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
+  try {
+    const res = await fetch(`${apiBase}/public/${match[1]}/${match[2].toLowerCase()}`, { cache: "no-store" });
+    if (!res.ok) return null;
+    const item = (await res.json()) as { name: string; short_id: string };
+    return match[1] === "listings" ? gearPath(item) : gearBundlePath(item);
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -120,6 +141,12 @@ export async function updateSession(request: NextRequest) {
     // be read against the next session.
     response.cookies.delete(ACTIVITY_COOKIE);
     if (isProtected) {
+      // S5-01 Scenario 2: an old link to a live listing or bundle opens its
+      // public page (301) rather than a login wall.
+      const publicPage = await publicPathFor(pathname);
+      if (publicPage) {
+        return withCookiesFrom(response, NextResponse.redirect(new URL(publicPage, request.url), 301));
+      }
       // No reason here: someone who simply never logged in should not be told
       // their session expired. The expiry message is set at the moment the
       // session is ended, below.
