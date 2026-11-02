@@ -1,5 +1,7 @@
 import Link from "next/link";
+import type { Route } from "next";
 import { Container, ButtonLink } from "./ui";
+import { helpPath } from "@/lib/help";
 
 const COLUMNS = [
   { title: "Marketplace", links: ["Cameras", "Camping", "Water sports", "Music", "Bundles"] },
@@ -7,6 +9,12 @@ const COLUMNS = [
   { title: "For owners", links: ["Inventory management", "Dynamic pricing tools", "Owner insurance", "Handover rules", "Earnings estimator"] },
   { title: "For renters", links: ["How it works", "Trust & safety", "Help centre"] },
 ];
+
+/** The footer links that have a page of their own; the rest still point home. */
+const LINK_TARGETS: Partial<Record<string, Route>> = {
+  "Damage claims": helpPath("damage-claims"),
+  "Help centre": helpPath(),
+};
 
 export function SiteFooter() {
   return (
@@ -30,7 +38,7 @@ export function SiteFooter() {
                 <ul className="mt-4 space-y-2.5">
                   {col.links.map((link) => (
                     <li key={link}>
-                      <Link href="/" className="text-sm text-white/70 transition-colors hover:text-white">
+                      <Link href={LINK_TARGETS[link] ?? "/"} className="text-sm text-white/70 transition-colors hover:text-white">
                         {link}
                       </Link>
                     </li>
