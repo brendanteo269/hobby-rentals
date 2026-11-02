@@ -33,6 +33,8 @@ export type BrowseFilters = {
   end_date: string;
   /** S2-30: serial-verified listings only. */
   verified: boolean;
+  /** S5-11: listings this renter can book instantly. Matches none without the badge. */
+  instant_book: boolean;
   /** Daily prices in dollars, as entered in the browse form. */
   min_price: string;
   max_price: string;
@@ -104,6 +106,7 @@ export function parseBrowseFilters(params: SearchParams): BrowseFilters {
     start_date: first(params.start_date),
     end_date: first(params.end_date),
     verified: ["1", "true"].includes(first(params.verified)),
+    instant_book: ["1", "true"].includes(first(params.instant_book)),
     min_price: price(first(params.min_price)),
     max_price: price(first(params.max_price)),
     origin_lat: hasValidOrigin ? originLat : null,
@@ -129,6 +132,7 @@ export function hasActiveFilters(filters: BrowseFilters): boolean {
     filters.start_date !== "" ||
     filters.end_date !== "" ||
     filters.verified ||
+    filters.instant_book ||
     filters.min_price !== "" ||
     filters.max_price !== "" ||
     filters.origin_lat !== null
@@ -152,6 +156,7 @@ export function browseHref(filters: BrowseFilters): string {
   if (filters.start_date) search.set("start_date", filters.start_date);
   if (filters.end_date) search.set("end_date", filters.end_date);
   if (filters.verified) search.set("verified", "1");
+  if (filters.instant_book) search.set("instant_book", "1");
   if (filters.min_price) search.set("min_price", filters.min_price);
   if (filters.max_price) search.set("max_price", filters.max_price);
   const hasOrigin = filters.origin_lat !== null && filters.origin_lng !== null && filters.radius_km !== null;
@@ -194,6 +199,7 @@ export const RELAX_FILTER_LABELS: Record<RelaxableFilter, string> = {
   condition: "Any condition",
   brand: "Any brand",
   verified_only: "Include unverified serials",
+  instant_book: "Any listing, not just Instant Book",
 };
 
 /**
@@ -210,6 +216,7 @@ export function relaxedHref(filters: BrowseFilters, filter: RelaxableFilter): st
     condition: { condition: [] },
     brand: { brand: [] },
     verified_only: { verified: false },
+    instant_book: { instant_book: false },
   };
   return browseHref({ ...filters, ...changes[filter], page: 1 });
 }

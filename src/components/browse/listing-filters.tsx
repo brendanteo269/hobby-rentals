@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { Route } from "next";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Flame, ShieldCheck, Sparkles } from "lucide-react";
+import { Flame, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { emitActivityEvent } from "@/app/analytics/actions";
 import { FilterSelect } from "@/components/browse/filter-select";
 import { RadiusSearch } from "@/components/browse/radius-search";
@@ -119,6 +119,24 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
           />
           <ShieldCheck className="size-4" aria-hidden="true" />
           Serial verified
+        </label>
+
+        {/* S5-11 Scenario 4. Only listings this renter could actually book
+            instantly: without the Trusted Renter badge it matches nothing,
+            and the no-results state offers to take it off again. */}
+        <label
+          className={`${filterPill} cursor-pointer has-[:checked]:border-ink has-[:checked]:bg-ink has-[:checked]:text-white has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-accent/40`}
+        >
+          <input
+            type="checkbox"
+            name="instant_book"
+            value="1"
+            defaultChecked={filters.instant_book}
+            onChange={(event) => event.currentTarget.form?.requestSubmit()}
+            className="sr-only"
+          />
+          <Zap className="size-4" aria-hidden="true" />
+          Instant Book
         </label>
 
         <button

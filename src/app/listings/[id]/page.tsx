@@ -11,6 +11,7 @@ import { formatDate, formatMoney } from "@/lib/format";
 import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS, passportBadge } from "@/lib/listings";
 import { BookingRequestForm } from "@/components/bookings/booking-request-form";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
+import { InstantBookBadge } from "@/components/listings/instant-book-badge";
 import { PromotedBadge } from "@/components/listings/promoted-badge";
 import { HighDemandBadge } from "@/components/listings/high-demand-badge";
 import { ListingViewTelemetry } from "@/components/analytics/listing-view-telemetry";
@@ -21,6 +22,7 @@ import { MessageButton } from "@/components/messages/message-button";
 import { ReportListingButton } from "@/components/listings/report-listing-button";
 import { getMyWaitlist } from "@/lib/api/waitlist";
 import { getMyAvailabilityAlerts } from "@/lib/api/availability-alerts";
+import { getMyRenterTrust } from "@/lib/api/verification";
 import { FavouriteButton } from "@/components/listings/favourite-button";
 import { getListingReviews } from "@/lib/api/reviews";
 import { RentalReviewSection } from "@/components/reviews/rental-review-section";
@@ -59,6 +61,14 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
   const availabilityAlerts = canBook
     ? await getMyAvailabilityAlerts(listing.id).catch(() => [])
     : [];
+
+  // S5-11: whether this renter clears the Trusted Renter bar, so the form
+  // can say that their booking confirms on the spot rather than leaving them
+  // to find out by pressing the button. Only asked when it could matter.
+  // Swallowed: the booking still works, it just says less.
+  const instantBookEligible = Boolean(
+    canBook && listing.instant_book_enabled && (await getMyRenterTrust().catch(() => undefined))?.trusted,
+  );
 
   // S2-15: the renter's own queue places on this listing, so the panel can
   // show "you are waiting" rather than offering to join again. Supplementary -
@@ -104,6 +114,10 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
             </p>
             <HighDemandBadge highDemand={categoryDemand?.is_high_demand} />
             <PromotedBadge promoted={listing.is_promoted} />
+            {/* S5-11 Scenario 1: in the label row, with the listing's other
+                labels, rather than down by the booking form - it is a term
+                of this listing and a renter should see it with the price. */}
+            <InstantBookBadge enabled={listing.instant_book_enabled} />
           </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
             <h1 className="heading text-3xl">{listing.name}</h1>
@@ -190,6 +204,8 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               minRentalDays={listing.min_rental_days}
               maxRentalDays={listing.max_rental_days}
               overdueDebtCents={suspension?.debt_cents ?? 0}
+              instantBook={listing.instant_book_enabled}
+              instantBookEligible={instantBookEligible}
               secondaryAction={
                 <MessageButton target={{ kind: "listing", listingId: listing.id }} label="Message owner" />
               }

@@ -113,6 +113,8 @@ export type ListingCard = {
    * the person, not the item - serial_status above is the item's.
    */
   owner_verified?: boolean;
+  /** S5-11: whether this listing takes instant bookings from Trusted Renters. */
+  instant_book_enabled?: boolean;
   /** Present for signed-in browse/favourites responses; public cards use 0. */
   favourite_count?: number;
   /** Present for signed-in browse/favourites responses. */
@@ -135,6 +137,7 @@ export type ListingCard = {
 
 /** A filter the backend says would find something if removed (the no-results state). */
 export type RelaxableFilter =
+  | "instant_book"
   | "category"
   | "condition"
   | "brand"
@@ -203,6 +206,12 @@ export type Listing = {
   attributes: Record<string, unknown>;
   has_custom_availability: boolean;
   custom_available_days: number[] | null;
+  /**
+   * S5-11: Trusted Renters can book this listing without the owner
+   * approving it. Shown to every renter, qualifying or not - the label is
+   * about the listing's terms, not about who is reading it.
+   */
+  instant_book_enabled: boolean;
   photo_keys: string[];
   /** Public URLs, one per entry in photo_keys, in the same order. */
   photo_urls: string[];
@@ -443,6 +452,8 @@ export type CreateListingRequest = {
   available_until?: string | null;
   has_custom_availability?: boolean;
   custom_available_days?: number[] | null;
+  /** S5-11: off unless the owner turns it on. */
+  instant_book_enabled?: boolean;
   initial_blackouts?: BlackoutDate[];
   /** May be empty for a saved draft; recording its baseline later sets them. */
   photo_keys: string[];
@@ -493,6 +504,7 @@ export type UpdateListingRequest = Partial<
     | "available_until"
     | "photo_keys"
     | "attributes"
+    | "instant_book_enabled"
   >
 >;
 

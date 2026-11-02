@@ -224,6 +224,9 @@ function parseListingFields(
       // as a new value.
       ...(text(formData, "available_from") ? { available_from: text(formData, "available_from") } : {}),
       available_until: text(formData, "available_until") || null,
+      // An unticked checkbox is not submitted at all, so its absence is the
+      // "off" answer - which is also what makes turning it back off work.
+      instant_book_enabled: formData.get("instant_book_enabled") === "1",
       photo_keys: photos,
     },
   };

@@ -5,6 +5,7 @@ import type { ChangeEvent } from "react";
 import { LoaderCircle } from "lucide-react";
 import { Button, ButtonLink, Field, FormError, FormSection, Modal, SelectField, TextareaField } from "@/components/ui";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
+import { InstantBookField } from "@/components/listings/instant-book-field";
 import { WeeklyAvailabilityField } from "@/components/listings/weekly-availability-field";
 import { PickupLocationField } from "@/components/listings/pickup-location-field";
 import { RentalDurationField } from "@/components/listings/rental-duration-field";
@@ -449,6 +450,8 @@ export function ListingForm({
           initialMin={listing?.min_rental_days ?? undefined}
           initialMax={editing ? listing.max_rental_days : undefined}
         />
+
+        <InstantBookField defaultChecked={listing?.instant_book_enabled ?? false} />
 
         <BlackoutRulesField
           availableFrom={calendarFrom}

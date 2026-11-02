@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   RELAX_FILTER_LABELS,
   browseHref,
+  hasActiveFilters,
   parseBrowseFilters,
   relatedCategoryHref,
   relaxedHref,
@@ -95,5 +96,33 @@ describe("no-results suggestions", () => {
   it("links a related category on its own", () => {
     expect(relatedCategoryHref("POWER_TOOLS_DIY")).toBe("/browse?category=POWER_TOOLS_DIY");
     expect(relatedCategoryHref("BANANAS")).toBe("/browse");
+  });
+});
+
+describe("the Instant Book filter (S5-11)", () => {
+  it("survives a round trip through the URL", () => {
+    const filters = { ...parseBrowseFilters({}), instant_book: true };
+
+    expect(browseHref(filters)).toContain("instant_book=1");
+    expect(parseBrowseFilters({ instant_book: "1" }).instant_book).toBe(true);
+  });
+
+  it("is off when the URL says nothing about it", () => {
+    expect(parseBrowseFilters({}).instant_book).toBe(false);
+  });
+
+  it("counts as an active filter, so the empty state knows something is narrowing the results", () => {
+    // A renter without the badge sees nothing with this on, and the "no
+    // listings yet" copy would be a lie.
+    expect(hasActiveFilters({ ...parseBrowseFilters({}), instant_book: true })).toBe(true);
+  });
+
+  it("can be removed from a search on its own", () => {
+    const filters = { ...parseBrowseFilters({}), instant_book: true, verified: true };
+
+    const href = relaxedHref(filters, "instant_book");
+
+    expect(href).not.toContain("instant_book");
+    expect(href).toContain("verified=1");
   });
 });
