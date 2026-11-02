@@ -69,6 +69,8 @@ export type NotificationType =
   | "LISTING_DEACTIVATED"
   | "LISTING_REACTIVATED"
   | "SAVED_SEARCH_MATCH"
+  // S5-03: renters started searching for something the owner's listing does not cover.
+  | "SEARCH_GAP_RISING"
   // S3-21: the owner's listing was reported and is under review.
   | "LISTING_REPORTED_OWNER"
   | "ACCOUNT_REPORTED"
@@ -200,6 +202,7 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   LISTING_DEACTIVATED: "Listing deactivated",
   LISTING_REACTIVATED: "Listing reactivated",
   SAVED_SEARCH_MATCH: "Saved search match",
+  SEARCH_GAP_RISING: "New search trend",
   HOBBYSHIELD_EXPIRING_7_DAYS: "HobbyShield expires in seven days",
   HOBBYSHIELD_EXPIRING_3_DAYS: "HobbyShield expires in three days",
   HOBBYSHIELD_EXPIRING_TODAY: "HobbyShield expires today",
