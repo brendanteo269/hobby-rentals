@@ -13,7 +13,6 @@ import {
   PAGE_SIZE,
   RELAX_FILTER_LABELS,
   browsePageHref,
-  browseHref,
   hasActiveFilters,
   parseBrowseFilters,
   relatedCategoryHref,

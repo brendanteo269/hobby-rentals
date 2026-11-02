@@ -42,8 +42,18 @@ function attributeText(value: unknown) {
   return null;
 }
 
-export default async function ListingDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ListingDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  // ?start=&end= - a link that already knows the dates. An offer on a gear
+  // request (S5-13) and a fulfilled availability alert (S4-07) both send the
+  // renter here with the dates they already said they wanted.
+  searchParams: Promise<{ start?: string; end?: string }>;
+}) {
   const { id } = await params;
+  const { start: linkedStart, end: linkedEnd } = await searchParams;
   let listing;
   try {
     listing = await getListing(id);
@@ -204,6 +214,8 @@ export default async function ListingDetailPage({ params }: { params: Promise<{ 
               minRentalDays={listing.min_rental_days}
               maxRentalDays={listing.max_rental_days}
               overdueDebtCents={suspension?.debt_cents ?? 0}
+              initialStartDate={linkedStart}
+              initialEndDate={linkedEnd}
               instantBook={listing.instant_book_enabled}
               instantBookEligible={instantBookEligible}
               secondaryAction={

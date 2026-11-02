@@ -1,14 +1,16 @@
 import Link from "next/link";
 import type { Route } from "next";
 import { unstable_rethrow } from "next/navigation";
-import { Layers, Tag, type LucideIcon } from "lucide-react";
+import { Layers, PackageSearch, Tag, type LucideIcon } from "lucide-react";
 import { browseListings } from "@/lib/api/listings";
 import { browseBundles } from "@/lib/api/bundles";
+import { getGearRequestBoard } from "@/lib/api/gear-requests";
 import { marketplaceHref, sharedFilters, type MarketplaceKind, type SharedMarketplaceFilters } from "@/lib/marketplace";
 
 const SIDES: { kind: MarketplaceKind; label: string; icon: LucideIcon; title: string }[] = [
   { kind: "items", label: "Items", icon: Tag, title: "Single pieces of gear, each rented on its own" },
   { kind: "bundles", label: "Bundles", icon: Layers, title: "Sets of gear an owner rents out together at a package rate" },
+  { kind: "requests", label: "Requests", icon: PackageSearch, title: "What renters are looking for and nobody has listed" },
 ];
 
 /**
@@ -16,7 +18,7 @@ const SIDES: { kind: MarketplaceKind; label: string; icon: LucideIcon; title: st
  * browsing items learns there are bundles too. Null when it cannot be had:
  * the count is a hint, and a failure must cost the number, not the page.
  */
-async function countOtherSide(kind: MarketplaceKind, filters: SharedMarketplaceFilters): Promise<number | null> {
+async function countSide(kind: MarketplaceKind, filters: SharedMarketplaceFilters): Promise<number | null> {
   const shared = sharedFilters(filters);
   const params = {
     q: shared.q || undefined,
@@ -27,6 +29,9 @@ async function countOtherSide(kind: MarketplaceKind, filters: SharedMarketplaceF
     page_size: 1,
   };
   try {
+    // Requests take none of the shared filters, so this is simply how many
+    // are open - the board is small enough to count by reading it.
+    if (kind === "requests") return (await getGearRequestBoard()).length;
     const response = kind === "bundles" ? await browseBundles(params) : await browseListings(params);
     return response.total_count;
   } catch (error) {
@@ -55,14 +60,19 @@ export async function MarketplaceHeader({
   /** The active side's total, which its page already has. Null when its search failed. */
   activeCount: number | null;
 }) {
-  const other: MarketplaceKind = active === "items" ? "bundles" : "items";
-  const otherCount = await countOtherSide(other, filters);
-  const countOf = (kind: MarketplaceKind) => (kind === active ? activeCount : otherCount);
+  // Every side the member is not on, counted in parallel: the point of the
+  // number is to say "there are bundles too", and with three sides one of
+  // them would otherwise be the only one that never says it.
+  const others = SIDES.map(({ kind }) => kind).filter((kind) => kind !== active);
+  const otherCounts = new Map(
+    await Promise.all(others.map(async (kind) => [kind, await countSide(kind, filters)] as const)),
+  );
+  const countOf = (kind: MarketplaceKind) => (kind === active ? activeCount : otherCounts.get(kind) ?? null);
 
   return (
     <div>
       <h1 className="sr-only">Browse marketplace</h1>
-      <nav aria-label="Show items or bundles" className="inline-flex rounded-full bg-surface-muted p-1">
+      <nav aria-label="Show items, bundles or requests" className="inline-flex rounded-full bg-surface-muted p-1">
         {SIDES.map(({ kind, label, icon: Icon, title }) => {
           const isActive = kind === active;
           return (

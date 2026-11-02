@@ -61,6 +61,10 @@ export type NotificationType =
   // neither of these expires.
   | "AVAILABILITY_ALERT_SET"
   | "AVAILABILITY_ALERT_FULFILLED"
+  // S5-13: the requests board - an owner told someone wants what they have,
+  // and a renter told an owner has it.
+  | "GEAR_REQUEST_POSTED_OWNER"
+  | "GEAR_REQUEST_OFFERED"
   // S2-19: handover meetup coordination on a confirmed booking.
   | "MEETUP_PROPOSED"
   | "MEETUP_ACCEPTED"
@@ -197,6 +201,8 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   WAITLIST_JOINED_OWNER: "New waitlist interest",
   AVAILABILITY_ALERT_SET: "Date alert set",
   AVAILABILITY_ALERT_FULFILLED: "Watched dates free",
+  GEAR_REQUEST_POSTED_OWNER: "Gear request posted",
+  GEAR_REQUEST_OFFERED: "Offer on your request",
   MEETUP_PROPOSED: "Meetup proposed",
   MEETUP_ACCEPTED: "Meetup confirmed",
   LISTING_DEACTIVATED: "Listing deactivated",

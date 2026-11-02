@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { Button, Notice } from "@/components/ui";
@@ -42,6 +42,14 @@ type Props = {
    * was never the problem.
    */
   overdueDebtCents?: number;
+  /**
+   * Dates to open on, from a link that already knows them - a gear request's
+   * offer (S5-13) or an availability alert (S4-07). Honoured only when they
+   * are genuinely bookable: a link can be stale, and a range silently
+   * pre-filled over days that have since gone would be refused on submit.
+   */
+  initialStartDate?: string;
+  initialEndDate?: string;
   /** S5-11: whether this listing takes instant bookings at all... */
   instantBook?: boolean;
   /** ...and whether this renter is one of the ones it takes them from. */
@@ -58,6 +66,8 @@ export function BookingRequestForm({
   onSuccess,
   hideHeading,
   overdueDebtCents = 0,
+  initialStartDate,
+  initialEndDate,
   instantBook = false,
   instantBookEligible = false,
 }: Props) {
@@ -83,8 +93,45 @@ export function BookingRequestForm({
     () => availableDates.filter((date) => consecutiveDatesFrom(date, availableSet).length >= minDays),
     [availableDates, availableSet, minDays],
   );
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  /**
+   * Dates that arrived in the link, reconciled with what this listing can
+   * actually sell.
+   *
+   * A link carries what the renter asked for somewhere else - a gear request
+   * (S5-13), an availability alert (S4-07) - and this listing may not be
+   * able to honour all of it: the range can be longer than the listing
+   * rents for, or part of it can have been booked since. Taking as much as
+   * holds and SAYING what did not is the point. Refusing it silently leaves
+   * the renter on an empty calendar that looks like a broken link, which is
+   * how this first shipped.
+   */
+  const linked = useMemo(() => {
+    if (!initialStartDate || !initialEndDate) return null;
+    if (!startDates.includes(initialStartDate)) {
+      return { start: "", end: "", note: "Those dates are no longer free on this listing. Pick from what is left." };
+    }
+    const run = consecutiveDatesFrom(initialStartDate, availableSet);
+    const length = run.indexOf(initialEndDate) + 1;
+    if (length >= minDays && (maxRentalDays == null || length <= maxRentalDays)) {
+      return { start: initialStartDate, end: initialEndDate, note: null };
+    }
+    // The start holds even when the whole range does not, so the renter
+    // carries on from where they were rather than starting over.
+    const because =
+      length === 0
+        ? "some of those days are taken"
+        : maxRentalDays != null && length > maxRentalDays
+          ? `this listing rents for at most ${maxRentalDays} days and you asked for ${length}`
+          : `this listing rents for at least ${minDays} days`;
+    return {
+      start: initialStartDate,
+      end: "",
+      note: `Your start date is set, but ${because}. Choose an end date.`,
+    };
+  }, [initialStartDate, initialEndDate, startDates, availableSet, minDays, maxRentalDays]);
+
+  const [startDate, setStartDate] = useState(linked?.start ?? "");
+  const [endDate, setEndDate] = useState(linked?.end ?? "");
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [errorCode, setErrorCode] = useState<string | undefined>();
@@ -128,6 +175,40 @@ export function BookingRequestForm({
   const anchorDate = startDates[0];
   const choosingEnd = Boolean(startDate && !endDate);
 
+  /**
+   * Prices a range on the server and takes a fresh idempotency key for it.
+   *
+   * The one place that quotes, because three things need to: picking an end
+   * date, toggling damage protection, and arriving on a link that already
+   * carries the dates. A range with no quote cannot be submitted, so a
+   * fourth copy of this is a fourth chance to forget the key.
+   */
+  const priceRange = useCallback(
+    (start: string, end: string, protection: boolean) => {
+      setQuote(null);
+      setIdempotencyKey(null);
+      startPricing(async () => {
+        const result = await quoteBooking(listingId, start, end, protection);
+        if ("error" in result) setError(result.error);
+        else {
+          setQuote(result.quote);
+          setIdempotencyKey(crypto.randomUUID());
+        }
+      });
+    },
+    [listingId, startPricing],
+  );
+
+  // A range that arrived in the URL was never picked, so nothing has priced
+  // it. Priced once: a failed quote leaves the dates on screen with their
+  // error rather than retrying forever.
+  const pricedFromLink = useRef(false);
+  useEffect(() => {
+    if (!linked?.end || pricedFromLink.current) return;
+    pricedFromLink.current = true;
+    priceRange(linked.start, linked.end, damageProtection);
+  }, [linked, damageProtection, priceRange]);
+
   /** Clears whatever the last attempt said, so a new one starts clean. */
   function clearOutcome() {
     setMessage(null);
@@ -145,16 +226,7 @@ export function BookingRequestForm({
       setIdempotencyKey(null);
     } else if (endDates.includes(day)) {
       setEndDate(day);
-      setQuote(null);
-      setIdempotencyKey(null);
-      startPricing(async () => {
-        const result = await quoteBooking(listingId, startDate, day, damageProtection);
-        if ("error" in result) setError(result.error);
-        else {
-          setQuote(result.quote);
-          setIdempotencyKey(crypto.randomUUID());
-        }
-      });
+      priceRange(startDate, day, damageProtection);
     }
   }
 
@@ -167,15 +239,7 @@ export function BookingRequestForm({
     setDamageProtection(selected);
     if (!startDate || !endDate) return;
     clearOutcome();
-    setIdempotencyKey(null);
-    startPricing(async () => {
-      const result = await quoteBooking(listingId, startDate, endDate, selected);
-      if ("error" in result) setError(result.error);
-      else {
-        setQuote(result.quote);
-        setIdempotencyKey(crypto.randomUUID());
-      }
-    });
+    priceRange(startDate, endDate, selected);
   }
 
   function submit() {
@@ -254,6 +318,13 @@ export function BookingRequestForm({
         {startDate ? `From: ${formatDate(startDate)}` : "Choose a start date."}
         {endDate ? ` · Until: ${formatDate(endDate)}` : startDate ? " · Choose an end date." : ""}
       </p>
+
+      {/* Why the link did not fill in everything it carried. Shown until the
+          renter has picked a full range of their own, at which point it is
+          answered. */}
+      {linked?.note && !endDate && (
+        <p className="mt-2 text-sm text-ink">{linked.note}</p>
+      )}
 
       {runBlocker && (
         <p className="mt-2 text-sm text-ink-soft">

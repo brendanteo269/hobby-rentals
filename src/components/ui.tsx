@@ -492,6 +492,7 @@ export function StatTile({
   detail,
   tone = "neutral",
   href,
+  size = "figure",
 }: {
   icon: LucideIcon;
   label: string;
@@ -499,6 +500,12 @@ export function StatTile({
   detail?: string;
   tone?: StatTone;
   href?: Route;
+  /**
+   * "figure" is a number to be read across a dashboard. "phrase" is for a
+   * value that is words - a date range, a rate - which at figure size wraps
+   * and stops looking like one value.
+   */
+  size?: "figure" | "phrase";
 }) {
   const body = (
     <>
@@ -508,7 +515,7 @@ export function StatTile({
         </span>
         <p className="text-sm font-medium text-ink-soft">{label}</p>
       </div>
-      <p className="heading mt-4 text-3xl">{value}</p>
+      <p className={`heading mt-4 ${size === "phrase" ? "text-lg" : "text-3xl"}`}>{value}</p>
       {detail && <p className="mt-1 text-xs text-ink-soft">{detail}</p>}
     </>
   );
