@@ -57,6 +57,7 @@ export async function AdminHeader() {
             Categories
           </Link>
           <Link href={ROUTES.analytics} className="text-sm text-ink-soft transition-colors hover:text-ink">Analytics</Link>
+          <Link href={ROUTES.assistant} className="text-sm text-ink-soft transition-colors hover:text-ink">Assistant</Link>
           <form action={leavePortal}>
             <button
               type="submit"
