@@ -46,6 +46,11 @@ export function todayIso(): string {
   return toIsoDate(new Date());
 }
 
+/** "5 Sept" — a calendar day close enough that its year goes without saying. */
+export function formatDayMonth(iso: string): string {
+  return new Date(iso).toLocaleDateString(LOCALE, { day: "numeric", month: "short" });
+}
+
 /** "5 Sept 2026" — a calendar day, with no time of day implied. */
 export function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString(LOCALE, {
