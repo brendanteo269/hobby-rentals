@@ -1,8 +1,9 @@
 "use client";
 
 import { useActionState, useState, useTransition } from "react";
-import { Check, Copy } from "lucide-react";
 import { Button, Field, FormError, Modal, Notice } from "./ui";
+import { ConnectedAppsCapabilities } from "./connected-apps-capabilities";
+import { ConnectedAppsGuide, CopyButton } from "./connected-apps-guide";
 import {
   createAssistantTokenAction,
   revokeAssistantTokenAction,
@@ -17,13 +18,6 @@ import { formatDate, formatDateTime } from "@/lib/format";
 
 /** The one time the token can be read. It lives in this form's state and is gone when the member leaves the page. */
 function NewToken({ name, token }: { name: string; token: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function copy() {
-    await navigator.clipboard.writeText(token);
-    setCopied(true);
-  }
-
   return (
     <Notice tone="success" className="mt-4">
       <p className="font-medium">Copy the token for {name} now. It will not be shown again.</p>
@@ -31,11 +25,9 @@ function NewToken({ name, token }: { name: string; token: string }) {
         <code className="min-w-0 flex-1 basis-64 break-all rounded border border-line bg-white p-2 text-xs text-ink">
           {token}
         </code>
-        <Button type="button" variant="outline" onClick={copy}>
-          {copied ? <Check className="size-4" aria-hidden="true" /> : <Copy className="size-4" aria-hidden="true" />}
-          {copied ? "Copied" : "Copy"}
-        </Button>
+        <CopyButton text={token} />
       </div>
+      <p className="mt-3 text-sm">Next, follow step 2 of the guide below.</p>
     </Notice>
   );
 }
@@ -141,6 +133,9 @@ export function ConnectedApps({ tokens }: { tokens: AssistantToken[] }) {
           ))}
         </ul>
       )}
+
+      <ConnectedAppsCapabilities />
+      <ConnectedAppsGuide open={Boolean(state?.created)} />
     </section>
   );
 }
