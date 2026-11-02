@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui";
 import { ListingForm } from "@/components/listings/listing-form";
+import { SearchGapPanel } from "@/components/listings/search-gap-panel";
 import { updateListing } from "@/app/listings/actions";
 import { getListingFormContext } from "@/app/listings/form-context";
 import { getListing, getListingAvailability } from "@/lib/api/listings";
@@ -43,6 +44,12 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
           Changes apply to new bookings only; anyone who has already booked keeps the terms they
           agreed to.
         </p>
+
+        {(listing.status === "ACTIVE" || listing.status === "DRAFT") && (
+          <div className="mt-10">
+            <SearchGapPanel listingId={listing.id} />
+          </div>
+        )}
 
         <div className="mt-10">
           <ListingForm
