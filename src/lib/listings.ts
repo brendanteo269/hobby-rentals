@@ -486,7 +486,7 @@ export type ListingCategoryOption = { slug: string; label: string; display_order
  * A partial update for PATCH /listings/{id}. Every field is optional and an
  * omitted one is left alone, so a caller sends only what actually changed.
  * The weekly schedule and blackouts are deliberately absent: those have
- * their own endpoints, mirrored by the /listings/[id]/availability page.
+ * their own endpoints, which the listing form's save calls separately.
  */
 export type UpdateListingRequest = Partial<
   Pick<

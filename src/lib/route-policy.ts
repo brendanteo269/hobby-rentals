@@ -25,9 +25,6 @@ import { ONBOARDING_PATH } from "@/lib/routes";
  */
 const VERIFIED_ONLY_PREFIXES = ["/listings/new", "/messages/new"];
 
-/** Suffixes under /listings/<id>/ that are owner actions rather than reads. */
-const VERIFIED_ONLY_LISTING_ACTIONS = ["/availability"];
-
 /** Suffixes under /bookings/<id>/ that act on the booking. */
 const VERIFIED_ONLY_BOOKING_ACTIONS = ["/return"];
 
@@ -40,13 +37,7 @@ const VERIFIED_ONLY_BOOKING_ACTIONS = ["/return"];
  */
 export function requiresVerifiedEmail(pathname: string): boolean {
   if (VERIFIED_ONLY_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return true;
-  if (pathname.startsWith("/bookings/") && VERIFIED_ONLY_BOOKING_ACTIONS.some((action) => pathname.endsWith(action))) {
-    return true;
-  }
-  return (
-    pathname.startsWith("/listings/") &&
-    VERIFIED_ONLY_LISTING_ACTIONS.some((action) => pathname.endsWith(action))
-  );
+  return pathname.startsWith("/bookings/") && VERIFIED_ONLY_BOOKING_ACTIONS.some((action) => pathname.endsWith(action));
 }
 
 /**

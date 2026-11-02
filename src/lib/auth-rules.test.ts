@@ -122,7 +122,7 @@ describe("route builders", () => {
 });
 
 describe("requiresVerifiedEmail", () => {
-  it.each(["/listings/new", "/listings/abc-123/availability", "/messages/new", "/bookings/abc-123/return"])(
+  it.each(["/listings/new", "/messages/new", "/bookings/abc-123/return"])(
     "gates the lending/messaging action %s",
     (path) => {
       expect(requiresVerifiedEmail(path)).toBe(true);
@@ -148,7 +148,7 @@ describe("requiresVerifiedEmail", () => {
 });
 
 describe("requiresOnboarding", () => {
-  it.each(["/profile", "/browse", "/favourites", "/listings", "/listings/new", "/listings/abc/availability", "/messages"])(
+  it.each(["/profile", "/browse", "/favourites", "/listings", "/listings/new", "/listings/abc/edit", "/messages"])(
     "gates %s",
     (path) => {
       expect(requiresOnboarding(path)).toBe(true);

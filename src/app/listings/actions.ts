@@ -455,7 +455,6 @@ export async function updateListing(
 
     revalidatePath("/listings/mine");
     revalidatePath(`/listings/${listingId}`);
-    revalidatePath(`/listings/${listingId}/availability`);
     return { success: { activeBookingCount: active_booking_count, cancelledBookingCount } };
   } catch (caught) {
     if (caught instanceof ListingApiError) {
