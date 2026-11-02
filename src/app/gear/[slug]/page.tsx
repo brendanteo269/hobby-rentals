@@ -6,6 +6,7 @@ import { RateLine } from "@/components/browse/listing-card";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { InstantBookBadge } from "@/components/listings/instant-book-badge";
 import { RentalReviewSection } from "@/components/reviews/rental-review-section";
+import { ListingQuestionsSection } from "@/components/listings/listing-questions-section";
 import { getPublicListing } from "@/lib/api/public";
 import { formatDate, formatMoney } from "@/lib/format";
 import { siteUrl } from "@/lib/env";
@@ -130,6 +131,7 @@ export default async function PublicListingPage({ params }: Props) {
         </div>
       </div>
 
+      <ListingQuestionsSection questions={listing.questions ?? []} />
       <RentalReviewSection title="Reviews for this listing" reviews={listing.reviews} emptyBody="This listing has not received any reviews yet." />
     </Container>
   );
