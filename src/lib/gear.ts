@@ -64,6 +64,12 @@ export type PublicBundle = {
   updated_at: string;
 };
 
+/** S5-02: what /sitemap.xml lists, one entry per live listing or bundle. */
+export type SitemapEntries = {
+  listings: { name: string; short_id: string; updated_at: string }[];
+  bundles: { name: string; short_id: string; updated_at: string }[];
+};
+
 /** "Coleman Sundome 4-Person Tent" -> "coleman-sundome-4-person-tent". */
 export function slugify(name: string): string {
   return name.toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "item";
@@ -85,9 +91,4 @@ export function shortIdFrom(slug: string): string | null {
 /** A signed-out visitor's way to act: log in, then come back to this page. */
 export function loginToAct(path: string): Route {
   return `/login?next=${encodeURIComponent(path)}` as Route;
-}
-
-/** The site's own address, for canonical and Open Graph URLs. */
-export function siteUrl(): URL {
-  return new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000");
 }

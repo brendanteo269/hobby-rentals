@@ -43,3 +43,21 @@ export function onemapEnv() {
 
   return { email, password };
 }
+
+/**
+ * Where the FastAPI backend is, without a trailing slash. API_URL (server-only)
+ * wins over NEXT_PUBLIC_API_URL so a server can reach the API on a private
+ * address; local development falls back to port 8000.
+ */
+export function apiBaseUrl(): string {
+  return (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
+}
+
+/**
+ * This site's own address, for the absolute URLs in canonical tags, Open
+ * Graph tags, the sitemap and robots.txt. Set NEXT_PUBLIC_SITE_URL wherever
+ * the site is served from anything but local development.
+ */
+export function siteUrl(): URL {
+  return new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000");
+}
