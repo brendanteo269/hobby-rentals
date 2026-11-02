@@ -196,6 +196,7 @@ export default async function BookingDetailPage({
                 { term: "Start date", value: formatDate(booking.start_date) },
                 { term: "End date", value: formatDate(booking.end_date) },
                 { term: "Rental days", value: booking.rental_days ?? "—" },
+                ...(booking.booking_source === "AI_ASSISTANT" ? [{ term: "Source", value: "Requested via AI assistant" }] : []),
                 ...(booking.status === "DECLINED"
                   ? [
                       { term: "Decline reason", value: booking.decline_reason ?? "—" },

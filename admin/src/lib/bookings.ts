@@ -364,6 +364,8 @@ export type AdminBookingDetail = {
   bundle_booking_id: string | null;
   created_at: string;
   updated_at: string;
+  /** S5-05: AI_ASSISTANT when a member's assistant sent the request. Null if it could not be read. */
+  booking_source: string | null;
   statusEvents: BookingStatusEvent[];
   escrowEntries: EscrowLedgerEntry[];
 };
@@ -396,7 +398,7 @@ export async function getBookingById(id: string): Promise<AdminBookingDetail | n
     return null;
   }
 
-  const rows = (data ?? []) as Omit<AdminBookingDetail, "statusEvents" | "escrowEntries">[];
+  const rows = (data ?? []) as Omit<AdminBookingDetail, "booking_source" | "statusEvents" | "escrowEntries">[];
   const booking = rows[0];
   if (!booking) return null;
 
@@ -405,7 +407,7 @@ export async function getBookingById(id: string): Promise<AdminBookingDetail | n
   // own", which the secret-key client bypasses the same way every other
   // service-role read does here) - read straight rather than needing a
   // dedicated RPC, same pattern getListingById uses for blackout dates.
-  const [{ data: events, error: eventsError }, { data: ledger, error: ledgerError }] = await Promise.all([
+  const [{ data: events, error: eventsError }, { data: ledger, error: ledgerError }, { data: source, error: sourceError }] = await Promise.all([
     supabase
       .from("booking_status_events")
       .select("id, from_status, to_status, actor_role, reason, created_at")
@@ -426,13 +428,16 @@ export async function getBookingById(id: string): Promise<AdminBookingDetail | n
         "OVERDUE_SETTLEMENT",
       ])
       .order("created_at", { ascending: true }),
+    supabase.from("bookings").select("booking_source").eq("id", id).maybeSingle(),
   ]);
 
   if (eventsError) console.error("Booking status timeline failed:", eventsError.message);
+  if (sourceError) console.error("Booking source lookup failed:", sourceError.message);
   if (ledgerError) console.error("Booking escrow ledger failed:", ledgerError.message);
 
   return {
     ...booking,
+    booking_source: (source?.booking_source as string | null | undefined) ?? null,
     statusEvents: (events ?? []) as BookingStatusEvent[],
     escrowEntries: (ledger ?? []) as EscrowLedgerEntry[],
   };

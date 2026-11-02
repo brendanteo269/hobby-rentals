@@ -186,6 +186,11 @@ describe("profilePath", () => {
     expect(profilePath("account")).toBe("/profile?view=account");
   });
 
+  it("knows the connected apps panel", () => {
+    expect(isProfileView("connected-apps")).toBe(true);
+    expect(profilePath("connected-apps")).toBe("/profile?view=connected-apps");
+  });
+
   it("round-trips through isProfileView", () => {
     // The writer and the reader must agree on the spelling; this is the only
     // place that checks they do.
