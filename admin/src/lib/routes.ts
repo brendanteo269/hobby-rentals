@@ -26,6 +26,7 @@ export const ROUTES = {
   booking: (id: string) => `/bookings/${id}` as Route,
   disputes: "/disputes",
   dispute: (id: string) => `/disputes/${id}` as Route,
+  assistant: "/assistant",
 } as const;
 
 /** Paths reachable without the portal password. Everything else is guarded. */
