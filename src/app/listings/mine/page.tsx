@@ -5,6 +5,7 @@ import { Badge, ButtonLink, EmptyState } from "@/components/ui";
 import { EnableOwningPrompt, OwnerPortal } from "@/components/owner-portal";
 import { ListingLifecycleActions } from "@/components/listings/listing-lifecycle-actions";
 import { BundleRow } from "@/components/bundles/bundle-row";
+import { HashTargetHighlight } from "@/components/hash-target-highlight";
 import { getListingHistory, getMyListings, type ListingHistory } from "@/lib/api/listings";
 import { getBundleEvents, getMyBundles, getOwnerBundleBookings } from "@/lib/api/bundles";
 import { getOwnerBookings } from "@/lib/api/bookings";
@@ -82,6 +83,7 @@ export default async function MyListingsPage({ searchParams }: { searchParams: P
 
   return (
     <OwnerPortal active="Inventory" title="My listings">
+      <HashTargetHighlight />
       {allListings.length > 0 && (
         <nav aria-label="Filter by status" className="flex flex-wrap gap-2">
           {([undefined, ...(Object.keys(LISTING_STATUS_LABELS) as ListingStatus[])] as const).map((value) => (

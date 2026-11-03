@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState, useTransition, type FormEvent } from "react";
 import { Lock } from "lucide-react";
 import { endAwayMode, previewAwayClashes, saveAwayMode } from "@/app/listings/mine/settings/actions";
@@ -16,6 +17,7 @@ import {
   type AwayPeriod,
 } from "@/lib/away";
 import { formatDateRange } from "@/lib/format";
+import { ownerBookingRowPath } from "@/lib/routes";
 
 type Review = { clashes: AwayClash[]; changed: boolean };
 
@@ -217,6 +219,7 @@ export function AwayModeCard({ period, today }: { period: AwayPeriod | null; tod
           }
           verb={verb}
           pending={pending}
+          today={today}
           onBack={() => setReview(null)}
           onConfirm={() => save(review.clashes, declineIds)}
         />
@@ -243,6 +246,34 @@ export function AwayModeCard({ period, today }: { period: AwayPeriod | null; tod
 }
 
 /**
+ * Why a confirmed booking stays, and the way out if the owner cannot honour
+ * it. Away mode never cancels one itself: a renter's confirmed plans should
+ * end by the owner's deliberate choice, made on that booking, with its own
+ * rules (a full refund, and not once the rental has started). Opens in a new
+ * tab so the owner keeps the away-mode form they are part way through.
+ */
+function KeptBookingNote({ clash, today }: { clash: AwayClash; today: string }) {
+  if (clash.status === "ACTIVE" || clash.start_date <= today) {
+    return <p className="mt-1 text-ink-soft">This rental has started and continues as booked.</p>;
+  }
+  return (
+    <p className="mt-1 text-ink-soft">
+      Away mode keeps this booking. If you can&apos;t hand it over,{" "}
+      <Link
+        href={ownerBookingRowPath(clash.kind, clash.id)}
+        target="_blank"
+        rel="noopener"
+        className="font-medium text-ink underline underline-offset-2"
+      >
+        cancel it from the booking
+        <span className="sr-only"> (opens in a new tab)</span>
+      </Link>{" "}
+      — {clash.renter_name ?? "the renter"} gets a full refund.
+    </p>
+  );
+}
+
+/**
  * Scenario 3: everything the period lands on, before it is saved. Confirmed
  * and active bookings are kept and only listed, so the owner plans the
  * handover; pending requests each carry a box, ticked to decline.
@@ -253,6 +284,7 @@ function ClashReview({
   onToggle,
   verb,
   pending,
+  today,
   onBack,
   onConfirm,
 }: {
@@ -261,6 +293,7 @@ function ClashReview({
   onToggle: (id: string) => void;
   verb: string;
   pending: boolean;
+  today: string;
   onBack: () => void;
   onConfirm: () => void;
 }) {
@@ -288,7 +321,7 @@ function ClashReview({
                     <span className="font-medium">{clash.item_name}</span>
                     {clash.renter_name && ` · ${clash.renter_name}`} · {formatDateRange(clash.start_date, clash.end_date)}
                   </p>
-                  <p className="mt-1 text-ink-soft">You will still need to hand this over and take it back.</p>
+                  <KeptBookingNote clash={clash} today={today} />
                 </div>
               </li>
             ))}

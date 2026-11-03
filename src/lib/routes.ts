@@ -108,6 +108,18 @@ export function renterSpendingPath(
  */
 export const MY_LISTINGS_PATH = "/listings/mine";
 
+/**
+ * Where an owner manages one confirmed booking, including cancelling it: its
+ * row on the Bookings tab, or for a bundle its row under the bundle on the
+ * Inventory tab. The fragments are the rows' ids, which highlight on arrival.
+ */
+export function ownerBookingRowPath(
+  kind: "LISTING" | "BUNDLE",
+  id: string,
+): `/listings/mine/bookings#booking-${string}` | `/listings/mine#bundle-booking-${string}` {
+  return kind === "BUNDLE" ? `/listings/mine#bundle-booking-${id}` : `/listings/mine/bookings#booking-${id}`;
+}
+
 /** The owner portal's settings tab, where Away mode is managed (S5-15). */
 export const OWNER_SETTINGS_PATH = "/listings/mine/settings";
 

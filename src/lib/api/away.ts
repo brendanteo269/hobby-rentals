@@ -6,8 +6,8 @@ import type { AwayClash, AwayPeriod } from "@/lib/away";
 export type AwaySaveResult = AwayPeriod & { declined: string[]; not_declined: string[] };
 
 /** The owner's current or upcoming away period, or null when away mode is off. */
-export function getAway() {
-  return backendRequest<AwayPeriod | null>("/profile/away");
+export async function getAway(): Promise<AwayPeriod | null> {
+  return (await backendRequest<{ period: AwayPeriod | null }>("/profile/away")).period;
 }
 
 /** S5-15 Scenario 3: the bookings and requests a range would land on, before saving. */

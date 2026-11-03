@@ -69,7 +69,12 @@ export function OwnerBundleBookingList({ bookings }: { bookings: BundleBooking[]
         {items.map((booking) => {
           const next = NEXT_ACTION[booking.status];
           return (
-            <li key={booking.id} className="bg-surface-muted px-3 py-2 text-sm">
+            // The id is what ownerBookingRowPath links to, e.g. from Away mode's review.
+            <li
+              key={booking.id}
+              id={`bundle-booking-${booking.id}`}
+              className="scroll-mt-24 bg-surface-muted px-3 py-2 text-sm data-[hash-target]:ring-1 data-[hash-target]:ring-ink"
+            >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span>
                   <span className="font-medium">{requesterName(booking)}</span>{" "}
