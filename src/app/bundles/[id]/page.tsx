@@ -6,7 +6,7 @@ import { BookingPauseNotice } from "@/components/listings/booking-pause-notice";
 import { BundleViewTelemetry } from "@/components/analytics/bundle-view-telemetry";
 import { getBundle, getBundleAvailability } from "@/lib/api/bundles";
 import { formatMoney, todayIso } from "@/lib/format";
-import { BUNDLE_STATUS_LABELS, type BundleAvailability } from "@/lib/bundles";
+import { BUNDLE_STATUS_LABELS, SINGLE_OWNER_BUNDLE_LABEL, type BundleAvailability } from "@/lib/bundles";
 import { CATEGORY_LABELS, LISTING_STATUS_LABELS, rentalDurationLimits } from "@/lib/listings";
 import { createClient } from "@/lib/supabase/server";
 import { BundleFavouriteButton } from "@/components/bundles/bundle-favourite-button";
@@ -51,7 +51,7 @@ export default async function BundlePage({ params }: { params: Promise<{ id: str
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="eyebrow">
-              Gear bundle · {bundle.items.length} {bundle.items.length === 1 ? "item" : "items"}
+              {SINGLE_OWNER_BUNDLE_LABEL} · {bundle.items.length} {bundle.items.length === 1 ? "item" : "items"}
             </p>
             <h1 className="heading mt-3 text-3xl">{bundle.name}</h1>
           </div>

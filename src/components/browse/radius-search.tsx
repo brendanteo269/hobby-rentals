@@ -9,7 +9,9 @@ import { filterPill } from "./filter-bar";
 
 type LocationState = { mode: "near" | "area" | null; postalCode?: string; lat?: number; lng?: number; radiusKm: number; planningArea?: LocationArea; label?: string };
 type PostalResult = { latitude: number; longitude: number; address?: string };
-const STORAGE_KEY = "hobby-rentals:browse-location";
+/** Where the picker remembers the renter's location, so the bundle builder can start from it. */
+export const BROWSE_LOCATION_STORAGE_KEY = "hobby-rentals:browse-location";
+const STORAGE_KEY = BROWSE_LOCATION_STORAGE_KEY;
 const rounded = (value: number) => Number(value.toFixed(4));
 
 function fromFilters(filters: BrowseFilters): LocationState {

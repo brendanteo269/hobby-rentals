@@ -14,7 +14,7 @@ import {
 import type { BrowseBundlesResponse } from "@/lib/bundles";
 import type { SearchParams } from "@/lib/browse-params";
 import { BundleCard } from "@/components/bundles/bundle-card";
-import { CloudOff, Layers, SearchX } from "lucide-react";
+import { CloudOff, Layers, SearchX, Sparkles } from "lucide-react";
 
 export const metadata = { title: "Bundles · Browse marketplace — HobbyRentals" };
 
@@ -39,6 +39,18 @@ export default async function BundlesPage({ searchParams }: { searchParams: Prom
 
       <div className="mt-5">
         <BundleFilters filters={filters} />
+      </div>
+
+      {/* S5-08: the bundles above are each one owner's; this builds one from several. */}
+      <div className="card mt-6 flex flex-wrap items-center justify-between gap-4 p-5">
+        <div>
+          <p className="font-medium">Planning something specific?</p>
+          <p className="body-copy mt-1">We can suggest a bundle of gear from different owners, free for your dates.</p>
+        </div>
+        <ButtonLink href="/bundles/build" variant="outline" className="gap-2">
+          <Sparkles className="size-4" aria-hidden="true" />
+          Build one for your activity
+        </ButtonLink>
       </div>
 
       <div className="mt-6">

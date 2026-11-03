@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Layers } from "lucide-react";
 import { Badge, ImageSlot } from "@/components/ui";
 import { formatMoney } from "@/lib/format";
-import type { Bundle, FeaturedBundleCard } from "@/lib/bundles";
+import { SINGLE_OWNER_BUNDLE_LABEL, type Bundle, type FeaturedBundleCard } from "@/lib/bundles";
 import { BundleFavouriteButton } from "./bundle-favourite-button";
 
 type CardBundle = Bundle | FeaturedBundleCard;
@@ -34,7 +34,7 @@ export function BundleCard({ bundle, className = "", onFavouriteRemoved }: {
         </Badge>
       </Link>
       <div className="p-5">
-        <p className="eyebrow">Gear bundle · {"item_count" in bundle ? bundle.item_count : bundle.items.length} {("item_count" in bundle ? bundle.item_count : bundle.items.length) === 1 ? "item" : "items"}</p>
+        <p className="eyebrow">{SINGLE_OWNER_BUNDLE_LABEL} · {"item_count" in bundle ? bundle.item_count : bundle.items.length} {("item_count" in bundle ? bundle.item_count : bundle.items.length) === 1 ? "item" : "items"}</p>
         <Link href={`/bundles/${bundle.id}`} className="mt-1 block">
           <h2 className="text-base font-semibold uppercase tracking-wide">{bundle.name}</h2>
         </Link>
