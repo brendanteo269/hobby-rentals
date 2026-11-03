@@ -3,8 +3,9 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ButtonLink, Container, ImageSlot } from "@/components/ui";
 import { RentalReviewSection } from "@/components/reviews/rental-review-section";
+import { BookingPauseNotice } from "@/components/listings/booking-pause-notice";
 import { getPublicBundle } from "@/lib/api/public";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, todayIso } from "@/lib/format";
 import { siteUrl } from "@/lib/env";
 import { gearBundlePath, gearPath, loginToAct, shortIdFrom } from "@/lib/gear";
 import { CATEGORY_LABELS } from "@/lib/listings";
@@ -59,6 +60,11 @@ export default async function PublicBundlePage({ params }: Props) {
       <div className="mx-auto max-w-3xl">
         <p className="eyebrow">Gear bundle · {bundle.items.length} {bundle.items.length === 1 ? "item" : "items"}</p>
         <h1 className="heading mt-3 text-3xl">{bundle.name}</h1>
+        {bundle.booking_pause && (
+          <div className="mt-4">
+            <BookingPauseNotice pause={bundle.booking_pause} today={todayIso()} />
+          </div>
+        )}
         {bundle.description && <p className="body-copy mt-4">{bundle.description}</p>}
 
         <section className="mt-8 border-t border-line pt-6">

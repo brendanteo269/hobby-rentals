@@ -156,6 +156,14 @@ describe("availabilityLine", () => {
     expect(availabilityLine({ available_from: "2026-11-03", available_until: null }, TODAY)).toBe(`Available from ${new Date("2026-11-03").toLocaleDateString("en-SG", { day: "numeric", month: "short", year: "numeric" })}`);
   });
 
+  it("says a listing is unavailable while its owner is away, without saying why (S5-15)", () => {
+    expect(availabilityLine({ available_from: "2026-01-01", available_until: null, away_until: "2027-01-03" }, TODAY)).toBe("Unavailable until 3 Jan");
+  });
+
+  it("still says the renter's dates are free when the owner is away only today", () => {
+    expect(availabilityLine({ available_for_dates: true, away_until: "2026-10-30" }, TODAY)).toBe("Available for your dates");
+  });
+
   it("says when an open listing closes", () => {
     expect(availabilityLine({ available_from: "2026-01-01", available_until: "2026-12-31" }, TODAY)).toMatch(/^Available until /);
   });

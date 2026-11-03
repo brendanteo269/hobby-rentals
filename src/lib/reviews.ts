@@ -1,5 +1,6 @@
 import type { OwnerVerification } from "@/lib/verification";
 import type { RenterTrust } from "@/lib/renter-trust";
+import type { BookingPause } from "@/lib/away";
 
 export type ReviewRole = "OWNER" | "RENTER";
 export type ReviewEligibility = { booking_id: string | null; bundle_booking_id: string | null; rental_name: string; reviewed_role: ReviewRole; settled_at: string; expires_at: string };
@@ -20,7 +21,7 @@ export type PublishedReview = {
 export type RatingSummary = { average: number | null; count: number };
 export type ReviewCollection = RatingSummary & { reviews: PublishedReview[] };
 import type { ListingCard } from "@/lib/listings";
-export type PublicMemberProfile = { id: string; display_name: string | null; created_at: string; verification?: OwnerVerification; renter_trust?: RenterTrust; owner_summary: RatingSummary; renter_summary: RatingSummary; reviews: PublishedReview[]; listings: ListingCard[] };
+export type PublicMemberProfile = { id: string; display_name: string | null; created_at: string; verification?: OwnerVerification; renter_trust?: RenterTrust; owner_summary: RatingSummary; renter_summary: RatingSummary; reviews: PublishedReview[]; listings: ListingCard[]; booking_pause?: BookingPause | null };
 
 import type { Route } from "next";
 

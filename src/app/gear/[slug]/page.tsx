@@ -2,13 +2,14 @@ import type { Metadata, Route } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Badge, ButtonLink, Container } from "@/components/ui";
 import { ListingGallery } from "@/components/listings/listing-gallery";
+import { BookingPauseNotice } from "@/components/listings/booking-pause-notice";
 import { RateLine } from "@/components/browse/listing-card";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { InstantBookBadge } from "@/components/listings/instant-book-badge";
 import { RentalReviewSection } from "@/components/reviews/rental-review-section";
 import { ListingQuestionsSection } from "@/components/listings/listing-questions-section";
 import { getPublicListing } from "@/lib/api/public";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, todayIso } from "@/lib/format";
 import { siteUrl } from "@/lib/env";
 import { gearPath, loginToAct, shortIdFrom } from "@/lib/gear";
 import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS, passportBadge } from "@/lib/listings";
@@ -82,6 +83,13 @@ export default async function PublicListingPage({ params }: Props) {
             <RateLine listing={listing} />
             <p className="body-copy mt-1">{formatMoney(listing.deposit_cents)} deposit</p>
           </div>
+
+          {/* S5-15 Scenario 2: with the price, as on the signed-in listing page. */}
+          {listing.booking_pause && (
+            <div className="mt-4">
+              <BookingPauseNotice pause={listing.booking_pause} today={todayIso()} />
+            </div>
+          )}
 
           <p className="body-copy mt-6 whitespace-pre-line">{listing.description}</p>
           <p className="mt-5 flex items-center gap-2 text-sm text-ink-soft">

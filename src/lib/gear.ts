@@ -9,6 +9,7 @@
  */
 
 import type { Route } from "next";
+import type { BookingPause } from "@/lib/away";
 import type { ListingCondition, LocationArea, SerialStatus } from "@/lib/listings";
 import type { PublicQuestion } from "@/lib/listing-questions";
 import type { ReviewCollection } from "@/lib/reviews";
@@ -39,6 +40,8 @@ export type PublicListing = {
   /** S5-07: questions the owner answered and chose to show; renters are never named. */
   questions?: PublicQuestion[];
   updated_at: string;
+  /** S5-15: the owner's away period, shown as "Not taking bookings ...". */
+  booking_pause?: BookingPause | null;
 };
 
 export type PublicBundleItem = {
@@ -65,6 +68,7 @@ export type PublicBundle = {
   items: PublicBundleItem[];
   reviews: ReviewCollection;
   updated_at: string;
+  booking_pause?: BookingPause | null;
 };
 
 /** S5-02: what /sitemap.xml lists, one entry per live listing or bundle. */

@@ -2,9 +2,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge, ButtonLink, Container, ImageSlot } from "@/components/ui";
 import { BundleBookingPanel } from "@/components/bundles/bundle-booking-panel";
+import { BookingPauseNotice } from "@/components/listings/booking-pause-notice";
 import { BundleViewTelemetry } from "@/components/analytics/bundle-view-telemetry";
 import { getBundle, getBundleAvailability } from "@/lib/api/bundles";
-import { formatMoney } from "@/lib/format";
+import { formatMoney, todayIso } from "@/lib/format";
 import { BUNDLE_STATUS_LABELS, type BundleAvailability } from "@/lib/bundles";
 import { CATEGORY_LABELS, LISTING_STATUS_LABELS, rentalDurationLimits } from "@/lib/listings";
 import { createClient } from "@/lib/supabase/server";
@@ -64,6 +65,13 @@ export default async function BundlePage({ params }: { params: Promise<{ id: str
             )}
           </div>
         </div>
+
+        {/* S5-15 Scenario 2: under the name - the owner's pause covers every item in the set. */}
+        {availability?.booking_pause && (
+          <div className="mt-4">
+            <BookingPauseNotice pause={availability.booking_pause} today={todayIso()} />
+          </div>
+        )}
 
         {bundle.description && <p className="body-copy mt-4">{bundle.description}</p>}
 

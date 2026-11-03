@@ -12,6 +12,7 @@
  * reminder that it needs a label too.
  */
 
+import { unavailableUntilLabel } from "@/lib/away";
 import { formatDate } from "@/lib/format";
 
 export type ListingCategory = string;
@@ -128,6 +129,8 @@ export type ListingCard = {
   available_until?: string | null;
   /** Present, and true, only when the renter searched with both dates. */
   available_for_dates?: boolean;
+  /** S5-15: the owner is away today, until this ISO date; null otherwise. */
+  away_until?: string | null;
   /**
    * With a semantic search: "exact" when the listing carries a brand or model
    * the renter typed (those rank first), "semantic" when matched on meaning.
@@ -483,7 +486,7 @@ export type ListingCategoryOption = { slug: string; label: string; display_order
  * A partial update for PATCH /listings/{id}. Every field is optional and an
  * omitted one is left alone, so a caller sends only what actually changed.
  * The weekly schedule and blackouts are deliberately absent: those have
- * their own endpoints, mirrored by the /listings/[id]/availability page.
+ * their own endpoints, which the listing form's save calls separately.
  */
 export type UpdateListingRequest = Partial<
   Pick<
@@ -736,10 +739,12 @@ export function isLocationArea(value: string): value is LocationArea {
  * passed in so the line is the same on the server and in tests.
  */
 export function availabilityLine(
-  card: Pick<ListingCard, "available_from" | "available_until" | "available_for_dates">,
+  card: Pick<ListingCard, "available_from" | "available_until" | "available_for_dates" | "away_until">,
   today: string,
 ): string {
+  // The renter's own dates win: a listing paused today may be free for them.
   if (card.available_for_dates) return "Available for your dates";
+  if (card.away_until) return unavailableUntilLabel(card.away_until);
   if (card.available_from && card.available_from > today) return `Available from ${formatDate(card.available_from)}`;
   if (card.available_until) return `Available until ${formatDate(card.available_until)}`;
   return "Available now";

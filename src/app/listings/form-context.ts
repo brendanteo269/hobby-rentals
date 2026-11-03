@@ -1,7 +1,9 @@
 import "server-only";
 
+import { getAway } from "@/lib/api/away";
 import { getListingCategories, getListingLimits } from "@/lib/api/listings";
 import { getProfileAvailability } from "@/lib/api/profile-availability";
+import type { AwayPeriod } from "@/lib/away";
 import { isLocationArea, type LocationArea } from "@/lib/listings";
 import type { ListingCategoryOption } from "@/lib/listings";
 import { getOwnProfile } from "@/lib/profile";
@@ -15,9 +17,17 @@ export async function getListingFormContext(): Promise<{
   profileDefaultLocation: LocationArea | null;
   depositCapBps: number;
   categories: ListingCategoryOption[];
+  awayPeriod: AwayPeriod | null;
 }> {
-  const [{ available_days: profileAvailableDays }, profile, limits, categories] =
-    await Promise.all([getProfileAvailability(), getOwnProfile(), getListingLimits(), getListingCategories()]);
+  const [{ available_days: profileAvailableDays }, profile, limits, categories, awayPeriod] =
+    await Promise.all([
+      getProfileAvailability(),
+      getOwnProfile(),
+      getListingLimits(),
+      getListingCategories(),
+      // S5-15: supplementary - the form works the same without the reminder.
+      getAway().catch(() => null),
+    ]);
 
   // The stored value is a plain text column, so a guard rather than a cast:
   // a future free-text migration on profiles should not start pre-filling
@@ -32,5 +42,6 @@ export async function getListingFormContext(): Promise<{
     profileDefaultLocation,
     depositCapBps: limits.deposit_cap_bps,
     categories,
+    awayPeriod,
   };
 }

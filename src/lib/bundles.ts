@@ -19,6 +19,7 @@ import type {
   LocationArea,
   UnavailableReason,
 } from "@/lib/listings";
+import type { BookingPause } from "@/lib/away";
 import type { BookingQuote, BookingStatus, DeclineReason } from "@/lib/bookings";
 import type { CancellationOutcome } from "@/lib/cancellations";
 import type { SettlementState } from "@/lib/settlement";
@@ -100,6 +101,8 @@ export type BundleUnavailableDate = {
 export type BundleAvailability = {
   available_dates: string[];
   unavailable_dates: BundleUnavailableDate[];
+  /** S5-15: the owner's away period, shown as "Not taking bookings ...". */
+  booking_pause?: BookingPause | null;
 };
 
 /**

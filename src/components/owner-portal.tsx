@@ -2,9 +2,12 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import { EmptyState } from "@/components/ui";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { AwayModeReminder } from "@/components/away-mode-reminder";
 import { EnableOwningForm } from "@/components/enable-owning-form";
+import { getAway } from "@/lib/api/away";
+import { todayIso } from "@/lib/format";
 import { getOwnProfile } from "@/lib/profile";
-import { MY_LISTINGS_PATH, ownerInsightsPath } from "@/lib/routes";
+import { MY_LISTINGS_PATH, OWNER_SETTINGS_PATH, ownerInsightsPath } from "@/lib/routes";
 import { Store } from "lucide-react";
 
 const SECTIONS = [
@@ -12,7 +15,7 @@ const SECTIONS = [
   { href: ownerInsightsPath(), label: "Insights" },
   { href: "/listings/mine/bookings", label: "Bookings" },
   { href: "/listings/mine/earnings", label: "Earnings" },
-  { href: "/listings/mine/settings", label: "Settings" },
+  { href: OWNER_SETTINGS_PATH, label: "Settings" },
 ] as const;
 
 export type OwnerSection = (typeof SECTIONS)[number]["label"];
@@ -46,10 +49,22 @@ export function EnableOwningPrompt() {
   );
 }
 
-/** S2-01 Scenario 1: the owner portal's navigation, shared by its sections. */
-export function OwnerPortal({ active, title, children }: { active: OwnerSection; title: string; children: ReactNode }) {
+/**
+ * S2-01 Scenario 1: the owner portal's navigation, shared by its sections.
+ *
+ * S5-15 Scenario 5: while away mode is on or scheduled, every section says so.
+ * Not on Settings, where the Away mode card already does. Supplementary: if
+ * the period cannot be read, the page shows without the reminder.
+ */
+export async function OwnerPortal({ active, title, children }: { active: OwnerSection; title: string; children: ReactNode }) {
+  const away = active === "Settings" ? null : await getAway().catch(() => null);
   return (
     <DashboardShell side="owner" title={title} tabs={SECTIONS} active={active}>
+      {away && (
+        <div className="mb-6">
+          <AwayModeReminder period={away} today={todayIso()} />
+        </div>
+      )}
       {children}
     </DashboardShell>
   );

@@ -11,6 +11,7 @@ import "server-only";
 import { backendRequest } from "@/lib/api/client";
 import { apiBaseUrl } from "@/lib/env";
 import type { ListingReport, ListingReportReason } from "@/lib/reports";
+import type { BookingPause } from "@/lib/away";
 import type { Booking } from "@/lib/bookings";
 import type {
   BaselineAngle,
@@ -251,6 +252,8 @@ export type ListingAvailability = {
 export type BookingAvailability = {
   available_dates: string[];
   unavailable_dates: UnavailableDate[];
+  /** S5-15: the owner's away period, shown as "Not taking bookings ...". */
+  booking_pause?: BookingPause | null;
 };
 
 /** Dates a renter can currently select, including the listing's schedule and reserved dates. */
@@ -276,18 +279,6 @@ export function addListingBlackout(listingId: string, start_date: string, end_da
   return backendRequest<{ id: string; cancelled_bookings: Booking[] }>(
     `/listings/${encodeURIComponent(listingId)}/blackouts`,
     { method: "POST", body: JSON.stringify({ start_date, end_date, reason: reason || null }) },
-  );
-}
-
-/**
- * Moves an existing blackout's dates. The way to free part of a range: a
- * delete followed by a shorter add leaves the whole range open in between,
- * and an availability alert fires on that gap.
- */
-export function updateListingBlackout(listingId: string, blackoutId: string, start_date: string, end_date: string) {
-  return backendRequest<{ id: string; cancelled_bookings: Booking[] }>(
-    `/listings/${encodeURIComponent(listingId)}/blackouts/${encodeURIComponent(blackoutId)}`,
-    { method: "PATCH", body: JSON.stringify({ start_date, end_date, reason: null }) },
   );
 }
 

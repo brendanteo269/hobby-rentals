@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Badge, ButtonLink, Container } from "@/components/ui";
+import { BookingPauseNotice } from "@/components/listings/booking-pause-notice";
 import { ListingGallery } from "@/components/listings/listing-gallery";
 import { RateLine } from "@/components/browse/listing-card";
 import { PassportTimeline } from "@/components/passport/passport-timeline";
@@ -7,7 +8,7 @@ import { getBookingAvailability, getListing, getListingCategoryAttributes, getPa
 import { getMySuspension } from "@/lib/api/overdue";
 import { getCategoryDemand } from "@/lib/api/analytics";
 import { createClient } from "@/lib/supabase/server";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, todayIso } from "@/lib/format";
 import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS, passportBadge } from "@/lib/listings";
 import { BookingRequestForm } from "@/components/bookings/booking-request-form";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
@@ -161,6 +162,14 @@ export default async function ListingDetailPage({
             <RateLine listing={listing} />
             <p className="body-copy mt-1">{formatMoney(listing.deposit_cents)} deposit</p>
           </div>
+
+          {/* S5-15 Scenario 2: with the price, before the renter scrolls to
+              the dates - the calendar alone does not say why or until when. */}
+          {bookingAvailability?.booking_pause && (
+            <div className="mt-4">
+              <BookingPauseNotice pause={bookingAvailability.booking_pause} today={todayIso()} />
+            </div>
+          )}
 
           <p className="body-copy mt-6 whitespace-pre-line">{listing.description}</p>
           <Link href={`/members/${listing.owner_id}` as Route} className="mt-5 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">

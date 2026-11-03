@@ -18,6 +18,8 @@ import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
 import type { BundleFormState } from "@/app/listings/mine/bundles/actions";
 import { formatMoney, todayIso } from "@/lib/format";
 import { MIN_BUNDLE_ITEMS, type Bundle } from "@/lib/bundles";
+import { AwayModeReminder } from "@/components/away-mode-reminder";
+import type { AwayPeriod } from "@/lib/away";
 import { CATEGORY_LABELS } from "@/lib/listings";
 
 /** One row of the item picker: an ACTIVE listing the owner could include. */
@@ -49,6 +51,7 @@ export function BundleForm({
   profileAvailableDays,
   depositCapBps,
   bundle,
+  awayPeriod = null,
 }: {
   action: (state: BundleFormState, formData: FormData) => Promise<BundleFormState>;
   /** The owner's ACTIVE listings - the only ones a bundle may contain. */
@@ -59,6 +62,8 @@ export function BundleForm({
   depositCapBps: number;
   /** Omitted when creating. */
   bundle?: Bundle;
+  /** S5-15: the owner's away period, which pauses this bundle whatever is set below. */
+  awayPeriod?: AwayPeriod | null;
 }) {
   const editing = bundle !== undefined;
   const [state, formAction, pending] = useActionState<BundleFormState, FormData>(action, undefined);
@@ -217,6 +222,7 @@ export function BundleForm({
       </FormSection>
 
       <FormSection title="Availability">
+        {awayPeriod && <AwayModeReminder period={awayPeriod} today={today} />}
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
             label="Available from"
