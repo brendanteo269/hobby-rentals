@@ -171,6 +171,12 @@ export type CreateBundleRequest = {
 export type UpdateBundleRequest = Partial<CreateBundleRequest>;
 
 /** A group of one is a listing, not a bundle. Mirrors bundle_service.MIN_BUNDLE_ITEMS. */
+/**
+ * What an owner's stored bundle is called where it sits beside a cross-owner
+ * bundle (S5-08), which is built for a renter from several owners' listings.
+ */
+export const SINGLE_OWNER_BUNDLE_LABEL = "Single-owner bundle";
+
 export const MIN_BUNDLE_ITEMS = 2;
 
 

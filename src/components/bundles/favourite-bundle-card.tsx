@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ImageSlot } from "@/components/ui";
 import { formatMoney } from "@/lib/format";
-import { BUNDLE_STATUS_LABELS, type FavouriteBundle } from "@/lib/bundles";
+import { BUNDLE_STATUS_LABELS, SINGLE_OWNER_BUNDLE_LABEL, type FavouriteBundle } from "@/lib/bundles";
 import { BundleFavouriteButton } from "./bundle-favourite-button";
 import { BundleCard } from "./bundle-card";
 
@@ -17,7 +17,7 @@ export function FavouriteBundleCard({ bundle }: { bundle: FavouriteBundle }) {
     <>
       <ImageSlot label={bundle.name} src={primaryPhoto} className={`aspect-square w-full ${active ? "" : "grayscale opacity-60"}`} />
       <div className="p-4">
-        <p className="eyebrow">Gear bundle · {bundle.items.length} {bundle.items.length === 1 ? "item" : "items"}</p>
+        <p className="eyebrow">{SINGLE_OWNER_BUNDLE_LABEL} · {bundle.items.length} {bundle.items.length === 1 ? "item" : "items"}</p>
         <h2 className="heading mt-1.5 text-sm leading-snug">{bundle.name}</h2>
         {active ? (
           <p className="mt-3 border-t border-line pt-3 text-base font-semibold">
