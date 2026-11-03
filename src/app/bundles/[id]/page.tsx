@@ -66,6 +66,13 @@ export default async function BundlePage({ params }: { params: Promise<{ id: str
           </div>
         </div>
 
+        {/* S5-15 Scenario 2: under the name - the owner's pause covers every item in the set. */}
+        {availability?.booking_pause && (
+          <div className="mt-4">
+            <BookingPauseNotice pause={availability.booking_pause} today={todayIso()} />
+          </div>
+        )}
+
         {bundle.description && <p className="body-copy mt-4">{bundle.description}</p>}
 
         {!published && (
@@ -129,12 +136,6 @@ export default async function BundlePage({ params }: { params: Promise<{ id: str
           </dl>
         </section>
 
-        {/* S5-15 Scenario 2: the owner's pause covers every item in the set. */}
-        {availability?.booking_pause && (
-          <div className="mt-8">
-            <BookingPauseNotice pause={availability.booking_pause} today={todayIso()} />
-          </div>
-        )}
         {availability && (
           <BundleBookingPanel
             bundleId={bundle.id}

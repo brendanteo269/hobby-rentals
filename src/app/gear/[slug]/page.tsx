@@ -84,6 +84,13 @@ export default async function PublicListingPage({ params }: Props) {
             <p className="body-copy mt-1">{formatMoney(listing.deposit_cents)} deposit</p>
           </div>
 
+          {/* S5-15 Scenario 2: with the price, as on the signed-in listing page. */}
+          {listing.booking_pause && (
+            <div className="mt-4">
+              <BookingPauseNotice pause={listing.booking_pause} today={todayIso()} />
+            </div>
+          )}
+
           <p className="body-copy mt-6 whitespace-pre-line">{listing.description}</p>
           <p className="mt-5 flex items-center gap-2 text-sm text-ink-soft">
             Listed by <span className="font-medium text-ink">{listing.owner_display_name ?? "Member"}</span>
@@ -123,11 +130,6 @@ export default async function PublicListingPage({ params }: Props) {
             </section>
           )}
 
-          {listing.booking_pause && (
-            <div className="mt-8">
-              <BookingPauseNotice pause={listing.booking_pause} today={todayIso()} />
-            </div>
-          )}
           <div className="mt-8 flex flex-wrap gap-3 border-t border-line pt-6">
             <ButtonLink href={act}>Request to book</ButtonLink>
             <ButtonLink href={act} variant="outline">Message owner</ButtonLink>

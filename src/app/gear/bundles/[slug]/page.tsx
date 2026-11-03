@@ -60,6 +60,11 @@ export default async function PublicBundlePage({ params }: Props) {
       <div className="mx-auto max-w-3xl">
         <p className="eyebrow">Gear bundle · {bundle.items.length} {bundle.items.length === 1 ? "item" : "items"}</p>
         <h1 className="heading mt-3 text-3xl">{bundle.name}</h1>
+        {bundle.booking_pause && (
+          <div className="mt-4">
+            <BookingPauseNotice pause={bundle.booking_pause} today={todayIso()} />
+          </div>
+        )}
         {bundle.description && <p className="body-copy mt-4">{bundle.description}</p>}
 
         <section className="mt-8 border-t border-line pt-6">
@@ -101,11 +106,6 @@ export default async function PublicBundlePage({ params }: Props) {
           </dl>
         </section>
 
-        {bundle.booking_pause && (
-          <div className="mt-8">
-            <BookingPauseNotice pause={bundle.booking_pause} today={todayIso()} />
-          </div>
-        )}
         <div className="mt-8 flex flex-wrap gap-3 border-t border-line pt-6">
           <ButtonLink href={act}>Request to book</ButtonLink>
           <ButtonLink href={act} variant="outline">Save</ButtonLink>

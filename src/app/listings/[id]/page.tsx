@@ -163,6 +163,14 @@ export default async function ListingDetailPage({
             <p className="body-copy mt-1">{formatMoney(listing.deposit_cents)} deposit</p>
           </div>
 
+          {/* S5-15 Scenario 2: with the price, before the renter scrolls to
+              the dates - the calendar alone does not say why or until when. */}
+          {bookingAvailability?.booking_pause && (
+            <div className="mt-4">
+              <BookingPauseNotice pause={bookingAvailability.booking_pause} today={todayIso()} />
+            </div>
+          )}
+
           <p className="body-copy mt-6 whitespace-pre-line">{listing.description}</p>
           <Link href={`/members/${listing.owner_id}` as Route} className="mt-5 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
             <PersonAvatar name={listing.owner_display_name ?? "Member"} size="sm" />
@@ -218,13 +226,6 @@ export default async function ListingDetailPage({
             </section>
           )}
 
-          {/* S5-15 Scenario 2: above the dates, so the renter knows why a run
-              of them is unavailable before they try to pick it. */}
-          {bookingAvailability?.booking_pause && (
-            <div className="mt-6">
-              <BookingPauseNotice pause={bookingAvailability.booking_pause} today={todayIso()} />
-            </div>
-          )}
           {listing.status === "ACTIVE" && user && user.id !== listing.owner_id && (
             <BookingRequestForm
               listingId={listing.id}
