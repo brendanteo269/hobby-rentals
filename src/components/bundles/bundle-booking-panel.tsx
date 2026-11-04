@@ -10,6 +10,7 @@ import {
 } from "@/components/bookings/availability-calendar";
 import { BookingQuoteRow, BookingQuoteSummary } from "@/components/bookings/booking-quote-summary";
 import { quoteBundleBooking, requestBundleBooking } from "@/app/bookings/actions";
+import { deductionLabel, omittedIds, substitutionLine } from "@/lib/bundle-items";
 import { formatDate, formatMoney } from "@/lib/format";
 import { rentalDurationLimits, UNAVAILABLE_REASON_LABELS } from "@/lib/listings";
 import type { BundleAvailability, BundleQuote } from "@/lib/bundles";
@@ -33,11 +34,14 @@ export function BundleBookingPanel({
   availability,
   minRentalDays,
   maxRentalDays,
+  optionalItems,
 }: {
   bundleId: string;
   availability: BundleAvailability;
   minRentalDays: number | null;
   maxRentalDays: number | null;
+  /** S5-10: the items the renter may leave out, each ticked until they say otherwise. */
+  optionalItems: { id: string; name: string; deduction_cents: number }[];
 }) {
   const { available_dates: availableDates, unavailable_dates: unavailableDates } = availability;
   const availableSet = useMemo(() => new Set(availableDates), [availableDates]);
@@ -84,6 +88,8 @@ export function BundleBookingPanel({
   // range gets its own key the next time a quote comes back.
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  // Optional items the renter has unticked; every one is ticked to begin with.
+  const [unticked, setUntickedIds] = useState<ReadonlySet<string>>(new Set());
 
   const endDates = useMemo(() => {
     if (!startDate) return [];
@@ -120,24 +126,39 @@ export function BundleBookingPanel({
       setIdempotencyKey(null);
     } else if (endDates.includes(day)) {
       setEndDate(day);
-      setQuote(null);
-      setIdempotencyKey(null);
-      startTransition(async () => {
-        const result = await quoteBundleBooking(bundleId, startDate, day);
-        if ("error" in result) setError(result.error);
-        else {
-          setQuote(result.quote);
-          setIdempotencyKey(crypto.randomUUID());
-        }
-      });
+      requote(startDate, day, unticked);
     }
+  }
+
+  /** Prices the range with the optional items as ticked, and takes a fresh key for what is now being asked. */
+  function requote(start: string, end: string, omitted: ReadonlySet<string>) {
+    setQuote(null);
+    setIdempotencyKey(null);
+    startTransition(async () => {
+      const result = await quoteBundleBooking(bundleId, start, end, optionalItems.filter((item) => omitted.has(item.id)).map((item) => item.id));
+      if ("error" in result) setError(result.error);
+      else {
+        setQuote(result.quote);
+        setIdempotencyKey(crypto.randomUUID());
+      }
+    });
+  }
+
+  /** S5-10 Scenario 3: ticking or unticking an optional item re-prices the bundle at once. */
+  function toggleOptional(listingId: string, ticked: boolean) {
+    clearOutcome();
+    const next = new Set(unticked);
+    if (ticked) next.delete(listingId);
+    else next.add(listingId);
+    setUntickedIds(next);
+    if (startDate && endDate) requote(startDate, endDate, next);
   }
 
   function submit() {
     if (!startDate || !endDate || !idempotencyKey) return;
     clearOutcome();
     startTransition(async () => {
-      const result = await requestBundleBooking(bundleId, startDate, endDate, idempotencyKey);
+      const result = await requestBundleBooking(bundleId, startDate, endDate, idempotencyKey, omittedIds(quote, unticked));
       if ("error" in result) {
         setError(result.error);
         setErrorCode(result.code);
@@ -198,12 +219,56 @@ export function BundleBookingPanel({
         </p>
       )}
 
+      {optionalItems.length > 0 && (
+        <fieldset className="mt-4">
+          <legend className="text-sm font-medium">Optional items</legend>
+          <p className="body-copy mt-1">Untick anything you do not need. It comes off the price and is not booked.</p>
+          <ul className="mt-2 space-y-1">
+            {optionalItems.map((item) => {
+              // Not free for the chosen dates: left out by itself, and the bundle is still offered.
+              const unavailable = quote?.optional_items.find((entry) => entry.listing_id === item.id)?.available === false;
+              return (
+                <li key={item.id}>
+                  <label className={`flex min-h-11 items-center gap-2 text-sm ${unavailable ? "text-ink-soft" : "cursor-pointer"}`}>
+                    <input
+                      type="checkbox"
+                      checked={!unavailable && !unticked.has(item.id)}
+                      disabled={unavailable || isPending}
+                      onChange={(event) => toggleOptional(item.id, event.target.checked)}
+                      className="size-4 accent-ink"
+                    />
+                    <span>
+                      {item.name} <span className="text-ink-soft">{deductionLabel(item.deduction_cents)} if left out</span>
+                      {unavailable && <span className="block text-xs">Not free for these dates, so it is not included.</span>}
+                    </span>
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
+        </fieldset>
+      )}
+
+      {quote && quote.substitutions.length > 0 && (
+        // S5-10 Scenario 4: a backup stands in where an item is out for the dates.
+        <ul className="mt-3 space-y-1 text-sm">
+          {quote.substitutions.map((swap) => (
+            <li key={swap.item_id}>{substitutionLine(swap)}</li>
+          ))}
+        </ul>
+      )}
+
       {quote && (
         <BookingQuoteSummary
           quote={quote}
           subject="bundle"
           extra={
             <>
+              {quote.deduction_cents > 0 && (
+                <BookingQuoteRow label={`Without ${quote.omitted_items.map((item) => item.name).join(", ")}`}>
+                  −{formatMoney(quote.deduction_cents)}
+                </BookingQuoteRow>
+              )}
               <BookingQuoteRow label="Booked separately">
                 <span className="text-ink-soft line-through">
                   {formatMoney(quote.components_subtotal_cents)}

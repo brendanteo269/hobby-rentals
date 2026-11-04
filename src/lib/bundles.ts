@@ -50,6 +50,11 @@ export type BundleComponent = {
   price_per_day_cents: number | null;
   price_per_week_cents: number | null;
   deposit_cents: number;
+  /** S5-10: a renter may leave this item out, for `optional_deduction_cents` off each rental day. */
+  is_optional: boolean;
+  optional_deduction_cents: number | null;
+  /** S5-10: another of the owner's listings, booked in its place when this one is not free for the dates. */
+  alternative: { id: string; name: string; status: ListingStatus } | null;
 };
 
 export type Bundle = {
@@ -116,6 +121,14 @@ export type BundleQuote = BookingQuote & {
   /** Reported, never enforced - the package rate is the owner's to set. */
   components_subtotal_cents: number;
   savings_cents: number;
+  /** S5-10: what leaving optional items out took off the rental. */
+  deduction_cents: number;
+  /** Optional items not booked: unticked by the renter, or not free for the dates. */
+  omitted_items: { listing_id: string; name: string; deduction_per_day_cents: number; reason: "LEFT_OUT" | "UNAVAILABLE" }[];
+  /** Every optional item, for the tick boxes: whether it is free for the dates and whether it is in the booking. */
+  optional_items: { listing_id: string; name: string; deduction_per_day_cents: number; available: boolean; included: boolean }[];
+  /** Backups standing in for items the dates need them for: "Includes <alternative> instead of <item>". */
+  substitutions: { item_id: string; item_name: string; alternative_id: string; alternative_name: string }[];
 };
 
 /** One page of the bundle marketplace, mirroring BrowseListingsResponse. */
@@ -146,11 +159,21 @@ export const BUNDLE_EVENT_LABELS: Record<string, string> = {
   OWNER_REMOVED: "Removed by you",
 };
 
+/** S5-10: one item of a bundle as the owner sets it. */
+export type BundleItemSetting = {
+  listing_id: string;
+  /** A renter may leave it out; `deduction_cents` is what that takes off each rental day. */
+  optional: boolean;
+  deduction_cents: number | null;
+  /** For a required item: another of the owner's listings, used when this one is not free. */
+  alternative_listing_id: string | null;
+};
+
 export type CreateBundleRequest = {
   name: string;
   description?: string | null;
-  /** At least MIN_BUNDLE_ITEMS; FastAPI 422s on fewer. */
-  listing_ids: string[];
+  /** At least MIN_BUNDLE_ITEMS, and at least one of them required; FastAPI 422s otherwise. */
+  items: BundleItemSetting[];
   /** At least one of the two is required, exactly as for a listing. */
   price_per_day_cents?: number | null;
   price_per_week_cents?: number | null;
@@ -166,7 +189,7 @@ export type CreateBundleRequest = {
 
 /**
  * A partial update for PATCH /bundles/{id}. An omitted field is left alone;
- * `listing_ids`, when present, replaces the membership outright.
+ * `items`, when present, replaces the membership outright.
  */
 export type UpdateBundleRequest = Partial<CreateBundleRequest>;
 
@@ -195,6 +218,12 @@ export type BundleBookingComponent = {
  * way; `items` are the per-listing reservations it created, which move with
  * it whenever the owner accepts or declines.
  */
+/** What a bundle booking changed from the template. Names, so it reads right if a listing is renamed. */
+export type BundleAdjustments = {
+  omitted: { listing_id: string; name: string }[];
+  substituted: { item_id: string; item_name: string; alternative_id: string; alternative_name: string }[];
+};
+
 export type BundleBooking = {
   id: string;
   bundle_id: string;
@@ -221,6 +250,8 @@ export type BundleBooking = {
   decline_reason?: DeclineReason | null;
   decline_note?: string | null;
   items: BundleBookingComponent[];
+  /** S5-10: the optional items left out and the backups booked in place of items, by name. */
+  adjustments?: BundleAdjustments;
   /** How a cancelled bundle booking was settled. Set on the lists only. */
   cancellation_outcome?: CancellationOutcome | null;
   /** S3-10: as on a single booking. Set on the lists only. */

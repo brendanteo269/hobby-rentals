@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { BundleApiError, createBundle, getBundle, removeBundle, updateBundle } from "@/lib/api/bundles";
 import { dollarsToCents } from "@/lib/format";
+import { itemSettingsOf, parseItemSettings, sameItemSettings } from "@/lib/bundle-items";
 import {
   MIN_BUNDLE_ITEMS,
   type Bundle,
@@ -96,6 +97,9 @@ function parseBundleFields(formData: FormData): ParsedBundle {
   if (listingIds.length < MIN_BUNDLE_ITEMS) {
     fieldErrors.listing_ids = `Choose at least ${MIN_BUNDLE_ITEMS} items for the bundle.`;
   }
+  // S5-10: each item is required or optional, and a required one may have a backup.
+  const { items, fieldErrors: itemErrors } = parseItemSettings(formData, listingIds);
+  Object.assign(fieldErrors, { ...itemErrors, ...(fieldErrors.listing_ids ? { listing_ids: fieldErrors.listing_ids } : {}) });
 
   // PriceFields mounts a box under whichever one name the owner picked -
   // never both, never neither once they have chosen - so exactly one of
@@ -123,7 +127,7 @@ function parseBundleFields(formData: FormData): ParsedBundle {
     fields: {
       name,
       description: text(formData, "description") || null,
-      listing_ids: listingIds,
+      items,
       price_per_day_cents: pricePerDay,
       price_per_week_cents: pricePerWeek,
       deposit_cents: deposit!,
@@ -167,7 +171,7 @@ export async function createMyBundle(
  *
  * PATCH is a partial update and membership is the expensive half - it
  * rewrites bundle_items and can republish the bundle - so an edit that only
- * renamed it should not resend the same item list.
+ * renamed it should not resend the same items and settings.
  */
 function changedFields(candidate: BundleFields, current: Bundle): UpdateBundleRequest {
   const changes: UpdateBundleRequest = {};
@@ -189,9 +193,8 @@ function changedFields(candidate: BundleFields, current: Bundle): UpdateBundleRe
     changes.blackout_dates = candidate.blackout_dates;
   }
 
-  const currentIds = [...current.items.map((item) => item.id)].sort();
-  if (JSON.stringify([...candidate.listing_ids].sort()) !== JSON.stringify(currentIds)) {
-    changes.listing_ids = candidate.listing_ids;
+  if (!sameItemSettings(candidate.items, itemSettingsOf(current))) {
+    changes.items = candidate.items;
   }
   return changes;
 }
