@@ -36,6 +36,11 @@ import { AskAboutItem } from "@/components/listings/ask-about-item";
 import { ListingQuestionsSection } from "@/components/listings/listing-questions-section";
 import { OwnerQuestionsPanel } from "@/components/listings/owner-questions-panel";
 import { getOwnerQuestions, getPublicQuestions } from "@/lib/api/listing-questions";
+import { OwnerResponseTime } from "@/components/listings/owner-response-time";
+import { ShareButton } from "@/components/listings/share-button";
+import { siteUrl } from "@/lib/env";
+import { gearPath } from "@/lib/gear";
+import { absoluteUrl, shareText } from "@/lib/share";
 
 function fallbackAttributeLabel(key: string) {
   return key.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -140,7 +145,13 @@ export default async function ListingDetailPage({
           </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
             <h1 className="heading text-3xl">{listing.name}</h1>
-            <FavouriteButton listingId={listing.id} initiallySaved={listing.is_favourited} initialCount={listing.favourite_count} />
+            <div className="flex flex-wrap items-center gap-2">
+              {/* S5-16 Scenario 4: a listing that is not live has no public page to share. */}
+              {listing.status === "ACTIVE" && (
+                <ShareButton url={absoluteUrl(gearPath({ name: listing.name, short_id: listing.id.slice(0, 8) }), siteUrl())} text={shareText(listing)} />
+              )}
+              <FavouriteButton listingId={listing.id} initiallySaved={listing.is_favourited} initialCount={listing.favourite_count} />
+            </div>
           </div>
           {user && user.id === listing.owner_id && (
             <div className="mt-4 flex flex-wrap gap-2">
@@ -179,6 +190,7 @@ export default async function ListingDetailPage({
                 renter is already deciding whether to trust them. */}
             <VerifiedOwnerBadge verified={listing.owner_verified} />
           </Link>
+          <OwnerResponseTime band={listing.owner_response_time} className="mt-1" />
 
           <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-6 text-sm">
             <div>
