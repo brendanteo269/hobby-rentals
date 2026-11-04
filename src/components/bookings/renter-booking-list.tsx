@@ -28,6 +28,7 @@ import { ConfirmReturnButton } from "@/components/bookings/confirm-return-button
 import { canRequestExtension } from "@/lib/extensions";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
 import { formatDate, formatDateRange, formatDateTime } from "@/lib/format";
+import { adjustmentLines } from "@/lib/bundle-items";
 import { KIT_STATUS_LABELS, type Kit } from "@/lib/booking-groups";
 import { renterKitPath } from "@/lib/routes";
 import { reviewPath, type ReviewEligibility } from "@/lib/reviews";
@@ -73,6 +74,12 @@ export function RenterBookingList({
               <p className="mt-1 text-xs text-ink-soft">
                 {booking.items.length} items · {booking.items.map((item) => item.listing_name ?? "an item").join(", ")}
               </p>
+              {/* S5-10: what was left out of the bundle, and the backups standing in. */}
+              {adjustmentLines(booking.adjustments).map((line) => (
+                <p key={line} className="mt-1 text-xs text-ink-soft">
+                  {line}
+                </p>
+              ))}
               {booking.settlement_state && !booking.cancellation_outcome ? (
                 <div className="mt-3">
                   <SettlementTracker state={booking.settlement_state} amounts={booking} viewer="renter" />

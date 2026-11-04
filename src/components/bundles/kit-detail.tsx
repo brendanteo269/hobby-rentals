@@ -1,21 +1,34 @@
 import Link from "next/link";
 import { TriangleAlert } from "lucide-react";
 import { Badge, ButtonLink, ImageSlot } from "@/components/ui";
-import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_LABELS } from "@/lib/bookings";
+import { RenterBookingList } from "@/components/bookings/renter-booking-list";
+import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_LABELS, type Booking } from "@/lib/bookings";
+import type { ReviewEligibility } from "@/lib/reviews";
 import { KIT_STATUS_LABELS, kitFailureMessage, pendingItemCount, type Kit, type KitItem } from "@/lib/booking-groups";
 import { formatDateRange, formatMoney } from "@/lib/format";
-import { RENTER_BOOKINGS_PATH, rebuildKitPath } from "@/lib/routes";
+import { rebuildKitPath } from "@/lib/routes";
 import { WithdrawKitButton } from "./withdraw-kit-button";
 
 /**
- * One cross-owner kit as the renter follows it (S5-09 Scenario 4): every
- * owner's item with its own status in one view, and the next step for the kit
+ * One cross-owner bundle as the renter follows it (S5-09 Scenario 4): every
+ * owner's item with its own status in one view, and the next step for the bundle
  * as a whole. An item is still an ordinary booking, so its meetup, pickup,
  * return and settlement happen on its own row in Bookings, linked from here.
  */
-export function KitDetail({ kit }: { kit: Kit }) {
+export function KitDetail({
+  kit,
+  acceptedBookings,
+  reviewEligibility,
+}: {
+  kit: Kit;
+  /** The bundle's items an owner has accepted, as the bookings they are. */
+  acceptedBookings: Booking[];
+  reviewEligibility: ReviewEligibility[];
+}) {
   const waiting = pendingItemCount(kit);
   const anyAccepted = kit.items.some((item) => item.status !== "PENDING");
+  // An accepted item is its booking row below, so it is not listed twice.
+  const acceptedIds = new Set(acceptedBookings.map((booking) => booking.id));
   return (
     <div className="space-y-6">
       <header>
@@ -44,10 +57,15 @@ export function KitDetail({ kit }: { kit: Kit }) {
       )}
 
       <ul className="space-y-4">
-        {kit.items.map((item) => (
-          <KitItemCard key={item.booking_id} item={item} />
-        ))}
+        {kit.items
+          .filter((item) => !acceptedIds.has(item.booking_id))
+          .map((item) => (
+            <KitItemCard key={item.booking_id} item={item} />
+          ))}
       </ul>
+      {acceptedBookings.length > 0 && (
+        <RenterBookingList bookings={acceptedBookings} bundleBookings={[]} reviewEligibility={reviewEligibility} />
+      )}
     </div>
   );
 }
@@ -87,14 +105,6 @@ function KitItemCard({ item }: { item: KitItem }) {
         <p className="mt-2">
           <Badge variant={BOOKING_STATUS_BADGE_VARIANT[item.status]}>{BOOKING_STATUS_LABELS[item.status]}</Badge>
         </p>
-        {(item.status === "CONFIRMED" || item.status === "ACTIVE" || item.status === "COMPLETED") && (
-          <Link
-            href={`${RENTER_BOOKINGS_PATH}#booking-${item.booking_id}`}
-            className="mt-2 block w-fit text-sm font-medium underline underline-offset-4"
-          >
-            Meetup, pickup and return
-          </Link>
-        )}
       </div>
       <p className="shrink-0 text-sm font-semibold">{item.total_amount_cents !== null ? formatMoney(item.total_amount_cents) : ""}</p>
     </li>

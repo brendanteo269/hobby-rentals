@@ -236,7 +236,7 @@ function KitItemLine({
   );
 }
 
-/** Says why the kit could not be priced or requested, with the one thing that would fix it. */
+/** Says why the bundle could not be priced or requested, with the one thing that would fix it. */
 function ProblemNotice({ problem, onDrop }: { problem: Problem | null; onDrop: (listingId: string) => void }) {
   if (!problem) return null;
   return (

@@ -19,7 +19,7 @@ import { CrossOwnerBundleEditor } from "./cross-owner-bundle-editor";
  * Opening one of the listings unmounts all this, so the form, the suggestion
  * and the renter's edits are kept for the session and put back on return.
  *
- * `rebuild` (S5-09 Scenario 3) starts the form from a kit an owner turned down,
+ * `rebuild` (S5-09 Scenario 3) starts the form from a bundle an owner turned down,
  * and carries the listings to leave out; the renter then builds as usual.
  */
 export function CrossOwnerBundleBuilder({ rebuild }: { rebuild?: KitRebuild }) {
@@ -28,7 +28,7 @@ export function CrossOwnerBundleBuilder({ rebuild }: { rebuild?: KitRebuild }) {
   // must match the server's, which has no storage.
   const [restored, setRestored] = useState<BundleSnapshot | null>(null);
   useEffect(() => {
-    // A rebuild starts from the kit, not from whatever was left in the session.
+    // A rebuild starts from the bundle, not from whatever was left in the session.
     if (rebuild) return;
     const frame = requestAnimationFrame(() => setRestored(loadBundleSnapshot()));
     return () => cancelAnimationFrame(frame);
@@ -113,7 +113,7 @@ export function CrossOwnerBundleBuilder({ rebuild }: { rebuild?: KitRebuild }) {
   );
 }
 
-/** The form's values for a kit being rebuilt: what the renter asked for the first time. */
+/** The form's values for a bundle being rebuilt: what the renter asked for the first time. */
 function rebuildValues(rebuild: KitRebuild): NonNullable<BuildBundleState>["values"] {
   return {
     activity: rebuild.activity ?? "",

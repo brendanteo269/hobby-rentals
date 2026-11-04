@@ -12,7 +12,7 @@ export type BuildBundleValues = {
   group_size: string;
   origin_lat: string;
   origin_lng: string;
-  /** Comma-separated listing ids to leave out: set only when rebuilding a kit (S5-09). */
+  /** Comma-separated listing ids to leave out: set only when rebuilding a bundle (S5-09). */
   exclude_listing_ids: string;
 };
 

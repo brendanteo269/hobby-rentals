@@ -8,11 +8,14 @@ import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { InstantBookBadge } from "@/components/listings/instant-book-badge";
 import { RentalReviewSection } from "@/components/reviews/rental-review-section";
 import { ListingQuestionsSection } from "@/components/listings/listing-questions-section";
+import { OwnerResponseTime } from "@/components/listings/owner-response-time";
+import { ShareButton } from "@/components/listings/share-button";
 import { getPublicListing } from "@/lib/api/public";
 import { formatDate, formatMoney, todayIso } from "@/lib/format";
 import { siteUrl } from "@/lib/env";
 import { gearPath, loginToAct, shortIdFrom } from "@/lib/gear";
 import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS, passportBadge } from "@/lib/listings";
+import { absoluteUrl, shareText } from "@/lib/share";
 import { createClient } from "@/lib/supabase/server";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -78,6 +81,10 @@ export default async function PublicListingPage({ params }: Props) {
             {badge && <Badge variant={listing.serial_status === "VERIFIED" ? "dark" : "neutral"}>Passport: {badge}</Badge>}
           </div>
           <h1 className="heading mt-2 text-3xl">{listing.name}</h1>
+          {/* S5-16: only ever rendered for a live listing - anything else is a 404 above. */}
+          <div className="mt-3">
+            <ShareButton url={absoluteUrl(canonical, siteUrl())} text={shareText(listing)} />
+          </div>
 
           <div className="mt-4 border-t border-line pt-4">
             <RateLine listing={listing} />
@@ -96,6 +103,7 @@ export default async function PublicListingPage({ params }: Props) {
             Listed by <span className="font-medium text-ink">{listing.owner_display_name ?? "Member"}</span>
             <VerifiedOwnerBadge verified={listing.owner_verified} />
           </p>
+          <OwnerResponseTime band={listing.owner_response_time} className="mt-1" />
 
           <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-6 text-sm">
             <div>

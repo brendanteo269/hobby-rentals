@@ -76,7 +76,7 @@ export type BuildCrossOwnerBundleRequest = {
   group_size?: number;
   origin_lat?: number;
   origin_lng?: number;
-  /** Listings never to offer: rebuilding a kit without what an owner turned down (S5-09). */
+  /** Listings never to offer: rebuilding a bundle without what an owner turned down (S5-09). */
   exclude_listing_ids?: string[];
 };
 

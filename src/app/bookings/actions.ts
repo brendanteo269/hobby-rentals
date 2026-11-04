@@ -120,9 +120,11 @@ export async function quoteBundleBooking(
   bundleId: string,
   startDate: string,
   endDate: string,
+  /** S5-10: the optional items the renter has unticked. */
+  omitListingIds: string[] = [],
 ): Promise<BundleQuoteResult> {
   try {
-    return { quote: await getBundleQuote(bundleId, startDate, endDate) };
+    return { quote: await getBundleQuote(bundleId, startDate, endDate, omitListingIds) };
   } catch (error) {
     if (error instanceof BackendApiError) return { error: error.message };
     throw error;
@@ -134,8 +136,9 @@ export async function requestBundleBooking(
   startDate: string,
   endDate: string,
   idempotencyKey: string,
+  omitListingIds: string[] = [],
 ) {
-  return runBundle(() => createBundleBooking(bundleId, startDate, endDate, idempotencyKey));
+  return runBundle(() => createBundleBooking(bundleId, startDate, endDate, idempotencyKey, omitListingIds));
 }
 
 export async function changeBundleBookingStatus(bundleBookingId: string, nextStatus: BookingStatus) {

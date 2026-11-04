@@ -14,6 +14,7 @@
 
 import { unavailableUntilLabel } from "@/lib/away";
 import { formatDate } from "@/lib/format";
+import type { ResponseTimeBand } from "@/lib/response-time";
 
 export type ListingCategory = string;
 
@@ -192,6 +193,8 @@ export type Listing = {
   owner_avatar_url?: string | null;
   /** S4-01: whether this listing's owner currently holds the Verified Owner badge. */
   owner_verified?: boolean;
+  /** S5-17: the owner's usual reply-time band; absent without enough history. */
+  owner_response_time?: ResponseTimeBand | null;
   name: string;
   description: string;
   category: ListingCategory;

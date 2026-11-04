@@ -4,6 +4,7 @@ import { BookingRequestDecision } from "@/components/bookings/booking-request-de
 import { TrustedRenterBadge } from "@/components/bookings/trusted-renter-badge";
 import { RequestCountdown } from "@/components/bookings/request-countdown";
 import { BOOKING_STATUS_LABELS, type BookingRequestDetail } from "@/lib/bookings";
+import { adjustmentLines } from "@/lib/bundle-items";
 import { cancellationOutcomeLine } from "@/lib/cancellations";
 import { formatDate, formatMoney, formatMonthYear } from "@/lib/format";
 
@@ -45,7 +46,7 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
         </p>
       </div>
       {request.kit_id && (
-        // S5-09: only this owner's part of the renter's kit is shown, and answering
+        // S5-09: only this owner's part of the renter's bundle is shown, and answering
         // covers all of it; what the renter asked other owners for is not theirs to see.
         <p className="mt-2 text-sm text-ink-soft">
           Part of a bundle the renter is requesting from several owners. This request covers your{" "}
@@ -59,6 +60,10 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
         // decision covers before making it.
         <p className="mt-2 text-sm text-ink-soft">
           Covers all {request.items.length} items: {request.items.map((item) => item.listing_name ?? "an item").join(", ")}
+          {adjustmentLines(request.adjustments).map((line) => (
+            // S5-10: what the renter left out, and the backups that stand in for items.
+            <span key={line} className="block">{line}</span>
+          ))}
         </p>
       )}
 

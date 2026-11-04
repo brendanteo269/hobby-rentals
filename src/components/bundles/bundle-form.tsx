@@ -16,9 +16,10 @@ import { WeeklyAvailabilityField } from "@/components/listings/weekly-availabili
 import { RentalDurationField } from "@/components/listings/rental-duration-field";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
 import type { BundleFormState } from "@/app/listings/mine/bundles/actions";
-import { formatMoney, todayIso } from "@/lib/format";
+import { centsToDollars, formatMoney, todayIso } from "@/lib/format";
 import { MIN_BUNDLE_ITEMS, type Bundle } from "@/lib/bundles";
 import { AwayModeReminder } from "@/components/away-mode-reminder";
+import { BundleItemSettings, REQUIRED_ITEM, type ItemSettingState } from "@/components/bundles/bundle-item-settings";
 import type { AwayPeriod } from "@/lib/away";
 import { CATEGORY_LABELS } from "@/lib/listings";
 
@@ -72,6 +73,30 @@ export function BundleForm({
   const [name, setName] = useState(bundle?.name ?? "");
   const [description, setDescription] = useState(bundle?.description ?? "");
   const [selected, setSelected] = useState<string[]>(() => bundle?.items.map((item) => item.id) ?? []);
+  // S5-10: each chosen item is required or optional, and a required one may have a backup.
+  const [itemSettings, setItemSettings] = useState<Record<string, ItemSettingState>>(() =>
+    Object.fromEntries(
+      (bundle?.items ?? []).map((item) => [
+        item.id,
+        {
+          optional: item.is_optional,
+          deduction: item.optional_deduction_cents ? centsToDollars(item.optional_deduction_cents) : "",
+          alternative: item.alternative?.id ?? "",
+        },
+      ]),
+    ),
+  );
+  const settingOf = (listingId: string) => itemSettings[listingId] ?? REQUIRED_ITEM;
+  function changeSetting(listingId: string, change: Partial<ItemSettingState>) {
+    setItemSettings((current) => ({ ...current, [listingId]: { ...(current[listingId] ?? REQUIRED_ITEM), ...change } }));
+  }
+  /** What this item could have as its backup: not in the bundle, and not another item's backup. */
+  const backupsFor = (listingId: string) => {
+    const takenByOthers = new Set(
+      selected.filter((id) => id !== listingId && !settingOf(id).optional).map((id) => settingOf(id).alternative),
+    );
+    return activeListings.filter((listing) => !selected.includes(listing.id) && !takenByOthers.has(listing.id));
+  };
 
   // The three availability controls constrain one another: nothing may be
   // offered or blacked out before today, and the window's own end cannot
@@ -108,8 +133,12 @@ export function BundleForm({
   const showSavedModal = saved !== undefined && state !== dismissedNotice;
 
   function toggle(listingId: string) {
-    setSelected((current) =>
-      current.includes(listingId) ? current.filter((id) => id !== listingId) : [...current, listingId],
+    setSelected((current) => (current.includes(listingId) ? current.filter((id) => id !== listingId) : [...current, listingId]));
+    // A listing that becomes an item of the bundle can no longer be anyone's backup.
+    setItemSettings((current) =>
+      Object.fromEntries(
+        Object.entries(current).map(([id, setting]) => [id, setting.alternative === listingId ? { ...setting, alternative: "" } : setting]),
+      ),
     );
   }
 
@@ -122,7 +151,7 @@ export function BundleForm({
           name="name"
           maxLength={200}
           required
-          placeholder="Weekend vlogging kit"
+          placeholder="Weekend vlogging bundle"
           error={errors.name}
           value={name}
           onChange={(event) => setName(event.target.value)}
@@ -149,7 +178,9 @@ export function BundleForm({
           </span>
           <p className="body-copy mt-1">
             Choose at least {MIN_BUNDLE_ITEMS} of your published listings. They stay individually
-            bookable — a bundle groups them, it does not take them off the marketplace.
+            bookable — a bundle groups them, it does not take them off the marketplace. Make an item
+            optional so renters can leave it out for less, or give it a backup from your other listings
+            for when it is out.
           </p>
 
           {tooFewToBundle ? (
@@ -185,6 +216,15 @@ export function BundleForm({
                         </span>
                       </span>
                     </label>
+                    {checked && (
+                      <BundleItemSettings
+                        listingId={listing.id}
+                        value={settingOf(listing.id)}
+                        backups={backupsFor(listing.id)}
+                        errors={errors}
+                        onChange={(change) => changeSetting(listing.id, change)}
+                      />
+                    )}
                   </li>
                 );
               })}

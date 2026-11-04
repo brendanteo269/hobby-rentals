@@ -36,7 +36,7 @@ export class BackendApiError extends Error {
     public readonly fieldErrors: FieldErrors = {},
     public readonly code?: string,
     public readonly shortfallCents?: number,
-    /** S5-09: which listing of a kit a KIT_ITEM_UNAVAILABLE refusal is about. */
+    /** S5-09: which listing of a bundle a KIT_ITEM_UNAVAILABLE refusal is about. */
     public readonly listingId?: string,
   ) {
     super(message);

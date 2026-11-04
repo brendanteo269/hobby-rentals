@@ -1,3 +1,4 @@
+import type { BundleAdjustments } from "@/lib/bundles";
 import type { CancellationOutcome } from "@/lib/cancellations";
 import type { ExtensionRequest } from "@/lib/extensions";
 import type { SettlementState } from "@/lib/settlement";
@@ -33,7 +34,7 @@ export type EscrowHold = {
 export type Booking = {
   id: string;
   listing_id: string;
-  /** S5-09: set when this item was requested as part of a cross-owner kit. */
+  /** S5-09: set when this item was requested as part of a cross-owner bundle. */
   booking_group_id?: string | null;
   /** What was rented. Set on the bookings lists only, as bundle_name is for a bundle. */
   listing_name?: string | null;
@@ -254,7 +255,7 @@ export function requestReviewPath(kind: RequestKind, id: string) {
 /** One unanswered request, as the owner's request list shows it. */
 export type BookingRequestSummary = {
   id: string;
-  /** S5-09: the cross-owner kit this is the owner's part of; the request then covers all their items in it. */
+  /** S5-09: the cross-owner bundle this is the owner's part of; the request then covers all their items in it. */
   kit_id?: string | null;
   kind: RequestKind;
   /** One of these two, by kind. */
@@ -278,7 +279,7 @@ export type BookingRequestSummary = {
 /** One request as the owner reviews it before deciding. */
 export type BookingRequestDetail = {
   id: string;
-  /** S5-09: see BookingRequestSummary. `items` then lists the owner's items in the kit. */
+  /** S5-09: see BookingRequestSummary. `items` then lists the owner's items in the bundle. */
   kit_id?: string | null;
   kind: RequestKind;
   listing_id: string | null;
@@ -286,6 +287,8 @@ export type BookingRequestDetail = {
   name: string | null;
   /** What a bundle request covers; empty for a single listing. */
   items: { listing_id: string; listing_name: string | null }[];
+  /** S5-10: for a bundle request, the optional items the renter left out and the backups standing in. */
+  adjustments?: BundleAdjustments | null;
   status: BookingStatus;
   respond_by: string | null;
   expires_in_seconds: number | null;

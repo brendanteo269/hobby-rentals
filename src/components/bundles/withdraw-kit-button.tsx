@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button, FormError } from "@/components/ui";
 import { withdrawKitAction } from "@/app/rentals/kits/[id]/actions";
 
-/** Withdraws the whole kit while no owner has accepted any of it; every hold goes back to the wallet. */
+/** Withdraws the whole bundle while no owner has accepted any of it; every hold goes back to the wallet. */
 export function WithdrawKitButton({ kitId }: { kitId: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | undefined>();
