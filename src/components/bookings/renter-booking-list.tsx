@@ -27,7 +27,9 @@ import { canConfirmReturn, canStartPickupInspection, canStartReturnInspection, r
 import { ConfirmReturnButton } from "@/components/bookings/confirm-return-button";
 import { canRequestExtension } from "@/lib/extensions";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
-import { formatDate, formatDateTime } from "@/lib/format";
+import { formatDate, formatDateRange, formatDateTime } from "@/lib/format";
+import { KIT_STATUS_LABELS, type Kit } from "@/lib/booking-groups";
+import { renterKitPath } from "@/lib/routes";
 import { reviewPath, type ReviewEligibility } from "@/lib/reviews";
 import { rentalRowId } from "@/lib/rentals";
 
@@ -250,6 +252,35 @@ export function RenterWaitlist({ waitlist }: { waitlist: WaitlistEntry[] }) {
           <Badge variant={hasLiveOffer(entry) ? "accent" : "neutral"}>
             {WAITLIST_STATUS_LABELS[entry.status]}
           </Badge>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
+ * S5-09 Scenario 4: the cross-owner bundles the renter has requested, each a
+ * card that opens its one view of every owner's item. The items are also
+ * listed below as the bookings they are, where their meetup, pickup and
+ * return happen.
+ */
+export function RenterKitList({ kits }: { kits: Kit[] }) {
+  return (
+    <ul className="space-y-3">
+      {kits.map((kit) => (
+        <li key={kit.id}>
+          <Link href={renterKitPath(kit.id)} className="card flex flex-wrap items-center justify-between gap-3 p-4 hover:bg-surface-muted">
+            <span>
+              <span className="font-semibold">{kit.activity ?? "Your bundle"}</span>
+              <span className="block text-sm text-ink-soft">
+                {formatDateRange(kit.start_date, kit.end_date)} · {kit.items.length} {kit.items.length === 1 ? "item" : "items"} from{" "}
+                {new Set(kit.items.map((item) => item.owner_id)).size} {new Set(kit.items.map((item) => item.owner_id)).size === 1 ? "owner" : "owners"}
+              </span>
+            </span>
+            <Badge variant={kit.status === "CONFIRMED" ? "success" : kit.status === "FAILED" ? "neutral" : "warning"}>
+              {KIT_STATUS_LABELS[kit.status]}
+            </Badge>
+          </Link>
         </li>
       ))}
     </ul>

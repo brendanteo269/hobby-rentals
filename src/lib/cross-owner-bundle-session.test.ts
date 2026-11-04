@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadBundleSnapshot, saveBundleSnapshot, type BundleSnapshot } from "@/lib/cross-owner-bundle-session";
+import { clearBundleSnapshot, loadBundleSnapshot, saveBundleSnapshot, type BundleSnapshot } from "@/lib/cross-owner-bundle-session";
 
 const snapshot = {
   values: { activity: "beach camping", start_date: "2026-12-01", end_date: "2026-12-02", group_size: "4", origin_lat: "", origin_lng: "" },
@@ -43,5 +43,26 @@ describe("bundle snapshot", () => {
     });
     expect(() => saveBundleSnapshot(snapshot)).not.toThrow();
     expect(loadBundleSnapshot()).toBeNull();
+  });
+});
+
+describe("clearing the snapshot", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("forgets it, so a requested kit is not offered for checkout again", () => {
+    const data = new Map<string, string>();
+    vi.stubGlobal("sessionStorage", {
+      getItem: (key: string) => data.get(key) ?? null,
+      setItem: (key: string, value: string) => void data.set(key, value),
+      removeItem: (key: string) => void data.delete(key),
+    });
+    saveBundleSnapshot(snapshot);
+    clearBundleSnapshot();
+    expect(loadBundleSnapshot()).toBeNull();
+  });
+
+  it("does not throw where storage is blocked", () => {
+    vi.stubGlobal("sessionStorage", { removeItem: () => { throw new Error("blocked"); } });
+    expect(() => clearBundleSnapshot()).not.toThrow();
   });
 });

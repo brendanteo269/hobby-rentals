@@ -12,6 +12,8 @@ export type BuildBundleValues = {
   group_size: string;
   origin_lat: string;
   origin_lng: string;
+  /** Comma-separated listing ids to leave out: set only when rebuilding a kit (S5-09). */
+  exclude_listing_ids: string;
 };
 
 export type BuildBundleState =
@@ -38,6 +40,7 @@ export async function buildBundle(_previous: BuildBundleState, formData: FormDat
     group_size: text(formData, "group_size"),
     origin_lat: text(formData, "origin_lat"),
     origin_lng: text(formData, "origin_lng"),
+    exclude_listing_ids: text(formData, "exclude_listing_ids"),
   };
   try {
     const bundle = await buildCrossOwnerBundle({
@@ -47,6 +50,7 @@ export async function buildBundle(_previous: BuildBundleState, formData: FormDat
       group_size: optionalNumber(values.group_size),
       origin_lat: optionalNumber(values.origin_lat),
       origin_lng: optionalNumber(values.origin_lng),
+      exclude_listing_ids: values.exclude_listing_ids ? values.exclude_listing_ids.split(",") : undefined,
     });
     return { values, bundle, builtAt: Date.now() };
   } catch (error) {

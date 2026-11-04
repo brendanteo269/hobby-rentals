@@ -1,6 +1,6 @@
 import { ButtonLink, EmptyState } from "@/components/ui";
 import { RenterPortal, requireRenter } from "@/components/renter-portal";
-import { RenterBookingList, RenterWaitlist } from "@/components/bookings/renter-booking-list";
+import { RenterBookingList, RenterKitList, RenterWaitlist } from "@/components/bookings/renter-booking-list";
 import { SuspensionBanner } from "@/components/bookings/suspension-banner";
 import { getRenterActivity } from "@/lib/api/rentals";
 import { isRentalFilter, matchesRentalFilter, RENTAL_FILTERS, type RentalFilter } from "@/lib/rentals";
@@ -18,7 +18,7 @@ export default async function RenterBookingsPage({ searchParams }: { searchParam
   await requireRenter();
   const { show } = await searchParams;
   const filter = isRentalFilter(show) ? show : undefined;
-  const { bookings, bundleBookings, waitlist, reviewEligibility, suspension } = await getRenterActivity();
+  const { bookings, bundleBookings, kits, waitlist, reviewEligibility, suspension } = await getRenterActivity();
 
   const bookingsUnder = (value: RentalFilter | undefined) => {
     if (value === "waitlist") return { bookings: [], bundleBookings: [] };
@@ -35,6 +35,9 @@ export default async function RenterBookingsPage({ searchParams }: { searchParam
   const shown = bookingsUnder(filter);
   const showWaitlist = (!filter || filter === "waitlist") && waitlist.length > 0;
   const hasAnything = bookings.length + bundleBookings.length + waitlist.length > 0;
+  // S5-09: kits are a view over bookings, not more of them, so they show on the
+  // unfiltered page and under no status filter.
+  const showKits = !filter && kits.length > 0;
   const filterLabel = RENTAL_FILTERS.find((option) => option.value === filter)?.label;
 
   return (
@@ -68,6 +71,15 @@ export default async function RenterBookingsPage({ searchParams }: { searchParam
           </div>
 
           <div className="mt-8 space-y-10">
+            {showKits && (
+              <section aria-labelledby="kits-heading">
+                <h2 id="kits-heading" className="heading text-lg">Bundles from several owners</h2>
+                <div className="mt-3">
+                  <RenterKitList kits={kits} />
+                </div>
+              </section>
+            )}
+
             {shown.bookings.length + shown.bundleBookings.length > 0 && (
               <RenterBookingList
                 bookings={shown.bookings}

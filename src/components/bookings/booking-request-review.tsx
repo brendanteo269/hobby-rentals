@@ -44,6 +44,16 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
             : BOOKING_STATUS_LABELS[request.status]}
         </p>
       </div>
+      {request.kit_id && (
+        // S5-09: only this owner's part of the renter's kit is shown, and answering
+        // covers all of it; what the renter asked other owners for is not theirs to see.
+        <p className="mt-2 text-sm text-ink-soft">
+          Part of a bundle the renter is requesting from several owners. This request covers your{" "}
+          {request.items.length === 1 ? "item" : `${request.items.length} items`}:{" "}
+          {request.items.map((item) => item.listing_name ?? "an item").join(", ")}. You answer for all of them together, and if you
+          decline, the renter&apos;s other requests in the bundle are cancelled.
+        </p>
+      )}
       {bundle && (
         // A bundle is decided whole, so the owner should see everything the
         // decision covers before making it.

@@ -36,6 +36,8 @@ export class BackendApiError extends Error {
     public readonly fieldErrors: FieldErrors = {},
     public readonly code?: string,
     public readonly shortfallCents?: number,
+    /** S5-09: which listing of a kit a KIT_ITEM_UNAVAILABLE refusal is about. */
+    public readonly listingId?: string,
   ) {
     super(message);
     this.name = "BackendApiError";
@@ -149,6 +151,9 @@ export async function backendRequest<T>(
     const shortfallCents = detail !== null && typeof detail === "object" && "shortfall_cents" in detail && typeof detail.shortfall_cents === "number"
       ? detail.shortfall_cents
       : undefined;
+    const listingId = detail !== null && typeof detail === "object" && "listing_id" in detail && typeof detail.listing_id === "string"
+      ? detail.listing_id
+      : undefined;
     const message =
       typeof detail === "string"
         ? detail
@@ -158,7 +163,7 @@ export async function backendRequest<T>(
             ? "Please correct the highlighted fields."
             : `Backend request failed (${res.status})`;
 
-    throw new BackendApiError(message, res.status, fieldErrors, code, shortfallCents);
+    throw new BackendApiError(message, res.status, fieldErrors, code, shortfallCents, listingId);
   }
 
   if (body === null) {
