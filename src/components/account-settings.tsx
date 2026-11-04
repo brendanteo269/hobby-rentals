@@ -14,6 +14,7 @@ import { LocationOptions } from "./location-options";
 import type { Roles } from "@/lib/contact-details";
 import { useEditableSection } from "./use-editable-section";
 import { useSubmissionAttempt } from "./use-submission-attempt";
+import { MobileNumberField } from "./mobile-number-field";
 
 /**
  * Announces a save that worked.
@@ -180,20 +181,44 @@ function DisplayNameForm({ current }: { current: string | null }) {
   );
 }
 
+/** The member's mobile: verified, or typed before verification existed. */
+type Mobile = { number: string | null; verified: boolean };
+
+/**
+ * Its own section rather than a field of ContactDetailsForm: it saves by
+ * verifying a texted code, not with that form's Save button. A member from
+ * before verification existed sees their old number offered for verifying,
+ * and keeps using the app meanwhile.
+ */
+function MobileNumberSection({ mobile }: { mobile: Mobile }) {
+  return (
+    <section className="border-t border-line pt-10">
+      <h2 className="heading text-xl">Mobile number</h2>
+      <p className="body-copy mt-2">
+        Shared with a counterparty once a booking is confirmed. A new number takes effect once its
+        code is verified.
+      </p>
+      <div className="mt-5 max-w-sm">
+        <MobileNumberField
+          verifiedNumber={mobile.verified ? mobile.number : null}
+          unverifiedNumber={mobile.verified ? null : mobile.number}
+        />
+      </div>
+    </section>
+  );
+}
+
 type ContactDetails = {
-  contactNumber: string | null;
   defaultPickupLocation: string | null;
   bio: string | null;
 };
 
 type ContactValues = {
-  contact_number: string;
   default_pickup_location: string;
   bio: string;
 };
 
 function ContactDetailsForm({
-  contactNumber,
   defaultPickupLocation,
   bio,
   roles,
@@ -205,7 +230,6 @@ function ContactDetailsForm({
   useSuccessToast(state);
 
   const saved: ContactValues = {
-    contact_number: contactNumber ?? "",
     default_pickup_location: defaultPickupLocation ?? "",
     bio: bio ?? "",
   };
@@ -214,24 +238,11 @@ function ContactDetailsForm({
 
   return (
     <section className="border-t border-line pt-10">
-      <h2 className="heading text-xl">Contact details</h2>
-      <p className="body-copy mt-2">Shared with a counterparty once a booking is confirmed.</p>
+      <h2 className="heading text-xl">Profile details</h2>
+      <p className="body-copy mt-2">A little about you, and where you hand your gear over.</p>
 
       {/* key: see useSubmissionAttempt. */}
       <form key={attempt} action={formAction} className="mt-5 max-w-sm space-y-4">
-        <Field
-          label="Contact number"
-          id="contact_number"
-          name="contact_number"
-          type="tel"
-          value={values.contact_number}
-          onChange={(event) => setValue("contact_number", event.target.value)}
-          disabled={!editing}
-          autoComplete="tel"
-          required
-          error={errors.contact_number}
-        />
-
         {roles.wantsToOwn && (
           <SelectField
             label="Default pickup location"
@@ -265,8 +276,8 @@ function ContactDetailsForm({
         <EditControls
           editing={editing}
           pending={pending}
-          saveLabel="Save contact details"
-          editLabel="Edit contact details"
+          saveLabel="Save details"
+          editLabel="Edit details"
           onEdit={edit}
           onCancel={cancel}
         />
@@ -363,18 +374,21 @@ export function AccountSettings({
   email,
   emailVerified,
   displayName,
+  mobile,
   roles,
   ...contact
 }: {
   email: string;
   emailVerified: boolean;
   displayName: string | null;
+  mobile: Mobile;
   roles: Roles;
 } & ContactDetails) {
   return (
     <div className="space-y-10">
       <EmailRow email={email} verified={emailVerified} />
       <DisplayNameForm current={displayName} />
+      <MobileNumberSection mobile={mobile} />
       <ContactDetailsForm {...contact} roles={roles} />
       <PasswordForm />
     </div>

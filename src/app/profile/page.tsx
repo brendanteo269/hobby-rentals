@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { CloudOff, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getOwnProfile } from "@/lib/profile";
+import { getOwnProfile, verifiedContactNumber } from "@/lib/profile";
 import { getMyOwnerVerification, getMyRenterTrust } from "@/lib/api/verification";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { hasAnsweredRequests, responseRatePercent } from "@/lib/verification";
@@ -177,7 +177,10 @@ export default async function ProfilePage({
               email={user.email ?? ""}
               emailVerified={isVerified}
               displayName={profile.display_name}
-              contactNumber={profile.contact_number}
+              mobile={{
+                number: profile.contact_number,
+                verified: verifiedContactNumber(profile) !== null,
+              }}
               defaultPickupLocation={profile.default_pickup_location}
               bio={profile.bio}
               roles={roles}

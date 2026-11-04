@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getOwnProfile } from "@/lib/profile";
+import { getOwnProfile, verifiedContactNumber } from "@/lib/profile";
 import { OnboardingForm } from "@/components/onboarding-form";
 import { getOwnAvatarUrl } from "@/lib/api/profile-avatar";
 
@@ -19,7 +19,11 @@ export default async function OnboardingPage() {
     <div className="flex flex-1 items-center justify-center px-6 py-20">
       {/* Prefilled when a name was given at signup, where it is optional — it
           is required here, and nobody should have to type it twice. */}
-      <OnboardingForm defaultDisplayName={profile?.display_name} avatarUrl={avatarUrl} />
+      <OnboardingForm
+        defaultDisplayName={profile?.display_name}
+        avatarUrl={avatarUrl}
+        verifiedNumber={profile ? verifiedContactNumber(profile) : null}
+      />
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
 import { LocationOptions } from "./location-options";
 import { useSubmissionAttempt } from "./use-submission-attempt";
 import { ProfilePhotoField } from "./profile-photo-field";
+import { MobileNumberField } from "./mobile-number-field";
 
 const OPTIONS = [
   {
@@ -27,7 +28,6 @@ const OPTIONS = [
 function emptyValues(displayName?: string | null): OnboardingValues {
   return {
     display_name: displayName ?? "",
-    contact_number: "",
     default_pickup_location: "",
     bio: "",
     wants_to_rent: false,
@@ -51,13 +51,19 @@ function emptyValues(displayName?: string | null): OnboardingValues {
  * The optional photo sits outside that keyed form: it saves itself the
  * moment it is cropped, and remounting it on a rejected submission would
  * reset it to the page's stale "no photo yet".
+ *
+ * The optional mobile number is verified in place. Which number is verified
+ * is held here rather than in the keyed form, for the same reason.
  */
 export function OnboardingForm({
   defaultDisplayName,
   avatarUrl,
+  verifiedNumber: initialVerifiedNumber,
 }: {
   defaultDisplayName?: string | null;
   avatarUrl: string | null;
+  /** E.164, when the member verified one and then left before finishing. */
+  verifiedNumber: string | null;
 }) {
   const [state, formAction, pending] = useActionState<OnboardingState, FormData>(
     completeOnboarding,
@@ -65,6 +71,7 @@ export function OnboardingForm({
   );
 
   const [values, setValues] = useState<OnboardingValues>(() => emptyValues(defaultDisplayName));
+  const [verifiedNumber, setVerifiedNumber] = useState(initialVerifiedNumber);
 
   // Re-seed from the rejected submission the moment a new result arrives.
   const attempt = useSubmissionAttempt(state, (next) => {
@@ -127,18 +134,7 @@ export function OnboardingForm({
             hint="Shown to people you rent with."
             error={errors.display_name}
           />
-          <Field
-            label="Contact number"
-            id="contact_number"
-            name="contact_number"
-            type="tel"
-            autoComplete="tel"
-            value={values.contact_number}
-            onChange={(event) => set("contact_number", event.target.value)}
-            required
-            hint="Shown to the other party once a booking is confirmed."
-            error={errors.contact_number}
-          />
+          <MobileNumberField optional verifiedNumber={verifiedNumber} onVerified={setVerifiedNumber} />
 
           {values.wants_to_own && (
             <SelectField
