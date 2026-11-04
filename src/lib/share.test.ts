@@ -5,12 +5,14 @@ const tent = { name: "Coleman Sundome 4-Person Tent", price_per_day_cents: 1200,
 
 describe("shareText", () => {
   it("names the item with its daily price", () => {
-    expect(shareText(tent)).toBe("Coleman Sundome 4-Person Tent, $12.00/day on HobbyRentals");
+    expect(shareText(tent)).toBe("Coleman Sundome 4-Person Tent is available to rent on HobbyRentals for $12.00/day.");
   });
 
   it("falls back to the weekly price, then to the name alone", () => {
-    expect(shareText({ ...tent, price_per_day_cents: null, price_per_week_cents: 7000 })).toBe("Coleman Sundome 4-Person Tent, $70.00/week on HobbyRentals");
-    expect(shareText({ ...tent, price_per_day_cents: null })).toBe("Coleman Sundome 4-Person Tent on HobbyRentals");
+    expect(shareText({ ...tent, price_per_day_cents: null, price_per_week_cents: 7000 })).toBe(
+      "Coleman Sundome 4-Person Tent is available to rent on HobbyRentals for $70.00/week.",
+    );
+    expect(shareText({ ...tent, price_per_day_cents: null })).toBe("Coleman Sundome 4-Person Tent is available to rent on HobbyRentals.");
   });
 });
 

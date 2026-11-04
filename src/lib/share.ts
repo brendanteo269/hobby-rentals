@@ -15,7 +15,7 @@ export type Shareable = {
   price_per_week_cents: number | null;
 };
 
-/** "Coleman Sundome 4-Person Tent, $12.00/day on HobbyRentals". */
+/** "Coleman Sundome 4-Person Tent is available to rent on HobbyRentals for $12.00/day." */
 export function shareText(item: Shareable): string {
   const price =
     item.price_per_day_cents !== null
@@ -23,7 +23,8 @@ export function shareText(item: Shareable): string {
       : item.price_per_week_cents !== null
         ? `${formatMoney(item.price_per_week_cents)}/week`
         : null;
-  return price ? `${item.name}, ${price} on HobbyRentals` : `${item.name} on HobbyRentals`;
+  const sentence = `${item.name} is available to rent on HobbyRentals`;
+  return price ? `${sentence} for ${price}.` : `${sentence}.`;
 }
 
 /** The public path as a full URL on the site's own origin. */
