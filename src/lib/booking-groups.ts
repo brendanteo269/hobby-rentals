@@ -1,9 +1,9 @@
 /**
- * S5-09: one checkout for a cross-owner bundle (a "kit"): the shape of the
- * priced breakdown and of a kit once it is requested.
+ * S5-09: one checkout for a cross-owner bundle (a "bundle"): the shape of the
+ * priced breakdown and of a bundle once it is requested.
  *
  * Mirrors app/routers/booking_groups.py. Free of `server-only` because the
- * checkout and its status views are client components. Each item of a kit is
+ * checkout and its status views are client components. Each item of a bundle is
  * an ordinary booking, so its own page, meetup, pickup, return and settlement
  * are the single-listing ones.
  */
@@ -11,7 +11,7 @@
 import type { BookingStatus } from "@/lib/bookings";
 import type { EditableItem } from "@/lib/cross-owner-bundles";
 
-/** One item's price for the kit's dates. */
+/** One item's price for the bundle's dates. */
 export type KitQuoteItem = {
   listing_id: string;
   listing_name: string;
@@ -24,7 +24,7 @@ export type KitQuoteItem = {
   total_amount_cents: number;
 };
 
-/** What one owner is owed for their items in the kit (Scenario 1). */
+/** What one owner is owed for their items in the bundle (Scenario 1). */
 export type KitQuoteOwner = {
   owner_id: string;
   owner_name: string | null;
@@ -48,7 +48,7 @@ export type KitQuote = {
   total_amount_cents: number;
 };
 
-/** One listing of the kit, and whether the renter wants damage protection on it. */
+/** One listing of the bundle, and whether the renter wants damage protection on it. */
 export type KitItemRequest = { listing_id: string; damage_protection: boolean };
 
 export type CreateKitRequest = {
@@ -84,7 +84,7 @@ export type KitItem = {
   decline_reason: string | null;
 };
 
-/** Which item brought the kit down, and how (Scenario 3). */
+/** Which item brought the bundle down, and how (Scenario 3). */
 export type KitFailure = {
   reason: "DECLINED" | "EXPIRED" | "WITHDRAWN";
   listing_id: string | null;
@@ -93,7 +93,7 @@ export type KitFailure = {
   at: string | null;
 };
 
-/** What to build the kit again from, without what an owner turned down. */
+/** What to build the bundle again from, without what an owner turned down. */
 export type KitRebuild = {
   activity: string | null;
   start_date: string;
@@ -126,33 +126,33 @@ export const KIT_STATUS_LABELS: Record<KitStatus, string> = {
   FAILED: "Not going ahead",
 };
 
-/** How a kit ended, in the renter's terms, for the banner on a failed kit (Scenario 3). */
+/** How a bundle ended, in the renter's terms, for the banner on a failed bundle (Scenario 3). */
 export function kitFailureMessage(failure: KitFailure): string {
   const item = failure.listing_name ?? "an item";
   const owner = failure.owner_name ? ` from ${failure.owner_name}` : "";
   switch (failure.reason) {
     case "DECLINED":
-      return `${item}${owner} was declined, so the rest of your kit was cancelled and every hold has been released.`;
+      return `${item}${owner} was declined, so the rest of your bundle was cancelled and every hold has been released.`;
     case "EXPIRED":
-      return `${item}${owner} was not answered in time, so the rest of your kit was cancelled and every hold has been released.`;
+      return `${item}${owner} was not answered in time, so the rest of your bundle was cancelled and every hold has been released.`;
     case "WITHDRAWN":
-      return "You withdrew this kit. Every hold has been released.";
+      return "You withdrew this bundle. Every hold has been released.";
   }
 }
 
-/** Items of the editor that are picked, as the kit's request: one per listing, protection off until chosen. */
+/** Items of the editor that are picked, as the bundle's request: one per listing, protection off until chosen. */
 export function kitItemsOf(items: EditableItem[], protected_: ReadonlySet<string> = new Set()): KitItemRequest[] {
   return items.flatMap((item) =>
     item.selected ? [{ listing_id: item.selected.id, damage_protection: protected_.has(item.selected.id) }] : [],
   );
 }
 
-/** How many items a priced kit has across all its owners. */
+/** How many items a priced bundle has across all its owners. */
 export function quotedItemCount(quote: KitQuote): number {
   return quote.owners.reduce((count, owner) => count + owner.items.length, 0);
 }
 
-/** Items still waiting on an owner, so the kit page can say how many answers are outstanding. */
+/** Items still waiting on an owner, so the bundle page can say how many answers are outstanding. */
 export function pendingItemCount(kit: Kit): number {
   return kit.items.filter((item) => item.status === "PENDING").length;
 }

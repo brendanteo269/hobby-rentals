@@ -6,7 +6,7 @@ import { renterKitPath } from "@/lib/routes";
 
 export type WithdrawKitResult = { error: string } | { withdrawn: true };
 
-/** S5-09: withdraws a kit no owner has accepted any of yet, releasing every hold. */
+/** S5-09: withdraws a bundle no owner has accepted any of yet, releasing every hold. */
 export async function withdrawKitAction(kitId: string): Promise<WithdrawKitResult> {
   try {
     await withdrawKit(kitId);
