@@ -88,6 +88,16 @@ export const SAVED_SEARCHES_PATH = "/rentals/saved-searches";
  */
 export const RENTER_BOOKINGS_PATH = "/rentals/bookings";
 
+/** The renter's view of one cross-owner kit (S5-09): every owner's item and where it stands. */
+export function renterKitPath(kitId: string): `/rentals/kits/${string}` {
+  return `/rentals/kits/${kitId}`;
+}
+
+/** The builder, opened to rebuild a kit without what an owner turned down (S5-09 Scenario 3). */
+export function rebuildKitPath(kitId: string): `/bundles/build?from_kit=${string}` {
+  return `/bundles/build?from_kit=${encodeURIComponent(kitId)}`;
+}
+
 /** The Bookings tab, optionally showing only one kind of booking. */
 export function renterBookingsPath(
   filter?: RentalFilter,

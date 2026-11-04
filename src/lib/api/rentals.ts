@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getMyBookings } from "@/lib/api/bookings";
+import { getMyKits } from "@/lib/api/booking-groups";
 import { getMyBundleBookings } from "@/lib/api/bundles";
 import { getMySuspension } from "@/lib/api/overdue";
 import { getReviewEligibility } from "@/lib/api/reviews";
@@ -13,9 +14,11 @@ import { getMyWaitlist } from "@/lib/api/waitlist";
  * the renter sight of their bookings.
  */
 export async function getRenterActivity() {
-  const [bookings, bundleBookings, waitlist, reviewEligibility, suspension] = await Promise.all([
+  const [bookings, bundleBookings, kits, waitlist, reviewEligibility, suspension] = await Promise.all([
     getMyBookings(),
     getMyBundleBookings(),
+    // S5-09: supplementary, as the items it groups are bookings listed in their own right.
+    getMyKits().catch(() => []),
     // Open places only: a queue place that was booked, left or lapsed is
     // history the bookings already tell.
     getMyWaitlist(true),
@@ -25,5 +28,5 @@ export async function getRenterActivity() {
     // the database refuses a suspended renter's booking whatever the page shows.
     getMySuspension().catch(() => undefined),
   ]);
-  return { bookings, bundleBookings, waitlist, reviewEligibility, suspension };
+  return { bookings, bundleBookings, kits, waitlist, reviewEligibility, suspension };
 }

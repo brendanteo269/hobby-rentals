@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ButtonLink } from "@/components/ui";
 import {
   addListing,
   bundleTotals,
@@ -67,6 +68,12 @@ export function CrossOwnerBundleEditor({
       </div>
       <div className="lg:sticky lg:top-24 lg:self-start">
         <CrossOwnerBundleSummary totals={totals} itemCount={pickedCount} rentalDays={bundle.rental_days} />
+        {/* S5-09: the whole bundle is requested in one checkout. */}
+        {pickedCount > 0 && (
+          <ButtonLink href="/bundles/build/checkout" className="mt-3 w-full">
+            Request all {pickedCount} {pickedCount === 1 ? "item" : "items"}
+          </ButtonLink>
+        )}
       </div>
     </div>
   );

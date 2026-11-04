@@ -76,6 +76,8 @@ export type BuildCrossOwnerBundleRequest = {
   group_size?: number;
   origin_lat?: number;
   origin_lng?: number;
+  /** Listings never to offer: rebuilding a kit without what an owner turned down (S5-09). */
+  exclude_listing_ids?: string[];
 };
 
 /** An item the renter is editing: the backend's item plus an id that stays put while it is swapped. */

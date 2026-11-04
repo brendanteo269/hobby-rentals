@@ -5,6 +5,7 @@ import { Sparkles } from "lucide-react";
 import { Button, Field, FormError } from "@/components/ui";
 import { buildBundle, type BuildBundleState } from "@/app/bundles/build/actions";
 import { loadBundleSnapshot, saveBundleSnapshot, type BundleSnapshot } from "@/lib/cross-owner-bundle-session";
+import type { KitRebuild } from "@/lib/booking-groups";
 import { todayIso } from "@/lib/format";
 import { BundleLocationField } from "./bundle-location-field";
 import { CrossOwnerBundleEditor } from "./cross-owner-bundle-editor";
@@ -17,20 +18,25 @@ import { CrossOwnerBundleEditor } from "./cross-owner-bundle-editor";
  *
  * Opening one of the listings unmounts all this, so the form, the suggestion
  * and the renter's edits are kept for the session and put back on return.
+ *
+ * `rebuild` (S5-09 Scenario 3) starts the form from a kit an owner turned down,
+ * and carries the listings to leave out; the renter then builds as usual.
  */
-export function CrossOwnerBundleBuilder() {
+export function CrossOwnerBundleBuilder({ rebuild }: { rebuild?: KitRebuild }) {
   const [state, formAction, pending] = useActionState<BuildBundleState, FormData>(buildBundle, undefined);
   // Restored after hydration, never in an initializer: the first client render
   // must match the server's, which has no storage.
   const [restored, setRestored] = useState<BundleSnapshot | null>(null);
   useEffect(() => {
+    // A rebuild starts from the kit, not from whatever was left in the session.
+    if (rebuild) return;
     const frame = requestAnimationFrame(() => setRestored(loadBundleSnapshot()));
     return () => cancelAnimationFrame(frame);
-  }, []);
+  }, [rebuild]);
 
   // A bundle built in this visit wins over one remembered from before it.
   const bundle = state?.bundle ?? restored?.bundle;
-  const values = state?.values ?? restored?.values;
+  const values = state?.values ?? restored?.values ?? (rebuild ? rebuildValues(rebuild) : undefined);
   const errors = state?.fieldErrors ?? {};
   const remember = useCallback(
     (items: BundleSnapshot["items"]) => {
@@ -47,6 +53,15 @@ export function CrossOwnerBundleBuilder() {
   return (
     <div className="space-y-8">
       <form key={restored ? "restored" : "fresh"} action={formAction} className="card space-y-5 p-5 sm:p-6">
+        {rebuild && rebuild.exclude_listing_ids.length > 0 && (
+          <>
+            <input type="hidden" name="exclude_listing_ids" value={rebuild.exclude_listing_ids.join(",")} />
+            <p className="rounded-lg bg-surface-muted px-3 py-2 text-sm">
+              Rebuilding your bundle without the {rebuild.exclude_listing_ids.length === 1 ? "item" : "items"} an owner turned
+              down. Check the details and press Build.
+            </p>
+          </>
+        )}
         <Field
           label="What are you planning?"
           id="activity"
@@ -96,4 +111,17 @@ export function CrossOwnerBundleBuilder() {
       )}
     </div>
   );
+}
+
+/** The form's values for a kit being rebuilt: what the renter asked for the first time. */
+function rebuildValues(rebuild: KitRebuild): NonNullable<BuildBundleState>["values"] {
+  return {
+    activity: rebuild.activity ?? "",
+    start_date: rebuild.start_date,
+    end_date: rebuild.end_date,
+    group_size: rebuild.group_size ? String(rebuild.group_size) : "",
+    origin_lat: rebuild.origin_lat === null ? "" : String(rebuild.origin_lat),
+    origin_lng: rebuild.origin_lng === null ? "" : String(rebuild.origin_lng),
+    exclude_listing_ids: rebuild.exclude_listing_ids.join(","),
+  };
 }

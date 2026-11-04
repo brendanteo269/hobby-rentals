@@ -49,6 +49,9 @@ export default async function OwnerBookingsPage() {
                     <span>
                       <span className="font-semibold">{request.name ?? (request.kind === "BUNDLE" ? "Bundle" : "Listing")}</span>
                       {request.kind === "BUNDLE" && <span className="text-ink-soft"> · Bundle of {request.item_count}</span>}
+                      {request.kit_id && (
+                        <span className="text-ink-soft"> · Part of a multi-owner bundle · your {request.item_count} {request.item_count === 1 ? "item" : "items"}</span>
+                      )}
                       <span className="text-ink-soft"> · {request.renter_display_name ?? "Unnamed member"}</span>
                       <span className="block text-sm text-ink-soft">
                         {formatDate(request.start_date)} – {formatDate(request.end_date)}
