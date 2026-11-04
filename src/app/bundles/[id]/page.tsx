@@ -91,13 +91,22 @@ export default async function BundlePage({ params }: { params: Promise<{ id: str
                   <ImageSlot label={item.name} src={item.photo_urls[0]} className="aspect-[4/3] w-full" />
                   <div className="p-4">
                     <p className="eyebrow">{CATEGORY_LABELS[item.category] ?? item.category} · {item.brand}</p>
-                    <p className="mt-1 text-sm font-medium">{item.name}</p>
+                    <p className="mt-1 text-sm font-medium">
+                      {item.name}
+                      {item.is_optional && <Badge variant="info" className="ml-2">Optional</Badge>}
+                    </p>
                     <p className="body-copy mt-1">
                       {item.price_per_day_cents !== null && `${formatMoney(item.price_per_day_cents)} / day`}
                       {item.price_per_day_cents !== null && item.price_per_week_cents !== null && " · "}
                       {item.price_per_week_cents !== null && `${formatMoney(item.price_per_week_cents)} / week`}
                       {" on its own"}
                     </p>
+                    {item.is_optional && item.optional_deduction_cents !== null && (
+                      <p className="body-copy mt-1">{formatMoney(item.optional_deduction_cents)} off each day if you leave it out.</p>
+                    )}
+                    {item.alternative && (
+                      <p className="body-copy mt-1">If it is out for your dates, {item.alternative.name} is used instead.</p>
+                    )}
                     {item.status !== "ACTIVE" && (
                       <p className="mt-2 text-xs text-accent-dark">
                         {LISTING_STATUS_LABELS[item.status]} — this is why the bundle is unpublished.
@@ -142,6 +151,9 @@ export default async function BundlePage({ params }: { params: Promise<{ id: str
             availability={availability}
             minRentalDays={bundle.min_rental_days}
             maxRentalDays={bundle.max_rental_days}
+            optionalItems={bundle.items
+              .filter((item) => item.is_optional)
+              .map((item) => ({ id: item.id, name: item.name, deduction_cents: item.optional_deduction_cents ?? 0 }))}
           />
         )}
         <RentalReviewSection title="Reviews for this bundle" reviews={reviews} emptyBody="This bundle has not received any reviews yet." />

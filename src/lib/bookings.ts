@@ -1,3 +1,4 @@
+import type { BundleAdjustments } from "@/lib/bundles";
 import type { CancellationOutcome } from "@/lib/cancellations";
 import type { ExtensionRequest } from "@/lib/extensions";
 import type { SettlementState } from "@/lib/settlement";
@@ -286,6 +287,8 @@ export type BookingRequestDetail = {
   name: string | null;
   /** What a bundle request covers; empty for a single listing. */
   items: { listing_id: string; listing_name: string | null }[];
+  /** S5-10: for a bundle request, the optional items the renter left out and the backups standing in. */
+  adjustments?: BundleAdjustments | null;
   status: BookingStatus;
   respond_by: string | null;
   expires_in_seconds: number | null;

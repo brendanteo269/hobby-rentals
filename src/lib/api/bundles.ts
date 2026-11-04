@@ -123,8 +123,10 @@ export function getBundleAvailability(bundleId: string) {
 }
 
 /** Prices a range at the rate block its duration reaches (Scenario 4). */
-export function getBundleQuote(bundleId: string, startDate: string, endDate: string) {
+export function getBundleQuote(bundleId: string, startDate: string, endDate: string, omitListingIds: string[] = []) {
   const query = new URLSearchParams({ start_date: startDate, end_date: endDate });
+  // S5-10: the optional items the renter has unticked, one repeated key each.
+  omitListingIds.forEach((id) => query.append("omit", id));
   return backendRequest<BundleQuote>(`/bundles/${encodeURIComponent(bundleId)}/quote?${query}`);
 }
 
@@ -145,10 +147,11 @@ export function createBundleBooking(
   start_date: string,
   end_date: string,
   idempotency_key: string,
+  omit_listing_ids: string[] = [],
 ) {
   return backendRequest<BundleBooking>(`/bundles/${encodeURIComponent(bundleId)}/bookings`, {
     method: "POST",
-    body: JSON.stringify({ start_date, end_date, idempotency_key }),
+    body: JSON.stringify({ start_date, end_date, idempotency_key, omit_listing_ids }),
   });
 }
 
