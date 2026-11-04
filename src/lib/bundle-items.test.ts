@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  suggestedDeductionCents,
   adjustmentLines,
   deductionLabel,
   itemSettingsOf,
@@ -118,5 +119,21 @@ describe("what the renter sees", () => {
     ).toEqual(["Includes Spare tent instead of Tent", "Without Lantern"]);
     expect(adjustmentLines(undefined)).toEqual([]);
     expect(adjustmentLines(null)).toEqual([]);
+  });
+});
+
+describe("suggestedDeductionCents", () => {
+  it("takes off the item's own price when the bundle costs at least the items combined", () => {
+    expect(suggestedDeductionCents(2000, 10000, 10000)).toBe(2000);
+    expect(suggestedDeductionCents(2000, 10000, 12000)).toBe(2000);
+  });
+
+  it("scales by the bundle's discount", () => {
+    expect(suggestedDeductionCents(2000, 10000, 8000)).toBe(1600);
+  });
+
+  it("never reaches the whole bundle price", () => {
+    expect(suggestedDeductionCents(9000, 9500, 9500)).toBe(9000);
+    expect(suggestedDeductionCents(5000, 5000, 5000)).toBe(4999);
   });
 });

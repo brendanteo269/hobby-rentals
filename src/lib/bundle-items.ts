@@ -83,3 +83,15 @@ export function adjustmentLines(adjustments: BundleAdjustments | null | undefine
     ...adjustments.omitted.map((item) => `Without ${item.name}`),
   ];
 }
+
+/**
+ * What an optional item takes off each day by default (S5-10): its own listed
+ * daily price when the bundle costs at least the items' combined price, else that
+ * price scaled by the bundle's discount, so leaving items out never beats the
+ * bundle's own saving. Never more than the bundle price itself.
+ */
+export function suggestedDeductionCents(itemDailyCents: number, itemsDailyCents: number, bundleDailyCents: number): number {
+  if (itemsDailyCents <= 0 || bundleDailyCents <= 0) return 0;
+  const share = bundleDailyCents >= itemsDailyCents ? itemDailyCents : (itemDailyCents * bundleDailyCents) / itemsDailyCents;
+  return Math.max(1, Math.min(Math.round(share), bundleDailyCents - 1));
+}

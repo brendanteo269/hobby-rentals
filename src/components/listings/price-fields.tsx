@@ -56,6 +56,7 @@ export function PriceFields({
   priceError,
   depositError,
   initial,
+  onRateChange,
 }: {
   /** Basis points (10000 = 100%) a deposit may not exceed of the weekly-equivalent rate. */
   depositCapBps: number;
@@ -64,6 +65,8 @@ export function PriceFields({
   depositError?: string;
   /** The stored values when editing; omitted on create. */
   initial?: Priced | null;
+  /** Told the rate as it is typed, for a form that derives something from it (the bundle's optional-item defaults). */
+  onRateChange?: (block: "DAY" | "WEEK" | null, rate: string) => void;
 }) {
   const initialPrice = initial ? priceFrom(initial) : null;
   const [block, setBlock] = useState<"DAY" | "WEEK" | null>(initialPrice?.block ?? null);
@@ -79,6 +82,7 @@ export function PriceFields({
         onRateChange={(nextBlock, nextRate) => {
           setBlock(nextBlock);
           setRate(nextRate);
+          onRateChange?.(nextBlock, nextRate);
         }}
       />
 

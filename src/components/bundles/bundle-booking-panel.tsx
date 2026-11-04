@@ -221,26 +221,44 @@ export function BundleBookingPanel({
 
       {optionalItems.length > 0 && (
         <fieldset className="mt-4">
-          <legend className="text-sm font-medium">Optional items</legend>
+          <legend className="text-sm font-semibold">Optional extras</legend>
           <p className="body-copy mt-1">Untick anything you do not need. It comes off the price and is not booked.</p>
-          <ul className="mt-2 space-y-1">
+          <ul className="mt-2 space-y-2">
             {optionalItems.map((item) => {
               // Not free for the chosen dates: left out by itself, and the bundle is still offered.
               const unavailable = quote?.optional_items.find((entry) => entry.listing_id === item.id)?.available === false;
+              const included = !unavailable && !unticked.has(item.id);
               return (
                 <li key={item.id}>
-                  <label className={`flex min-h-11 items-center gap-2 text-sm ${unavailable ? "text-ink-soft" : "cursor-pointer"}`}>
+                  <label
+                    className={`flex min-h-12 items-center gap-3 rounded-lg border-2 p-3 text-sm ${
+                      unavailable
+                        ? "border-line text-ink-soft"
+                        : included
+                          ? "cursor-pointer border-ink bg-surface-muted"
+                          : "cursor-pointer border-dashed border-accent"
+                    }`}
+                  >
                     <input
                       type="checkbox"
-                      checked={!unavailable && !unticked.has(item.id)}
+                      checked={included}
                       disabled={unavailable || isPending}
                       onChange={(event) => toggleOptional(item.id, event.target.checked)}
-                      className="size-4 accent-ink"
+                      className="size-5 shrink-0 accent-ink"
                     />
-                    <span>
-                      {item.name} <span className="text-ink-soft">{deductionLabel(item.deduction_cents)} if left out</span>
-                      {unavailable && <span className="block text-xs">Not free for these dates, so it is not included.</span>}
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-medium">{item.name}</span>
+                      <span className="block text-xs text-ink-soft">
+                        {unavailable
+                          ? "Not free for these dates, so it is not included."
+                          : included
+                            ? "Included"
+                            : "Left out, not booked"}
+                      </span>
                     </span>
+                    {!unavailable && (
+                      <span className="shrink-0 text-xs font-semibold text-accent-dark">{deductionLabel(item.deduction_cents)} if skipped</span>
+                    )}
                   </label>
                 </li>
               );
