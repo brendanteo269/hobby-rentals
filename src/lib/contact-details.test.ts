@@ -23,7 +23,6 @@ const BOTH: Roles = { wantsToRent: true, wantsToOwn: true };
 /** Builds the form a member would submit, with overrides for the field under test. */
 function form(fields: Record<string, string>): FormData {
   const data = new FormData();
-  data.set("contact_number", "9123 4567");
   for (const [key, value] of Object.entries(fields)) data.set(key, value);
   return data;
 }
@@ -97,50 +96,27 @@ describe("parseContactDetails — the owner's pickup location", () => {
   });
 });
 
-describe("parseContactDetails — contact number", () => {
-  it.each(["9123 4567", "+65 9123 4567", "(65) 9123-4567"])("accepts %s", (number) => {
-    const result = parseContactDetails(form({ contact_number: number }), RENTER);
-    expect(result.ok).toBe(true);
-  });
-
-  it.each([
-    ["", "empty"],
-    ["abc", "letters"],
-    ["12345", "too short"],
-    ["1".repeat(21), "too long"],
-  ])("rejects %s (%s)", (number) => {
-    const result = parseContactDetails(form({ contact_number: number }), RENTER);
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
-    expect(result.fieldErrors.contact_number).toBeDefined();
-  });
-});
-
 describe("parseContactDetails — reporting", () => {
   it("reports every invalid field at once, not just the first", () => {
     // The behaviour that stops a member fixing one error only to be shown the
     // next on resubmission.
     const result = parseContactDetails(
-      form({ contact_number: "abc", bio: "x".repeat(501) }),
+      form({ bio: "x".repeat(501) }),
       BOTH,
     );
     expect(result.ok).toBe(false);
     if (result.ok) return;
-    expect(Object.keys(result.fieldErrors).sort()).toEqual([
-      "bio",
-      "contact_number",
-      "default_pickup_location",
-    ]);
+    expect(Object.keys(result.fieldErrors).sort()).toEqual(["bio", "default_pickup_location"]);
   });
 
   it("keys errors by the field name the form uses", () => {
     // The keys are what the form indexes into, so a rename here silently stops
     // any message rendering.
-    const result = parseContactDetails(form({ contact_number: "" }), OWNER);
+    const result = parseContactDetails(form({ bio: "x".repeat(501) }), OWNER);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     for (const key of Object.keys(result.fieldErrors)) {
-      expect(key).toMatch(/^(contact_number|default_pickup_location|bio)$/);
+      expect(key).toMatch(/^(default_pickup_location|bio)$/);
     }
   });
 

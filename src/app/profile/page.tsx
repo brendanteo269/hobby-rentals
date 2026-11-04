@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { CloudOff, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getOwnProfile } from "@/lib/profile";
+import { getOwnProfile, verifiedContactNumber } from "@/lib/profile";
 import { getMyOwnerVerification, getMyRenterTrust } from "@/lib/api/verification";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { hasAnsweredRequests, responseRatePercent } from "@/lib/verification";
@@ -26,6 +26,8 @@ import { ConnectedApps } from "@/components/connected-apps";
 import { getAssistantTokens } from "@/lib/api/assistant-tokens";
 import { BackendApiError } from "@/lib/api/client";
 import { getPublicMember } from "@/lib/api/reviews";
+import { getOwnAvatarUrl } from "@/lib/api/profile-avatar";
+import { ProfileAvatarEditor } from "@/components/profile-photo-field";
 import { isInsightsPeriod } from "@/lib/owner-insights";
 
 export const metadata = { title: "Your profile — HobbyRentals" };
@@ -91,17 +93,22 @@ export default async function ProfilePage({
   // S4-01: the owner's own badge standing. Swallowed - a badge missing from
   // your own profile must not cost you the page, and it says nothing a renter
   // cannot already see.
-  const [verification, renterTrust] = await Promise.all([
+  const [verification, renterTrust, avatarUrl] = await Promise.all([
     getMyOwnerVerification().catch(() => undefined),
     // S4-06, swallowed for the same reason: a badge missing from your own
     // profile must not cost you the page.
     getMyRenterTrust().catch(() => undefined),
+    // Falls back to null on its own, for the same reason.
+    getOwnAvatarUrl(),
   ]);
 
   return (
     <Container className="py-16">
       <p className="eyebrow">Member since {memberSince}</p>
-      <h1 className="heading mt-3 text-3xl">{profile.display_name ?? "Your profile"}</h1>
+      <div className="mt-3 flex items-center gap-4">
+        <ProfileAvatarEditor name={profile.display_name ?? user.email ?? null} initialUrl={avatarUrl} />
+        <h1 className="heading text-3xl">{profile.display_name ?? "Your profile"}</h1>
+      </div>
       <p className="body-copy mt-2 flex flex-wrap items-center gap-3">
         {user.email}
         {/* About the email address, not the owner. Named in full so it cannot
@@ -170,7 +177,10 @@ export default async function ProfilePage({
               email={user.email ?? ""}
               emailVerified={isVerified}
               displayName={profile.display_name}
-              contactNumber={profile.contact_number}
+              mobile={{
+                number: profile.contact_number,
+                verified: verifiedContactNumber(profile) !== null,
+              }}
               defaultPickupLocation={profile.default_pickup_location}
               bio={profile.bio}
               roles={roles}

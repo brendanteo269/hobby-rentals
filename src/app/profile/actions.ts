@@ -14,6 +14,7 @@ import { defaultDashboardPath, MY_LISTINGS_PATH, RENTALS_PATH } from "@/lib/rout
 import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/login-attempts";
 import { BackendApiError, type FieldErrors } from "@/lib/api/client";
 import { updateNotificationPreferences } from "@/lib/api/notifications";
+import { removeAvatar, saveAvatar } from "@/lib/api/profile-avatar";
 import { createAssistantToken, revokeAssistantToken } from "@/lib/api/assistant-tokens";
 import { validateAssistantTokenName, type CreatedAssistantToken } from "@/lib/assistant-tokens";
 import { NOTIFICATION_CATEGORIES, preferenceFieldName } from "@/lib/notification-preferences";
@@ -29,7 +30,6 @@ import { NOTIFICATION_CATEGORIES, preferenceFieldName } from "@/lib/notification
  */
 export type OnboardingValues = {
   display_name: string;
-  contact_number: string;
   default_pickup_location: string;
   bio: string;
   wants_to_rent: boolean;
@@ -50,6 +50,10 @@ const CORRECT_FIELDS = "Please correct the highlighted fields.";
  * The update goes through the member's own session, so Row Level Security is
  * what confines it to their row — the id is never taken from the form.
  *
+ * The mobile number is not written here, and is optional: MobileNumberField
+ * verifies it with Supabase Auth, which copies it into the profile itself.
+ * It stays optional until hosted has a paid SMS provider to send the codes.
+ *
  * Completing this is also what gives the member a wallet: the
  * profiles_create_wallet_on_onboarding trigger fires on the onboarded_at
  * transition below. Nothing here has to ask for one.
@@ -65,7 +69,6 @@ export async function completeOnboarding(
   // Echoed back on every rejection so the form can redisplay itself.
   const values: OnboardingValues = {
     display_name: displayName,
-    contact_number: String(formData.get("contact_number") ?? ""),
     default_pickup_location: String(formData.get("default_pickup_location") ?? ""),
     bio: String(formData.get("bio") ?? ""),
     wants_to_rent: wantsToRent,
@@ -109,7 +112,6 @@ export async function completeOnboarding(
       display_name: displayName,
       wants_to_rent: wantsToRent,
       wants_to_own: wantsToOwn,
-      contact_number: parsed.contact_number,
       default_pickup_location: parsed.default_pickup_location,
       bio: parsed.bio,
       onboarded_at: new Date().toISOString(),
@@ -237,7 +239,10 @@ export async function updateDisplayName(
   return { success: "Display name updated." };
 }
 
-/** Updates the contact number, pickup location and bio collected at onboarding. */
+/**
+ * Updates the pickup location and bio collected at onboarding. The mobile
+ * number has its own section, since it changes only by verifying a new one.
+ */
 export async function updateContactDetails(
   _prev: FormState,
   formData: FormData,
@@ -274,10 +279,7 @@ export async function updateContactDetails(
   // select submits nothing, which parses as null — writing that unconditionally
   // would wipe a stored location the moment a member who has since stopped
   // owning edited their bio.
-  const update: Record<string, string | null> = {
-    contact_number: values.contact_number,
-    bio: values.bio,
-  };
+  const update: Record<string, string | null> = { bio: values.bio };
   if (roles.wantsToOwn) update.default_pickup_location = values.default_pickup_location;
 
   const { error } = await supabase.from("profiles").update(update).eq("id", user.id);
@@ -285,7 +287,40 @@ export async function updateContactDetails(
   if (error) return { error: error.message };
 
   revalidatePath("/profile");
-  return { success: "Contact details updated." };
+  return { success: "Profile details updated." };
+}
+
+export type ProfilePhotoResult = { error?: string; avatarUrl?: string | null };
+
+/**
+ * Makes an upload from /api/profile/avatar/presign the member's photo.
+ *
+ * Called straight from ProfilePhotoField rather than through a form: the
+ * photo is saved the moment it is cropped, on the Account tab and during
+ * onboarding alike, so an error lands beside the photo while the member is
+ * still looking at it. The layout is revalidated because the header shows it.
+ */
+export async function saveProfilePhoto(uploadKey: string): Promise<ProfilePhotoResult> {
+  try {
+    const { avatar_url } = await saveAvatar(uploadKey);
+    revalidatePath("/", "layout");
+    return { avatarUrl: avatar_url };
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
+}
+
+/** Removes the member's photo; they go back to their initial everywhere. */
+export async function removeProfilePhoto(): Promise<ProfilePhotoResult> {
+  try {
+    await removeAvatar();
+    revalidatePath("/", "layout");
+    return { avatarUrl: null };
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
 }
 
 /**

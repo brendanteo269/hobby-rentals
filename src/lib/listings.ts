@@ -189,6 +189,8 @@ export type Listing = {
   owner_id: string;
   /** Detail responses include only this public owner identity field. */
   owner_display_name?: string | null;
+  /** The owner's profile photo, or null to show their initial. */
+  owner_avatar_url?: string | null;
   /** S4-01: whether this listing's owner currently holds the Verified Owner badge. */
   owner_verified?: boolean;
   /** S5-17: the owner's usual reply-time band; absent without enough history. */

@@ -41,6 +41,7 @@ export function ConversationThreadPanel({
   initialHasMore = false,
   currentUserId,
   otherPartyName,
+  otherPartyAvatarUrl = null,
   attachmentLimits,
   replaceComposerWith,
   footerBanner,
@@ -56,6 +57,7 @@ export function ConversationThreadPanel({
   initialHasMore?: boolean;
   currentUserId: string;
   otherPartyName: string | null;
+  otherPartyAvatarUrl?: string | null;
   attachmentLimits?: ConversationLimits;
   /**
    * Rendered instead of the reply composer when set - the enquiry-side "this
@@ -236,6 +238,7 @@ export function ConversationThreadPanel({
             messages={messages}
             currentUserId={currentUserId}
             otherPartyName={otherPartyName}
+            otherPartyAvatarUrl={otherPartyAvatarUrl}
             hasMore={hasMore}
             isLoadingMore={isLoadingMore}
             onLoadEarlier={loadEarlier}

@@ -1,5 +1,5 @@
 import { Star } from "lucide-react";
-import { PersonAvatar } from "@/components/messages/person-avatar";
+import { PersonAvatar } from "@/components/person-avatar";
 import { ImageSlot } from "@/components/ui";
 import { formatDate } from "@/lib/format";
 import { CONDITION_LABELS } from "@/lib/listings";
@@ -18,7 +18,7 @@ export function PublishedReviewCard({ review, showRental = true }: { review: Pub
   return (
     <article className="card p-4">
       <div className="flex min-w-0 items-start gap-2">
-          <PersonAvatar name={reviewerName} size="md" />
+          <PersonAvatar name={reviewerName} imageUrl={review.reviewer?.avatar_url} size="md" />
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-ink">{reviewerName}</p>
             <p className="text-xs text-ink-soft">

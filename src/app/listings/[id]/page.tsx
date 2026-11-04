@@ -31,7 +31,7 @@ import { Suspense } from "react";
 import { SimilarListings, SimilarListingsFallback } from "@/components/listings/similar-listings";
 import Link from "next/link";
 import type { Route } from "next";
-import { PersonAvatar } from "@/components/messages/person-avatar";
+import { PersonAvatar } from "@/components/person-avatar";
 import { AskAboutItem } from "@/components/listings/ask-about-item";
 import { ListingQuestionsSection } from "@/components/listings/listing-questions-section";
 import { OwnerQuestionsPanel } from "@/components/listings/owner-questions-panel";
@@ -184,7 +184,7 @@ export default async function ListingDetailPage({
 
           <p className="body-copy mt-6 whitespace-pre-line">{listing.description}</p>
           <Link href={`/members/${listing.owner_id}` as Route} className="mt-5 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
-            <PersonAvatar name={listing.owner_display_name ?? "Member"} size="sm" />
+            <PersonAvatar name={listing.owner_display_name ?? "Member"} imageUrl={listing.owner_avatar_url} size="sm" />
             <span>Listed by <span className="font-medium underline-offset-2 hover:underline">{listing.owner_display_name ?? "Member"}</span></span>
             {/* S4-01 Scenario 3: alongside the owner's details, where a
                 renter is already deciding whether to trust them. */}
