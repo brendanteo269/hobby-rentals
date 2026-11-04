@@ -65,8 +65,8 @@ describe("kitFailureMessage", () => {
     expect(kitFailureMessage({ ...failure, listing_name: null, owner_name: null, reason: "DECLINED" })).toMatch(/^an item was declined/);
   });
 
-  it("a withdrawn kit says the renter did it", () => {
-    expect(kitFailureMessage({ ...failure, reason: "WITHDRAWN" })).toBe("You withdrew this kit. Every hold has been released.");
+  it("a withdrawn bundle says the renter did it", () => {
+    expect(kitFailureMessage({ ...failure, reason: "WITHDRAWN" })).toBe("You withdrew this bundle. Every hold has been released.");
   });
 });
 

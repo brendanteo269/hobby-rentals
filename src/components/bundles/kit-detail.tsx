@@ -10,8 +10,8 @@ import { rebuildKitPath } from "@/lib/routes";
 import { WithdrawKitButton } from "./withdraw-kit-button";
 
 /**
- * One cross-owner kit as the renter follows it (S5-09 Scenario 4): every
- * owner's item with its own status in one view, and the next step for the kit
+ * One cross-owner bundle as the renter follows it (S5-09 Scenario 4): every
+ * owner's item with its own status in one view, and the next step for the bundle
  * as a whole. An item is still an ordinary booking, so its meetup, pickup,
  * return and settlement happen on its own row in Bookings, linked from here.
  */
@@ -21,7 +21,7 @@ export function KitDetail({
   reviewEligibility,
 }: {
   kit: Kit;
-  /** The kit's items an owner has accepted, as the bookings they are. */
+  /** The bundle's items an owner has accepted, as the bookings they are. */
   acceptedBookings: Booking[];
   reviewEligibility: ReviewEligibility[];
 }) {

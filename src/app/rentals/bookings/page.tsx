@@ -20,9 +20,9 @@ export default async function RenterBookingsPage({ searchParams }: { searchParam
   const filter = isRentalFilter(show) ? show : undefined;
   const { bookings, bundleBookings, kits, waitlist, reviewEligibility, suspension } = await getRenterActivity();
 
-  // S5-09: an item of a cross-owner kit is the same thing as its kit's card, so
-  // it is not listed again as a booking of its own; the kit's page carries its
-  // actions. The kit shows wherever any of its items would have.
+  // S5-09: an item of a cross-owner bundle is the same thing as its bundle's card, so
+  // it is not listed again as a booking of its own; the bundle's page carries its
+  // actions. The bundle shows wherever any of its items would have.
   const ownBookings = bookings.filter((booking) => !booking.booking_group_id);
   const bookingsUnder = (value: RentalFilter | undefined) => {
     if (value === "waitlist") return { bookings: [], bundleBookings: [], kits: [] };

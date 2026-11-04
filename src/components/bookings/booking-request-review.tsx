@@ -46,7 +46,7 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
         </p>
       </div>
       {request.kit_id && (
-        // S5-09: only this owner's part of the renter's kit is shown, and answering
+        // S5-09: only this owner's part of the renter's bundle is shown, and answering
         // covers all of it; what the renter asked other owners for is not theirs to see.
         <p className="mt-2 text-sm text-ink-soft">
           Part of a bundle the renter is requesting from several owners. This request covers your{" "}
