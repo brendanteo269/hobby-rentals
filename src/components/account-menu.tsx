@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import { Clock, LogOut, UserRound } from "lucide-react";
 import { useDismiss } from "./use-dismiss";
+import { PersonAvatar } from "./person-avatar";
 
 /**
  * Header avatar that opens the account menu: who is signed in, then Profile
@@ -13,17 +14,21 @@ import { useDismiss } from "./use-dismiss";
 export function AccountMenu({
   name,
   email,
+  avatarUrl,
   signOutAction,
 }: {
   /** The display name, or null for a member who has not set one. */
   name: string | null;
   email: string;
+  /** Their profile photo, or null to show their initial. */
+  avatarUrl: string | null;
   signOutAction: () => Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const close = useCallback(() => setOpen(false), []);
-  const initial = (name || email || "?").charAt(0);
+  // The email stands in for a missing name, so the initial is never "M" for "Member".
+  const avatarName = name || email || null;
 
   useDismiss(rootRef, open, close);
 
@@ -35,9 +40,9 @@ export function AccountMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={`Account: ${name ?? email}`}
-        className="flex size-9 items-center justify-center rounded-full bg-ink text-sm font-semibold uppercase text-white outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2"
+        className="flex rounded-full outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2"
       >
-        {initial}
+        <PersonAvatar name={avatarName} imageUrl={avatarUrl} size="md" />
       </button>
 
       {open && (
@@ -46,9 +51,7 @@ export function AccountMenu({
           className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-xl border border-line bg-white shadow-lg"
         >
           <div className="flex flex-col items-center px-5 pb-4 pt-5 text-center">
-            <span className="flex size-14 items-center justify-center rounded-full bg-ink text-xl font-semibold uppercase text-white">
-              {initial}
-            </span>
+            <PersonAvatar name={avatarName} imageUrl={avatarUrl} size="lg" />
             {name && <p className="mt-3 max-w-full truncate text-base font-medium text-ink">{name}</p>}
             <p className={`max-w-full truncate text-sm text-ink-soft ${name ? "mt-0.5" : "mt-3"}`}>{email}</p>
             <Link

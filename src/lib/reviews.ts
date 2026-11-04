@@ -11,7 +11,7 @@ export type PublishedReview = {
   reviewed_role: ReviewRole;
   rental_name_snapshot: string;
   published_at: string;
-  reviewer?: { display_name: string | null } | null;
+  reviewer?: { display_name: string | null; avatar_url?: string | null } | null;
   rental_listing: {
     name: string;
     condition: "NEW" | "GOOD" | "FAIR" | "POOR";
@@ -21,7 +21,7 @@ export type PublishedReview = {
 export type RatingSummary = { average: number | null; count: number };
 export type ReviewCollection = RatingSummary & { reviews: PublishedReview[] };
 import type { ListingCard } from "@/lib/listings";
-export type PublicMemberProfile = { id: string; display_name: string | null; created_at: string; verification?: OwnerVerification; renter_trust?: RenterTrust; owner_summary: RatingSummary; renter_summary: RatingSummary; reviews: PublishedReview[]; listings: ListingCard[]; booking_pause?: BookingPause | null };
+export type PublicMemberProfile = { id: string; display_name: string | null; avatar_url?: string | null; created_at: string; verification?: OwnerVerification; renter_trust?: RenterTrust; owner_summary: RatingSummary; renter_summary: RatingSummary; reviews: PublishedReview[]; listings: ListingCard[]; booking_pause?: BookingPause | null };
 
 import type { Route } from "next";
 

@@ -39,6 +39,8 @@ export type Conversation = {
   booking_end_date: string | null;
   other_party_id: string;
   other_party_name: string | null;
+  /** Their profile photo, or null to show their initial. */
+  other_party_avatar_url?: string | null;
   other_party_role: ConversationRole;
   /** S3-24: the other party is suspended or banned, so the thread takes no more messages. */
   other_party_unavailable: boolean;

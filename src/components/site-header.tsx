@@ -12,6 +12,7 @@ import { NewMessageToaster } from "./messages/new-message-toaster";
 import { NotificationBell } from "./notifications/notification-bell";
 import { getNotificationCounts } from "@/lib/api/notifications";
 import { getOwnProfile } from "@/lib/profile";
+import { getOwnAvatarUrl } from "@/lib/api/profile-avatar";
 import { defaultDashboardPath } from "@/lib/routes";
 
 /**
@@ -34,7 +35,9 @@ export async function SiteHeader() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [counts, profile] = user ? await Promise.all([notificationCounts(), getOwnProfile()]) : [null, null];
+  const [counts, profile, avatarUrl] = user
+    ? await Promise.all([notificationCounts(), getOwnProfile(), getOwnAvatarUrl()])
+    : [null, null, null];
   // The side onboarding would send the member to: their listings if they
   // only own, their rentals otherwise.
   const dashboardPath = defaultDashboardPath({
@@ -75,7 +78,7 @@ export async function SiteHeader() {
                 />
                 <MobileMenu dashboardPath={dashboardPath} />
               </div>
-              <AccountMenu name={profile?.display_name ?? null} email={user.email ?? ""} signOutAction={signOut} />
+              <AccountMenu name={profile?.display_name ?? null} email={user.email ?? ""} avatarUrl={avatarUrl} signOutAction={signOut} />
             </>
           ) : (
             <ButtonLink href="/login" className="h-9 py-0">Log in / Sign up</ButtonLink>

@@ -5,7 +5,7 @@ import { Badge, ImageSlot } from "@/components/ui";
 import { CONVERSATION_ROLE_BADGE_VARIANT, CONVERSATION_ROLE_LABELS, type ConversationRole } from "@/lib/conversations";
 import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_LABELS, type BookingStatus } from "@/lib/bookings";
 import { formatDate } from "@/lib/format";
-import { PersonAvatar } from "./person-avatar";
+import { PersonAvatar } from "@/components/person-avatar";
 
 /**
  * The listing a thread is about - what the row/page is actually recognised
@@ -22,6 +22,7 @@ export function ConversationHeader({
   booking,
   otherPartyId,
   otherPartyName,
+  otherPartyAvatarUrl,
   otherPartyRole,
   actions,
 }: {
@@ -40,6 +41,7 @@ export function ConversationHeader({
   otherPartyId?: string;
   /** Omitted on the "start a new thread" screen, where no other party has been resolved yet. */
   otherPartyName?: string | null;
+  otherPartyAvatarUrl?: string | null;
   otherPartyRole: ConversationRole;
   /** Controls for an existing thread, after the other party - e.g. reporting them (S3-22). */
   actions?: ReactNode;
@@ -73,7 +75,7 @@ export function ConversationHeader({
           className="flex shrink-0 items-center gap-1.5 rounded-md px-1 py-1 transition-colors hover:bg-surface-muted"
           aria-label={`View ${otherPartyName}'s public profile`}
         >
-          <PersonAvatar name={otherPartyName} size="sm" />
+          <PersonAvatar name={otherPartyName} imageUrl={otherPartyAvatarUrl} size="sm" />
           <span className="text-xs text-ink-soft">{otherPartyName}</span>
           <Badge variant={CONVERSATION_ROLE_BADGE_VARIANT[otherPartyRole]}>
             {CONVERSATION_ROLE_LABELS[otherPartyRole]}
@@ -81,7 +83,7 @@ export function ConversationHeader({
         </Link>
       ) : (
         <div className="flex shrink-0 items-center gap-1.5">
-          {otherPartyName && <PersonAvatar name={otherPartyName} size="sm" />}
+          {otherPartyName && <PersonAvatar name={otherPartyName} imageUrl={otherPartyAvatarUrl} size="sm" />}
           {otherPartyName && <span className="text-xs text-ink-soft">{otherPartyName}</span>}
           <Badge variant={CONVERSATION_ROLE_BADGE_VARIANT[otherPartyRole]}>
             {CONVERSATION_ROLE_LABELS[otherPartyRole]}

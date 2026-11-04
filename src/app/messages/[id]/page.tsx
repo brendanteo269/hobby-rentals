@@ -113,6 +113,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
           booking={headerBooking}
           otherPartyId={conversation.other_party_id}
           otherPartyName={conversation.other_party_name ?? "Member"}
+          otherPartyAvatarUrl={conversation.other_party_avatar_url}
           otherPartyRole={conversation.other_party_role}
           actions={
             // S3-22: only a booking conversation can be reported from.
@@ -129,6 +130,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
           initialHasMore={messagePage.has_more}
           currentUserId={user.id}
           otherPartyName={conversation.other_party_name}
+          otherPartyAvatarUrl={conversation.other_party_avatar_url}
           attachmentLimits={attachmentLimits}
           bookingId={conversation.scope === "BOOKING" ? conversation.booking_id ?? undefined : undefined}
           meetupEligible={conversation.scope === "BOOKING" && conversation.booking_status === "CONFIRMED"}

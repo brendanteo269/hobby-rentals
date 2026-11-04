@@ -14,6 +14,7 @@ import { defaultDashboardPath, MY_LISTINGS_PATH, RENTALS_PATH } from "@/lib/rout
 import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/login-attempts";
 import { BackendApiError, type FieldErrors } from "@/lib/api/client";
 import { updateNotificationPreferences } from "@/lib/api/notifications";
+import { removeAvatar, saveAvatar } from "@/lib/api/profile-avatar";
 import { createAssistantToken, revokeAssistantToken } from "@/lib/api/assistant-tokens";
 import { validateAssistantTokenName, type CreatedAssistantToken } from "@/lib/assistant-tokens";
 import { NOTIFICATION_CATEGORIES, preferenceFieldName } from "@/lib/notification-preferences";
@@ -286,6 +287,39 @@ export async function updateContactDetails(
 
   revalidatePath("/profile");
   return { success: "Contact details updated." };
+}
+
+export type ProfilePhotoResult = { error?: string; avatarUrl?: string | null };
+
+/**
+ * Makes an upload from /api/profile/avatar/presign the member's photo.
+ *
+ * Called straight from ProfilePhotoField rather than through a form: the
+ * photo is saved the moment it is cropped, on the Account tab and during
+ * onboarding alike, so an error lands beside the photo while the member is
+ * still looking at it. The layout is revalidated because the header shows it.
+ */
+export async function saveProfilePhoto(uploadKey: string): Promise<ProfilePhotoResult> {
+  try {
+    const { avatar_url } = await saveAvatar(uploadKey);
+    revalidatePath("/", "layout");
+    return { avatarUrl: avatar_url };
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
+}
+
+/** Removes the member's photo; they go back to their initial everywhere. */
+export async function removeProfilePhoto(): Promise<ProfilePhotoResult> {
+  try {
+    await removeAvatar();
+    revalidatePath("/", "layout");
+    return { avatarUrl: null };
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
 }
 
 /**

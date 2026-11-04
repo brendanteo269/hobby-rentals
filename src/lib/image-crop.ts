@@ -14,37 +14,54 @@ export type CropTransform = { x: number; y: number; scale: number };
 
 export const CENTERED_CROP: CropTransform = { x: 0, y: 0, scale: 1 };
 
+/** The side of the square `crop` selects from a `width` x `height` source, in source pixels. */
+export function cropSourceSide(width: number, height: number, crop: CropTransform): number {
+  return Math.round(Math.min(width, height) / crop.scale);
+}
+
+/**
+ * The output canvas side: the crop's own size, or `maxSide` when the crop is
+ * larger. Never enlarges - upscaling adds pixels without adding detail.
+ */
+export function outputSide(sourceSide: number, maxSide?: number): number {
+  return maxSide === undefined ? sourceSide : Math.min(sourceSide, maxSide);
+}
+
 /**
  * Draws the square region of `bitmap` selected by `crop` onto a fresh
  * canvas and encodes it as `mimeType`.
  *
- * Always at native resolution: the source rectangle shrinks as scale grows
- * rather than the canvas being scaled, so this never resamples (no
- * up/down-sampling blur), and source coordinates are floored rather than
- * left fractional - a fractional source offset forces the browser to
- * bilinearly blend across pixel boundaries even at 1:1 scale, which is what
- * actually caused the original auto-crop blur.
+ * At native resolution unless `maxSide` caps it: the source rectangle
+ * shrinks as scale grows rather than the canvas being scaled, so a listing
+ * photo is never resampled (no up/down-sampling blur), and source
+ * coordinates are floored rather than left fractional - a fractional source
+ * offset forces the browser to bilinearly blend across pixel boundaries even
+ * at 1:1 scale, which is what actually caused the original auto-crop blur.
+ * `maxSide` is for small outputs such as a profile photo, where shrinking a
+ * phone's 3000px crop is the point.
  */
 export async function cropBitmapToFile(
   bitmap: ImageBitmap,
   crop: CropTransform,
   mimeType: string,
   fileName: string,
+  maxSide?: number,
 ): Promise<File | null> {
-  const minSide = Math.min(bitmap.width, bitmap.height);
-  const sSide = Math.round(minSide / crop.scale);
+  const sSide = cropSourceSide(bitmap.width, bitmap.height, crop);
   const maxOffsetX = (bitmap.width - sSide) / 2;
   const maxOffsetY = (bitmap.height - sSide) / 2;
   const sx = Math.floor(maxOffsetX + crop.x * maxOffsetX);
   const sy = Math.floor(maxOffsetY + crop.y * maxOffsetY);
+  const side = outputSide(sSide, maxSide);
 
   const canvas = document.createElement("canvas");
-  canvas.width = sSide;
-  canvas.height = sSide;
+  canvas.width = side;
+  canvas.height = side;
   const ctx = canvas.getContext("2d");
   if (!ctx) return null;
 
-  ctx.drawImage(bitmap, sx, sy, sSide, sSide, 0, 0, sSide, sSide);
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(bitmap, sx, sy, sSide, sSide, 0, 0, side, side);
 
   // 0.95: any canvas re-encode of a JPEG/WebP is already a second
   // generation of lossy compression on top of the original file's own - this

@@ -5,7 +5,7 @@ import type { Message } from "@/lib/conversations";
 import { formatChatTimestamp } from "@/lib/format";
 import { AttachmentLightbox } from "./attachment-lightbox";
 import { MeetupProposalCard } from "./meetup-proposal-card";
-import { PersonAvatar } from "./person-avatar";
+import { PersonAvatar } from "@/components/person-avatar";
 
 /**
  * A thread's messages, oldest first. Read-only and permanent: a message is
@@ -20,6 +20,7 @@ export function MessageThread({
   messages,
   currentUserId,
   otherPartyName,
+  otherPartyAvatarUrl = null,
   hasMore = false,
   isLoadingMore = false,
   onLoadEarlier,
@@ -32,6 +33,7 @@ export function MessageThread({
   currentUserId: string;
   /** Shown next to the other party's own bubbles - the viewer's own need no name/avatar, their side and colour already say whose they are. */
   otherPartyName: string | null;
+  otherPartyAvatarUrl?: string | null;
   /** S2-16: whether an earlier page of this thread exists - shows the "Load earlier messages" control at the top. */
   hasMore?: boolean;
   isLoadingMore?: boolean;
@@ -93,7 +95,7 @@ export function MessageThread({
               message.meetup_event_type === "ACCEPTED" && message.meetup_proposal.id !== confirmedMeetupProposalId;
             return (
               <li key={message.id} className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"}`}>
-                {!mine && <PersonAvatar name={otherPartyName} size="sm" />}
+                {!mine && <PersonAvatar name={otherPartyName} imageUrl={otherPartyAvatarUrl} size="sm" />}
                 <MeetupProposalCard
                   message={message}
                   isActionable={isActionable}
@@ -109,7 +111,7 @@ export function MessageThread({
           const hasAttachments = message.attachment_urls.length > 0;
           return (
             <li key={message.id} className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"}`}>
-              {!mine && <PersonAvatar name={otherPartyName} size="sm" />}
+              {!mine && <PersonAvatar name={otherPartyName} imageUrl={otherPartyAvatarUrl} size="sm" />}
               <div
                 className={`min-w-0 rounded-2xl px-4 py-3 text-sm leading-relaxed ${hasAttachments ? "w-full max-w-[85%] sm:max-w-sm" : "max-w-[70%]"} ${mine ? "bg-ink text-white" : "bg-surface-muted text-ink"}`}
               >

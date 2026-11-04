@@ -9,6 +9,7 @@ import {
 } from "@/app/profile/actions";
 import { LocationOptions } from "./location-options";
 import { useSubmissionAttempt } from "./use-submission-attempt";
+import { ProfilePhotoField } from "./profile-photo-field";
 
 const OPTIONS = [
   {
@@ -46,8 +47,18 @@ function emptyValues(displayName?: string | null): OnboardingValues {
  * Every control is deliberately *controlled*, and the form is keyed on the
  * submission attempt, so a rejected submission does not wipe what the member
  * typed — see useSubmissionAttempt for why both halves are needed.
+ *
+ * The optional photo sits outside that keyed form: it saves itself the
+ * moment it is cropped, and remounting it on a rejected submission would
+ * reset it to the page's stale "no photo yet".
  */
-export function OnboardingForm({ defaultDisplayName }: { defaultDisplayName?: string | null }) {
+export function OnboardingForm({
+  defaultDisplayName,
+  avatarUrl,
+}: {
+  defaultDisplayName?: string | null;
+  avatarUrl: string | null;
+}) {
   const [state, formAction, pending] = useActionState<OnboardingState, FormData>(
     completeOnboarding,
     undefined,
@@ -73,8 +84,16 @@ export function OnboardingForm({ defaultDisplayName }: { defaultDisplayName?: st
         you like.
       </p>
 
+      <div className="mt-8 rounded-2xl border border-line bg-white p-5">
+        <p className="text-sm font-semibold">Profile photo</p>
+        <p className="body-copy mt-1">Optional. Shown beside your name to people you rent with.</p>
+        <div className="mt-4">
+          <ProfilePhotoField name={values.display_name || null} initialUrl={avatarUrl} />
+        </div>
+      </div>
+
       {/* key: see useSubmissionAttempt. */}
-      <form key={attempt} action={formAction} className="mt-8 space-y-4">
+      <form key={attempt} action={formAction} className="mt-4 space-y-4">
         {OPTIONS.map((option) => (
           <label
             key={option.name}

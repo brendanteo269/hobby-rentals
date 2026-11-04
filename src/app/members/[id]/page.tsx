@@ -8,6 +8,7 @@ import { todayIso } from "@/lib/format";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { hasAnsweredRequests, responseRatePercent } from "@/lib/verification";
 import { TrustedRenterBadge } from "@/components/bookings/trusted-renter-badge";
+import { PersonAvatar } from "@/components/person-avatar";
 import { hasCompletedRentals, onTimeRatePercent } from "@/lib/renter-trust";
 
 function Rating({ label, summary }: { label: string; summary: { average: number | null; count: number } }) {
@@ -18,7 +19,7 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
   const { id } = await params;
   const member = await getPublicMember(id).catch(() => null);
   if (!member) notFound();
-  return <Container className="py-16"><p className="eyebrow">Member since {new Date(member.created_at).toLocaleDateString("en-SG", { month: "long", year: "numeric" })}</p><div className="mt-2 flex flex-wrap items-center gap-3"><h1 className="heading text-3xl">{member.display_name ?? "Member"}</h1><VerifiedOwnerBadge verified={member.verification?.verified} /><TrustedRenterBadge trusted={member.renter_trust?.trusted} /></div>
+  return <Container className="py-16"><p className="eyebrow">Member since {new Date(member.created_at).toLocaleDateString("en-SG", { month: "long", year: "numeric" })}</p><div className="mt-2 flex flex-wrap items-center gap-3"><PersonAvatar name={member.display_name} imageUrl={member.avatar_url} size="lg" /><h1 className="heading text-3xl">{member.display_name ?? "Member"}</h1><VerifiedOwnerBadge verified={member.verification?.verified} /><TrustedRenterBadge trusted={member.renter_trust?.trusted} /></div>
     {/* S5-15: under the name, since everything listed below is paused with it. */}
     {member.booking_pause && <div className="mt-4 max-w-xl"><BookingPauseNotice pause={member.booking_pause} today={todayIso()} /></div>}
     {member.verification && <p className="body-copy mt-2 text-sm">{member.verification.completed_rentals} completed {member.verification.completed_rentals === 1 ? "rental" : "rentals"} as an owner · {hasAnsweredRequests(member.verification) ? `answered ${responseRatePercent(member.verification)}% of booking requests` : "no booking requests yet"}</p>}

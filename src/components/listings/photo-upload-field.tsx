@@ -3,14 +3,10 @@
 import { useRef, useState } from "react";
 import { Crop } from "lucide-react";
 import { Button, RequiredMark } from "@/components/ui";
-import {
-  ALLOWED_PHOTO_CONTENT_TYPES,
-  MAX_LISTING_PHOTOS,
-  type PhotoKind,
-  type PresignPhotoResponse,
-} from "@/lib/listings";
+import { ALLOWED_PHOTO_CONTENT_TYPES, MAX_LISTING_PHOTOS, type PhotoKind } from "@/lib/listings";
 import { CENTERED_CROP, cropBitmapToFile, cropToSquare, type CropTransform } from "@/lib/image-crop";
-import { PhotoCropModal } from "./photo-crop-modal";
+import { putFileToS3 } from "@/lib/photo-upload";
+import { PhotoCropModal } from "@/components/photo-crop-modal";
 
 type Photo = {
   key: string;
@@ -42,35 +38,13 @@ function releasePreview(url: string) {
 type UploadingSlot = { id: string; fileName: string };
 
 /**
- * Presigns and PUTs one file to S3, returning the resulting photo_key.
- * Shared by the initial upload and the re-crop-then-reupload path so the
- * presign protocol and its error handling live in exactly one place.
+ * Presigns and PUTs one listing-flow photo to S3, returning the resulting
+ * photo_key. Shared by the initial upload and the re-crop-then-reupload path
+ * (and the passport, return and claim forms), so the photo kinds all go
+ * through the one listings presign route.
  */
-export async function putPhotoToS3(file: File, kind: PhotoKind = "listing"): Promise<string> {
-  const presignRes = await fetch("/api/listings/photos/presign", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content_type: file.type, kind }),
-  });
-  if (!presignRes.ok) {
-    const body: unknown = await presignRes.json().catch(() => null);
-    const message =
-      body !== null && typeof body === "object" && "error" in body
-        ? String((body as { error: unknown }).error)
-        : "Could not prepare the upload.";
-    throw new Error(message);
-  }
-  const { upload_url, photo_key } = (await presignRes.json()) as PresignPhotoResponse;
-
-  const putRes = await fetch(upload_url, {
-    method: "PUT",
-    headers: { "Content-Type": file.type },
-    body: file,
-  });
-  if (!putRes.ok) {
-    throw new Error(`${file.name} failed to upload. Try again.`);
-  }
-  return photo_key;
+export function putPhotoToS3(file: File, kind: PhotoKind = "listing"): Promise<string> {
+  return putFileToS3(file, "/api/listings/photos/presign", { kind });
 }
 
 /**

@@ -6,7 +6,7 @@ import { ImageSlot } from "@/components/ui";
 import { conversationPriceLocationLine, type Conversation } from "@/lib/conversations";
 import { BOOKING_STATUS_LABELS } from "@/lib/bookings";
 import { formatChatTimestamp, formatDate } from "@/lib/format";
-import { PersonAvatar } from "./person-avatar";
+import { PersonAvatar } from "@/components/person-avatar";
 
 type Tab = "LISTING" | "BOOKING";
 const TABS: { tab: Tab; label: string }[] = [
@@ -107,7 +107,7 @@ function ConversationRow({ conversation, active }: { conversation: Conversation;
         <div className="relative shrink-0">
           <ImageSlot label={conversation.listing_name} src={conversation.listing_photo_url ?? undefined} className="size-14 rounded-xl" />
           <div className="absolute -bottom-1 -right-1 rounded-full ring-2 ring-white">
-            <PersonAvatar name={conversation.other_party_name} size="sm" />
+            <PersonAvatar name={conversation.other_party_name} imageUrl={conversation.other_party_avatar_url} size="sm" />
           </div>
         </div>
         <div className="min-w-0 flex-1">
