@@ -30,8 +30,8 @@ export type RentalCard = {
   name: string | null;
   /** Where the name links: the listing or the bundle. */
   href: `/listings/${string}` | `/bundles/${string}`;
-  /** Where the full booking is, with its actions: its row on the Bookings tab. */
-  detailsHref: `/rentals/bookings#${string}`;
+  /** Where the full booking is, with its actions: its row on the Bookings tab, or on its kit's page (S5-09). */
+  detailsHref: `/rentals/bookings#${string}` | `/rentals/kits/${string}#${string}`;
   ownerName: string | null;
   startDate: string;
   endDate: string;
@@ -67,7 +67,10 @@ function bookingCard(booking: Booking): RentalCard {
     rowId: rentalRowId("BOOKING", booking.id),
     name: booking.listing_name ?? null,
     href: `/listings/${booking.listing_id}`,
-    detailsHref: `/rentals/bookings#booking-${booking.id}`,
+    // An item of a cross-owner kit is listed with its kit, not among the bookings.
+    detailsHref: booking.booking_group_id
+      ? `/rentals/kits/${booking.booking_group_id}#booking-${booking.id}`
+      : `/rentals/bookings#booking-${booking.id}`,
     ownerName: booking.owner_name ?? null,
     startDate: booking.start_date,
     endDate: booking.end_date,

@@ -20,24 +20,27 @@ export default async function RenterBookingsPage({ searchParams }: { searchParam
   const filter = isRentalFilter(show) ? show : undefined;
   const { bookings, bundleBookings, kits, waitlist, reviewEligibility, suspension } = await getRenterActivity();
 
+  // S5-09: an item of a cross-owner kit is the same thing as its kit's card, so
+  // it is not listed again as a booking of its own; the kit's page carries its
+  // actions. The kit shows wherever any of its items would have.
+  const ownBookings = bookings.filter((booking) => !booking.booking_group_id);
   const bookingsUnder = (value: RentalFilter | undefined) => {
-    if (value === "waitlist") return { bookings: [], bundleBookings: [] };
+    if (value === "waitlist") return { bookings: [], bundleBookings: [], kits: [] };
     return {
-      bookings: bookings.filter((booking) => matchesRentalFilter(booking.status, value)),
+      bookings: ownBookings.filter((booking) => matchesRentalFilter(booking.status, value)),
       bundleBookings: bundleBookings.filter((booking) => matchesRentalFilter(booking.status, value)),
+      kits: kits.filter((kit) => kit.items.some((item) => matchesRentalFilter(item.status, value))),
     };
   };
   const countUnder = (value: RentalFilter) => {
     if (value === "waitlist") return waitlist.length;
     const shown = bookingsUnder(value);
-    return shown.bookings.length + shown.bundleBookings.length;
+    return shown.bookings.length + shown.bundleBookings.length + shown.kits.length;
   };
   const shown = bookingsUnder(filter);
   const showWaitlist = (!filter || filter === "waitlist") && waitlist.length > 0;
   const hasAnything = bookings.length + bundleBookings.length + waitlist.length > 0;
-  // S5-09: kits are a view over bookings, not more of them, so they show on the
-  // unfiltered page and under no status filter.
-  const showKits = !filter && kits.length > 0;
+  const showKits = shown.kits.length > 0;
   const filterLabel = RENTAL_FILTERS.find((option) => option.value === filter)?.label;
 
   return (
@@ -75,7 +78,7 @@ export default async function RenterBookingsPage({ searchParams }: { searchParam
               <section aria-labelledby="kits-heading">
                 <h2 id="kits-heading" className="heading text-lg">Bundles from several owners</h2>
                 <div className="mt-3">
-                  <RenterKitList kits={kits} />
+                  <RenterKitList kits={shown.kits} />
                 </div>
               </section>
             )}

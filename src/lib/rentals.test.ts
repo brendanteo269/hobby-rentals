@@ -78,6 +78,14 @@ describe("renterDashboard", () => {
     });
   });
 
+  it("links an item of a cross-owner kit to its row on the kit's page, not among the bookings", () => {
+    const item = { ...booking("k1", "ACTIVE", "2026-10-15", "2026-10-25"), booking_group_id: "kit-9" };
+
+    const [card] = renterDashboard([item], []).active;
+
+    expect(card.detailsHref).toBe("/rentals/kits/kit-9#booking-k1");
+  });
+
   it("shows a bundle by its own name and links to the bundle", () => {
     const [card] = renterDashboard([], [bundle("b1", "ACTIVE", "2026-10-15", "2026-10-17")]).active;
 
