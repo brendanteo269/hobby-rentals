@@ -6,6 +6,7 @@ import { getPublicMember } from "@/lib/api/reviews";
 import { BookingPauseNotice } from "@/components/listings/booking-pause-notice";
 import { todayIso } from "@/lib/format";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
+import { OwnerResponseTime } from "@/components/listings/owner-response-time";
 import { hasAnsweredRequests, responseRatePercent } from "@/lib/verification";
 import { TrustedRenterBadge } from "@/components/bookings/trusted-renter-badge";
 import { hasCompletedRentals, onTimeRatePercent } from "@/lib/renter-trust";
@@ -22,6 +23,8 @@ export default async function MemberPage({ params }: { params: Promise<{ id: str
     {/* S5-15: under the name, since everything listed below is paused with it. */}
     {member.booking_pause && <div className="mt-4 max-w-xl"><BookingPauseNotice pause={member.booking_pause} today={todayIso()} /></div>}
     {member.verification && <p className="body-copy mt-2 text-sm">{member.verification.completed_rentals} completed {member.verification.completed_rentals === 1 ? "rental" : "rentals"} as an owner · {hasAnsweredRequests(member.verification) ? `answered ${responseRatePercent(member.verification)}% of booking requests` : "no booking requests yet"}</p>}
+    {/* S5-17: the owner's usual reply time, under the record it sits beside. */}
+    <OwnerResponseTime band={member.response_time} className="mt-2" />
     {/* S4-06: the same member down the other side of a rental. Kept on its
         own line so neither record can be read as the other's. */}
     {member.renter_trust && <p className="body-copy mt-1 text-sm">{member.renter_trust.completed_rentals} completed {member.renter_trust.completed_rentals === 1 ? "rental" : "rentals"} as a renter · {hasCompletedRentals(member.renter_trust) ? `returned ${onTimeRatePercent(member.renter_trust)}% on time` : "nothing returned yet"}</p>}
