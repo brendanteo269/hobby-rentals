@@ -143,6 +143,13 @@ function hiddenAttributes(formData: FormData): Record<string, string | number> {
 
 const isString = (value: unknown): value is string => typeof value === "string";
 const isNumber = (value: unknown): value is number => typeof value === "number";
+const isDraftPromoCode = (value: unknown): value is NonNullable<CreateListingRequest["initial_promo_codes"]>[number] =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as { code?: unknown }).code === "string" &&
+  ((value as { discount_type?: unknown }).discount_type === "PERCENT" ||
+    (value as { discount_type?: unknown }).discount_type === "FIXED");
+
 const isBlackout = (value: unknown): value is BlackoutDate =>
   typeof value === "object" &&
   value !== null &&
@@ -271,6 +278,9 @@ export async function submitListing(
     has_custom_availability: text(formData, "has_custom_availability") === "true",
     custom_available_days: hiddenList(formData, "custom_available_days", isNumber),
     initial_blackouts: hiddenList(formData, "initial_blackouts", isBlackout),
+    // S5-12: codes written while the listing was being created, applied to
+    // it by the API once it exists.
+    initial_promo_codes: hiddenList(formData, "initial_promo_codes", isDraftPromoCode),
     attributes: hiddenAttributes(formData),
     ...(serial && { serial }),
   };

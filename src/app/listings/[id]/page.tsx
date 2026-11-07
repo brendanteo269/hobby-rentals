@@ -24,6 +24,8 @@ import { ReportListingButton } from "@/components/listings/report-listing-button
 import { getMyWaitlist } from "@/lib/api/waitlist";
 import { getMyAvailabilityAlerts } from "@/lib/api/availability-alerts";
 import { getMyRenterTrust } from "@/lib/api/verification";
+import { getListingPromoCodes } from "@/lib/api/promo-codes";
+import { ListingPromoCodes } from "@/components/listings/listing-promo-codes";
 import { FavouriteButton } from "@/components/listings/favourite-button";
 import { getListingReviews } from "@/lib/api/reviews";
 import { RentalReviewSection } from "@/components/reviews/rental-review-section";
@@ -120,6 +122,10 @@ export default async function ListingDetailPage({
   const reviews = await getListingReviews(listing.id).catch(() => ({ average: null, count: 0, reviews: [] }));
   // S5-07: supplementary like the reviews - a failure hides the section, never the page.
   const isOwner = Boolean(user && user.id === listing.owner_id);
+  // S5-12. Owner-only: the endpoint 404s for anyone else, and a code is
+  // something a renter is given rather than something they can read off the
+  // page. Swallowed - a missing panel must not cost the owner the listing.
+  const promoCodes = isOwner ? await getListingPromoCodes(listing.id).catch(() => []) : [];
   const publicQuestions = listing.status === "ACTIVE" ? await getPublicQuestions(listing.id).catch(() => []) : [];
   const ownerQuestions = isOwner ? await getOwnerQuestions(listing.id).catch(() => null) : null;
 
@@ -227,6 +233,10 @@ export default async function ListingDetailPage({
 
           {listing.status === "ACTIVE" && user && !isOwner && <AskAboutItem listingId={listing.id} />}
           {ownerQuestions && <OwnerQuestionsPanel listingId={listing.id} data={ownerQuestions} />}
+
+          {/* S5-12: what the owner is currently offering on this listing, and
+              why a code a renter mentioned did or did not work. */}
+          {isOwner && <ListingPromoCodes listingId={listing.id} codes={promoCodes} />}
 
           {listing.status === "ACTIVE" && user && user.id === listing.owner_id && (
             <section className="mt-6 border-t border-line pt-6">

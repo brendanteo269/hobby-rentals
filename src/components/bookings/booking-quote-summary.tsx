@@ -79,8 +79,20 @@ export function BookingQuoteSummary({
         {quote.price_per_day_cents === null && " / week"}
       </Row>
 
-      <Row label="Rental subtotal">{formatMoney(quote.rental_subtotal_cents)}</Row>
+      {/* S5-12 Scenario 2. The rental is shown at full price with the code
+          taken off beneath it: a single discounted figure would leave the
+          renter unable to check the discount they were promised. */}
+      <Row label="Rental subtotal">
+        {formatMoney(quote.promo_discount_cents ? quote.gross_rental_subtotal_cents : quote.rental_subtotal_cents)}
+      </Row>
+      {quote.promo_discount_cents > 0 && (
+        <Row label={`Promo${quote.promo_code ? ` · ${quote.promo_code.toUpperCase()}` : ""}`}>
+          &minus;{formatMoney(quote.promo_discount_cents)}
+        </Row>
+      )}
       {extra}
+      {/* Worked out on the discounted rental, which is why it moves when a
+          code is applied. */}
       <Row label="Platform fee">{formatMoney(quote.platform_fee_cents)}</Row>
       {/* S2-09: only once taken. An unselected option is not a charge, and a
           zero row beside real ones reads as a thing you are paying for. */}
