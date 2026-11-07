@@ -4,6 +4,7 @@ import { ListingForm } from "@/components/listings/listing-form";
 import { SearchGapPanel } from "@/components/listings/search-gap-panel";
 import { updateListing } from "@/app/listings/actions";
 import { getListingFormContext } from "@/app/listings/form-context";
+import { getListingPromoCodes } from "@/lib/api/promo-codes";
 import { getListing, getListingAvailability } from "@/lib/api/listings";
 import { createClient } from "@/lib/supabase/server";
 
@@ -24,11 +25,14 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
   const supabase = await createClient();
   // The blackouts and bookings come from the availability endpoint, which is
   // owner-only - so it 404s for anyone the ownership check below would reject.
-  const [listing, availability, { data: { user } }, context] = await Promise.all([
+  const [listing, availability, { data: { user } }, context, promoCodes] = await Promise.all([
     getListing(id).catch(() => null),
     getListingAvailability(id).catch(() => null),
     supabase.auth.getUser(),
     getListingFormContext(),
+    // S5-12. Swallowed like the availability above: a missing codes list
+    // must not cost the owner the whole edit form.
+    getListingPromoCodes(id).catch(() => []),
   ]);
 
   if (!listing || !availability || listing.owner_id !== user?.id || listing.status === "REMOVED") {
@@ -55,6 +59,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
           <ListingForm
             action={updateListing.bind(null, listing.id)}
             listing={listing}
+            promoCodes={promoCodes}
             availability={{
               blackouts: availability.blackouts,
               bookedRanges: availability.confirmed_bookings,

@@ -11,6 +11,7 @@ import {
 } from "@/components/bookings/availability-calendar";
 import { BookingQuoteSummary } from "@/components/bookings/booking-quote-summary";
 import { DamageProtectionField } from "@/components/bookings/damage-protection-field";
+import { PromoCodeField } from "@/components/bookings/promo-code-field";
 import { quoteBooking, requestBooking } from "@/app/bookings/actions";
 import type { BookingQuote } from "@/lib/api/bookings";
 import type { Booking } from "@/lib/bookings";
@@ -140,6 +141,12 @@ export function BookingRequestForm({
   // S2-09. Kept here rather than read off the quote so the renter's choice
   // survives re-picking dates, and so toggling it can re-price immediately.
   const [damageProtection, setDamageProtection] = useState(false);
+  // S5-12. Two values, not one: what is typed in the box, and what the
+  // server accepted. Re-pricing must send the accepted one, so editing the
+  // box without applying it cannot quietly change the price.
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedCode, setAppliedCode] = useState<string | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
   // Generated once per quoted date range and reused across retries of
   // submitting it (e.g. a request that times out but actually succeeds
   // server-side), so a double-submit places only one wallet hold. A new
@@ -184,11 +191,11 @@ export function BookingRequestForm({
    * fourth copy of this is a fourth chance to forget the key.
    */
   const priceRange = useCallback(
-    (start: string, end: string, protection: boolean) => {
+    (start: string, end: string, protection: boolean, code: string | null = null) => {
       setQuote(null);
       setIdempotencyKey(null);
       startPricing(async () => {
-        const result = await quoteBooking(listingId, start, end, protection);
+        const result = await quoteBooking(listingId, start, end, protection, code);
         if ("error" in result) setError(result.error);
         else {
           setQuote(result.quote);
@@ -226,8 +233,43 @@ export function BookingRequestForm({
       setIdempotencyKey(null);
     } else if (endDates.includes(day)) {
       setEndDate(day);
-      priceRange(startDate, day, damageProtection);
+      priceRange(startDate, day, damageProtection, appliedCode);
     }
+  }
+
+  /**
+   * S5-12 Scenario 2 and 3: applying a code re-prices through the server.
+   *
+   * The renter sends a code and never an amount, so a rejected one
+   * (Scenario 3) comes back as the reason it was rejected and the price
+   * stays where it was.
+   */
+  function applyPromo(code: string | null) {
+    setPromoError(null);
+    clearOutcome();
+    if (!startDate || !endDate) {
+      setAppliedCode(code);
+      return;
+    }
+    setQuote(null);
+    setIdempotencyKey(null);
+    startPricing(async () => {
+      const result = await quoteBooking(listingId, startDate, endDate, damageProtection, code);
+      if ("error" in result) {
+        // The dates are unchanged and still priced as they were; only the
+        // code failed, so it is the code that is reported.
+        setPromoError(result.error);
+        const previous = await quoteBooking(listingId, startDate, endDate, damageProtection, appliedCode);
+        if (!("error" in previous)) {
+          setQuote(previous.quote);
+          setIdempotencyKey(crypto.randomUUID());
+        }
+        return;
+      }
+      setAppliedCode(code);
+      setQuote(result.quote);
+      setIdempotencyKey(crypto.randomUUID());
+    });
   }
 
   /**
@@ -239,14 +281,14 @@ export function BookingRequestForm({
     setDamageProtection(selected);
     if (!startDate || !endDate) return;
     clearOutcome();
-    priceRange(startDate, endDate, selected);
+    priceRange(startDate, endDate, selected, appliedCode);
   }
 
   function submit() {
     if (!startDate || !endDate || !idempotencyKey) return;
     clearOutcome();
     startSending(async () => {
-      const result = await requestBooking(listingId, startDate, endDate, idempotencyKey, damageProtection);
+      const result = await requestBooking(listingId, startDate, endDate, idempotencyKey, damageProtection, appliedCode);
       if ("error" in result) {
         setError(result.error);
         setErrorCode(result.code);
@@ -332,6 +374,22 @@ export function BookingRequestForm({
           {formatDate(runBlocker.blocked)} is{" "}
           {UNAVAILABLE_REASON_LABELS[runBlocker.reason].toLowerCase()}.
         </p>
+      )}
+
+      {/* S5-12: after the dates, before the breakdown it changes. */}
+      {startDate && endDate && (
+        <PromoCodeField
+          value={promoInput}
+          onChange={setPromoInput}
+          appliedCode={appliedCode}
+          error={promoError}
+          disabled={isPending}
+          onApply={() => applyPromo(promoInput.trim())}
+          onRemove={() => {
+            setPromoInput("");
+            applyPromo(null);
+          }}
+        />
       )}
 
       {quote && (
