@@ -45,6 +45,8 @@ export type PublicListing = {
   updated_at: string;
   /** S5-15: the owner's away period, shown as "Not taking bookings ...". */
   booking_pause?: BookingPause | null;
+  /** S6-02: whether a quick-start guide comes with it; never its content. */
+  has_guide?: boolean;
 };
 
 export type PublicBundleItem = {

@@ -5,7 +5,7 @@ import { ListingGallery } from "@/components/listings/listing-gallery";
 import { BookingPauseNotice } from "@/components/listings/booking-pause-notice";
 import { RateLine } from "@/components/browse/listing-card";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
-import { InstantBookBadge } from "@/components/listings/instant-book-badge";
+import { ListingPerks } from "@/components/listings/listing-perks";
 import { RentalReviewSection } from "@/components/reviews/rental-review-section";
 import { ListingQuestionsSection } from "@/components/listings/listing-questions-section";
 import { OwnerResponseTime } from "@/components/listings/owner-response-time";
@@ -77,7 +77,6 @@ export default async function PublicListingPage({ params }: Props) {
             <p className="eyebrow">
               {CATEGORY_LABELS[listing.category] ?? listing.category} · {LOCATION_LABELS[listing.location_area]}
             </p>
-            <InstantBookBadge enabled={listing.instant_book_enabled} />
             {badge && <Badge variant={listing.serial_status === "VERIFIED" ? "dark" : "neutral"}>Passport: {badge}</Badge>}
           </div>
           <h1 className="heading mt-2 text-3xl">{listing.name}</h1>
@@ -89,6 +88,7 @@ export default async function PublicListingPage({ params }: Props) {
           <div className="mt-4 border-t border-line pt-4">
             <RateLine listing={listing} />
             <p className="body-copy mt-1">{formatMoney(listing.deposit_cents)} deposit</p>
+            <ListingPerks instantBook={listing.instant_book_enabled} guide={listing.has_guide} />
           </div>
 
           {/* S5-15 Scenario 2: with the price, as on the signed-in listing page. */}
