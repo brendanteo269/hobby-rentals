@@ -84,6 +84,16 @@ function parseFieldErrors(detail: unknown): FieldErrors {
   return errors;
 }
 
+/**
+ * A rule the service applies itself, beyond Pydantic's, arrives as
+ * {message, field_errors: {path: message}} (S6-02's guide checks); its entries
+ * join the validation ones under the same keys.
+ */
+function stringEntries(value: unknown): FieldErrors {
+  if (value === null || typeof value !== "object") return {};
+  return Object.fromEntries(Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+}
+
 /** Shared FastAPI client for Server Components, Server Actions and Route Handlers. */
 export async function backendRequest<T>(
   path: string,
@@ -140,7 +150,10 @@ export async function backendRequest<T>(
         ? body.detail
         : undefined;
 
-    const fieldErrors = parseFieldErrors(detail);
+    const fieldErrors = {
+      ...parseFieldErrors(detail),
+      ...(detail !== null && typeof detail === "object" && "field_errors" in detail ? stringEntries(detail.field_errors) : {}),
+    };
     // A 422 carries its specifics per field, so the summary stays generic and
     // the form puts each message where the member is looking. A conflict may
     // arrive as {message, ...context} - the blackout endpoint attaches the

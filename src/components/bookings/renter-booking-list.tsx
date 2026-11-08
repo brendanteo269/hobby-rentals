@@ -33,6 +33,8 @@ import { KIT_STATUS_LABELS, type Kit } from "@/lib/booking-groups";
 import { renterKitPath } from "@/lib/routes";
 import { reviewPath, type ReviewEligibility } from "@/lib/reviews";
 import { rentalRowId } from "@/lib/rentals";
+import { guidesByBooking, updatedSinceBooking, type GuideIndexEntry } from "@/lib/guides";
+import { bookingGuidePath } from "@/lib/routes";
 
 /**
  * Every booking the renter has made, single items and bundles alike, each with
@@ -44,12 +46,16 @@ export function RenterBookingList({
   bookings,
   bundleBookings,
   reviewEligibility,
+  guides,
 }: {
   bookings: Booking[];
   /** S2-20: a request for a whole set, shown beside the single-item ones. */
   bundleBookings: BundleBooking[];
   reviewEligibility: ReviewEligibility[];
+  /** S6-02: which current bookings - bundle items included - have a quick-start guide. */
+  guides: GuideIndexEntry[];
 }) {
+  const guideFor = guidesByBooking(guides);
   return (
     <>
       <HashTargetHighlight />
@@ -80,6 +86,20 @@ export function RenterBookingList({
                   {line}
                 </p>
               ))}
+              {/* S6-02: one guide per item, each on the same protected page a single booking's opens. */}
+              {booking.items.some((item) => guideFor.has(item.booking_id)) && (
+                <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                  <span className="text-ink-soft">Quick-start guides:</span>
+                  {booking.items
+                    .filter((item) => guideFor.has(item.booking_id))
+                    .map((item) => (
+                      <Link key={item.booking_id} href={bookingGuidePath(item.booking_id)} className="font-medium underline-offset-2 hover:underline">
+                        {item.listing_name ?? "Item"}
+                        {updatedSinceBooking(guideFor.get(item.booking_id)!, guideFor.get(item.booking_id)!.booked_at) && " (updated)"}
+                      </Link>
+                    ))}
+                </p>
+              )}
               {booking.settlement_state && !booking.cancellation_outcome ? (
                 <div className="mt-3">
                   <SettlementTracker state={booking.settlement_state} amounts={booking} viewer="renter" />
@@ -212,6 +232,14 @@ export function RenterBookingList({
                 <ConfirmReturnButton bookingId={booking.id} />
               )}
               {reviewEligibility.find((item) => item.booking_id === booking.id) && <ButtonLink href={reviewPath(reviewEligibility.find((item) => item.booking_id === booking.id)!)} variant="accent" className="px-3 py-1.5 text-xs">Rate owner</ButtonLink>}
+              {guideFor.has(booking.id) && (
+                <ButtonLink href={bookingGuidePath(booking.id)} variant="outline" className="gap-1.5 px-3 py-1.5 text-xs">
+                  Quick-start guide
+                  {updatedSinceBooking(guideFor.get(booking.id)!, booking.created_at) && (
+                    <Badge variant="info" className="px-2 py-0.5">Updated</Badge>
+                  )}
+                </ButtonLink>
+              )}
               {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
                 <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
               )}

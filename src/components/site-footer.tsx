@@ -18,7 +18,7 @@ const LINK_TARGETS: Partial<Record<string, Route>> = {
 
 export function SiteFooter() {
   return (
-    <footer className="mt-24 bg-dark text-white">
+    <footer className="mt-24 bg-dark text-white print:hidden">
       <Container className="py-14">
         <div className="grid gap-12 md:grid-cols-[1fr_2fr]">
           <div className="md:border-r md:border-white/15 md:pr-10">

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Flag } from "lucide-react";
 import { Button, FormNotice, Modal, SelectField, TextareaField } from "@/components/ui";
 import { submitListingReport } from "@/app/listings/[id]/report-actions";
 import { LISTING_REPORT_REASONS, type ListingReportReason } from "@/lib/reports";
@@ -35,8 +36,13 @@ export function ReportListingButton({ listingId }: { listingId: string }) {
 
   return (
     <>
-      <button type="button" className="text-sm text-ink-soft underline hover:text-ink" onClick={() => setOpen(true)}>
-        Report listing
+      <button
+        type="button"
+        className="inline-flex items-center gap-1.5 text-sm text-ink-soft transition-colors hover:text-accent-dark"
+        onClick={() => setOpen(true)}
+      >
+        <Flag className="h-3.5 w-3.5" aria-hidden />
+        Report this listing
       </button>
       {open && (
         <Modal title="Report this listing" onClose={() => setOpen(false)}>

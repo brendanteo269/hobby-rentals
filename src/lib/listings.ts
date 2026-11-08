@@ -234,6 +234,8 @@ export type Listing = {
   is_favourited: boolean;
   /** S3-28: server-computed - ACTIVE with a promotion still running. */
   is_promoted?: boolean;
+  /** S6-02: detail responses only. Whether a quick-start guide exists - never its content. */
+  has_guide?: boolean;
 };
 
 /** A listing in the member's saved-items page. Unavailable rows stay visible
@@ -259,7 +261,7 @@ export const MAX_LISTING_PHOTOS = 8;
  * "passport" photos are condition evidence, stored apart from listing photos;
  * "return" photos are a renter's return evidence, private in the same way.
  */
-export type PhotoKind = "listing" | "passport" | "return" | "pickup" | "claim" | "rebuttal";
+export type PhotoKind = "listing" | "passport" | "return" | "pickup" | "claim" | "rebuttal" | "guide";
 
 /** S2-04 Scenario 2: the four angles a baseline covers, in capture order. */
 export const BASELINE_ANGLES = [

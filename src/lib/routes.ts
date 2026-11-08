@@ -93,6 +93,16 @@ export function renterKitPath(kitId: string): `/rentals/kits/${string}` {
   return `/rentals/kits/${kitId}`;
 }
 
+/** S6-02: where an owner writes and edits the quick-start guide for one listing. */
+export function listingGuidePath(listingId: string): `/listings/${string}/guide` {
+  return `/listings/${listingId}/guide`;
+}
+
+/** S6-02: a renter's quick-start guide, reached from their booking. The same page for single, bundle and kit items. */
+export function bookingGuidePath(bookingId: string): `/bookings/${string}/guide` {
+  return `/bookings/${bookingId}/guide`;
+}
+
 /** The builder, opened to rebuild a bundle without what an owner turned down (S5-09 Scenario 3). */
 export function rebuildKitPath(kitId: string): `/bundles/build?from_kit=${string}` {
   return `/bundles/build?from_kit=${encodeURIComponent(kitId)}`;

@@ -256,7 +256,7 @@ export function ChatWidget() {
           ref={launcherRef}
           type="button"
           onClick={openPanel}
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 rounded-full bg-ink px-4 py-3 text-sm font-medium text-white shadow-card-hover transition-colors hover:bg-ink/90"
+          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 print:hidden rounded-full bg-ink px-4 py-3 text-sm font-medium text-white shadow-card-hover transition-colors hover:bg-ink/90"
           aria-haspopup="dialog"
         >
           <MessageCircle size={18} />
@@ -270,7 +270,7 @@ export function ChatWidget() {
           role="dialog"
           aria-label="HobbyRentals assistant"
           onKeyDown={(event) => event.key === "Escape" && close()}
-          className="fixed inset-0 z-40 flex flex-col bg-white sm:inset-auto sm:bottom-5 sm:right-5 sm:h-[min(640px,calc(100vh-2.5rem))] sm:w-[380px] sm:rounded-2xl sm:border sm:border-line sm:shadow-card-hover"
+          className="fixed inset-0 z-40 flex flex-col bg-white print:hidden sm:inset-auto sm:bottom-5 sm:right-5 sm:h-[min(640px,calc(100vh-2.5rem))] sm:w-[380px] sm:rounded-2xl sm:border sm:border-line sm:shadow-card-hover"
         >
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <div>

@@ -4,6 +4,7 @@ import { Badge, ButtonLink, ImageSlot } from "@/components/ui";
 import { RenterBookingList } from "@/components/bookings/renter-booking-list";
 import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_LABELS, type Booking } from "@/lib/bookings";
 import type { ReviewEligibility } from "@/lib/reviews";
+import type { GuideIndexEntry } from "@/lib/guides";
 import { KIT_STATUS_LABELS, kitFailureMessage, pendingItemCount, type Kit, type KitItem } from "@/lib/booking-groups";
 import { formatDateRange, formatMoney } from "@/lib/format";
 import { rebuildKitPath } from "@/lib/routes";
@@ -19,11 +20,14 @@ export function KitDetail({
   kit,
   acceptedBookings,
   reviewEligibility,
+  guides,
 }: {
   kit: Kit;
   /** The bundle's items an owner has accepted, as the bookings they are. */
   acceptedBookings: Booking[];
   reviewEligibility: ReviewEligibility[];
+  /** S6-02: so each accepted item links to its owner's quick-start guide, as it would in Bookings. */
+  guides: GuideIndexEntry[];
 }) {
   const waiting = pendingItemCount(kit);
   const anyAccepted = kit.items.some((item) => item.status !== "PENDING");
@@ -64,7 +68,7 @@ export function KitDetail({
           ))}
       </ul>
       {acceptedBookings.length > 0 && (
-        <RenterBookingList bookings={acceptedBookings} bundleBookings={[]} reviewEligibility={reviewEligibility} />
+        <RenterBookingList bookings={acceptedBookings} bundleBookings={[]} reviewEligibility={reviewEligibility} guides={guides} />
       )}
     </div>
   );
