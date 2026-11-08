@@ -59,9 +59,10 @@ export async function quoteBooking(
   startDate: string,
   endDate: string,
   damageProtection = false,
+  promoCode: string | null = null,
 ): Promise<BookingQuoteResult> {
   try {
-    return { quote: await getBookingQuote(listingId, startDate, endDate, damageProtection) };
+    return { quote: await getBookingQuote(listingId, startDate, endDate, damageProtection, promoCode) };
   } catch (error) {
     if (error instanceof BackendApiError) return { error: error.message };
     throw error;
@@ -74,8 +75,9 @@ export async function requestBooking(
   endDate: string,
   idempotencyKey: string,
   damageProtection = false,
+  promoCode: string | null = null,
 ) {
-  return run(() => createBooking(listingId, startDate, endDate, idempotencyKey, damageProtection));
+  return run(() => createBooking(listingId, startDate, endDate, idempotencyKey, damageProtection, promoCode));
 }
 
 export async function changeBookingStatus(bookingId: string, nextStatus: BookingStatus) {

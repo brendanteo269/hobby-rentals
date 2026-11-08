@@ -158,6 +158,11 @@ export type BookingQuote = {
   price_per_week_cents: number | null;
   lines: BookingQuoteLine[];
   rental_subtotal_cents: number;
+  /** S5-12: the rental before any code, and what the code took off it. */
+  gross_rental_subtotal_cents: number;
+  promo_discount_cents: number;
+  /** The code that produced the discount, echoed back by the server. */
+  promo_code?: string | null;
   platform_fee_bps: number;
   platform_fee_cents: number;
   deposit_cents: number;
@@ -309,6 +314,9 @@ export type BookingRequestDetail = {
   /** Set on a cancelled request: who cancelled it, and why if a member's account was suspended or banned. */
   cancellation_outcome?: CancellationOutcome | null;
   pricing: {
+    /** S5-12: the code the renter used, and what it took off the rental. */
+    promo_code?: string | null;
+    promo_discount_cents: number;
     price_per_day_cents: number | null;
     price_per_week_cents: number | null;
     rental_subtotal_cents: number | null;

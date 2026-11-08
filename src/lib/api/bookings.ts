@@ -21,10 +21,12 @@ export function createBooking(
   end_date: string,
   idempotency_key: string,
   damage_protection = false,
+  /** S5-12: the code the renter typed. The server prices it; we never send an amount. */
+  promo_code: string | null = null,
 ) {
   return backendRequest<Booking>("/bookings", {
     method: "POST",
-    body: JSON.stringify({ listing_id, start_date, end_date, idempotency_key, damage_protection }),
+    body: JSON.stringify({ listing_id, start_date, end_date, idempotency_key, damage_protection, promo_code }),
   });
 }
 
@@ -33,6 +35,7 @@ export function getBookingQuote(
   startDate: string,
   endDate: string,
   damageProtection = false,
+  promoCode: string | null = null,
 ) {
   const query = new URLSearchParams({
     listing_id: listingId,
@@ -40,6 +43,7 @@ export function getBookingQuote(
     end_date: endDate,
     damage_protection: String(damageProtection),
   });
+  if (promoCode) query.set("promo_code", promoCode);
   return backendRequest<BookingQuote>(`/bookings/quote?${query.toString()}`);
 }
 

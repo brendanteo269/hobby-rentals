@@ -106,7 +106,24 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
             {pricing.price_per_week_cents !== null && <>
               <dt className="text-ink-soft">Weekly rate</dt><dd className="text-right">{formatMoney(pricing.price_per_week_cents)}</dd>
             </>}
-            <dt className="text-ink-soft">Rental subtotal</dt><dd className="text-right">{money(pricing.rental_subtotal_cents)}</dd>
+            {/* S5-12. With a code, the subtotal above is already net of it,
+                so showing it alone leaves an owner unable to reconcile the
+                rate times the days. Full price, then what their own code
+                took off. */}
+            <dt className="text-ink-soft">Rental subtotal</dt>
+            <dd className="text-right">
+              {money(
+                pricing.promo_discount_cents
+                  ? (pricing.rental_subtotal_cents ?? 0) + pricing.promo_discount_cents
+                  : pricing.rental_subtotal_cents,
+              )}
+            </dd>
+            {pricing.promo_discount_cents > 0 && <>
+              <dt className="text-ink-soft">
+                Your promo code{pricing.promo_code ? ` · ${pricing.promo_code.toUpperCase()}` : ""}
+              </dt>
+              <dd className="text-right">−{formatMoney(pricing.promo_discount_cents)}</dd>
+            </>}
             <dt className="text-ink-soft">Platform fee (paid by renter)</dt><dd className="text-right">{money(pricing.platform_fee_cents)}</dd>
             <dt className="text-ink-soft">Security deposit (refundable)</dt><dd className="text-right">{money(pricing.deposit_cents)}</dd>
             <dt className="text-ink-soft">Damage protection</dt>

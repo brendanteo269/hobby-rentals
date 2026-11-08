@@ -14,6 +14,7 @@
 
 import { unavailableUntilLabel } from "@/lib/away";
 import { formatDate } from "@/lib/format";
+import type { PromoDiscountType } from "@/lib/promo-codes";
 import type { ResponseTimeBand } from "@/lib/response-time";
 
 export type ListingCategory = string;
@@ -465,6 +466,19 @@ export type CreateListingRequest = {
   /** S5-11: off unless the owner turns it on. */
   instant_book_enabled?: boolean;
   initial_blackouts?: BlackoutDate[];
+  /**
+   * S5-12: discount codes written while creating the listing. Applied by the
+   * API once the listing exists, as initial_blackouts are.
+   */
+  initial_promo_codes?: {
+    code: string;
+    discount_type: PromoDiscountType;
+    percent_off: number | null;
+    amount_off_cents: number | null;
+    starts_on: string;
+    ends_on: string;
+    usage_limit: number | null;
+  }[];
   /** May be empty for a saved draft; recording its baseline later sets them. */
   photo_keys: string[];
 /** Values validated against the selected category's current schema on create. */
