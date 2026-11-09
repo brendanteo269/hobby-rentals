@@ -26,8 +26,14 @@ import {
   getExtensionQuote,
   requestExtension,
 } from "@/lib/api/extensions";
+import {
+  acceptHigherDeposit,
+  declineHigherDeposit,
+  offerHigherDeposit,
+} from "@/lib/api/deposit-offers";
 import { BackendApiError } from "@/lib/api/client";
 import type { Booking, BookingQuote, BookingStatus, DeclineReason } from "@/lib/bookings";
+import type { DepositOffer } from "@/lib/booking-risk";
 import type { BundleBooking, BundleQuote } from "@/lib/bundles";
 import type { CancellableKind, CancellationPreview, CancellationRecord } from "@/lib/cancellations";
 import type { ExtensionQuote, ExtensionRequest } from "@/lib/extensions";
@@ -52,6 +58,35 @@ async function run(action: () => Promise<Booking>): Promise<BookingActionResult>
     }
     throw error;
   }
+}
+
+/**
+ * S6-05 Scenario 3: the owner accepting on condition the deposit doubles.
+ *
+ * Not `run`, which returns a booking: this returns the offer, because the
+ * booking has not changed - it is still pending, now waiting on the renter.
+ */
+export async function offerHigherDepositOn(
+  bookingId: string,
+): Promise<{ error: string } | { offer: DepositOffer }> {
+  try {
+    const offer = await offerHigherDeposit(bookingId);
+    revalidatePath("/", "layout");
+    return { offer };
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
+}
+
+/** The renter agreeing: the extra is held and the booking is confirmed. */
+export async function acceptDepositOffer(bookingId: string): Promise<BookingActionResult> {
+  return run(() => acceptHigherDeposit(bookingId));
+}
+
+/** The renter turning the terms down, which withdraws their request. */
+export async function declineDepositOffer(bookingId: string): Promise<BookingActionResult> {
+  return run(() => declineHigherDeposit(bookingId));
 }
 
 export async function quoteBooking(

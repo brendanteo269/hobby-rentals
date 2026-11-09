@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Badge, EmptyState } from "@/components/ui";
 import { BookingRequestDecision } from "@/components/bookings/booking-request-decision";
 import { TrustedRenterBadge } from "@/components/bookings/trusted-renter-badge";
+import { BookingRiskPanel } from "@/components/bookings/booking-risk-panel";
+import { HigherDepositOffer } from "@/components/bookings/higher-deposit-offer";
 import { RequestCountdown } from "@/components/bookings/request-countdown";
 import { BOOKING_STATUS_LABELS, type BookingRequestDetail } from "@/lib/bookings";
 import { adjustmentLines } from "@/lib/bundle-items";
@@ -134,11 +136,36 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
             <dd className="border-t border-line pt-2 text-right font-semibold">{money(pricing.owner_net_earnings_cents)}</dd>
           </dl>
         </section>
+
+        {/* S6-05: after the earnings. The owner reads what the booking is
+            worth first, then what to weigh against it. */}
+        {request.risk && <BookingRiskPanel risk={request.risk} />}
       </div>
 
       <div className="mt-8">
         {request.status === "PENDING"
-          ? <BookingRequestDecision kind={request.kind} bookingId={request.id} expiresInSeconds={request.expires_in_seconds} />
+          ? <>
+              <BookingRequestDecision kind={request.kind} bookingId={request.id} expiresInSeconds={request.expires_in_seconds} />
+              {/* S6-05 Scenario 3: the third option, beside accept and
+                  decline.
+                  Offered only on a Medium or High request, as the story
+                  asks - asking a renter with a clean record for twice the
+                  deposit is a cost to them with nothing behind it. An offer
+                  already made still shows whatever the rating, so an owner
+                  waiting on one does not lose sight of it.
+                  Single listings only: a bundle's deposit is the sum of its
+                  items' and doubling it is a different conversation. */}
+              {request.kind === "BOOKING"
+                && (pricing.deposit_cents ?? 0) > 0
+                && (request.deposit_offer || (request.risk && request.risk.level !== "LOW")) && (
+                <HigherDepositOffer
+                  bookingId={request.id}
+                  offer={request.deposit_offer}
+                  depositCents={pricing.deposit_cents ?? 0}
+                  side="owner"
+                />
+              )}
+            </>
           : request.status === "CANCELLED" && request.cancellation_outcome
             // Someone who opens a notification about a cancelled request is told what happened and why.
             ? <EmptyState title="This request was cancelled" body={cancelledBody(request.cancellation_outcome)} />
