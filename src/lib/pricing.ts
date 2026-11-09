@@ -1,4 +1,5 @@
 import type { ListingCondition } from "@/lib/listings";
+import type { ForecastHighWeek } from "@/lib/demand-forecast";
 
 export type PricingCycle = "DAY" | "WEEK";
 
@@ -40,4 +41,6 @@ export type PricingRecommendation = {
   comparables: PricingComparable[];
   outliers_excluded_count: number;
   demand: PricingDemand | null;
+  /** S6-06: forecast High weeks ahead, a reason only; never part of the suggested price. */
+  forecast_high_weeks: ForecastHighWeek[];
 };
