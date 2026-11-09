@@ -65,6 +65,11 @@ export type NotificationType =
   // and a renter told an owner has it.
   | "GEAR_REQUEST_POSTED_OWNER"
   | "GEAR_REQUEST_OFFERED"
+  // S6-05: the owner accepting on condition of a bigger deposit, and the
+  // renter's answer either way.
+  | "BOOKING_DEPOSIT_OFFER"
+  | "BOOKING_DEPOSIT_OFFER_ACCEPTED_OWNER"
+  | "BOOKING_DEPOSIT_OFFER_DECLINED_OWNER"
   // S2-19: handover meetup coordination on a confirmed booking.
   | "MEETUP_PROPOSED"
   | "MEETUP_ACCEPTED"
@@ -203,6 +208,9 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   AVAILABILITY_ALERT_FULFILLED: "Watched dates free",
   GEAR_REQUEST_POSTED_OWNER: "Gear request posted",
   GEAR_REQUEST_OFFERED: "Offer on your request",
+  BOOKING_DEPOSIT_OFFER: "Higher deposit offered",
+  BOOKING_DEPOSIT_OFFER_ACCEPTED_OWNER: "Higher deposit agreed",
+  BOOKING_DEPOSIT_OFFER_DECLINED_OWNER: "Higher deposit declined",
   MEETUP_PROPOSED: "Meetup proposed",
   MEETUP_ACCEPTED: "Meetup confirmed",
   LISTING_DEACTIVATED: "Listing deactivated",

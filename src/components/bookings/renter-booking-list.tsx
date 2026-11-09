@@ -16,6 +16,8 @@ import {
 import type { BundleBooking } from "@/lib/bundles";
 import { BlockedCancelButton, CancelBookingButton } from "@/components/bookings/cancel-booking-button";
 import { OverdueNotice } from "@/components/bookings/overdue-notice";
+import { HigherDepositOffer } from "@/components/bookings/higher-deposit-offer";
+import { isOpenOffer } from "@/lib/booking-risk";
 import { cancellationOutcomeLine } from "@/lib/cancellations";
 import { claimPendingRenter, renterClaimPath } from "@/lib/settlement";
 import { SettlementTracker } from "@/components/bookings/settlement-tracker";
@@ -152,6 +154,16 @@ export function RenterBookingList({
               )}
               {booking.status === "ACTIVE" && booking.return_state && returnStatusLine(booking.return_state, "renter") && (
                 <p className="mt-1 text-sm text-ink-soft">{returnStatusLine(booking.return_state, "renter")}</p>
+              )}
+              {/* S6-05 Scenario 3: the owner will take it at a higher
+                  deposit, and the request waits on the renter's answer. */}
+              {booking.status === "PENDING" && isOpenOffer(booking.deposit_offer) && (
+                <HigherDepositOffer
+                  bookingId={booking.id}
+                  offer={booking.deposit_offer}
+                  depositCents={booking.deposit_cents ?? 0}
+                  side="renter"
+                />
               )}
               <OverdueNotice booking={booking} side="renter" />
               {booking.pending_extension && (

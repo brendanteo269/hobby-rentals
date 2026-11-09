@@ -1,3 +1,4 @@
+import type { BookingRisk, DepositOffer } from "@/lib/booking-risk";
 import type { BundleAdjustments } from "@/lib/bundles";
 import type { CancellationOutcome } from "@/lib/cancellations";
 import type { ExtensionRequest } from "@/lib/extensions";
@@ -43,6 +44,8 @@ export type Booking = {
   renter_name?: string | null;
   /** S4-06: whether they hold the Trusted Renter badge. Owner's list only. */
   renter_trusted?: boolean;
+  /** S6-05 Scenario 3: the higher-deposit offer on this booking, if any. */
+  deposit_offer?: DepositOffer | null;
   owner_id: string;
   /** Whose item it is. Set on the renter's list only; null when the owner has no display name. */
   owner_name?: string | null;
@@ -313,6 +316,10 @@ export type BookingRequestDetail = {
   period: { start_date: string; end_date: string; rental_days: number | null };
   /** Set on a cancelled request: who cancelled it, and why if a member's account was suspended or banned. */
   cancellation_outcome?: CancellationOutcome | null;
+  /** S6-05: present on a pending single-listing request; null otherwise. */
+  risk?: BookingRisk | null;
+  /** S6-05 Scenario 3: the higher-deposit offer on this request, if any. */
+  deposit_offer?: DepositOffer | null;
   pricing: {
     /** S5-12: the code the renter used, and what it took off the rental. */
     promo_code?: string | null;
