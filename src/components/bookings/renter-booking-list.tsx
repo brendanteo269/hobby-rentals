@@ -1,3 +1,4 @@
+import { DeliveryAddressLine } from "@/components/bookings/delivery-address-line";
 import Link from "next/link";
 import type { Route } from "next";
 import { Badge, ButtonLink } from "@/components/ui";
@@ -167,6 +168,7 @@ export function RenterBookingList({
                   {booking.confirmed_meetup_time && `, ${formatDateTime(booking.confirmed_meetup_time)}`}
                 </p>
               )}
+              <DeliveryAddressLine booking={booking} className="mt-1 text-sm" />
               {booking.status === "CONFIRMED" && booking.handover_state && (
                 <div className="mt-4">
                   <HandoverTracker booking={booking} viewer="renter" />

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Badge, Button, ButtonLink } from "@/components/ui";
 import { changeBookingStatus, type BookingActionResult } from "@/app/bookings/actions";
 import { AddToCalendarButton } from "@/components/bookings/add-to-calendar-button";
+import { DeliveryAddressLine } from "@/components/bookings/delivery-address-line";
 import { MessageButton } from "@/components/messages/message-button";
 import { ExtensionRequestDecision } from "@/components/bookings/extension-request-decision";
 import { OverdueNotice } from "@/components/bookings/overdue-notice";
@@ -99,6 +100,8 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
                   {booking.confirmed_meetup_time && `, ${formatDateTime(booking.confirmed_meetup_time)}`}
                 </span>
               )}
+              {/* S6-09 Scenario 4: the handover happens here, so it sits where the meetup would. */}
+              <DeliveryAddressLine booking={booking} className="mt-0.5" />
               {booking.status === "ACTIVE" && (
                 <span className="block text-ink-soft">
                   {HANDED_OVER_NOTE} <a href={SUPPORT_MAILTO} className="underline">{SUPPORT_EMAIL}</a>

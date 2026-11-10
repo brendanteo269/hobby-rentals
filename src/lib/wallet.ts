@@ -13,6 +13,10 @@ import { createClient } from "@/lib/supabase/client";
  * DAMAGE_PAYOUT what reached the owner for it. OVERDUE_SETTLEMENT is an
  * overdue return fee, paid from the deposit or later.
  *
+ * S6-09: DELIVERY_CHARGE is a delivery fee leaving the renter's held balance when
+ * the handover is confirmed; DELIVERY_PAYOUT is the same amount reaching the owner,
+ * in full: no commission is taken on it.
+ *
  * REFERRAL_CREDIT is S6-07's reward for a friend's first rental: spendable
  * on rentals, never withdrawable.
  */
@@ -33,12 +37,14 @@ export type TransactionType =
   | "RENTAL_PAYOUT"
   | "DAMAGE_DEDUCTION"
   | "DAMAGE_PAYOUT"
+  | "DELIVERY_CHARGE"
+  | "DELIVERY_PAYOUT"
   | "REFERRAL_CREDIT";
 /** SETTLED: a hold a rental's settlement consumed. */
 export type TransactionStatus = "COMPLETED" | "PENDING" | "REFUNDED" | "SETTLED";
 
 /** What reaches an owner from their rentals, for the earnings page and the wallet's Earnings filter. */
-export const EARNING_TYPES: TransactionType[] = ["RENTAL_PAYOUT", "DAMAGE_PAYOUT", "CANCELLATION_PAYOUT"];
+export const EARNING_TYPES: TransactionType[] = ["RENTAL_PAYOUT", "DAMAGE_PAYOUT", "CANCELLATION_PAYOUT", "DELIVERY_PAYOUT"];
 export type TransactionFilter = "all" | "topups" | "escrow" | "releases" | "refunds" | "withdrawals" | "adjustments";
 
 export type WalletTransaction = {

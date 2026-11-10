@@ -99,6 +99,10 @@ export function BookingQuoteSummary({
       {quote.damage_protection?.selected && (
         <Row label="Damage protection">{formatMoney(quote.damage_protection.fee_cents)}</Row>
       )}
+      {/* S6-09 Scenario 2. Its own line, after the platform fee and outside the
+          promo: neither the code nor the fee touches it. Bundles do not
+          deliver, so their quotes carry no delivery at all. */}
+      {quote.delivery?.selected && <Row label="Delivery">{formatMoney(quote.delivery.fee_cents)}</Row>}
       <Row label="Security deposit">{formatMoney(quote.deposit_cents)}</Row>
       <Row
         strong

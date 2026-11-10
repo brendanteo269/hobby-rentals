@@ -7,6 +7,7 @@ import { Button, ButtonLink, Field, FormError, FormSection, Modal, SelectField, 
 import { AwayModeReminder } from "@/components/away-mode-reminder";
 import type { AwayPeriod } from "@/lib/away";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
+import { DeliveryField } from "@/components/listings/delivery-field";
 import { InstantBookField } from "@/components/listings/instant-book-field";
 import { PromoCodesField } from "@/components/listings/promo-codes-field";
 import type { PromoCode } from "@/lib/promo-codes";
@@ -463,6 +464,12 @@ export function ListingForm({
         />
 
         <InstantBookField defaultChecked={listing?.instant_book_enabled ?? false} />
+
+        <DeliveryField
+          initial={listing}
+          radiusError={errors.delivery_radius_km}
+          feeError={errors.delivery_fee_cents}
+        />
 
         <BlackoutRulesField
           availableFrom={calendarFrom}
