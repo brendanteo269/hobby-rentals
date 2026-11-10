@@ -10,6 +10,7 @@ import type {
   DeclineReason,
 } from "@/lib/bookings";
 import type { CancellationPreview, CancellationRecord } from "@/lib/cancellations";
+import type { DeliveryChoice } from "@/lib/delivery";
 import type { ClaimSettlement, DamageClaim, RentalDispute, RepairEstimate } from "@/lib/settlement";
 
 // Re-exported so existing callers keep importing the quote from here.
@@ -23,10 +24,12 @@ export function createBooking(
   damage_protection = false,
   /** S5-12: the code the renter typed. The server prices it; we never send an amount. */
   promo_code: string | null = null,
+  /** S6-09: deliver to this address. The server refuses one outside the listing's radius. */
+  delivery: DeliveryChoice | null = null,
 ) {
   return backendRequest<Booking>("/bookings", {
     method: "POST",
-    body: JSON.stringify({ listing_id, start_date, end_date, idempotency_key, damage_protection, promo_code }),
+    body: JSON.stringify({ listing_id, start_date, end_date, idempotency_key, damage_protection, promo_code, delivery }),
   });
 }
 
@@ -36,6 +39,7 @@ export function getBookingQuote(
   endDate: string,
   damageProtection = false,
   promoCode: string | null = null,
+  delivery: DeliveryChoice | null = null,
 ) {
   const query = new URLSearchParams({
     listing_id: listingId,
@@ -44,6 +48,11 @@ export function getBookingQuote(
     damage_protection: String(damageProtection),
   });
   if (promoCode) query.set("promo_code", promoCode);
+  if (delivery) {
+    query.set("delivery_address", delivery.address);
+    query.set("delivery_lat", String(delivery.lat));
+    query.set("delivery_lng", String(delivery.lng));
+  }
   return backendRequest<BookingQuote>(`/bookings/quote?${query.toString()}`);
 }
 

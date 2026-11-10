@@ -34,6 +34,7 @@ import {
 import { BackendApiError } from "@/lib/api/client";
 import type { Booking, BookingQuote, BookingStatus, DeclineReason } from "@/lib/bookings";
 import type { DepositOffer } from "@/lib/booking-risk";
+import type { DeliveryChoice } from "@/lib/delivery";
 import type { BundleBooking, BundleQuote } from "@/lib/bundles";
 import type { CancellableKind, CancellationPreview, CancellationRecord } from "@/lib/cancellations";
 import type { ExtensionQuote, ExtensionRequest } from "@/lib/extensions";
@@ -43,7 +44,8 @@ export type BookingActionResult =
   | { error: string; code?: string; shortfallCents?: number }
   | { booking: Booking };
 
-export type BookingQuoteResult = { error: string } | { quote: BookingQuote };
+/** `code` is set when the server named the reason, such as OUTSIDE_RADIUS for a delivery address out of range. */
+export type BookingQuoteResult = { error: string; code?: string } | { quote: BookingQuote };
 
 async function run(action: () => Promise<Booking>): Promise<BookingActionResult> {
   try {
@@ -95,11 +97,12 @@ export async function quoteBooking(
   endDate: string,
   damageProtection = false,
   promoCode: string | null = null,
+  delivery: DeliveryChoice | null = null,
 ): Promise<BookingQuoteResult> {
   try {
-    return { quote: await getBookingQuote(listingId, startDate, endDate, damageProtection, promoCode) };
+    return { quote: await getBookingQuote(listingId, startDate, endDate, damageProtection, promoCode, delivery) };
   } catch (error) {
-    if (error instanceof BackendApiError) return { error: error.message };
+    if (error instanceof BackendApiError) return { error: error.message, code: error.code };
     throw error;
   }
 }
@@ -111,8 +114,9 @@ export async function requestBooking(
   idempotencyKey: string,
   damageProtection = false,
   promoCode: string | null = null,
+  delivery: DeliveryChoice | null = null,
 ) {
-  return run(() => createBooking(listingId, startDate, endDate, idempotencyKey, damageProtection, promoCode));
+  return run(() => createBooking(listingId, startDate, endDate, idempotencyKey, damageProtection, promoCode, delivery));
 }
 
 export async function changeBookingStatus(bookingId: string, nextStatus: BookingStatus) {

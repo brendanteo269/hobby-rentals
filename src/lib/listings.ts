@@ -109,6 +109,8 @@ export type ListingCard = {
   price_per_week_cents: number | null;
   deposit_cents: number;
   location_area: LocationArea;
+  /** S6-09: the card's "Delivery available" badge. */
+  delivery_enabled?: boolean;
   /** The passport's serial status, for the card's badge (S2-30). */
   serial_status: SerialStatus | null;
   /**
@@ -202,6 +204,10 @@ export type Listing = {
   brand: string;
   condition: ListingCondition;
   location_area: LocationArea;
+  /** S6-09: set when the owner delivers, within delivery_radius_km of the listing's area, for a flat fee. */
+  delivery_enabled?: boolean;
+  delivery_radius_km?: number | null;
+  delivery_fee_cents?: number | null;
   price_per_day_cents: number | null;
   price_per_week_cents: number | null;
   deposit_cents: number;
@@ -449,6 +455,10 @@ export type CreateListingRequest = {
   location_area: LocationArea;
   deposit_cents: number;
   replacement_value_cents?: number | null;
+  /** S6-09. Optional; off when omitted. */
+  delivery_enabled?: boolean;
+  delivery_radius_km?: number | null;
+  delivery_fee_cents?: number | null;
   /**
    * Price per rental block is a choice, not two mandatory fields: at least
    * one of these two must be set (FastAPI 422s otherwise), but neither is
@@ -518,6 +528,9 @@ export type UpdateListingRequest = Partial<
     | "category"
     | "condition"
     | "location_area"
+    | "delivery_enabled"
+    | "delivery_radius_km"
+    | "delivery_fee_cents"
     | "deposit_cents"
     | "replacement_value_cents"
     | "price_per_day_cents"

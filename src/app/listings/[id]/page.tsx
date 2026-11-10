@@ -160,7 +160,7 @@ export default async function ListingDetailPage({
             <RateLine listing={listing} />
             <p className="body-copy mt-1">{formatMoney(listing.deposit_cents)} deposit</p>
             {/* S5-11 Scenario 1 / S6-02 Scenario 2: terms of the rental, so with the price. */}
-            <ListingPerks instantBook={listing.instant_book_enabled} guide={listing.has_guide} />
+            <ListingPerks instantBook={listing.instant_book_enabled} guide={listing.has_guide} delivery={listing} />
           </div>
 
           {/* S5-15 Scenario 2: with the price, before the renter scrolls to

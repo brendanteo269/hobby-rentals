@@ -5,6 +5,7 @@ import { formatMoney, todayIso } from "@/lib/format";
 import { Badge } from "@/components/ui";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { PromotedBadge } from "@/components/listings/promoted-badge";
+import { DeliveryBadge } from "@/components/listings/delivery-badge";
 import { InstantBookBadge } from "@/components/listings/instant-book-badge";
 import { HighDemandBadge } from "@/components/listings/high-demand-badge";
 import {
@@ -35,7 +36,7 @@ import { FavouriteButton } from "@/components/listings/favourite-button";
 export function ListingCard({ listing, highDemand = false, className = "", onFavouriteRemoved }: { listing: ListingCardData; highDemand?: boolean; className?: string; onFavouriteRemoved?: () => void }) {
   const badge = passportBadge(listing.serial_status);
   const hasDistance = listing.distance_km !== null && listing.distance_km !== undefined;
-  const hasInfoPills = Boolean(listing.owner_verified || listing.instant_book_enabled || badge || hasDistance);
+  const hasInfoPills = Boolean(listing.owner_verified || listing.instant_book_enabled || listing.delivery_enabled || badge || hasDistance);
   // Pills live in two fixed slots so cards in a row line up however many a
   // listing has: attention pills overlay the photo, and info pills sit in a
   // row pinned to the bottom of the body, below the title and price.
@@ -89,6 +90,7 @@ export function ListingCard({ listing, highDemand = false, className = "", onFav
             {/* S5-11: a term of the listing, like its price - shown to every
                 renter, whether or not they currently qualify. */}
             <InstantBookBadge enabled={listing.instant_book_enabled} />
+            <DeliveryBadge listing={listing} />
             {badge && (
               <Badge variant={listing.serial_status === "VERIFIED" ? "dark" : "neutral"} className="shrink-0 whitespace-nowrap">
                 {badge}

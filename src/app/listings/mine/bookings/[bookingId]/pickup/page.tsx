@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { OwnerPortal, requireOwner } from "@/components/owner-portal";
 import { ConfirmHandoverButton } from "@/components/bookings/confirm-handover-button";
+import { DeliveryAddressLine } from "@/components/bookings/delivery-address-line";
 import { BackendApiError } from "@/lib/api/client";
 import { getOwnerBookings } from "@/lib/api/bookings";
 import { getReturnInspection } from "@/lib/api/returns";
@@ -32,6 +33,7 @@ export default async function OwnerPickupPhotosPage({ params }: { params: Promis
 
   return (
     <OwnerPortal active="Bookings" title={`Pickup photos · ${booking.listing_name ?? "Your item"}`}>
+      <DeliveryAddressLine booking={booking} className="mb-3 text-sm" />
       <p className="body-copy">
         Taken by the renter{inspection.completed_at ? ` on ${formatDateTime(inspection.completed_at)}` : ""}. They are the
         record of the item&apos;s condition when it left you.

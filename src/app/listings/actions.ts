@@ -30,6 +30,7 @@ export async function requestPriceRecommendation(input: PricingRecommendationReq
     throw caught;
   }
 }
+import { validateDeliverySettings } from "@/lib/delivery";
 import { dollarsToCents, todayIso } from "@/lib/format";
 import {
   BASELINE_INCOMPLETE,
@@ -208,6 +209,20 @@ function parseListingFields(
     fieldErrors.deposit_cents = "Enter a deposit amount, or 0 for none.";
   }
 
+  // S6-09: the radius and fee inputs only exist while the switch is on, so
+  // off means both are cleared. FastAPI is still the authority on the limits;
+  // this only says which of the two boxes to put the message under.
+  const deliveryEnabled = formData.get("delivery_enabled") === "on";
+  const deliveryRadius = deliveryEnabled ? count(formData, "delivery_radius_km") : null;
+  const deliveryFee = deliveryEnabled ? cents(formData, "delivery_fee") : null;
+  const deliverySettings = {
+    delivery_enabled: deliveryEnabled,
+    delivery_radius_km: deliveryRadius === null || Number.isNaN(deliveryRadius) ? null : deliveryRadius,
+    delivery_fee_cents: deliveryFee === null || Number.isNaN(deliveryFee) ? null : deliveryFee,
+  };
+  const deliveryProblem = validateDeliverySettings(deliverySettings);
+  if (deliveryProblem) fieldErrors[deliveryProblem.field] = deliveryProblem.message;
+
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
   return {
@@ -218,6 +233,7 @@ function parseListingFields(
       category,
       condition: condition as CreateListingRequest["condition"],
       location_area: locationArea as CreateListingRequest["location_area"],
+      ...deliverySettings,
       price_per_day_cents: pricePerDay,
       price_per_week_cents: pricePerWeek,
       deposit_cents: deposit!,

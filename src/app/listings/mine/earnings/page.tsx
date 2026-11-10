@@ -12,6 +12,7 @@ const EARNING_LABELS: Partial<Record<TransactionType, string>> = {
   RENTAL_PAYOUT: "Rental payout",
   DAMAGE_PAYOUT: "Damage compensation",
   CANCELLATION_PAYOUT: "Cancellation payout",
+  DELIVERY_PAYOUT: "Delivery fee",
   OVERDUE_SETTLEMENT: "Overdue return fee",
 };
 

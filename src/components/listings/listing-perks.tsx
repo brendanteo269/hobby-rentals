@@ -1,5 +1,7 @@
 import type { LucideIcon } from "lucide-react";
-import { BookOpen, Zap } from "lucide-react";
+import { BookOpen, Truck, Zap } from "lucide-react";
+import { deliveryBadge, type DeliverySettings } from "@/lib/delivery";
+import { formatMoney } from "@/lib/format";
 
 /**
  * What comes with renting this listing, under its price on the detail pages:
@@ -7,8 +9,25 @@ import { BookOpen, Zap } from "lucide-react";
  * the price and deposit and have room to say what they mean - a hover title
  * does not reach a phone. Search cards keep the short badges.
  */
-export function ListingPerks({ instantBook, guide }: { instantBook?: boolean; guide?: boolean }) {
+export function ListingPerks({
+  instantBook,
+  guide,
+  delivery,
+}: {
+  instantBook?: boolean;
+  guide?: boolean;
+  delivery?: Partial<DeliverySettings>;
+}) {
   const perks: { icon: LucideIcon; title: string; detail: string }[] = [];
+  // S6-09 Scenario 1. The fee and radius are terms the renter weighs before booking, so they are stated here.
+  const deliveryTitle = delivery ? deliveryBadge(delivery) : null;
+  if (deliveryTitle && delivery) {
+    perks.push({
+      icon: Truck,
+      title: deliveryTitle,
+      detail: `${formatMoney(delivery.delivery_fee_cents ?? 0)} flat fee within about ${delivery.delivery_radius_km} km of the collection area.`,
+    });
+  }
   if (instantBook) {
     perks.push({ icon: Zap, title: "Instant Book", detail: "Trusted Renters are confirmed on the spot." });
   }

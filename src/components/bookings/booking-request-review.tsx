@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge, EmptyState } from "@/components/ui";
 import { BookingRequestDecision } from "@/components/bookings/booking-request-decision";
+import { DeliveryAddressLine } from "@/components/bookings/delivery-address-line";
 import { TrustedRenterBadge } from "@/components/bookings/trusted-renter-badge";
 import { BookingRiskPanel } from "@/components/bookings/booking-risk-panel";
 import { HigherDepositOffer } from "@/components/bookings/higher-deposit-offer";
@@ -97,6 +98,7 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
 
         <section className="card p-5" aria-labelledby="earnings-heading">
           <p id="earnings-heading" className="eyebrow">Rental and earnings</p>
+          <DeliveryAddressLine booking={pricing} className="mt-2 text-sm" />
           <p className="mt-2 text-sm">
             {formatDate(period.start_date)} – {formatDate(period.end_date)}
             {days > 0 && <span className="text-ink-soft"> · {days} {days === 1 ? "day" : "days"}</span>}
@@ -127,6 +129,12 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
               <dd className="text-right">−{formatMoney(pricing.promo_discount_cents)}</dd>
             </>}
             <dt className="text-ink-soft">Platform fee (paid by renter)</dt><dd className="text-right">{money(pricing.platform_fee_cents)}</dd>
+            {/* S6-09: the renter chose delivery. The fee is the owner's in full, paid when the renter
+                confirms the handover, so it is shown apart from the rental and its commission. */}
+            {pricing.delivery_selected && <>
+              <dt className="text-ink-soft">Delivery fee (paid to you at handover)</dt>
+              <dd className="text-right">{formatMoney(pricing.delivery_fee_cents ?? 0)}</dd>
+            </>}
             <dt className="text-ink-soft">Security deposit (refundable)</dt><dd className="text-right">{money(pricing.deposit_cents)}</dd>
             <dt className="text-ink-soft">Damage protection</dt>
             <dd className="text-right">{pricing.damage_protection.selected ? formatMoney(pricing.damage_protection.fee_cents) : "Not selected"}</dd>

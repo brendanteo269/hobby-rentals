@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui";
+import { DeliveryAddressLine } from "@/components/bookings/delivery-address-line";
 import { ReturnInspection } from "@/components/bookings/return-inspection";
 import { BackendApiError } from "@/lib/api/client";
 import { getMyBookings } from "@/lib/api/bookings";
@@ -30,6 +31,8 @@ export default async function PickupPhotosPage({ params }: { params: Promise<{ i
       <div className="mx-auto max-w-2xl">
         <p className="eyebrow">Picking up · {booking.listing_name ?? "Your rental"}</p>
         <h1 className="heading mt-3 text-3xl">{completed ? "Pickup photos saved" : "Photograph the pickup"}</h1>
+        {/* S6-09 Scenario 4: for a delivered booking the pickup is at the delivery address. */}
+        <DeliveryAddressLine booking={booking} className="mt-2 text-sm" />
         <div className="mt-10">
           <ReturnInspection
             bookingId={id}
