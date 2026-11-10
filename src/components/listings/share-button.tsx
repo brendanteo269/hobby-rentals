@@ -15,8 +15,11 @@ import { telegramShareUrl, whatsappShareUrl } from "@/lib/share";
  *
  * When the browser refuses the clipboard, the link is shown already
  * selected so it can still be copied by hand.
+ *
+ * S6-07 shares a member's referral link through it too ("invite"), which
+ * changes nothing but the button's accessible name.
  */
-export function ShareButton({ url, text, what = "listing" }: { url: string; text: string; what?: "listing" | "bundle" }) {
+export function ShareButton({ url, text, what = "listing" }: { url: string; text: string; what?: "listing" | "bundle" | "invite" }) {
   const [open, setOpen] = useState(false);
   const [manual, setManual] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);

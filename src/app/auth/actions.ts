@@ -20,6 +20,7 @@ import { clearRecoveryMark, hasRecoveryMarkFor } from "@/lib/recovery";
 import { exchangeEmailLink } from "@/lib/auth-callback";
 import type { FieldErrors } from "@/lib/api/client";
 import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/login-attempts";
+import { forgetReferralCode } from "@/lib/referral-cookie";
 
 /**
  * What the member typed, echoed back so a rejected submission can redisplay
@@ -29,7 +30,7 @@ import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/log
  * and sits in the rendered payload, which is not somewhere a password should
  * be put to save one field of retyping.
  */
-export type AuthValues = { email: string; display_name: string; terms: boolean };
+export type AuthValues = { email: string; display_name: string; terms: boolean; referral_code: string };
 
 export type AuthState = { error?: string; values?: AuthValues } | undefined;
 
@@ -38,6 +39,7 @@ function readValues(formData: FormData): AuthValues {
     email: String(formData.get("email") ?? ""),
     display_name: String(formData.get("display_name") ?? ""),
     terms: formData.get("terms") === "on",
+    referral_code: String(formData.get("referral_code") ?? ""),
   };
 }
 
@@ -103,15 +105,26 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   const supabase = await createClient();
 
   // display_name rides along in user metadata; the on_auth_user_created
-  // trigger copies it into public.profiles when the row is created.
+  // trigger copies it into public.profiles when the row is created. The
+  // referral code (S6-07) rides the same way, and the same trigger decides
+  // whether it counts, ignoring one that does not.
+  //
+  // Only the field is read, never the remembered link: the page already
+  // filled the field from it, so an empty field means the visitor cleared
+  // it, and clearing it is how they decline the referral.
   const displayName = String(formData.get("display_name") ?? "").trim();
+  const referralCode = values.referral_code.trim();
+  const metadata = {
+    ...(displayName ? { display_name: displayName } : {}),
+    ...(referralCode ? { referral_code: referralCode } : {}),
+  };
 
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
       emailRedirectTo: `${origin}/auth/confirm`,
-      data: displayName ? { display_name: displayName } : undefined,
+      data: Object.keys(metadata).length > 0 ? metadata : undefined,
     },
   });
 
@@ -143,6 +156,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   // resent. No second account is created and the next screen tells the truth,
   // so this is left as Supabase does it: the alternative is timing-based
   // guesswork about whether the row predates this request.
+  await forgetReferralCode();
   redirect(checkEmailPath(email));
 }
 

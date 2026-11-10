@@ -57,9 +57,9 @@ export function authErrorPath(code: AuthErrorCode): `/auth-error?reason=${AuthEr
  * Renting and owning are not panels: each lives in its own portal (My rentals,
  * My listings), so the profile is only about the member themselves.
  */
-export type ProfileView = "ratings" | "wallet" | "notifications" | "account" | "connected-apps";
+export type ProfileView = "ratings" | "wallet" | "referrals" | "notifications" | "account" | "connected-apps";
 
-const PROFILE_VIEWS: readonly ProfileView[] = ["ratings", "wallet", "notifications", "account", "connected-apps"];
+const PROFILE_VIEWS: readonly ProfileView[] = ["ratings", "wallet", "referrals", "notifications", "account", "connected-apps"];
 
 export function isProfileView(value: string | undefined): value is ProfileView {
   return PROFILE_VIEWS.includes(value as ProfileView);
@@ -71,6 +71,19 @@ export const DEFAULT_PROFILE_VIEW: ProfileView = "ratings";
 /** The profile page, optionally opened on a particular panel. */
 export function profilePath(view?: ProfileView): "/profile" | `/profile?view=${ProfileView}` {
   return view ? `/profile?view=${view}` : "/profile";
+}
+
+/**
+ * S6-07: a member's referral link. Opened by someone signed out, it remembers
+ * the code and sends them on to sign up.
+ */
+export function referralPath(code: string): `/r/${string}` {
+  return `/r/${encodeURIComponent(code)}`;
+}
+
+/** The signup screen, with a referral code to fill in for the visitor (S6-07). */
+export function signupPath(referralCode?: string | null): "/signup" | `/signup?ref=${string}` {
+  return referralCode ? `/signup?ref=${encodeURIComponent(referralCode)}` : "/signup";
 }
 
 /**

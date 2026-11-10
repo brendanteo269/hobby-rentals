@@ -10,14 +10,18 @@ export function BalanceSummaryCard({
   onOpenTopUp: () => void;
   onOpenWithdraw: () => void;
 }) {
-  const belowMinimum = wallet.availableCents < MIN_WITHDRAWAL_CENTS;
+  const belowMinimum = wallet.withdrawableCents < MIN_WITHDRAWAL_CENTS;
   return (
     <div className="card p-6 sm:p-8">
       <div className="grid gap-6 sm:grid-cols-3">
         <Metric
           label="Available balance"
           valueCents={wallet.availableCents}
-          note="Spendable or eligible for withdrawal"
+          note={
+            wallet.creditCents > 0
+              ? `Includes ${formatWalletAmount(wallet.creditCents)} referral credit for rentals, which can't be withdrawn`
+              : "Spendable or eligible for withdrawal"
+          }
         />
         <Metric
           label="Held in escrow"
@@ -37,7 +41,7 @@ export function BalanceSummaryCard({
           variant="outline"
           onClick={onOpenWithdraw}
           disabled={belowMinimum}
-          title={belowMinimum ? `You need at least ${formatWalletAmount(MIN_WITHDRAWAL_CENTS)} available to withdraw.` : undefined}
+          title={belowMinimum ? `You need at least ${formatWalletAmount(MIN_WITHDRAWAL_CENTS)} withdrawable to withdraw.` : undefined}
         >
           Withdraw funds
         </Button>
