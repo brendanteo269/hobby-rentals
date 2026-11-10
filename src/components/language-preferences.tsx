@@ -28,7 +28,12 @@ export function LanguagePreferencesForm({ preferences }: { preferences: Language
         original.
       </p>
 
-      <form action={formAction} className="mt-6 max-w-xl space-y-5">
+      {/* React 19 resets the form when the action returns, and an uncontrolled field can snap back to the old
+          defaultValue before the refreshed props land. Keying on the saved values remounts it with the new ones. */}
+      <form
+        key={`${preferences.preferred_language ?? ""}:${preferences.always_translate}`}
+        action={formAction}
+        className="mt-6 max-w-xl space-y-5">
         <label className="block">
           <span className="text-sm font-medium">Preferred language</span>
           <Select
