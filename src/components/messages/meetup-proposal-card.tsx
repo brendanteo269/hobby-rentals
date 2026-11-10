@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { Check, ExternalLink } from "lucide-react";
 import { Badge, Button } from "@/components/ui";
-import { acceptBookingMeetup } from "@/app/messages/actions";
+import { acceptBookingMeetup, checkBookingMeetupConflicts } from "@/app/messages/actions";
+import { MeetupConflictWarning } from "./meetup-conflict-warning";
+import { clashingTimes, type MeetupConflictCheck } from "@/lib/meetup-conflicts";
 import { meetupMapsSearchUrl } from "@/lib/meetups";
 import { formatDateTime } from "@/lib/format";
 import type { Message } from "@/lib/conversations";
@@ -17,6 +19,7 @@ import type { Message } from "@/lib/conversations";
  */
 export function MeetupProposalCard({
   message,
+  bookingId,
   isActionable,
   pendingReschedule,
   rescheduled,
@@ -24,6 +27,8 @@ export function MeetupProposalCard({
   onReject,
 }: {
   message: Message;
+  /** The booking the meetup is for - the clash check (S6-01) runs against it. */
+  bookingId?: string;
   /** True only for the latest proposal, and only when the viewer didn't send it - the recipient is who can act on it. */
   isActionable: boolean;
   /** S2-19 Scenario 5: this is the confirmed arrangement, but a newer proposal is now awaiting a response - the old time/location are still in force until that one is accepted. */
@@ -41,23 +46,60 @@ export function MeetupProposalCard({
   // close-together rows can't accidentally commit to the wrong time.
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // S6-01: a clash or away warning raised by Accept, with the time it was for.
+  const [conflict, setConflict] = useState<{ check: MeetupConflictCheck; time: string } | null>(null);
   if (!proposal) return null;
 
   const isAccepted = message.meetup_event_type === "ACCEPTED";
 
+  /** Checks the time first (S6-01); only a clean time, or one the person confirmed, is accepted. */
   async function accept(time: string) {
     setAcceptingTime(time);
     setError(null);
-    const result = await acceptBookingMeetup(proposal!.id, time);
+    if (bookingId) {
+      const checked = await checkBookingMeetupConflicts(bookingId, [time]);
+      if ("error" in checked) {
+        setError(checked.error);
+        setAcceptingTime(null);
+        return;
+      }
+      if (checked.check.blocked_reason || clashingTimes(checked.check).length > 0) {
+        setConflict({ check: checked.check, time });
+        setAcceptingTime(null);
+        return;
+      }
+    }
+    await send(time, false);
+  }
+
+  async function send(time: string, acknowledged: boolean) {
+    setAcceptingTime(time);
+    setError(null);
+    const result = await acceptBookingMeetup(proposal!.id, time, acknowledged);
     if ("error" in result) {
       setError(result.error);
       setAcceptingTime(null);
+      setConflict(null);
       return;
     }
+    setConflict(null);
     onAccepted(result.message);
   }
 
   return (
+    <>
+    {conflict && (
+      <MeetupConflictWarning
+        check={conflict.check}
+        isSending={acceptingTime !== null}
+        onClose={() => setConflict(null)}
+        onGoAhead={() => void send(conflict.time, true)}
+        onProposeInstead={() => {
+          setConflict(null);
+          onReject();
+        }}
+      />
+    )}
     <div
       className={`w-full max-w-[85%] overflow-hidden rounded-2xl border border-line bg-white text-sm text-ink sm:max-w-sm ${rescheduled ? "opacity-60" : ""}`}
     >
@@ -173,5 +215,6 @@ export function MeetupProposalCard({
         )}
       </div>
     </div>
+    </>
   );
 }

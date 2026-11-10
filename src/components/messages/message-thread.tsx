@@ -28,6 +28,7 @@ export function MessageThread({
   confirmedMeetupProposalId = null,
   onMeetupAccepted,
   onMeetupRejected,
+  bookingId,
 }: {
   messages: Message[];
   currentUserId: string;
@@ -45,6 +46,8 @@ export function MessageThread({
   onMeetupAccepted?: (message: Message) => void;
   /** None of the pending proposal's times work - opens the propose-a-meetup modal. */
   onMeetupRejected?: () => void;
+  /** The booking this conversation is about, for the meetup clash check (S6-01). */
+  bookingId?: string;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -98,6 +101,7 @@ export function MessageThread({
                 {!mine && <PersonAvatar name={otherPartyName} imageUrl={otherPartyAvatarUrl} size="sm" />}
                 <MeetupProposalCard
                   message={message}
+                  bookingId={bookingId}
                   isActionable={isActionable}
                   pendingReschedule={pendingReschedule}
                   rescheduled={supersededByLaterAcceptance}

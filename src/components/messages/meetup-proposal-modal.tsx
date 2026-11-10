@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Button, Input, Modal, Select } from "@/components/ui";
-import { proposeBookingMeetup } from "@/app/messages/actions";
+import { checkBookingMeetupConflicts, proposeBookingMeetup } from "@/app/messages/actions";
+import { MeetupConflictWarning } from "./meetup-conflict-warning";
+import { clashingTimes, toTimeOfDayValue, type MeetupConflictCheck } from "@/lib/meetup-conflicts";
 import { combineDateAndTime, composeMeetupLocation, TIME_OF_DAY_OPTIONS } from "@/lib/meetups";
 import { LOCATION_AREAS, LOCATION_LABELS, isLocationArea, type LocationArea } from "@/lib/listings";
 import { formatDate } from "@/lib/format";
@@ -45,6 +47,7 @@ export function MeetupProposalModal({
   const [times, setTimes] = useState<string[]>([""]);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conflicts, setConflicts] = useState<MeetupConflictCheck | null>(null);
 
   // The postal code a lookup has already resolved address for. Switching to
   // "Choose an area" and back to "Custom address" re-runs this effect (mode
@@ -110,12 +113,12 @@ export function MeetupProposalModal({
     setTimes((current) => current.filter((_, i) => i !== index));
   }
 
-  async function submit() {
-    if (!canSubmit) return;
+  /** Sends the proposal; `acknowledged` once the person has seen and accepted a clash warning. */
+  async function send(acknowledged: boolean) {
     setIsSending(true);
     setError(null);
     try {
-      const result = await proposeBookingMeetup(bookingId, location, validTimes);
+      const result = await proposeBookingMeetup(bookingId, location, validTimes, acknowledged);
       if ("error" in result) {
         setError(result.error);
         return;
@@ -127,7 +130,37 @@ export function MeetupProposalModal({
     }
   }
 
+  /** S6-01: checks the times first; a clash or an away owner is shown before anything is sent. */
+  async function submit() {
+    if (!canSubmit) return;
+    setIsSending(true);
+    setError(null);
+    const result = await checkBookingMeetupConflicts(bookingId, validTimes);
+    setIsSending(false);
+    if ("error" in result) {
+      setError(result.error);
+      return;
+    }
+    if (result.check.blocked_reason || clashingTimes(result.check).length > 0) {
+      setConflicts(result.check);
+      return;
+    }
+    await send(false);
+  }
+
+  /** Swaps a suggested free slot in for the clashing time and returns to the form to review it. */
+  function pickSuggestion(clashingTime: string, suggestion: string) {
+    const slot = toTimeOfDayValue(suggestion);
+    setTimes((current) => {
+      // Keep each remaining time unique so the same slot isn't offered twice.
+      const next = current.map((t) => (combineDateAndTime(pickupDate, t) === clashingTime ? slot : t));
+      return next.filter((t, i) => next.indexOf(t) === i);
+    });
+    setConflicts(null);
+  }
+
   return (
+    <>
     <Modal title="Propose a meetup" onClose={onClose}>
       <div className="mt-5 space-y-4">
         <div>
@@ -276,5 +309,15 @@ export function MeetupProposalModal({
         </Button>
       </div>
     </Modal>
+    {conflicts && (
+      <MeetupConflictWarning
+        check={conflicts}
+        isSending={isSending}
+        onClose={() => setConflicts(null)}
+        onGoAhead={() => void send(true)}
+        onPickSuggestion={pickSuggestion}
+      />
+    )}
+    </>
   );
 }
