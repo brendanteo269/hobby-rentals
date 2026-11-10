@@ -12,6 +12,9 @@ import { createClient } from "@/lib/supabase/client";
  * commission. DAMAGE_DEDUCTION is what the deposit paid towards damage, and
  * DAMAGE_PAYOUT what reached the owner for it. OVERDUE_SETTLEMENT is an
  * overdue return fee, paid from the deposit or later.
+ *
+ * REFERRAL_CREDIT is S6-07's reward for a friend's first rental: spendable
+ * on rentals, never withdrawable.
  */
 export type TransactionType =
   | "TOPUP"
@@ -29,7 +32,8 @@ export type TransactionType =
   | "RENTAL_CHARGE"
   | "RENTAL_PAYOUT"
   | "DAMAGE_DEDUCTION"
-  | "DAMAGE_PAYOUT";
+  | "DAMAGE_PAYOUT"
+  | "REFERRAL_CREDIT";
 /** SETTLED: a hold a rental's settlement consumed. */
 export type TransactionStatus = "COMPLETED" | "PENDING" | "REFUNDED" | "SETTLED";
 
@@ -71,10 +75,24 @@ type BookingReferenceResponse = {
 export type WalletState = {
   availableCents: number;
   heldCents: number;
+  /** How much of availableCents is referral credit (S6-07), which cannot be withdrawn. */
+  creditCents: number;
+  /**
+   * availableCents less the credit, never below zero. Computed by the API
+   * with the same rule the database withdraws by, so every withdrawal check
+   * on the page reads this rather than working it out again.
+   */
+  withdrawableCents: number;
   transactions: WalletTransaction[];
 };
 
-export const EMPTY_WALLET: WalletState = { availableCents: 0, heldCents: 0, transactions: [] };
+export const EMPTY_WALLET: WalletState = {
+  availableCents: 0,
+  heldCents: 0,
+  creditCents: 0,
+  withdrawableCents: 0,
+  transactions: [],
+};
 
 // Mirrors the $10.00 floor enforced by create_wallet_withdrawal in the DB.
 export const MIN_WITHDRAWAL_CENTS = 1000;
@@ -82,6 +100,8 @@ export const MIN_WITHDRAWAL_CENTS = 1000;
 type WalletApiResponse = {
   available_balance_cents: number;
   held_balance_cents: number;
+  credit_balance_cents: number;
+  withdrawable_cents: number;
   transactions: Array<{
     id: string;
     type: TransactionType;
@@ -99,6 +119,8 @@ export function mapWalletResponse(data: WalletApiResponse): WalletState {
   return {
     availableCents: data.available_balance_cents,
     heldCents: data.held_balance_cents,
+    creditCents: data.credit_balance_cents,
+    withdrawableCents: data.withdrawable_cents,
     transactions: data.transactions.map((tx) => ({
       id: tx.id,
       type: tx.type,
@@ -158,7 +180,7 @@ export function filterTransactions(transactions: WalletTransaction[], filter: Tr
     );
   }
   if (filter === "adjustments") {
-    return transactions.filter((tx) => tx.type === "ADMIN_CREDIT" || tx.type === "ADMIN_DEBIT");
+    return transactions.filter((tx) => ["ADMIN_CREDIT", "ADMIN_DEBIT", "REFERRAL_CREDIT"].includes(tx.type));
   }
   return transactions.filter((tx) => tx.type === "WITHDRAWAL");
 }

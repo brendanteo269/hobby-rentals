@@ -99,7 +99,12 @@ export type NotificationType =
   | "HOBBYSHIELD_EXPIRING_TODAY"
   | "HOBBYSHIELD_EXPIRED"
   // S2-16: the other party sent a plain text/attachment message.
-  | "MESSAGE_RECEIVED";
+  | "MESSAGE_RECEIVED"
+  // S6-07: referral credit, to the member who invited a friend and to the
+  // friend; and, at signup, the friend told their code counted.
+  | "REFERRAL_APPLIED_REFEREE"
+  | "REFERRAL_REWARDED_REFERRER"
+  | "REFERRAL_REWARDED_REFEREE";
 
 /** Mirrors app/notification_catalog.py NotificationCategory. */
 export type NotificationCategory =
@@ -225,6 +230,9 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   HOBBYSHIELD_EXPIRING_TODAY: "HobbyShield expires today",
   HOBBYSHIELD_EXPIRED: "HobbyShield expired",
   MESSAGE_RECEIVED: "New message",
+  REFERRAL_APPLIED_REFEREE: "Referral applied",
+  REFERRAL_REWARDED_REFERRER: "Referral credit earned",
+  REFERRAL_REWARDED_REFEREE: "Welcome reward added",
 };
 
 export const NOTIFICATION_TYPES = Object.keys(NOTIFICATION_TYPE_LABELS) as NotificationType[];

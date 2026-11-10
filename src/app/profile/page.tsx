@@ -24,6 +24,8 @@ import { NotificationPreferences } from "@/components/notification-preferences";
 import { getNotificationPreferences } from "@/lib/api/notifications";
 import { ConnectedApps } from "@/components/connected-apps";
 import { getAssistantTokens } from "@/lib/api/assistant-tokens";
+import { getMyReferrals } from "@/lib/api/referrals";
+import { ReferAFriend } from "@/components/referrals/refer-a-friend";
 import { BackendApiError } from "@/lib/api/client";
 import { getPublicMember } from "@/lib/api/reviews";
 import { getOwnAvatarUrl } from "@/lib/api/profile-avatar";
@@ -80,6 +82,14 @@ export default async function ProfilePage({
   const assistantTokens =
     active === "connected-apps"
       ? await getAssistantTokens().catch((error) => {
+          if (error instanceof BackendApiError) return null;
+          throw error;
+        })
+      : null;
+  // S6-07. Swallowed the same way as the connected apps above.
+  const referrals =
+    active === "referrals"
+      ? await getMyReferrals().catch((error) => {
           if (error instanceof BackendApiError) return null;
           throw error;
         })
@@ -161,6 +171,16 @@ export default async function ProfilePage({
         <div className="mt-8">
           {active === "ratings" && <RatingsView profile={ratings} />}
           {active === "wallet" && <CreditWallet />}
+          {active === "referrals" &&
+            (referrals ? (
+              <ReferAFriend summary={referrals} />
+            ) : (
+              <EmptyState
+                icon={CloudOff}
+                title="Your referral link could not be loaded"
+                body="Try refreshing this page in a moment."
+              />
+            ))}
           {preferences && <NotificationPreferences preferences={preferences} />}
           {active === "connected-apps" &&
             (assistantTokens ? (
