@@ -9,6 +9,7 @@ import { MessageButton } from "@/components/messages/message-button";
 import { ButtonLink } from "@/components/ui";
 import { getConversation, getConversationLimits, getMessages, getMyConversations } from "@/lib/api/conversations";
 import { getBookingAvailability, getListing } from "@/lib/api/listings";
+import { getLanguagePreferences } from "@/lib/api/translation";
 import { getMyBookings, getOwnerBookings } from "@/lib/api/bookings";
 import { conversationPriceLocationLine, type Conversation } from "@/lib/conversations";
 import { unavailableReason } from "@/lib/cancellations";
@@ -58,6 +59,10 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
   } catch {
     notFound();
   }
+
+  // S6-04: only whether the reader has a language decides if messages get a Translate button, so a
+  // failure here just means no button, never a thread that will not open.
+  const languagePreferences = await getLanguagePreferences().catch(() => null);
 
   // Only fetched once we know it's actually needed: a confirmed/active/
   // completed booking means no new request can be made here, so there's
@@ -132,6 +137,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
           otherPartyName={conversation.other_party_name}
           otherPartyAvatarUrl={conversation.other_party_avatar_url}
           attachmentLimits={attachmentLimits}
+          canTranslate={languagePreferences?.preferred_language != null}
           bookingId={conversation.scope === "BOOKING" ? conversation.booking_id ?? undefined : undefined}
           meetupEligible={conversation.scope === "BOOKING" && conversation.booking_status === "CONFIRMED"}
           defaultLocationArea={conversation.listing_location_area}

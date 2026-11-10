@@ -47,6 +47,7 @@ export function ConversationThreadPanel({
   footerBanner,
   bookingId,
   meetupEligible = false,
+  canTranslate = false,
   defaultLocationArea = null,
   bookingStartDate = null,
   bookingEndDate = null,
@@ -80,6 +81,8 @@ export function ConversationThreadPanel({
   bookingId?: string;
   /** S2-19: whether "Arrange meetup" should be offered at all (AC6) - true only while the booking is CONFIRMED. */
   meetupEligible?: boolean;
+  /** S6-04: the reader has chosen a language, so incoming messages get a Translate button. */
+  canTranslate?: boolean;
   /** S2-19 UX follow-up: the listing's own area, offered as the meetup location's starting point. */
   defaultLocationArea?: string | null;
   /**
@@ -247,6 +250,7 @@ export function ConversationThreadPanel({
             onMeetupAccepted={appendMessage}
             onMeetupRejected={() => setShowMeetupModal(true)}
             bookingId={bookingId}
+            canTranslate={canTranslate}
           />
         </div>
       </div>

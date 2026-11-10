@@ -22,6 +22,8 @@ import { AccountSettings } from "@/components/account-settings";
 import { CreditWallet } from "@/components/credit-wallet";
 import { NotificationPreferences } from "@/components/notification-preferences";
 import { getNotificationPreferences } from "@/lib/api/notifications";
+import { getLanguagePreferences } from "@/lib/api/translation";
+import { LanguagePreferencesForm } from "@/components/language-preferences";
 import { ConnectedApps } from "@/components/connected-apps";
 import { getAssistantTokens } from "@/lib/api/assistant-tokens";
 import { getMyReferrals } from "@/lib/api/referrals";
@@ -77,6 +79,7 @@ export default async function ProfilePage({
   const active: ProfileView = resolveView(view);
   const ratings = active === "ratings" ? await getPublicMember(user.id).catch(() => null) : null;
   const preferences = active === "notifications" ? await getNotificationPreferences() : null;
+  const languagePreferences = active === "language" ? await getLanguagePreferences() : null;
   // Only a backend refusal is swallowed: backendRequest signs a member out by
   // throwing a redirect, which has to keep travelling.
   const assistantTokens =
@@ -182,6 +185,7 @@ export default async function ProfilePage({
               />
             ))}
           {preferences && <NotificationPreferences preferences={preferences} />}
+          {languagePreferences && <LanguagePreferencesForm preferences={languagePreferences} />}
           {active === "connected-apps" &&
             (assistantTokens ? (
               <ConnectedApps tokens={assistantTokens} />
