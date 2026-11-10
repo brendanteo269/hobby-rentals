@@ -246,6 +246,7 @@ export function ConversationThreadPanel({
             confirmedMeetupProposalId={meetupState.confirmed?.id ?? null}
             onMeetupAccepted={appendMessage}
             onMeetupRejected={() => setShowMeetupModal(true)}
+            bookingId={bookingId}
           />
         </div>
       </div>
