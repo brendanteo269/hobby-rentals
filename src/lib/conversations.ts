@@ -1,6 +1,7 @@
 import { formatMoney } from "@/lib/format";
 import { isLocationArea, LOCATION_LABELS } from "@/lib/listings";
 import type { BookingStatus } from "@/lib/bookings";
+import type { MessageTranslation } from "@/lib/translation";
 
 /** LISTING = an enquiry thread opened from a listing; BOOKING = opened from a booking. */
 export type ConversationScope = "LISTING" | "BOOKING";
@@ -90,6 +91,8 @@ export type Message = {
   /** S2-19: set when this message announced a meetup proposal or its acceptance - see MeetupProposal. */
   meetup_event_type: "PROPOSED" | "ACCEPTED" | null;
   meetup_proposal: MeetupProposal | null;
+  /** S6-04: present for a reader with "Always translate" on; `body` above is still the original. */
+  translation?: MessageTranslation | null;
   created_at: string;
 };
 

@@ -5,6 +5,7 @@ import type { Message } from "@/lib/conversations";
 import { formatChatTimestamp } from "@/lib/format";
 import { AttachmentLightbox } from "./attachment-lightbox";
 import { MeetupProposalCard } from "./meetup-proposal-card";
+import { MessageTranslationBlock } from "./message-translation-block";
 import { PersonAvatar } from "@/components/person-avatar";
 
 /**
@@ -29,6 +30,7 @@ export function MessageThread({
   onMeetupAccepted,
   onMeetupRejected,
   bookingId,
+  canTranslate = false,
 }: {
   messages: Message[];
   currentUserId: string;
@@ -48,6 +50,8 @@ export function MessageThread({
   onMeetupRejected?: () => void;
   /** The booking this conversation is about, for the meetup clash check (S6-01). */
   bookingId?: string;
+  /** S6-04: the reader has chosen a language, so incoming messages get a Translate button. */
+  canTranslate?: boolean;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -140,6 +144,7 @@ export function MessageThread({
                   </ul>
                 )}
                 {message.body && <p className="whitespace-pre-line [overflow-wrap:anywhere]">{message.body}</p>}
+                {!mine && <MessageTranslationBlock message={message} currentUserId={currentUserId} canTranslate={canTranslate} />}
                 <p className={`mt-1.5 text-[0.6875rem] ${mine ? "text-white/70" : "text-ink-soft"}`}>
                   <time dateTime={message.created_at}>{formatChatTimestamp(message.created_at)}</time>
                 </p>

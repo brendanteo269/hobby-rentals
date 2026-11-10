@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getMessages, sendBookingMessage, sendListingMessage, sendMessage } from "@/lib/api/conversations";
 import { acceptMeetup, checkMeetupConflicts, proposeMeetup } from "@/lib/api/meetups";
 import { BackendApiError } from "@/lib/api/client";
+import { translateMessage } from "@/lib/api/translation";
+import type { MessageTranslation } from "@/lib/translation";
 import type { MeetupConflictCheck } from "@/lib/meetup-conflicts";
 import { needsConfirmation, type Conversation, type Message, type MessagePage, type NeedsConfirmation } from "@/lib/conversations";
 
@@ -103,6 +105,18 @@ export async function checkBookingMeetupConflicts(
 ): Promise<{ check: MeetupConflictCheck } | { error: string }> {
   try {
     return { check: await checkMeetupConflicts(bookingId, times) };
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
+}
+
+/** S6-04: translate one received message into the reader's preferred language. */
+export async function translateBookingMessage(
+  messageId: string,
+): Promise<{ translation: MessageTranslation } | { error: string }> {
+  try {
+    return { translation: await translateMessage(messageId) };
   } catch (error) {
     if (error instanceof BackendApiError) return { error: error.message };
     throw error;

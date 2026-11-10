@@ -14,6 +14,8 @@ import { defaultDashboardPath, MY_LISTINGS_PATH, RENTALS_PATH } from "@/lib/rout
 import { clearLoginAttempts, lockoutMessage, recordFailedLogin } from "@/lib/login-attempts";
 import { BackendApiError, type FieldErrors } from "@/lib/api/client";
 import { updateNotificationPreferences } from "@/lib/api/notifications";
+import { updateLanguagePreferences } from "@/lib/api/translation";
+import { isLanguage } from "@/lib/translation";
 import { removeAvatar, saveAvatar } from "@/lib/api/profile-avatar";
 import { createAssistantToken, revokeAssistantToken } from "@/lib/api/assistant-tokens";
 import { validateAssistantTokenName, type CreatedAssistantToken } from "@/lib/assistant-tokens";
@@ -392,6 +394,27 @@ export async function saveNotificationPreferences(_prev: FormState, formData: Fo
   }
   revalidatePath("/profile");
   return { success: "Notification preferences saved." };
+}
+
+/**
+ * S6-04: saves the preferred chat language and the Always-translate switch. An
+ * unticked box is absent from the form, which is what "off" looks like.
+ */
+export async function saveLanguagePreferences(_prev: FormState, formData: FormData): Promise<FormState> {
+  const chosen = formData.get("preferred_language");
+  const preferredLanguage = isLanguage(chosen) ? chosen : null;
+  try {
+    await updateLanguagePreferences({
+      preferred_language: preferredLanguage,
+      always_translate: formData.get("always_translate") === "on",
+    });
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
+  revalidatePath("/profile");
+  revalidatePath("/messages", "layout");
+  return { success: "Language preferences saved." };
 }
 
 export type AssistantTokenState = { error?: string; created?: CreatedAssistantToken } | undefined;
