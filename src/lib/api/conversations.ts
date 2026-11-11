@@ -1,7 +1,7 @@
 import "server-only";
 
 import { backendRequest } from "@/lib/api/client";
-import type { Conversation, ConversationLimits, Message, MessagePage, NeedsConfirmation } from "@/lib/conversations";
+import type { Conversation, ConversationLimits, Message, MessagePage, NeedsConfirmation, ReplySuggestions } from "@/lib/conversations";
 
 /** Mirrors the FastAPI routes in app/routers/conversations.py. */
 
@@ -52,11 +52,17 @@ export function sendBookingMessage(bookingId: string, text: string, attachmentKe
   });
 }
 
-export function sendMessage(conversationId: string, text: string, attachmentKeys: string[] = [], confirmationId?: string) {
+export function sendMessage(conversationId: string, text: string, attachmentKeys: string[] = [], confirmationId?: string, suggestionId?: string) {
   return backendRequest<Message | NeedsConfirmation>(`/conversations/${encodeURIComponent(conversationId)}/messages`, {
     method: "POST",
-    body: JSON.stringify({ text, attachment_keys: attachmentKeys, confirmation_id: confirmationId }),
+    // S6-13: suggestion_id names the suggested reply the owner tapped, so its use is counted.
+    body: JSON.stringify({ text, attachment_keys: attachmentKeys, confirmation_id: confirmationId, suggestion_id: suggestionId }),
   });
+}
+
+/** S6-13: up to three suggested replies for the owner; empty for anyone else, or when the renter did not speak last. */
+export function getReplySuggestions(conversationId: string) {
+  return backendRequest<ReplySuggestions>(`/conversations/${encodeURIComponent(conversationId)}/reply-suggestions`);
 }
 
 /** S2-17: issues a one-time S3 upload URL for a message attachment, mirroring presignListingPhoto. */

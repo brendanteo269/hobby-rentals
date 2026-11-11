@@ -165,3 +165,17 @@ export type NeedsConfirmation = {
 export function needsConfirmation(result: object): result is NeedsConfirmation {
   return "status" in result && result.status === "needs_confirmation";
 }
+
+/** S6-13: a reply the owner may tap to put in their message box. Nothing is sent until they press Send. */
+export type ReplySuggestion = { id: string; type: string; text: string };
+/** after_message_id is the renter message the suggestions answer; null when the chat gets none. */
+export type ReplySuggestions = { after_message_id: string | null; suggestions: ReplySuggestion[] };
+
+/**
+ * S6-13: whether the owner should be offered suggestions now - the viewer is
+ * the owner and the newest message is the renter's text.
+ */
+export function wantsReplySuggestions(messages: Pick<Message, "sender_id" | "body">[], currentUserId: string, viewerIsOwner: boolean): boolean {
+  const last = messages.at(-1);
+  return viewerIsOwner && !!last && last.sender_id !== currentUserId && last.body.trim().length > 0;
+}

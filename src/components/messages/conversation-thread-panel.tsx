@@ -10,11 +10,12 @@ import { useRealtimeSignal } from "@/components/use-realtime-signal";
 import { useSingleFlight } from "@/components/use-single-flight";
 import { MessageThread } from "./message-thread";
 import { MessageComposer } from "./message-composer";
+import { SuggestedReplies } from "./suggested-replies";
 import { MeetupProposalModal } from "./meetup-proposal-modal";
 import { ConfirmedMeetupBar } from "./confirmed-meetup-bar";
 import { loadEarlierMessages } from "@/app/messages/actions";
 import { deriveMeetupState } from "@/lib/meetups";
-import type { ConversationLimits, Message, MessagePage } from "@/lib/conversations";
+import { wantsReplySuggestions, type ConversationLimits, type Message, type MessagePage, type ReplySuggestion } from "@/lib/conversations";
 
 /**
  * Safety-net interval for an open thread. New messages normally arrive via a
@@ -51,6 +52,7 @@ export function ConversationThreadPanel({
   defaultLocationArea = null,
   bookingStartDate = null,
   bookingEndDate = null,
+  viewerIsOwner = false,
 }: {
   conversationId: string;
   initialMessages: Message[];
@@ -94,6 +96,8 @@ export function ConversationThreadPanel({
   bookingStartDate?: string | null;
   /** S4-16: the booking's last day, so the calendar menu knows whether its rental dates can still be added. */
   bookingEndDate?: string | null;
+  /** S6-13: the viewer owns the listing, so a renter's message gets suggested replies. */
+  viewerIsOwner?: boolean;
 }) {
   const { show, dismiss } = useToast();
   // The inner chat window, where the composer's safety warning is shown (S4-15).
@@ -221,6 +225,12 @@ export function ConversationThreadPanel({
   }
 
   const meetupActive = Boolean(meetupState.pending || meetupState.confirmed);
+  const [draft, setDraft] = useState<{ text: string; suggestionId: string; nonce: number } | null>(null);
+  const suggestFor = !replaceComposerWith && wantsReplySuggestions(messages, currentUserId, viewerIsOwner) ? messages.at(-1)!.id : null;
+
+  function pickSuggestion(suggestion: ReplySuggestion) {
+    setDraft((current) => ({ text: suggestion.text, suggestionId: suggestion.id, nonce: (current?.nonce ?? 0) + 1 }));
+  }
 
   return (
     <>
@@ -258,8 +268,10 @@ export function ConversationThreadPanel({
       {footerBanner}
 
       <div className="border-t border-line p-4" onFocusCapture={dismissAwayToast}>
+        {suggestFor && <SuggestedReplies conversationId={conversationId} afterMessageId={suggestFor} onPick={pickSuggestion} />}
         {replaceComposerWith ?? (
           <MessageComposer
+            draft={draft}
             target={{ kind: "reply", conversationId }}
             label="Reply"
             placeholder="Write a reply…"

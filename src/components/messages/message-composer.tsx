@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { flushSync } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -86,6 +86,7 @@ export function MessageComposer({
   extraButton,
   onSent,
   warningHost,
+  draft,
 }: {
   target: Target;
   label?: string;
@@ -108,6 +109,13 @@ export function MessageComposer({
    * conversation) the warning covers the screen.
    */
   warningHost?: HTMLElement | null;
+  /**
+   * S6-13: a suggested reply the owner tapped. Its text replaces what is in
+   * the box, for them to edit; it is sent only when they press Send, and the
+   * send names it so its use can be counted. `nonce` changes on every tap, so
+   * tapping the same suggestion again after editing puts it back.
+   */
+  draft?: { text: string; suggestionId: string; nonce: number } | null;
 }) {
   const router = useRouter();
   const { show } = useToast();
@@ -122,7 +130,26 @@ export function MessageComposer({
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [held, setHeld] = useState<HeldMessage | null>(null);
+  // S6-13: the suggestion this message started from, until it is sent or the box is emptied.
+  const [suggestionId, setSuggestionId] = useState<string | null>(null);
+  const [appliedDraft, setAppliedDraft] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+
+  // A new tap: adopted while rendering (React's pattern for state that follows
+  // a prop), not in an effect, so the box never paints the old text first.
+  if (draft && draft.nonce !== appliedDraft) {
+    setAppliedDraft(draft.nonce);
+    setText(draft.text);
+    setSuggestionId(draft.suggestionId);
+    setHeld(null);
+  }
+  useEffect(() => {
+    if (appliedDraft === null) return;
+    const box = textRef.current;
+    box?.focus();
+    box?.setSelectionRange(box.value.length, box.value.length);
+  }, [appliedDraft]);
 
   const remainingSlots = MAX_MESSAGE_ATTACHMENTS - attachments.length - uploading.length;
 
@@ -184,7 +211,7 @@ export function MessageComposer({
     void (async () => {
       try {
         if (target.kind === "reply") {
-          const result = await replyToConversation(target.conversationId, value, attachmentKeys, confirmationId);
+          const result = await replyToConversation(target.conversationId, value, attachmentKeys, confirmationId, suggestionId ?? undefined);
           // Forced to commit and paint on its own, ahead of appending the
           // message below: the button must stop showing "Sending…" before
           // the new bubble appears, not in the same update as it - plain
@@ -203,6 +230,7 @@ export function MessageComposer({
           }
           setHeld(null);
           setText("");
+          setSuggestionId(null);
           attachments.forEach((attachment) => releasePreview(attachment.previewUrl));
           setAttachments([]);
           onSent?.(result.message);
@@ -306,6 +334,7 @@ export function MessageComposer({
         )}
         {extraButton}
         <textarea
+          ref={textRef}
           aria-label={label}
           id="message-text"
           name="text"
@@ -314,6 +343,8 @@ export function MessageComposer({
           onChange={(event) => {
             setText(event.target.value);
             setHeld(null); // an edited message is a new message: it is checked again
+            // Emptied and started over: whatever is sent now was not that suggestion.
+            if (!event.target.value.trim()) setSuggestionId(null);
           }}
           maxLength={attachmentLimits?.max_message_length}
           onKeyDown={(event) => {
