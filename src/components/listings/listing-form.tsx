@@ -362,6 +362,13 @@ export function ListingForm({
           onValueChange={setPickupLocation}
           error={errors.location_area}
         />
+
+        {/* S6-09: below the collection area, since the radius is measured from it. */}
+        <DeliveryField
+          initial={listing}
+          radiusError={errors.delivery_radius_km}
+          feeError={errors.delivery_fee_cents}
+        />
       </FormSection>
 
       {!editing && (
@@ -464,12 +471,6 @@ export function ListingForm({
         />
 
         <InstantBookField defaultChecked={listing?.instant_book_enabled ?? false} />
-
-        <DeliveryField
-          initial={listing}
-          radiusError={errors.delivery_radius_km}
-          feeError={errors.delivery_fee_cents}
-        />
 
         <BlackoutRulesField
           availableFrom={calendarFrom}

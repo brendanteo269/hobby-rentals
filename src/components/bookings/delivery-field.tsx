@@ -70,10 +70,7 @@ export function DeliveryField({
             Deliver to me · {fee}
           </span>
           <span className="body-copy mt-1 block text-sm">
-            The owner brings it to you within about {offer.radius_km} km of their collection area. The fee is a
-            separate charge: promo codes do not reduce it. You pay it when the booking is requested and the owner
-            receives it once you confirm you have the item; if the booking is cancelled before then, you get it back
-            in full.
+            The owner brings it to you within about {offer.radius_km} km of their collection area.
           </span>
         </span>
       </label>

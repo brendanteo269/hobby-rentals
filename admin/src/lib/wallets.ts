@@ -74,6 +74,7 @@ export async function getWallet(id: string): Promise<AdminWallet | null> {
 }
 
 /** Mirrors the wallet_transactions.type check constraint. */
+/** Every value the wallet_transactions.type constraint allows, as of S6-09. */
 export type TransactionType =
   | "TOPUP"
   | "ESCROW_HOLD"
@@ -81,7 +82,19 @@ export type TransactionType =
   | "WITHDRAWAL"
   | "REFUND"
   | "ADMIN_CREDIT"
-  | "ADMIN_DEBIT";
+  | "ADMIN_DEBIT"
+  | "OWNER_PROTECTION_PREMIUM"
+  | "CANCELLATION_FEE"
+  | "CANCELLATION_PAYOUT"
+  | "OVERDUE_SETTLEMENT"
+  | "RENTAL_CHARGE"
+  | "RENTAL_PAYOUT"
+  | "DAMAGE_DEDUCTION"
+  | "DAMAGE_PAYOUT"
+  | "LISTING_PROMOTION"
+  | "REFERRAL_CREDIT"
+  | "DELIVERY_CHARGE"
+  | "DELIVERY_PAYOUT";
 
 /** amount_cents is signed: positive for a credit, negative for a debit. */
 export type WalletTransaction = {
@@ -153,14 +166,35 @@ const typeLabels: Record<TransactionType, { label: string; tone: StatusTone }> =
   REFUND: { label: "Refund", tone: "positive" },
   ADMIN_CREDIT: { label: "Manual credit", tone: "critical" },
   ADMIN_DEBIT: { label: "Manual debit", tone: "critical" },
+  OWNER_PROTECTION_PREMIUM: { label: "HobbyShield premium", tone: "neutral" },
+  CANCELLATION_FEE: { label: "Cancellation fee", tone: "warning" },
+  CANCELLATION_PAYOUT: { label: "Cancellation payout", tone: "positive" },
+  OVERDUE_SETTLEMENT: { label: "Overdue fee", tone: "warning" },
+  RENTAL_CHARGE: { label: "Rental charge", tone: "neutral" },
+  RENTAL_PAYOUT: { label: "Rental payout", tone: "positive" },
+  DAMAGE_DEDUCTION: { label: "Damage deduction", tone: "warning" },
+  DAMAGE_PAYOUT: { label: "Damage payout", tone: "positive" },
+  LISTING_PROMOTION: { label: "Promotion", tone: "neutral" },
+  REFERRAL_CREDIT: { label: "Referral credit", tone: "positive" },
+  DELIVERY_CHARGE: { label: "Delivery fee", tone: "neutral" },
+  DELIVERY_PAYOUT: { label: "Delivery payout", tone: "positive" },
 };
 
 /** Every known type, in the same order as typeLabels, for populating a type filter. */
 export const TRANSACTION_TYPES = Object.keys(typeLabels) as TransactionType[];
 
-/** Display label and Badge tone for a transaction type. */
-export function transactionTypeLabel(type: TransactionType): { label: string; tone: StatusTone } {
-  return typeLabels[type];
+/**
+ * Display label and Badge tone for a transaction type.
+ *
+ * Takes any string and falls back to the raw type, humanised: the database
+ * gains a type whenever a feature adds money movement, and this page rendered
+ * nothing but a crash for any type it had not been told about.
+ */
+export function transactionTypeLabel(type: string): { label: string; tone: StatusTone } {
+  const known = typeLabels[type as TransactionType];
+  if (known) return known;
+  const words = type.toLowerCase().replace(/_/g, " ");
+  return { label: words.charAt(0).toUpperCase() + words.slice(1), tone: "neutral" };
 }
 
 /**
