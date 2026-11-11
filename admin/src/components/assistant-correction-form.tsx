@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useId } from "react";
+import { useActionState, useId } from "react";
 import { Button, FormMessage, Input, RequiredMark, Textarea } from "./ui";
 import { useToast } from "./toast";
 import { saveCorrection, type FormState } from "@/app/assistant/actions";
@@ -20,13 +20,16 @@ export function AssistantCorrectionForm({
   question: string;
   slugs?: string[];
 }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(saveCorrection, undefined);
   const { show } = useToast();
+  // The toast is raised here rather than from an effect: a saved correction
+  // re-renders the page without this form (the answer is now corrected), so
+  // an effect on the result would never run.
+  const [state, action, pending] = useActionState<FormState, FormData>(async (previous, form) => {
+    const result = await saveCorrection(previous, form);
+    if (result?.success) show(result.success, "success");
+    return result;
+  }, undefined);
   const id = useId();
-
-  useEffect(() => {
-    if (state?.success) show(state.success, "success");
-  }, [show, state]);
 
   if (state?.success) return <p className="text-xs text-ink-soft">Correction saved.</p>;
 
