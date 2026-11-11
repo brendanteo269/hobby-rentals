@@ -27,10 +27,15 @@ export function TrustFeatures() {
         <p className="eyebrow text-center">How HobbyRentals protects you</p>
         <h2 className="heading mt-3 text-center text-2xl sm:text-3xl">A clear path from reservation to return</h2>
         <ol className="mt-10 grid gap-5 sm:grid-cols-3">
-          {FEATURES.map((feature) => {
+          {FEATURES.map((feature, index) => {
             const [Start, Middle, End] = feature.flow;
             return (
-              <li key={feature.step} className="flex h-full flex-col rounded-2xl border border-line bg-white p-6">
+              // Arrive 01 -> 02 -> 03 when the surrounding Reveal scrolls in.
+              <li
+                key={feature.step}
+                style={{ transitionDelay: `${150 + index * 120}ms` }}
+                className="flex h-full flex-col rounded-2xl border border-line bg-white p-6 transition-[opacity,translate] duration-500 ease-out group-data-[reveal=hidden]/reveal:translate-y-3 group-data-[reveal=hidden]/reveal:opacity-0"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <span className={`flex size-11 items-center justify-center rounded-xl ${toneClasses[feature.tone]}`}>
                     <feature.icon className="size-5" aria-hidden="true" />

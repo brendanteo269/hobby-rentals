@@ -60,7 +60,7 @@ export function SearchBar({
         defaultValue={defaultValue}
         placeholder={placeholder}
         autoComplete="off"
-        className={`h-14 w-full rounded-full border border-line bg-white pl-14 ${trailing ? "pr-44" : "pr-32"} text-base outline-none transition-colors placeholder:text-ink-soft/70 focus:border-ink`}
+        className={`h-14 w-full rounded-full border border-line bg-white pl-14 ${trailing ? "pr-44" : "pr-32"} text-base outline-none transition-[border-color,box-shadow] placeholder:text-ink-soft/70 focus:border-ink focus:shadow-card-hover`}
       />
       {trailing}
       <button

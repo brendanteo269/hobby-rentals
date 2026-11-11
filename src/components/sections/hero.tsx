@@ -34,11 +34,18 @@ function exampleHref(q: string): string {
   return browseHref({ ...parseBrowseFilters({}), q, sort: defaultSort(q) });
 }
 
-function ShowcaseTile({ category, photo, alt, tall }: (typeof SHOWCASE)[number] & { tall: boolean }) {
+function ShowcaseTile({
+  category,
+  photo,
+  alt,
+  tall,
+  entranceDelayMs,
+}: (typeof SHOWCASE)[number] & { tall: boolean; entranceDelayMs: number }) {
   return (
     <Link
       href={relatedCategoryHref(category) as Route}
-      className={`group relative overflow-hidden rounded-2xl bg-surface-muted outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 ${
+      style={{ animationDelay: `${entranceDelayMs}ms` }}
+      className={`group relative overflow-hidden rounded-2xl bg-surface-muted outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 motion-safe:animate-rise-in ${
         tall ? "col-span-3 row-span-2" : "col-span-2"
       }`}
     >
@@ -78,17 +85,25 @@ export function Hero({ defaultLocation }: { defaultLocation: string | null }) {
 
   return (
     <Container className="grid gap-10 pt-14 lg:grid-cols-2 lg:items-center lg:pt-20">
+      {/* Entrance: copy, then the search card, then the photos, each a beat apart. */}
       <div>
-        <p className="eyebrow">Peer-to-peer gear rentals · Singapore</p>
-        <h1 className="heading mt-4 text-3xl leading-tight sm:text-4xl">
-          Rent the gear you need. Make money on what you own.
-        </h1>
-        <p className="body-copy mt-4 max-w-md">
-          Cameras, camping kit, instruments and tools from people near you, with your payment held
-          until the item is back.
-        </p>
+        <div className="motion-safe:animate-rise-in">
+          <p className="eyebrow">Peer-to-peer gear rentals · Singapore</p>
+          <h1 className="heading mt-4 text-3xl leading-tight sm:text-4xl">
+            Rent the gear you need. Make money on what you own.
+          </h1>
+          <p className="body-copy mt-4 max-w-md">
+            Cameras, camping kit, instruments and tools from people near you, with your payment held
+            until the item is back.
+          </p>
+        </div>
 
-        <form method="get" action="/browse" role="search" className="mt-8 card space-y-3 p-3">
+        <form
+          method="get"
+          action="/browse"
+          role="search"
+          className="mt-8 card space-y-3 p-3 transition-[box-shadow,border-color] duration-200 focus-within:border-ink-soft/50 focus-within:shadow-card-hover motion-safe:animate-rise-in motion-safe:[animation-delay:80ms]"
+        >
           <label htmlFor="search" className="sr-only">
             Search for listings
           </label>
@@ -135,7 +150,7 @@ export function Hero({ defaultLocation }: { defaultLocation: string | null }) {
           </div>
         </form>
 
-        <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
+        <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 motion-safe:animate-rise-in motion-safe:[animation-delay:120ms]">
           {TRUST_LINE.map(({ icon: Icon, label }) => (
             <span key={label} className="flex items-center gap-1.5 text-xs text-ink-soft">
               <Icon className="size-4 text-ink" aria-hidden="true" />
@@ -147,7 +162,7 @@ export function Hero({ defaultLocation }: { defaultLocation: string | null }) {
 
       <div className="grid h-72 grid-cols-5 grid-rows-2 gap-3 sm:h-[26rem] lg:h-[34rem]">
         {SHOWCASE.map((tile, index) => (
-          <ShowcaseTile key={tile.category} {...tile} tall={index === 0} />
+          <ShowcaseTile key={tile.category} {...tile} tall={index === 0} entranceDelayMs={160 + index * 60} />
         ))}
       </div>
     </Container>

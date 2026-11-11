@@ -52,7 +52,7 @@ export default async function GearRequestsPage() {
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {requests.map((request) => (
               <li key={request.id}>
-                <Link href={`/requests/${request.id}` as Route} className="card flex h-full flex-col p-5 transition-shadow hover:shadow-sm">
+                <Link href={`/requests/${request.id}` as Route} className="card card-lift flex h-full flex-col p-5">
                   <div className="flex items-start justify-between gap-3">
                     <h2 className="heading text-lg">{request.title}</h2>
                     <Badge variant={request.offer_count > 0 ? "success" : "neutral"}>

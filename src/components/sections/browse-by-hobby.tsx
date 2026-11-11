@@ -24,7 +24,7 @@ export function BrowseByHobby() {
           <li key={slug}>
             <Link
               href={relatedCategoryHref(slug) as Route}
-              className="group flex flex-col items-center gap-3 card px-4 py-8 text-center outline-none transition-colors hover:border-ink focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2"
+              className="group flex flex-col items-center gap-3 card card-lift px-4 py-8 text-center"
             >
               <span className="flex size-12 items-center justify-center rounded-full bg-surface-muted text-ink transition-colors group-hover:bg-accent-soft group-hover:text-accent-dark">
                 <Icon className="size-6" aria-hidden="true" />
