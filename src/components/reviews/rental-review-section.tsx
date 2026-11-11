@@ -2,6 +2,7 @@ import { Star } from "lucide-react";
 import { EmptyState } from "@/components/ui";
 import type { ReviewCollection } from "@/lib/reviews";
 import { PublishedReviewCard } from "./published-review-card";
+import { WhatRentersSay } from "./what-renters-say";
 
 /** Detail-page review summary for one exact rental experience. */
 export function RentalReviewSection({
@@ -30,6 +31,7 @@ export function RentalReviewSection({
             <span>·</span>
             <span>{reviews.count} {reviews.count === 1 ? "review" : "reviews"}</span>
           </div>
+          <WhatRentersSay summary={reviews.summary} />
           <ul className="mt-5 space-y-3">
             {reviews.reviews.map((review) => (
               <li key={review.id}><PublishedReviewCard review={review} showRental={false} /></li>
