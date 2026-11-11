@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { forecastSpanLabel, forecastWeekLabel, forecastWeekSpanLabel, forecastWeeksPhrase, holidayBands } from "@/lib/demand-forecast";
+import { forecastSpanLabel, forecastWeekLabel, forecastWeekSpanLabel, forecastWeeksEnd, forecastWeeksPhrase, holidayBands } from "@/lib/demand-forecast";
 
 describe("forecast week labels", () => {
   it("names a week by its Monday in Singapore time", () => {
@@ -23,6 +23,11 @@ describe("forecast spans", () => {
   it("names a whole week Monday to Sunday", () => {
     expect(forecastWeekSpanLabel("2026-11-23")).toBe("23–29 Nov");
     expect(forecastWeekSpanLabel("2026-12-28")).toBe("28 Dec – 3 Jan");
+  });
+
+  it("ends on the Sunday of the last week, across a year", () => {
+    expect(forecastWeeksEnd("2027-01-04")).toBe("10 Jan");
+    expect(forecastWeeksEnd("2026-12-28")).toBe("3 Jan");
   });
 });
 

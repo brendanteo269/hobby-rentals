@@ -107,9 +107,18 @@ export function holidayBands(weeks: ForecastWeek[]): HolidayBand[] {
   return bands;
 }
 
+function weekSunday(weekStart: string): string {
+  const sunday = new Date(weekStart);
+  sunday.setUTCDate(sunday.getUTCDate() + 6);
+  return sunday.toISOString().slice(0, 10);
+}
+
 /** "16 Nov – 10 Jan": from the Monday of the first week to the Sunday of the last. */
 export function forecastWeeksSpan(firstWeek: string, lastWeek: string): string {
-  const sunday = new Date(lastWeek);
-  sunday.setUTCDate(sunday.getUTCDate() + 6);
-  return forecastSpanLabel(firstWeek, sunday.toISOString().slice(0, 10));
+  return forecastSpanLabel(firstWeek, weekSunday(lastWeek));
+}
+
+/** "10 Jan": the last day a forecast covers, the Sunday of its last week. */
+export function forecastWeeksEnd(lastWeek: string): string {
+  return formatDayMonth(weekSunday(lastWeek));
 }
