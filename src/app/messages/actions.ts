@@ -1,13 +1,13 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { getMessages, sendBookingMessage, sendListingMessage, sendMessage } from "@/lib/api/conversations";
+import { getMessages, getReplySuggestions, sendBookingMessage, sendListingMessage, sendMessage } from "@/lib/api/conversations";
 import { acceptMeetup, checkMeetupConflicts, proposeMeetup } from "@/lib/api/meetups";
 import { BackendApiError } from "@/lib/api/client";
 import { translateMessage } from "@/lib/api/translation";
 import type { MessageTranslation } from "@/lib/translation";
 import type { MeetupConflictCheck } from "@/lib/meetup-conflicts";
-import { needsConfirmation, type Conversation, type Message, type MessagePage, type NeedsConfirmation } from "@/lib/conversations";
+import { needsConfirmation, type Conversation, type Message, type MessagePage, type NeedsConfirmation, type ReplySuggestions } from "@/lib/conversations";
 
 /** `confirmation`: the safety checks held the message (S4-15); nothing was sent. */
 export type ConversationActionResult = { error: string } | { conversation: Conversation } | { confirmation: NeedsConfirmation };
@@ -69,8 +69,27 @@ export async function startBookingConversation(bookingId: string, text: string, 
   return runConversation(() => sendBookingMessage(bookingId, text, attachmentKeys, confirmationId));
 }
 
-export async function replyToConversation(conversationId: string, text: string, attachmentKeys: string[] = [], confirmationId?: string) {
-  return runCheckedMessage(() => sendMessage(conversationId, text, attachmentKeys, confirmationId));
+export async function replyToConversation(
+  conversationId: string,
+  text: string,
+  attachmentKeys: string[] = [],
+  confirmationId?: string,
+  suggestionId?: string,
+) {
+  return runCheckedMessage(() => sendMessage(conversationId, text, attachmentKeys, confirmationId, suggestionId));
+}
+
+/**
+ * S6-13: suggested replies for the owner. A failure shows none - they are a
+ * convenience, never something the chat waits on or reports.
+ */
+export async function fetchReplySuggestions(conversationId: string): Promise<ReplySuggestions> {
+  try {
+    return await getReplySuggestions(conversationId);
+  } catch (error) {
+    if (error instanceof BackendApiError) return { after_message_id: null, suggestions: [] };
+    throw error;
+  }
 }
 
 /** S2-16: the page of messages just before `before` (the oldest one already loaded), for a "load earlier messages" control. */

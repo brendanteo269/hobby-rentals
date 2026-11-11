@@ -3,6 +3,8 @@ import { PlatformMetricsPanel } from "@/components/platform-metrics";
 import { Container } from "@/components/ui";
 import { requirePortalSession } from "@/lib/admin";
 import { getAdminCategoryDemand, getPlatformMetrics, lastThirtyDays } from "@/lib/analytics";
+import { ReplySuggestionUsageTable } from "@/components/reply-suggestion-usage";
+import { getReplySuggestionUsage, type ReplySuggestionUsage } from "@/lib/reply-suggestions";
 
 export const metadata = { title: "Analytics — HobbyRentals Admin" };
 
@@ -21,6 +23,13 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
     rows = await getAdminCategoryDemand();
   } catch {
     // Keep the portal usable when the analytics API is unavailable.
+  }
+
+  let suggestionUsage: ReplySuggestionUsage[] | null = null;
+  try {
+    suggestionUsage = await getReplySuggestionUsage();
+  } catch {
+    // Shown as an error in its section; the rest of the page still loads.
   }
 
   return <Container className="py-12">
@@ -43,6 +52,10 @@ export default async function AnalyticsPage({ searchParams }: { searchParams: Pr
         <tbody>{rows.map((row) => <tr key={row.category} className="border-b border-line last:border-0"><td className="p-3 font-medium">{row.label}</td><td className="p-3">{row.views_7d}</td><td className="p-3">{row.searches_7d}</td><td className="p-3">{row.baseline_score.toFixed(1)}</td><td className="p-3">{row.surge_percentage > 0 ? "+" : ""}{row.surge_percentage.toFixed(1)}%</td><td className="p-3">{row.is_high_demand ? "High demand" : "Normal"}</td></tr>)}</tbody>
       </table>
     </div> : <p role="alert" className="mt-8 text-sm text-bad">Could not load category activity.</p>}
+
+    <h2 className="display-caps mt-12 text-2xl">Suggested replies</h2>
+    <p className="body-copy mt-2 max-w-3xl">How often owners use the AI-suggested replies offered when a renter messages them. A suggestion counts as used when the owner taps it and sends the message, as it was or after editing it.</p>
+    <ReplySuggestionUsageTable rows={suggestionUsage} />
 
     <section className="mt-8 border border-line bg-sand p-6 text-sm text-ink-soft">
       <h2 className="display-caps text-lg text-ink">Pricing Q&amp;A</h2>

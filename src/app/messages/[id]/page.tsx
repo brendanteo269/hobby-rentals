@@ -138,6 +138,7 @@ export default async function ConversationPage({ params }: { params: Promise<{ i
           otherPartyAvatarUrl={conversation.other_party_avatar_url}
           attachmentLimits={attachmentLimits}
           canTranslate={languagePreferences?.preferred_language != null}
+          viewerIsOwner={conversation.other_party_role === "RENTER"}
           bookingId={conversation.scope === "BOOKING" ? conversation.booking_id ?? undefined : undefined}
           meetupEligible={conversation.scope === "BOOKING" && conversation.booking_status === "CONFIRMED"}
           defaultLocationArea={conversation.listing_location_area}
