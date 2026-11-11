@@ -3,12 +3,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Route } from "next";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { MessageCircle, RotateCcw, Send, ThumbsDown, ThumbsUp, X } from "lucide-react";
 import {
   CLIENT_TIMEOUT_MS,
+  FEEDBACK_REASONS,
+  MAX_FEEDBACK_NOTE_CHARS,
   MAX_MESSAGE_CHARS,
   applyEvent,
+  feedbackBody,
   finishInterrupted,
   historyFor,
   loadState,
@@ -19,6 +22,7 @@ import {
   type ChatCard,
   type ChatMessage,
   type ChatState,
+  type FeedbackReason,
 } from "@/lib/chat-assistant";
 import { formatMoney } from "@/lib/format";
 import { gearPath } from "@/lib/gear";
@@ -73,7 +77,80 @@ function ListingCards({ cards }: { cards: ChatCard[] }) {
   );
 }
 
-function Reply({ message, onRate }: { message: ChatMessage; onRate: (message: ChatMessage, rating: 1 | -1) => void }) {
+/** S6-08 Scenario 1: after a thumbs down, pick a reason and optionally add a short note. */
+function WhyNotHelpful({ onSend }: { onSend: (reason: FeedbackReason, note: string) => Promise<boolean> }) {
+  const [reason, setReason] = useState<FeedbackReason | null>(null);
+  const [note, setNote] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "failed">("idle");
+  const noteId = useId();
+
+  async function send() {
+    if (!reason) return;
+    setStatus("sending");
+    setStatus((await onSend(reason, note)) ? "idle" : "failed");
+  }
+
+  return (
+    <div className="space-y-2 rounded-xl border border-line p-2.5">
+      <p className="text-xs text-ink-soft">What was wrong with this answer?</p>
+      <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label="Reason">
+        {FEEDBACK_REASONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={reason === option.value}
+            onClick={() => setReason(option.value)}
+            className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${
+              reason === option.value ? "border-ink bg-ink text-white" : "border-line text-ink hover:bg-surface-muted"
+            }`}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      {reason && (
+        <>
+          <label className="sr-only" htmlFor={noteId}>
+            Add a note (optional)
+          </label>
+          <textarea
+            id={noteId}
+            value={note}
+            onChange={(event) => setNote(event.target.value)}
+            maxLength={MAX_FEEDBACK_NOTE_CHARS}
+            rows={2}
+            placeholder="Add a short note (optional)"
+            className="w-full resize-none rounded-lg border border-line px-2.5 py-1.5 text-xs text-ink placeholder:text-ink-soft focus:border-ink-soft focus:outline-none"
+          />
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-[11px] text-ink-soft" aria-live="polite">
+              {status === "failed" ? "That didn't send. Try again?" : `${note.length}/${MAX_FEEDBACK_NOTE_CHARS}`}
+            </span>
+            <button
+              type="button"
+              onClick={() => void send()}
+              disabled={status === "sending"}
+              className="rounded-full bg-ink px-3 py-1 text-xs font-medium text-white hover:bg-ink/90 disabled:opacity-60"
+            >
+              {status === "sending" ? "Sending…" : "Send"}
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Reply({
+  message,
+  onRate,
+  onExplain,
+}: {
+  message: ChatMessage;
+  onRate: (message: ChatMessage, rating: 1 | -1) => void;
+  onExplain: (message: ChatMessage, reason: FeedbackReason, note: string) => Promise<boolean>;
+}) {
   const muted = message.kind === "unavailable";
   return (
     <div className="space-y-2">
@@ -129,6 +206,12 @@ function Reply({ message, onRate }: { message: ChatMessage; onRate: (message: Ch
             );
           })}
         </div>
+      )}
+      {message.turnId && message.rating === -1 && !message.feedbackReason && (
+        <WhyNotHelpful onSend={(reason, note) => onExplain(message, reason, note)} />
+      )}
+      {message.rating === -1 && message.feedbackReason && (
+        <p className="text-xs text-ink-soft">Thanks, that helps us improve the assistant.</p>
       )}
     </div>
   );
@@ -222,19 +305,36 @@ export function ChatWidget() {
     }
   }
 
+  async function postFeedback(turnId: string, body: ReturnType<typeof feedbackBody>) {
+    const response = await fetch(`${API_URL}/assistant/turns/${turnId}/feedback`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  }
+
   async function rate(message: ChatMessage, rating: 1 | -1) {
     if (!state || !message.turnId) return;
-    const previous = message.rating;
-    updateReply(message.id, (current) => ({ ...current, rating }));
+    const { rating: previous, feedbackReason: previousReason } = message;
+    // A thumbs up clears the reason on the server too; a repeated thumbs down keeps it.
+    updateReply(message.id, (current) => ({ ...current, rating, feedbackReason: rating === 1 ? undefined : current.feedbackReason }));
     try {
-      const response = await fetch(`${API_URL}/assistant/turns/${message.turnId}/feedback`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ session_id: state.sessionId, rating }),
-      });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      await postFeedback(message.turnId, feedbackBody(state.sessionId, rating));
     } catch {
-      updateReply(message.id, (current) => ({ ...current, rating: previous }));
+      updateReply(message.id, (current) => ({ ...current, rating: previous, feedbackReason: previousReason }));
+    }
+  }
+
+  /** S6-08 Scenario 1: why the thumbs down. True once stored. */
+  async function explain(message: ChatMessage, reason: FeedbackReason, note: string): Promise<boolean> {
+    if (!state || !message.turnId) return false;
+    try {
+      await postFeedback(message.turnId, feedbackBody(state.sessionId, -1, reason, note));
+      updateReply(message.id, (current) => ({ ...current, rating: -1, feedbackReason: reason }));
+      return true;
+    } catch {
+      return false;
     }
   }
 
@@ -315,7 +415,7 @@ export function ChatWidget() {
                   <p className="max-w-[85%] whitespace-pre-line rounded-2xl rounded-tr-sm bg-ink px-3.5 py-2.5 text-sm text-white">{message.text}</p>
                 </div>
               ) : (
-                <Reply key={message.id} message={message} onRate={rate} />
+                <Reply key={message.id} message={message} onRate={rate} onExplain={explain} />
               ),
             )}
           </div>
