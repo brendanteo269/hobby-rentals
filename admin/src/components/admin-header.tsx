@@ -53,6 +53,7 @@ export async function AdminHeader() {
           >
             Wallets
           </Link>
+          <Link href={ROUTES.community} className="text-sm text-ink-soft transition-colors hover:text-ink">Community</Link>
           <Link href={ROUTES.categories} className="text-sm text-ink-soft transition-colors hover:text-ink">
             Categories
           </Link>
