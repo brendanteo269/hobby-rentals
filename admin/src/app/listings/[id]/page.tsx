@@ -28,6 +28,8 @@ import {
 } from "@/components/ui";
 import { ListingModerationPanel } from "@/components/listing-moderation-panel";
 import { ListingReportsPanel } from "@/components/listing-reports-panel";
+import { ListingReviewsPanel } from "@/components/listing-reviews-panel";
+import { getListingReviews, getListingReviewSummary } from "@/lib/reviews";
 import { getListingReports } from "@/lib/reports";
 import { getReportAssessment } from "@/lib/moderation";
 import { AuditTrail } from "@/components/audit-trail";
@@ -75,6 +77,8 @@ export default async function ListingDetailPage({
     categories,
     { entries: auditEntries, total: auditTotal },
     reports,
+    reviews,
+    reviewSummary,
   ] = await Promise.all([
     getAdminPassport(id).catch(() => null),
     createAdminClient()
@@ -85,6 +89,8 @@ export default async function ListingDetailPage({
     getCategoryOptions(),
     getListingAuditTrail(id, listing.owner_id, auditPage),
     getListingReports(id),
+    getListingReviews(id).catch(() => []),
+    getListingReviewSummary(id).catch(() => null),
   ]);
   const auditLastPage = Math.max(1, Math.ceil(auditTotal / AUDIT_PAGE_SIZE));
   // What the AI made of each report on this listing, shown above the decision.
@@ -337,6 +343,7 @@ export default async function ListingDetailPage({
 
         <div className="space-y-6">
           <ListingReportsPanel listingId={listing.id} reports={reports} assessments={assessments} />
+          <ListingReviewsPanel listingId={listing.id} reviews={reviews} summary={reviewSummary} />
           <ListingModerationPanel
             key={listing.status}
             listingId={listing.id}

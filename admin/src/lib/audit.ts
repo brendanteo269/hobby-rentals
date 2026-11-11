@@ -19,6 +19,7 @@ export const AUDIT_ACTIONS = {
   listing_reactivated: "Listing reactivated",
   listing_report_dismissed: "Listing report dismissed",
   listing_report_actioned: "Listing deactivated from a report",
+  review_removed: "Review removed from a listing",
   booking_viewed: "Booking viewed",
   escrow_viewed: "Escrow record viewed",
   escrow_overridden: "Escrow manually released",
