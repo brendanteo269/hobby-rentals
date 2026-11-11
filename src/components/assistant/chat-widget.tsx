@@ -133,7 +133,7 @@ function WhyNotHelpful({ onSend }: { onSend: (reason: FeedbackReason, note: stri
               disabled={status === "sending"}
               className="rounded-full bg-ink px-3 py-1 text-xs font-medium text-white hover:bg-ink/90 disabled:opacity-60"
             >
-              {status === "sending" ? "Sending…" : "Send"}
+              {status === "sending" ? "Sending…" : "Send feedback"}
             </button>
           </div>
         </>

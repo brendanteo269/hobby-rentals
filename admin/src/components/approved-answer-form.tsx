@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useId } from "react";
+import { useActionState, useId } from "react";
 import { Button, FormMessage, Input, Textarea } from "./ui";
 import { useToast } from "./toast";
 import { changeApprovedAnswer, type FormState } from "@/app/assistant/actions";
@@ -8,14 +8,16 @@ import { MAX_CORRECTION_CHARS, type ApprovedAnswer } from "@/lib/assistant";
 
 /** Edit, mark reviewed, retire or restore one approved answer. An example's text is the members' rated answer, so only its status changes. */
 export function ApprovedAnswerForm({ answer }: { answer: ApprovedAnswer }) {
-  const [state, action, pending] = useActionState<FormState, FormData>(changeApprovedAnswer, undefined);
   const { show } = useToast();
+  // Raised here, not from an effect: retiring or restoring moves the answer
+  // out of the filtered list, so this form is gone before an effect could run.
+  const [state, action, pending] = useActionState<FormState, FormData>(async (previous, form) => {
+    const result = await changeApprovedAnswer(previous, form);
+    if (result?.success) show(result.success, "success");
+    return result;
+  }, undefined);
   const id = useId();
   const editable = answer.kind === "CORRECTION";
-
-  useEffect(() => {
-    if (state?.success) show(state.success, "success");
-  }, [show, state]);
 
   return (
     <form action={action} className="space-y-3">
