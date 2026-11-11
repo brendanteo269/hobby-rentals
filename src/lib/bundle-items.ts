@@ -7,7 +7,7 @@
  */
 
 import { dollarsToCents, formatMoney } from "@/lib/format";
-import type { Bundle, BundleAdjustments, BundleItemSetting, BundleQuote } from "@/lib/bundles";
+import type { Bundle, BundleAdjustments, BundleBackupCoverage, BundleItemSetting, BundleQuote } from "@/lib/bundles";
 
 /** Reads the owner's settings for each chosen listing out of the bundle form (fields `optional_<id>`, `deduction_<id>`, `alternative_<id>`). */
 export function parseItemSettings(
@@ -68,6 +68,64 @@ export function omittedIds(quote: Pick<BundleQuote, "optional_items"> | null, un
 /** S5-10 Scenario 4: what the bundle includes in place of an item that is out for the dates. */
 export function substitutionLine(swap: { item_name: string; alternative_name: string }): string {
   return `Includes ${swap.alternative_name} instead of ${swap.item_name}`;
+}
+
+/**
+ * The first required item whose range cannot be covered whole, or null when the
+ * range can be booked. An item is booked as itself or as its backup for every day
+ * (S5-10), so for each one that has a backup, all the days must be free for the
+ * item or all of them for the backup. Days are assumed to be bookable one by one
+ * already; this is only the part the day-by-day calendar cannot see.
+ */
+export function uncoveredBy(backups: readonly BundleBackupCoverage[], days: readonly string[]): BundleBackupCoverage | null {
+  return (
+    backups.find((entry) => {
+      const item = new Set(entry.item_free);
+      const backup = new Set(entry.backup_free);
+      return !days.every((day) => item.has(day)) && !days.every((day) => backup.has(day));
+    }) ?? null
+  );
+}
+
+/**
+ * Where a run of free days, taken from its first day, stops being bookable as one range:
+ * the last day a rental can end on, the next day it cannot, and the item that is left
+ * half covered there. Null when every range along the run can be booked.
+ */
+export function backupLimitAlong(
+  backups: readonly BundleBackupCoverage[],
+  run: readonly string[],
+): { lastOk: string; blocked: string; short: BundleBackupCoverage } | null {
+  for (let index = 1; index < run.length; index += 1) {
+    const short = uncoveredBy(backups, run.slice(0, index + 1));
+    if (short) return { lastOk: run[index - 1], blocked: run[index], short };
+  }
+  return null;
+}
+
+/**
+ * For each day the bundle can be booked on, what it would use a backup for: "Sony A7 IV instead of
+ * Sony FX3" for every required item that is not itself free that day but its backup is. A day with no
+ * entry needs no backup. Drives the calendar's colours, so a renter sees at a glance which days are
+ * plain and which stand in a backup, without picking dates to find out.
+ */
+export function backupUseByDay(
+  backups: readonly BundleBackupCoverage[],
+  bookableDays: readonly string[],
+): Map<string, string[]> {
+  const uses = new Map<string, string[]>();
+  for (const day of bookableDays) {
+    const lines = backups
+      .filter((entry) => !entry.item_free.includes(day) && entry.backup_free.includes(day))
+      .map((entry) => `${entry.backup_name} instead of ${entry.item_name}`);
+    if (lines.length > 0) uses.set(day, lines);
+  }
+  return uses;
+}
+
+/** Whether a range can be booked as one: no required item with a backup is left half-covered. */
+export function rangeIsBookable(backups: readonly BundleBackupCoverage[], days: readonly string[]): boolean {
+  return uncoveredBy(backups, days) === null;
 }
 
 /** What an optional item takes off, as the tick box shows it. */

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useCallback, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
 import {
@@ -10,10 +10,11 @@ import {
 } from "@/components/bookings/availability-calendar";
 import { BookingQuoteRow, BookingQuoteSummary } from "@/components/bookings/booking-quote-summary";
 import { quoteBundleBooking, requestBundleBooking } from "@/app/bookings/actions";
-import { deductionLabel, omittedIds, substitutionLine } from "@/lib/bundle-items";
+import { BackupListingCard } from "@/components/bundles/backup-listing-card";
+import { backupLimitAlong, backupUseByDay, deductionLabel, omittedIds, rangeIsBookable, substitutionLine } from "@/lib/bundle-items";
 import { formatDate, formatMoney } from "@/lib/format";
 import { rentalDurationLimits, UNAVAILABLE_REASON_LABELS } from "@/lib/listings";
-import type { BundleAvailability, BundleQuote } from "@/lib/bundles";
+import type { BundleAlternative, BundleAvailability, BundleQuote } from "@/lib/bundles";
 
 /**
  * S2-20: the renter's booking screen for a bundle.
@@ -35,6 +36,7 @@ export function BundleBookingPanel({
   minRentalDays,
   maxRentalDays,
   optionalItems,
+  backupsByItem = {},
 }: {
   bundleId: string;
   availability: BundleAvailability;
@@ -42,6 +44,8 @@ export function BundleBookingPanel({
   maxRentalDays: number | null;
   /** S5-10: the items the renter may leave out, each ticked until they say otherwise. */
   optionalItems: { id: string; name: string; deduction_cents: number }[];
+  /** S5-10: each required item's backup, by the item's id, to show when the dates need it. */
+  backupsByItem?: Record<string, BundleAlternative>;
 }) {
   const { available_dates: availableDates, unavailable_dates: unavailableDates } = availability;
   const availableSet = useMemo(() => new Set(availableDates), [availableDates]);
@@ -71,9 +75,32 @@ export function BundleBookingPanel({
     max_rental_days: maxRentalDays,
   });
   const minDays = minRentalDays ?? 1;
+  // S5-10: the calendar above judges each day alone, but an item or its backup is booked for the whole
+  // range. A run of free days can therefore include ranges nobody can book - the item free early in it,
+  // only the backup free later - and those end dates are not offered.
+  const backups = useMemo(() => availability.backups ?? [], [availability.backups]);
+  const endDatesFrom = useCallback(
+    (start: string) => {
+      const maximum = maxRentalDays ?? Infinity;
+      const run = consecutiveDatesFrom(start, availableSet);
+      return run.filter(
+        (_, index) => index + 1 >= minDays && index + 1 <= maximum && rangeIsBookable(backups, run.slice(0, index + 1)),
+      );
+    },
+    [availableSet, backups, maxRentalDays, minDays],
+  );
   const startDates = useMemo(
-    () => availableDates.filter((date) => consecutiveDatesFrom(date, availableSet).length >= minDays),
-    [availableDates, availableSet, minDays],
+    () => availableDates.filter((date) => endDatesFrom(date).length > 0),
+    [availableDates, endDatesFrom],
+  );
+  // The calendar's colours: orange where a day stands in a backup, green where nothing does.
+  const backupUse = useMemo(() => backupUseByDay(backups, availableDates), [backups, availableDates]);
+  const dayTone = useCallback(
+    (day: string) => {
+      const uses = backupUse.get(day);
+      return uses ? { tone: "backup" as const, note: `Uses ${uses.join(", ")}` } : { tone: "ok" as const };
+    },
+    [backupUse],
   );
 
   const [startDate, setStartDate] = useState("");
@@ -87,17 +114,24 @@ export function BundleBookingPanel({
   // submitting it, so a double-submit places only one wallet hold. A new
   // range gets its own key the next time a quote comes back.
   const [idempotencyKey, setIdempotencyKey] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  // Two transitions, not one: pricing a range and sending the request are different waits, and one
+  // shared flag made the button read "Sending…" while a price was only being checked, telling the
+  // renter a request was on its way when nothing had been sent.
+  const [isPricing, startPricing] = useTransition();
+  const [isSending, startSending] = useTransition();
+  const isPending = isPricing || isSending;
   // Optional items the renter has unticked; every one is ticked to begin with.
   const [unticked, setUntickedIds] = useState<ReadonlySet<string>>(new Set());
 
-  const endDates = useMemo(() => {
-    if (!startDate) return [];
-    const maximum = maxRentalDays ?? Infinity;
-    return consecutiveDatesFrom(startDate, availableSet).filter(
-      (_, index) => index + 1 >= minDays && index + 1 <= maximum,
-    );
-  }, [availableSet, maxRentalDays, minDays, startDate]);
+  const endDates = useMemo(() => (startDate ? endDatesFrom(startDate) : []), [endDatesFrom, startDate]);
+
+  // Where the free days run on but a backup rule cuts the offered ranges short: the first day a rental
+  // from here can no longer reach, and the item that cannot be covered whole. Said under the calendar,
+  // so a renter is not left wondering why a day that looks free cannot be chosen as the end.
+  const backupLimit = useMemo(
+    () => (startDate && !endDate ? backupLimitAlong(backups, consecutiveDatesFrom(startDate, availableSet)) : null),
+    [startDate, endDate, availableSet, backups],
+  );
 
   // A run of bookable days ends somewhere, and the renter is told which date
   // stopped it - and which item - rather than left to guess why the calendar
@@ -134,7 +168,7 @@ export function BundleBookingPanel({
   function requote(start: string, end: string, omitted: ReadonlySet<string>) {
     setQuote(null);
     setIdempotencyKey(null);
-    startTransition(async () => {
+    startPricing(async () => {
       const result = await quoteBundleBooking(bundleId, start, end, optionalItems.filter((item) => omitted.has(item.id)).map((item) => item.id));
       if ("error" in result) setError(result.error);
       else {
@@ -157,7 +191,7 @@ export function BundleBookingPanel({
   function submit() {
     if (!startDate || !endDate || !idempotencyKey) return;
     clearOutcome();
-    startTransition(async () => {
+    startSending(async () => {
       const result = await requestBundleBooking(bundleId, startDate, endDate, idempotencyKey, omittedIds(quote, unticked));
       if ("error" in result) {
         setError(result.error);
@@ -204,6 +238,7 @@ export function BundleBookingPanel({
         endDate={endDate}
         onPick={pick}
         blockedBy={(day) => blockerByDate.get(day)}
+        dayTone={backups.length > 0 ? dayTone : undefined}
       />
 
       <p className="mt-3 text-sm text-ink-soft">
@@ -211,11 +246,34 @@ export function BundleBookingPanel({
         {endDate ? ` · Until: ${formatDate(endDate)}` : startDate ? " · Choose an end date." : ""}
       </p>
 
+      {backups.length > 0 && (
+        <div className="mt-2 text-xs text-ink-soft">
+          <p className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-3 rounded bg-success-soft ring-1 ring-success/40" aria-hidden="true" />
+              Everything is available
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-3 rounded bg-warning-soft ring-1 ring-warning/40" aria-hidden="true" />
+              A backup is used (hover for which)
+            </span>
+          </p>
+        </div>
+      )}
+
       {runBlocker && (
         <p className="mt-2 text-sm text-ink-soft">
           Bookable through {formatDate(runBlocker.lastInRun)} — {formatDate(runBlocker.blocked)} is{" "}
           {UNAVAILABLE_REASON_LABELS[runBlocker.reason].toLowerCase()}
           {runBlocker.who ? ` (${runBlocker.who})` : ""}.
+        </p>
+      )}
+
+      {backupLimit && (
+        <p className="mt-2 text-sm text-ink-soft">
+          From {formatDate(startDate)} you can book through {formatDate(backupLimit.lastOk)}.{" "}
+          {backupLimit.short.item_name} and its backup, {backupLimit.short.backup_name}, are each free for part of
+          the stretch after that, but one of them has to cover the whole rental.
         </p>
       )}
 
@@ -270,9 +328,17 @@ export function BundleBookingPanel({
       {quote && quote.substitutions.length > 0 && (
         // S5-10 Scenario 4: a backup stands in where an item is out for the dates.
         <ul className="mt-3 space-y-1 text-sm">
-          {quote.substitutions.map((swap) => (
-            <li key={swap.item_id}>{substitutionLine(swap)}</li>
-          ))}
+          {quote.substitutions.map((swap) => {
+            const backup = backupsByItem[swap.item_id];
+            // The listing itself when we have it, so the renter can look and decide; the line alone otherwise.
+            return backup ? (
+              <li key={swap.item_id}>
+                <BackupListingCard itemName={swap.item_name} backup={backup} />
+              </li>
+            ) : (
+              <li key={swap.item_id}>{substitutionLine(swap)}</li>
+            );
+          })}
         </ul>
       )}
 
@@ -319,7 +385,7 @@ export function BundleBookingPanel({
       )}
 
       <Button className="mt-4" disabled={isPending || !endDate || !quote} onClick={submit}>
-        {isPending ? "Sending…" : "Request booking"}
+        {isSending ? "Sending…" : isPricing ? "Checking price…" : "Request booking"}
       </Button>
     </div>
   );
