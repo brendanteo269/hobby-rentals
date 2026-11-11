@@ -10,6 +10,7 @@ import { FilterSelect } from "@/components/browse/filter-select";
 import { RadiusSearch } from "@/components/browse/radius-search";
 import { DateRangeFilter } from "@/components/browse/date-range-filter";
 import { SearchBar, filterPill } from "@/components/browse/filter-bar";
+import { PhotoSearchButton } from "@/components/browse/photo-search-button";
 import { SearchExamples, SmartSearchNote } from "@/components/browse/search-examples";
 import { browseHref, defaultSort, type BrowseFilters } from "@/lib/browse-params";
 import {
@@ -57,6 +58,15 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
         <input key={value} type="hidden" name="brand" value={value} />
       ))}
 
+      {/* S6-03: the photo label survives a filter change, and is dropped by parseBrowseFilters if q is retyped. */}
+      {filters.photo && (
+        <>
+          <input type="hidden" name="photo" value={filters.photo} />
+          <input type="hidden" name="photo_q" value={filters.q} />
+          {filters.photo_category && <input type="hidden" name="photo_category" value={filters.photo_category} />}
+        </>
+      )}
+
       {/* Kept across a new search, so the results stay in the order the member chose. */}
       {filters.sort === "newest" && filters.q && <input type="hidden" name="sort" value="newest" />}
 
@@ -66,6 +76,7 @@ export function ListingFilters({ filters, highDemandCategories = [] }: { filters
         placeholder="Describe what you're doing, e.g. camping on a rainy weekend"
         defaultValue={filters.q}
         icon={Sparkles}
+        trailing={<PhotoSearchButton filters={filters} />}
       />
       <div className="mt-3 space-y-2 px-2">
         <SmartSearchNote />

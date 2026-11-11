@@ -8,7 +8,9 @@ export const metadata = { title: "Post a gear request" };
  * fits. Short on purpose - every extra field is a reason not to finish it,
  * and the one that matters is the name, which is what owners are matched on.
  */
-export default function NewGearRequestPage() {
+export default async function NewGearRequestPage({ searchParams }: { searchParams: Promise<{ title?: string }> }) {
+  // S6-03 Scenario 4: a photo search with no close match arrives with what the photo showed.
+  const { title = "" } = await searchParams;
   return (
     <Container className="py-16">
       <ButtonLink href="/requests" variant="outline" className="px-4 py-2 text-xs">
@@ -20,7 +22,7 @@ export default function NewGearRequestPage() {
         listing is archived, who would not show up in a search at all.
       </p>
       <div className="mt-8 max-w-xl">
-        <PostRequestForm />
+        <PostRequestForm defaultTitle={title.slice(0, 120)} />
       </div>
     </Container>
   );
