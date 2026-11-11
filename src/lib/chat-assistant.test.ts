@@ -3,6 +3,7 @@ import {
   STORAGE_KEY,
   UNAVAILABLE_LINKS,
   applyEvent,
+  feedbackBody,
   finishInterrupted,
   historyFor,
   loadState,
@@ -123,5 +124,25 @@ describe("loadState and saveState", () => {
     storage.setItem(STORAGE_KEY, "{not json");
     expect(loadState(storage).messages).toEqual([]);
     expect(loadState(undefined).sessionId).toMatch(/^[0-9a-f-]{36}$/);
+  });
+});
+
+describe("feedbackBody", () => {
+  it("sends a plain thumbs up or down without a reason", () => {
+    expect(feedbackBody("s", 1)).toEqual({ session_id: "s", rating: 1 });
+    expect(feedbackBody("s", -1)).toEqual({ session_id: "s", rating: -1 });
+  });
+
+  it("sends a reason and trimmed note with a thumbs down", () => {
+    expect(feedbackBody("s", -1, "OUT_OF_DATE", "  fee changed  ")).toEqual({ session_id: "s", rating: -1, reason: "OUT_OF_DATE", note: "fee changed" });
+  });
+
+  it("leaves out a blank note, and never sends a reason with a thumbs up", () => {
+    expect(feedbackBody("s", -1, "WRONG", "   ")).toEqual({ session_id: "s", rating: -1, reason: "WRONG" });
+    expect(feedbackBody("s", 1, "WRONG", "note")).toEqual({ session_id: "s", rating: 1 });
+  });
+
+  it("caps the note at the API's limit", () => {
+    expect(feedbackBody("s", -1, "OTHER", "x".repeat(400)).note).toHaveLength(300);
   });
 });

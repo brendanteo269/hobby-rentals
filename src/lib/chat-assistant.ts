@@ -46,11 +46,35 @@ export type ChatMessage = {
   actions?: ChatLink[];
   turnId?: string | null;
   rating?: 1 | -1;
+  /** S6-08: the reason given for a thumbs down, once sent. */
+  feedbackReason?: FeedbackReason;
   /** Still streaming. */
   pending?: boolean;
 };
 
 export type ChatState = { sessionId: string; messages: ChatMessage[] };
+
+/** S6-08 Scenario 1: why a thumbs down. Values match the API's. */
+export const FEEDBACK_REASONS = [
+  { value: "WRONG", label: "Wrong" },
+  { value: "NOT_HELPFUL", label: "Not helpful" },
+  { value: "OUT_OF_DATE", label: "Out of date" },
+  { value: "NO_GEAR", label: "Didn't find gear" },
+  { value: "OTHER", label: "Other" },
+] as const;
+export type FeedbackReason = (typeof FEEDBACK_REASONS)[number]["value"];
+export const MAX_FEEDBACK_NOTE_CHARS = 300;
+
+/** The feedback request body: a reason and note only with a thumbs down, and a blank note left out. */
+export function feedbackBody(sessionId: string, rating: 1 | -1, reason?: FeedbackReason, note?: string) {
+  const trimmed = note?.trim().slice(0, MAX_FEEDBACK_NOTE_CHARS);
+  return {
+    session_id: sessionId,
+    rating,
+    ...(rating === -1 && reason ? { reason } : {}),
+    ...(rating === -1 && reason && trimmed ? { note: trimmed } : {}),
+  };
+}
 
 export type ChatEvent = { event: string; data: Record<string, unknown> };
 
