@@ -10,10 +10,10 @@ import type { StatusTone } from "@/lib/users";
  * they never go stale.
  */
 
-export type ReportKind = "LISTING" | "USER";
+export type ReportKind = "LISTING" | "USER" | "FORUM_POST" | "FORUM_COMMENT";
 export type QueueStatus = "OPEN" | "DECIDED";
 export type Priority = "HIGH" | "MEDIUM" | "LOW";
-export type ReportDecisionKind = "DISMISS" | "DEACTIVATE" | "WARN";
+export type ReportDecisionKind = "DISMISS" | "DEACTIVATE" | "WARN" | "REMOVE";
 export type AiSuggestion = "DISMISS" | "WARN" | "DEACTIVATE" | "NEEDS_HUMAN";
 
 export const PAGE_SIZE = 25;
@@ -22,7 +22,7 @@ export const PAGE_SIZE = 25;
 export const STRIKE_LIMIT = 3;
 export const SUSPENSION_DAYS = 30;
 
-export const KIND_LABELS: Record<ReportKind, string> = { LISTING: "Listing", USER: "User" };
+export const KIND_LABELS: Record<ReportKind, string> = { LISTING: "Listing", USER: "User", FORUM_POST: "Forum post", FORUM_COMMENT: "Forum comment" };
 
 export const PRIORITY: Record<Priority, { label: string; tone: StatusTone }> = {
   HIGH: { label: "High", tone: "critical" },
@@ -35,6 +35,7 @@ export const DECISION_LABELS: Record<ReportDecisionKind, string> = {
   DISMISS: "Dismissed",
   DEACTIVATE: "Listing deactivated",
   WARN: "Acknowledged, strike added",
+  REMOVE: "Removed from Community",
 };
 
 /** One row of admin_moderation_queue. */
@@ -54,6 +55,10 @@ export type QueuedReport = {
   listing_id: string | null;
   listing_name: string | null;
   booking_id: string | null;
+  /** S6-11: the post a forum report is about (and the comment, for a comment report). */
+  forum_post_id: string | null;
+  forum_comment_id: string | null;
+  forum_post_title: string | null;
   created_at: string;
   resolved_at: string | null;
   case_age_seconds: number;

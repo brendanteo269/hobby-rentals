@@ -19,6 +19,7 @@ export type NavItem = {
 export function navItems(dashboardPath: Route | null): NavItem[] {
   const items: NavItem[] = [{ label: "Marketplace", href: "/browse", matches: ["/browse", "/bundles"] }];
   if (dashboardPath) {
+    items.push({ label: "Community", href: "/community", matches: ["/community"] });
     items.push({ label: "My dashboard", href: dashboardPath, matches: ["/rentals", "/listings/mine"] });
   }
   return items;
