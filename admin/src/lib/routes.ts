@@ -27,6 +27,8 @@ export const ROUTES = {
   disputes: "/disputes",
   dispute: (id: string) => `/disputes/${id}` as Route,
   assistant: "/assistant",
+  assistantAnswers: "/assistant/answers",
+  assistantFeedback: "/assistant/feedback",
   community: "/community",
 } as const;
 

@@ -5,6 +5,7 @@ import {
   OUTCOME_LABELS,
   PAGE_SIZE,
   RATING_FILTERS,
+  REASON_LABELS,
   getAssistantSummary,
   listAssistantTurns,
   type AssistantOutcome,
@@ -14,6 +15,8 @@ import { formatDateTime } from "@/lib/format";
 import { ROUTES } from "@/lib/routes";
 import { Badge, Container, EmptyState, Panel } from "@/components/ui";
 import { HelpResyncForm } from "@/components/help-resync-form";
+import { AssistantCorrectionForm } from "@/components/assistant-correction-form";
+import { AssistantTabs } from "@/components/assistant-tabs";
 import { Pagination } from "@/components/pagination";
 
 export const metadata = { title: "Assistant — HobbyRentals Admin" };
@@ -37,17 +40,23 @@ function hrefFor(search: Search): Route {
 }
 
 function Turn({ turn }: { turn: AssistantTurn }) {
+  const helpSlugs = turn.source_slugs.filter((slug) => !slug.startsWith("answer-"));
   return (
-    <li className="space-y-2 py-4">
+    <li id={`turn-${turn.id}`} className="scroll-mt-24 space-y-2 py-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="font-medium">{turn.question}</p>
         <div className="flex items-center gap-2">
-          {turn.rating === -1 && <Badge tone="critical">Thumbs down</Badge>}
+          {turn.correction_id && <Badge tone="positive">Corrected</Badge>}
+          {!turn.correction_id && turn.covered_by && turn.covered_similarity !== null && (
+            <Badge tone="neutral">Close to a correction ({Math.round(turn.covered_similarity * 100)}%)</Badge>
+          )}
+          {turn.rating === -1 && <Badge tone="critical">Thumbs down{turn.reason ? `: ${REASON_LABELS[turn.reason]}` : ""}</Badge>}
           {turn.rating === 1 && <Badge tone="positive">Thumbs up</Badge>}
           <Badge tone={OUTCOME_TONE[turn.outcome]}>{OUTCOME_LABELS[turn.outcome]}</Badge>
         </div>
       </div>
       {turn.answer && <p className="body-copy whitespace-pre-line">{turn.answer}</p>}
+      {turn.note && <p className="border-l-2 border-bad pl-3 text-sm">“{turn.note}”</p>}
       <p className="text-xs text-ink-soft">
         {formatDateTime(turn.created_at)} · {turn.intent.replace("_", " ")} · {turn.signed_in ? "signed in" : "visitor"}
         {turn.latency_ms !== null && ` · ${(turn.latency_ms / 1000).toFixed(1)} s`}
@@ -55,12 +64,21 @@ function Turn({ turn }: { turn: AssistantTurn }) {
         {turn.source_slugs.map((slug) => (
           <span key={slug}>
             {" · "}
-            <a href={`${WEB_APP_URL}/help#${slug}`} target="_blank" rel="noreferrer" className="underline underline-offset-2 hover:text-ink">
+            <a
+              href={slug.startsWith("answer-") ? `${WEB_APP_URL}/help/answers/${slug.slice(7)}` : `${WEB_APP_URL}/help#${slug}`}
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2 hover:text-ink"
+            >
               {slug}
             </a>
           </span>
         ))}
       </p>
+      {/* S6-08 Scenario 2: a thumbs-down answer can be corrected once; later edits are under Approved answers. */}
+      {turn.rating === -1 && !turn.correction_id && turn.question && (
+        <AssistantCorrectionForm turnId={turn.id} question={turn.question} slugs={helpSlugs} />
+      )}
     </li>
   );
 }
@@ -90,6 +108,7 @@ export default async function AssistantPage({ searchParams }: { searchParams: Pr
         </div>
         <HelpResyncForm />
       </div>
+      <AssistantTabs current={ROUTES.assistant} />
 
       {summary && (
         <dl className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
