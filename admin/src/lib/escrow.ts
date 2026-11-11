@@ -12,6 +12,8 @@ export const ESCROW_LEDGER_TYPES = [
   "OVERDUE_SETTLEMENT",
   "CANCELLATION_FEE",
   "CANCELLATION_PAYOUT",
+  "DELIVERY_CHARGE",
+  "DELIVERY_PAYOUT",
 ] as const;
 
 export const ESCROW_TYPE_LABELS: Record<string, string> = {
@@ -24,10 +26,12 @@ export const ESCROW_TYPE_LABELS: Record<string, string> = {
   OVERDUE_SETTLEMENT: "Overdue fee",
   CANCELLATION_FEE: "Cancellation fee",
   CANCELLATION_PAYOUT: "Cancellation paid to owner",
+  DELIVERY_CHARGE: "Delivery fee charged",
+  DELIVERY_PAYOUT: "Delivery fee paid to owner",
 };
 
 /** The escrow_component values a hold can carry, in the order they are shown. */
-export const ESCROW_COMPONENTS = ["RENTAL", "DEPOSIT", "PROTECTION"] as const;
+export const ESCROW_COMPONENTS = ["RENTAL", "DEPOSIT", "PROTECTION", "DELIVERY"] as const;
 export type EscrowComponent = (typeof ESCROW_COMPONENTS)[number];
 
 /**
@@ -41,6 +45,7 @@ export const ESCROW_COMPONENT_LABELS: Record<EscrowPart, string> = {
   RENTAL: "Rental fee",
   DEPOSIT: "Security deposit",
   PROTECTION: "Damage protection",
+  DELIVERY: "Delivery fee",
   WHOLE: "Whole hold",
 };
 
