@@ -1,4 +1,4 @@
-import { ButtonLink, Container, SectionHead } from "@/components/ui";
+import { Container, SectionHead } from "@/components/ui";
 import { getFeaturedBundles } from "@/lib/api/bundles";
 import { FeaturedBundlesCarousel } from "./featured-bundles-carousel";
 
@@ -19,23 +19,12 @@ export async function FeaturedBundles() {
 
   return (
     <Container className="pt-20">
-      <SectionHead title="Popular Gear bundles" />
+      <SectionHead title="Gear bundles" href="/bundles" linkLabel="View all" />
       <p className="body-copy mt-2 max-w-2xl">
-        Complete sets so you can book everything a trip needs in one go instead
-        of piecing it together item by item.
+        Everything a trip needs, booked together instead of item by item.
       </p>
 
       <FeaturedBundlesCarousel bundles={bundles} />
-
-      <div className="mt-9 flex justify-center">
-        <ButtonLink
-          href="/bundles"
-          variant="accent"
-          className="px-10 py-4 text-base shadow-sm hover:-translate-y-0.5 hover:shadow-md"
-        >
-          Explore more curated bundles
-        </ButtonLink>
-      </div>
     </Container>
   );
 }

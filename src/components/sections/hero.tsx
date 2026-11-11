@@ -1,9 +1,14 @@
-import { Container, Button, Input, Select, ImageSlot } from "@/components/ui";
-import { ShieldCheck, BadgeCheck, Handshake, Camera } from "lucide-react";
+import Image, { type StaticImageData } from "next/image";
+import Link from "next/link";
+import type { Route } from "next";
+import { Container, Button, Input, Select } from "@/components/ui";
+import { ShieldCheck, BadgeCheck, Handshake } from "lucide-react";
 import { SearchExamples, SmartSearchNote } from "@/components/browse/search-examples";
-import { browseHref, defaultSort, parseBrowseFilters } from "@/lib/browse-params";
-import { HERO_IMAGE } from "@/lib/mock-images";
-import { LOCATION_AREAS, LOCATION_LABELS, isLocationArea } from "@/lib/listings";
+import { browseHref, defaultSort, parseBrowseFilters, relatedCategoryHref } from "@/lib/browse-params";
+import { CATEGORY_LABELS, LOCATION_AREAS, LOCATION_LABELS, isLocationArea, type ListingCategory } from "@/lib/listings";
+import photographyPhoto from "../../../public/landing/photography.jpg";
+import campingPhoto from "../../../public/landing/camping.jpg";
+import musicPhoto from "../../../public/landing/music.jpg";
 
 const TRUST_LINE = [
   { icon: ShieldCheck, label: "Escrow-protected" },
@@ -11,12 +16,55 @@ const TRUST_LINE = [
   { icon: Handshake, label: "Guided handover" },
 ];
 
+/**
+ * The showcase tiles. Bundled stock photos rather than live listings, so the
+ * hero looks finished on an empty marketplace; each one is a category, not a
+ * specific item, so none of them promises gear that may not be listed. The
+ * first is the tall tile.
+ */
+const SHOWCASE: { category: ListingCategory; photo: StaticImageData; alt: string }[] = [
+  { category: "PHOTOGRAPHY_VIDEOGRAPHY", photo: photographyPhoto, alt: "A film camera on the sand under a pier" },
+  { category: "CAMPING_OUTDOOR", photo: campingPhoto, alt: "View from inside a tent onto a pine forest" },
+  { category: "MUSIC_AUDIO", photo: musicPhoto, alt: "Guitars and a keyboard in a sunlit home studio" },
+];
+
+const fieldLabel = "block px-3 pb-1 text-[0.6875rem] font-medium text-ink-soft";
+
 function exampleHref(q: string): string {
   return browseHref({ ...parseBrowseFilters({}), q, sort: defaultSort(q) });
 }
 
+function ShowcaseTile({ category, photo, alt, tall }: (typeof SHOWCASE)[number] & { tall: boolean }) {
+  return (
+    <Link
+      href={relatedCategoryHref(category) as Route}
+      className={`group relative overflow-hidden rounded-2xl bg-surface-muted outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2 ${
+        tall ? "col-span-3 row-span-2" : "col-span-2"
+      }`}
+    >
+      <Image
+        src={photo}
+        alt={alt}
+        fill
+        placeholder="blur"
+        // The tall tile is the largest thing above the fold.
+        loading={tall ? "eager" : "lazy"}
+        fetchPriority={tall ? "high" : "auto"}
+        sizes={tall ? "(min-width: 1024px) 380px, 60vw" : "(min-width: 1024px) 250px, 40vw"}
+        className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+      />
+      <span className="absolute bottom-2 left-2 whitespace-nowrap rounded-full bg-white/95 px-2.5 py-1 text-[0.6875rem] font-medium text-ink shadow-sm sm:bottom-3 sm:left-3 sm:px-3 sm:py-1.5 sm:text-xs">
+        {CATEGORY_LABELS[category]}{" "}
+        <span aria-hidden="true" className="max-sm:hidden">
+          →
+        </span>
+      </span>
+    </Link>
+  );
+}
+
 /**
- * Opening section: search card on the left, a showcase image on the right.
+ * Opening section: search card on the left, category photos on the right.
  *
  * The search card is a plain GET to /browse using the same filter param
  * names as the marketplace's own filter form (@/lib/browse-params), so
@@ -36,11 +84,11 @@ export function Hero({ defaultLocation }: { defaultLocation: string | null }) {
           Rent the gear you need. Make money on what you own.
         </h1>
         <p className="body-copy mt-4 max-w-md">
-          A secure, community-backed rental platform for photography, outdoor gear, and creator
-          kits across Singapore.
+          Cameras, camping kit, instruments and tools from people near you, with your payment held
+          until the item is back.
         </p>
 
-        <form method="get" action="/browse" role="search" className="mt-8 card space-y-2 p-3">
+        <form method="get" action="/browse" role="search" className="mt-8 card space-y-3 p-3">
           <label htmlFor="search" className="sr-only">
             Search for listings
           </label>
@@ -51,44 +99,32 @@ export function Hero({ defaultLocation }: { defaultLocation: string | null }) {
             placeholder="Describe what you need, e.g. coffee like a barista"
             className="w-full border-transparent"
           />
-          <div className="flex flex-wrap gap-2">
-            <label htmlFor="location_area" className="sr-only">
-              Pickup location
-            </label>
-            <Select
-              id="location_area"
-              name="location_area"
-              pill
-              defaultValue={prefillLocation}
-              className="min-w-36 flex-1 border-transparent"
-            >
-              <option value="">Pickup location</option>
-              {LOCATION_AREAS.map((area) => (
-                <option key={area} value={area}>
-                  {LOCATION_LABELS[area]}
-                </option>
-              ))}
-            </Select>
-            <label htmlFor="start_date" className="sr-only">
-              Start date
-            </label>
-            <Input
-              id="start_date"
-              name="start_date"
-              type="date"
-              pill
-              className="min-w-32 flex-1 border-transparent"
-            />
-            <label htmlFor="end_date" className="sr-only">
-              End date
-            </label>
-            <Input
-              id="end_date"
-              name="end_date"
-              type="date"
-              pill
-              className="min-w-32 flex-1 border-transparent"
-            />
+          <div className="grid gap-2 sm:grid-cols-3">
+            <div>
+              <label htmlFor="location_area" className={fieldLabel}>
+                Pickup area
+              </label>
+              <Select id="location_area" name="location_area" pill defaultValue={prefillLocation} className="border-transparent">
+                <option value="">Anywhere</option>
+                {LOCATION_AREAS.map((area) => (
+                  <option key={area} value={area}>
+                    {LOCATION_LABELS[area]}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div>
+              <label htmlFor="start_date" className={fieldLabel}>
+                From
+              </label>
+              <Input id="start_date" name="start_date" type="date" pill className="border-transparent" />
+            </div>
+            <div>
+              <label htmlFor="end_date" className={fieldLabel}>
+                To
+              </label>
+              <Input id="end_date" name="end_date" type="date" pill className="border-transparent" />
+            </div>
           </div>
           <Button type="submit" className="w-full">
             Search
@@ -99,7 +135,7 @@ export function Hero({ defaultLocation }: { defaultLocation: string | null }) {
           </div>
         </form>
 
-        <div className="mt-6 flex flex-wrap justify-center gap-x-6 gap-y-2">
+        <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
           {TRUST_LINE.map(({ icon: Icon, label }) => (
             <span key={label} className="flex items-center gap-1.5 text-xs text-ink-soft">
               <Icon className="size-4 text-ink" aria-hidden="true" />
@@ -109,19 +145,10 @@ export function Hero({ defaultLocation }: { defaultLocation: string | null }) {
         </div>
       </div>
 
-      <div className="relative">
-        <ImageSlot
-          label="Hobby gear laid out on a wooden table"
-          src={HERO_IMAGE}
-          align="end"
-          className="aspect-4/5 w-full rounded-3xl lg:aspect-square"
-        />
-        <div className="absolute bottom-4 left-4 right-4 flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 shadow-sm sm:right-auto">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surface-muted text-ink">
-            <Camera className="size-4" aria-hidden="true" />
-          </span>
-          <p className="text-xs font-medium">Sony Cinema Kit · Tampines · 5.0</p>
-        </div>
+      <div className="grid h-72 grid-cols-5 grid-rows-2 gap-3 sm:h-[26rem] lg:h-[34rem]">
+        {SHOWCASE.map((tile, index) => (
+          <ShowcaseTile key={tile.category} {...tile} tall={index === 0} />
+        ))}
       </div>
     </Container>
   );

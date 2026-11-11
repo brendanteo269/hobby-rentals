@@ -1,24 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
+import { HelpBlock } from "@/components/help-block";
 import { Container } from "@/components/ui";
-import { HELP_TOPICS, helpPath, type HelpBlock } from "@/lib/help";
+import { HELP_TOPICS, helpPath } from "@/lib/help";
 
 export const metadata: Metadata = {
   title: "Help centre — HobbyRentals",
   description: "Fees, deposits, damage protection, HobbyShield, late returns, damage claims and cancellations on HobbyRentals.",
 };
-
-function Block({ block }: { block: HelpBlock }) {
-  if (typeof block === "string") return <p className="body-copy">{block}</p>;
-  return (
-    <ul className="body-copy list-disc space-y-1.5 pl-5">
-      {block.list.map((item) => (
-        <li key={item}>{item}</li>
-      ))}
-    </ul>
-  );
-}
 
 /**
  * The help centre. Public, so a visitor can read the rules before signing up,
@@ -73,7 +63,7 @@ export default function HelpPage() {
                       <a href={`#${section.slug}`} className="hover:underline">{section.title}</a>
                     </h3>
                     {section.body.map((block, index) => (
-                      <Block key={index} block={block} />
+                      <HelpBlock key={index} block={block} />
                     ))}
                   </article>
                 ))}
