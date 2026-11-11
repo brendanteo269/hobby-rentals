@@ -7,8 +7,8 @@ const nextConfig: NextConfig = {
   typedRoutes: true,
   images: {
     remotePatterns: [
-      // Mock listing/hero photos, used as a stand-in for listings with no
-      // uploaded photos of their own (see lib/mock-images.ts).
+      // Mock listing photos (lib/marketplace-data.ts). The homepage hero's
+      // photos are bundled under public/landing and need no remote host.
       { protocol: "https", hostname: "images.unsplash.com" },
       // Real listing photos: storage_service.photo_url (API repo) hands back
       // the bucket's public URL - virtual-hosted-style, so the bucket name

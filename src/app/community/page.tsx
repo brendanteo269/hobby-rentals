@@ -17,7 +17,7 @@ export default async function CommunityPage() {
       <ul className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {forums.map((forum) => (
           <li key={forum.category_slug}>
-            <Link href={`/community/${forum.category_slug}` as Route} className="card flex h-full items-start gap-4 p-5 transition-colors hover:border-ink-soft">
+            <Link href={`/community/${forum.category_slug}` as Route} className="card card-lift flex h-full items-start gap-4 p-5">
               <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent">
                 <MessagesSquare className="size-5" aria-hidden="true" />
               </span>

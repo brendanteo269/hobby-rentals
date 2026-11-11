@@ -24,13 +24,19 @@ export function Pagination({ page, lastPage, hrefForPage, onPageChange }: Pagina
   return (
     <nav className="mt-10 flex items-center justify-between border-t border-line pt-6" aria-label="Pagination">
       <PageControl page={page - 1} disabled={page <= 1} hrefForPage={hrefForPage} onPageChange={onPageChange}>
-        ← Previous
+        <span aria-hidden="true" className="inline-block transition-transform group-hover:-translate-x-0.5">
+          ←
+        </span>{" "}
+        Previous
       </PageControl>
       <span className="text-sm text-ink-soft">
         Page {page} of {lastPage}
       </span>
       <PageControl page={page + 1} disabled={page >= lastPage} hrefForPage={hrefForPage} onPageChange={onPageChange}>
-        Next →
+        Next{" "}
+        <span aria-hidden="true" className="inline-block transition-transform group-hover:translate-x-0.5">
+          →
+        </span>
       </PageControl>
     </nav>
   );
@@ -52,7 +58,7 @@ function PageControl({
 
   if (hrefForPage) {
     return (
-      <Link href={hrefForPage(page) as Route} className="text-sm text-ink-soft transition-colors hover:text-ink">
+      <Link href={hrefForPage(page) as Route} className="group text-sm text-ink-soft transition-colors hover:text-ink">
         {children}
       </Link>
     );
@@ -62,7 +68,7 @@ function PageControl({
     <button
       type="button"
       onClick={() => onPageChange?.(page)}
-      className="text-sm text-ink-soft transition-colors hover:text-ink"
+      className="group text-sm text-ink-soft transition-colors hover:text-ink"
     >
       {children}
     </button>

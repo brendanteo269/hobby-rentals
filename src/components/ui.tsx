@@ -15,8 +15,11 @@ export function SectionHead({ title, href, linkLabel }: { title: string; href?: 
     <div className="flex items-baseline justify-between gap-4">
       <h2 className="heading text-2xl sm:text-3xl">{title}</h2>
       {href && linkLabel && (
-        <Link href={href} className="eyebrow hover:text-ink transition-colors">
-          {linkLabel} <span aria-hidden="true">→</span>
+        <Link href={href} className="group eyebrow hover:text-ink transition-colors">
+          {linkLabel}{" "}
+          <span aria-hidden="true" className="inline-block transition-transform group-hover:translate-x-0.5">
+            →
+          </span>
         </Link>
       )}
     </div>
@@ -467,7 +470,17 @@ export function ImageSlot({
 
 /** A grey placeholder block that pulses while a page loads; size and shape it with className. */
 export function Skeleton({ className = "", style }: { className?: string; style?: CSSProperties }) {
-  return <div aria-hidden="true" className={`animate-pulse rounded-lg bg-surface-muted ${className}`} style={style} />;
+  return <div aria-hidden="true" className={`motion-safe:animate-shimmer rounded-lg bg-surface-muted ${className}`} style={style} />;
+}
+
+/**
+ * A CSS mask for a horizontal scroller that fades whichever edge has more
+ * content beyond it, so a cut-off card reads as "scroll for more".
+ */
+export function scrollEdgeMask({ left, right }: { left: boolean; right: boolean }): string {
+  const start = left ? "transparent, black 3rem" : "black";
+  const end = right ? "black calc(100% - 3rem), transparent" : "black";
+  return `linear-gradient(to right, ${start}, ${end})`;
 }
 
 export type StatTone = "accent" | "success" | "warning" | "info" | "neutral";

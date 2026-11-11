@@ -76,13 +76,18 @@ body {
   box-shadow: var(--shadow-card);
 }
 
-/* A card that is a link: lifts on hover so it reads as clickable. */
+/* A card that is a link: lifts on hover so it reads as clickable, and shows
+   the same accent ring as buttons when reached by keyboard. */
 @utility card-lift {
   transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
   &:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-card-hover);
     border-color: var(--color-ink-soft);
+  }
+  &:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--color-accent) 40%, transparent);
+    outline-offset: 2px;
   }
 }
 
@@ -99,4 +104,62 @@ body {
 
 @utility animate-toast-in {
   animation: toast-in 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* One-off entrance for above-the-fold content. `both` keeps a delayed
+   element hidden until its turn instead of flashing in first. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility animate-rise-in {
+  animation: rise-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Loading placeholders: a highlight sweeping across, left to right. */
+@keyframes shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@utility animate-shimmer {
+  background-image: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.6), transparent);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+/* Every <details> slides open and shut, so disclosures behave the same on
+   every page. Browsers without ::details-content ignore all of it and toggle
+   instantly, and ones without interpolate-size still open, just without the
+   slide. */
+@layer base {
+  details {
+    interpolate-size: allow-keywords;
+  }
+  details::details-content {
+    height: 0;
+    overflow: clip;
+  }
+  details[open]::details-content {
+    height: auto;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    details::details-content {
+      transition:
+        height 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+        content-visibility 0.3s allow-discrete;
+    }
+  }
 }

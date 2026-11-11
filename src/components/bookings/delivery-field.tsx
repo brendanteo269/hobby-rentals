@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Truck } from "lucide-react";
-import { Button } from "@/components/ui";
+import { Button, Skeleton } from "@/components/ui";
 import { PostalAddressFields } from "@/components/postal-address-fields";
 import type { PostalAddress } from "@/components/use-postal-address";
 import { OUTSIDE_RADIUS_MESSAGE, type DeliveryChoice, type DeliveryOffer } from "@/lib/delivery";
@@ -11,7 +11,7 @@ import { formatMoney } from "@/lib/format";
 // Leaflet needs the browser, so the map is never rendered on the server.
 const DeliveryRadiusMap = dynamic(
   () => import("@/components/bookings/delivery-radius-map").then((module) => module.DeliveryRadiusMap),
-  { ssr: false, loading: () => <div className="h-56 w-full animate-pulse rounded-xl bg-line/40" aria-hidden="true" /> },
+  { ssr: false, loading: () => <Skeleton className="h-56 w-full rounded-xl" /> },
 );
 
 /**

@@ -4,6 +4,7 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ChatWidget } from "@/components/assistant/chat-widget";
 import { ToastProvider } from "@/components/toast";
+import { siteUrl } from "@/lib/env";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -11,9 +12,11 @@ const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const display = Plus_Jakarta_Sans({ variable: "--font-jakarta", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "HobbyRentals — Rent the listings you want",
+  // Makes the opengraph-image beside this file an absolute URL in link previews.
+  metadataBase: siteUrl(),
+  title: "HobbyRentals — Rent hobby gear in Singapore",
   description:
-    "Singapore's peer-to-peer marketplace for high-value hobby equipment — cameras, kayaks, keyboards, kilns.",
+    "Rent cameras, camping kit, instruments and tools from people near you in Singapore, or earn from gear you're not using.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

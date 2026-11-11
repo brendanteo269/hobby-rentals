@@ -9,6 +9,7 @@ import {
   FORECAST_LEVEL_LABELS,
   forecastSpanLabel,
   forecastWeekSpanLabel,
+  forecastWeeksEnd,
   forecastWeeksSpan,
   holidayBands,
   type DemandForecast,
@@ -71,9 +72,10 @@ function AttentionCard({ items }: { items: ForecastAttention[] }) {
   );
 }
 
+type Levels = Map<string, Map<string, ForecastLevel>>;
+
 function ListingRow({ listing, levels, weeks }: { listing: Listing; levels: Map<string, ForecastLevel> | undefined; weeks: DemandForecast["weeks"] }) {
   const unavailable = new Map(listing.unavailable.map((span) => [span.week_start, span]));
-  const forecastable = weeks.some((week) => (levels?.get(week.week_start) ?? "NOT_ENOUGH_DATA") !== "NOT_ENOUGH_DATA");
   return (
     <tr>
       {/* Sticky so the item stays in view while the weeks scroll on a phone. */}
@@ -81,7 +83,7 @@ function ListingRow({ listing, levels, weeks }: { listing: Listing; levels: Map<
         <p className="truncate font-medium">{listing.listing_name}</p>
         <p className="truncate text-xs text-ink-soft">{categoryLabel(listing.category)}</p>
       </th>
-      {forecastable ? weeks.map((week) => {
+      {weeks.map((week) => {
         const level = levels?.get(week.week_start) ?? "NOT_ENOUGH_DATA";
         const span = unavailable.get(week.week_start);
         const conflict = level === "HIGH" && span !== undefined;
@@ -98,11 +100,18 @@ function ListingRow({ listing, levels, weeks }: { listing: Listing; levels: Map<
             )}
           </td>
         );
-      }) : (
-        <td colSpan={weeks.length} className="px-3 py-2 text-xs text-ink-soft">Not enough booking history in this category yet.</td>
-      )}
+      })}
     </tr>
   );
+}
+
+function levelsOf(forecast: DemandForecast): Levels {
+  return new Map(forecast.categories.map((row) => [row.category, new Map(row.levels.map((cell) => [cell.week_start, cell.level]))]));
+}
+
+/** A listing has a forecast once its category has history for at least one upcoming week. */
+function hasForecast(levels: Map<string, ForecastLevel> | undefined): boolean {
+  return [...(levels?.values() ?? [])].some((level) => level !== "NOT_ENOUGH_DATA");
 }
 
 /** A listing worth looking at: any week that is not typical. Blocked days in a High week fall under that too. */
@@ -110,82 +119,128 @@ function standsOut(levels: Map<string, ForecastLevel> | undefined): boolean {
   return [...(levels?.values() ?? [])].some((level) => level === "LOW" || level === "HIGH");
 }
 
-function quietSummary(count: number): string {
-  return count === 1 ? "1 listing has typical demand across all upcoming weeks" : `${count} listings have typical demand across all upcoming weeks`;
+function listingCount(count: number): string {
+  return count === 1 ? "1 listing" : `${count} listings`;
 }
 
-/** Layer 2: every listing in a row, the ones that stand out first. */
-function Outlook({ forecast }: { forecast: DemandForecast }) {
-  const levels = new Map(forecast.categories.map((row) => [row.category, new Map(row.levels.map((cell) => [cell.week_start, cell.level]))]));
-  const prominent = forecast.listings.filter((listing) => standsOut(levels.get(listing.category)));
-  const quiet = forecast.listings.filter((listing) => !standsOut(levels.get(listing.category)));
+function quietSummary(count: number): string {
+  return `${listingCount(count)} ${count === 1 ? "has" : "have"} typical demand across all upcoming weeks`;
+}
+
+/** "A, B and C". */
+function joinWithAnd(items: string[]): string {
+  return items.length <= 1 ? items.join("") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
+}
+
+/** The week-by-week grid. `folded` listings sit behind one summary line under `rows`. */
+function OutlookTable({ forecast, levels, rows, folded }: { forecast: DemandForecast; levels: Levels; rows: Listing[]; folded: Listing[] }) {
   const bands = holidayBands(forecast.weeks);
-  const columns = forecast.weeks.length + 1;
   const row = (listing: Listing) => <ListingRow key={listing.listing_id} listing={listing} levels={levels.get(listing.category)} weeks={forecast.weeks} />;
+  return (
+    <div className="mt-5 overflow-x-auto">
+      <table className="w-full min-w-[48rem] border-separate border-spacing-x-1 border-spacing-y-1.5 text-sm">
+        <caption className="sr-only">Expected renter interest for each of your active listings, week by week</caption>
+        <thead>
+          {bands.length > 0 && (
+            <tr aria-hidden>
+              <td className="sticky left-0 z-10 bg-white" />
+              {forecast.weeks.map((week, index) => {
+                const band = bands.find((b) => b.startIndex === index);
+                if (band) {
+                  return (
+                    <td key={week.week_start} colSpan={band.length} className="rounded-md bg-surface-muted px-2 py-1 text-center text-[11px] text-ink-soft">
+                      {band.label} · {band.span}
+                    </td>
+                  );
+                }
+                return bands.some((b) => index > b.startIndex && index < b.startIndex + b.length) ? null : <td key={week.week_start} />;
+              })}
+            </tr>
+          )}
+          <tr>
+            <th scope="col" className="sticky left-0 z-10 bg-white pr-3 text-left text-xs font-medium text-ink-soft">Listing</th>
+            {forecast.weeks.map((week) => (
+              <th key={week.week_start} scope="col" className="whitespace-nowrap px-1 text-center text-xs font-medium" title={week.holiday ?? undefined}>
+                {forecastWeekSpanLabel(week.week_start)}
+                {week.holiday && <span className="sr-only">, {week.holiday}</span>}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(row)}
+          {folded.length > 0 && (
+            <DemandForecastQuietRows summary={quietSummary(folded.length)} columns={forecast.weeks.length + 1}>
+              {folded.map(row)}
+            </DemandForecastQuietRows>
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/**
+ * Layer 2, only as detailed as it is useful: the grid when some week stands
+ * out, one sentence when none does, and a closing note on the listings whose
+ * categories are still building history.
+ */
+function Outlook({ forecast, levels }: { forecast: DemandForecast; levels: Levels }) {
+  const forecastable = forecast.listings.filter((listing) => hasForecast(levels.get(listing.category)));
+  const pending = forecast.listings.filter((listing) => !hasForecast(levels.get(listing.category)));
+  const prominent = forecastable.filter((listing) => standsOut(levels.get(listing.category)));
+  const quiet = forecastable.filter((listing) => !standsOut(levels.get(listing.category)));
+  const pendingCategories = [...new Set(pending.map((listing) => categoryLabel(listing.category)))];
+  const lastWeek = forecast.weeks[forecast.weeks.length - 1]?.week_start;
 
   return (
     <section aria-labelledby="forecast-outlook" className="card p-5">
-      <p className="eyebrow">{forecastWeeksSpan(forecast.weeks[0].week_start, forecast.weeks[forecast.weeks.length - 1].week_start)}</p>
+      {forecastable.length > 0 && <p className="eyebrow">{forecastWeeksSpan(forecast.weeks[0].week_start, lastWeek)}</p>}
       <h2 id="forecast-outlook" className="heading mt-1 text-xl">Availability outlook</h2>
-      <p className="body-copy mt-1">Expected renter interest for your active listings.</p>
-      <div className="mt-5 overflow-x-auto">
-        <table className="w-full min-w-[48rem] border-separate border-spacing-x-1 border-spacing-y-1.5 text-sm">
-          <caption className="sr-only">Expected renter interest for each of your active listings, week by week</caption>
-          <thead>
-            {bands.length > 0 && (
-              <tr aria-hidden>
-                <td className="sticky left-0 z-10 bg-white" />
-                {forecast.weeks.map((week, index) => {
-                  const band = bands.find((b) => b.startIndex === index);
-                  if (band) {
-                    return (
-                      <td key={week.week_start} colSpan={band.length} className="rounded-md bg-surface-muted px-2 py-1 text-center text-[11px] text-ink-soft">
-                        {band.label} · {band.span}
-                      </td>
-                    );
-                  }
-                  return bands.some((b) => index > b.startIndex && index < b.startIndex + b.length) ? null : <td key={week.week_start} />;
-                })}
-              </tr>
-            )}
-            <tr>
-              <th scope="col" className="sticky left-0 z-10 bg-white pr-3 text-left text-xs font-medium text-ink-soft">Listing</th>
-              {forecast.weeks.map((week) => (
-                <th key={week.week_start} scope="col" className="whitespace-nowrap px-1 text-center text-xs font-medium" title={week.holiday ?? undefined}>
-                  {forecastWeekSpanLabel(week.week_start)}
-                  {week.holiday && <span className="sr-only">, {week.holiday}</span>}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {/* With nothing standing out there is nothing to fold away from. */}
-            {(prominent.length > 0 ? prominent : quiet).map(row)}
-            {prominent.length > 0 && quiet.length > 0 && (
-              <DemandForecastQuietRows summary={quietSummary(quiet.length)} columns={columns}>
-                {quiet.map(row)}
-              </DemandForecastQuietRows>
-            )}
-          </tbody>
-        </table>
-      </div>
+      {forecast.run_week === null ? (
+        <p className="body-copy mt-1">Forecasts will appear here after the first weekly forecast on Monday.</p>
+      ) : forecastable.length === 0 ? (
+        <p className="body-copy mt-1">Forecasts will appear here once there is enough rental history in your listings&apos; categories.</p>
+      ) : prominent.length > 0 ? (
+        <>
+          <p className="body-copy mt-1">Expected renter interest for your active listings.</p>
+          <OutlookTable forecast={forecast} levels={levels} rows={prominent} folded={quiet} />
+        </>
+      ) : (
+        <>
+          <p className="body-copy mt-1">
+            No unusual weeks expected for your {listingCount(quiet.length)} with a forecast through {forecastWeeksEnd(lastWeek)}.
+          </p>
+          <details className="group mt-3">
+            <summary className="inline-flex cursor-pointer list-none items-center gap-1 text-xs text-ink-soft hover:text-ink">
+              Show weekly view
+              <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" aria-hidden />
+            </summary>
+            <OutlookTable forecast={forecast} levels={levels} rows={quiet} folded={[]} />
+          </details>
+        </>
+      )}
+      {forecastable.length > 0 && pending.length > 0 && (
+        <p className="mt-5 border-t border-line pt-3 text-xs text-ink-soft">
+          {listingCount(pending.length)} {pending.length === 1 ? "does" : "do"} not have a forecast yet. We&apos;re building rental history
+          for {joinWithAnd(pendingCategories)}.
+        </p>
+      )}
     </section>
   );
 }
 
 /** Layer 3: whether past forecasts were right, then - only if asked - how they are made. */
 function Accuracy({ forecast }: { forecast: DemandForecast }) {
-  const forecastable = forecast.categories.filter((row) => row.levels.some((cell) => cell.level !== "NOT_ENOUGH_DATA"));
+  const scored = forecast.categories.filter((row) => row.accuracy.shown);
   return (
     <section aria-labelledby="forecast-accuracy" className="card p-5 text-sm">
       <h2 id="forecast-accuracy" className="font-medium">Forecast accuracy</h2>
       <ul className="mt-2 space-y-1 text-ink-soft">
-        {forecastable.length === 0 && <li>Not enough history in your categories to measure yet.</li>}
-        {forecastable.map(({ category, accuracy }) => (
+        {scored.length === 0 && <li>Accuracy will appear after forecasts have been compared with completed rental weeks.</li>}
+        {scored.map(({ category, accuracy }) => (
           <li key={category}>
-            {accuracy.shown
-              ? `${categoryLabel(category)} matched ${accuracy.matched_weeks} of the last ${accuracy.scored_weeks} weeks.`
-              : `${categoryLabel(category)} is still being measured.`}
+            {categoryLabel(category)} matched {accuracy.matched_weeks} of the last {accuracy.scored_weeks} weeks.
           </li>
         ))}
       </ul>
@@ -217,18 +272,14 @@ function Accuracy({ forecast }: { forecast: DemandForecast }) {
  */
 export function DemandForecastSection({ forecast }: { forecast: DemandForecast }) {
   if (forecast.listings.length === 0) return null;
-  if (forecast.run_week === null) {
-    return (
-      <p id="demand-forecast" className="rounded-xl border border-line bg-surface-muted p-4 text-sm text-ink-soft">
-        Your availability outlook appears after the first weekly forecast on Monday.
-      </p>
-    );
-  }
+  const levels = levelsOf(forecast);
+  // Nothing to measure until some listing has a forecast.
+  const measurable = forecast.listings.some((listing) => hasForecast(levels.get(listing.category)));
   return (
     <div id="demand-forecast" className="scroll-mt-24 space-y-4">
       {forecast.needs_attention.length > 0 && <AttentionCard items={forecast.needs_attention} />}
-      <Outlook forecast={forecast} />
-      <Accuracy forecast={forecast} />
+      <Outlook forecast={forecast} levels={levels} />
+      {measurable && <Accuracy forecast={forecast} />}
     </div>
   );
 }
