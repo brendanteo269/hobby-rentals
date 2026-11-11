@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Badge, Button, ButtonLink } from "@/components/ui";
 import { changeBookingStatus, type BookingActionResult } from "@/app/bookings/actions";
 import { AddToCalendarButton } from "@/components/bookings/add-to-calendar-button";
+import { DownloadReceiptButton } from "@/components/bookings/download-receipt-button";
 import { DeliveryAddressLine } from "@/components/bookings/delivery-address-line";
 import { MessageButton } from "@/components/messages/message-button";
 import { ExtensionRequestDecision } from "@/components/bookings/extension-request-decision";
@@ -121,6 +122,7 @@ export function OwnerBookingList({ bookings, reviewEligibility = [] }: { booking
             </span>
             <span className="flex gap-2">
               <AddToCalendarButton booking={booking} />
+              <DownloadReceiptButton booking={booking} />
               {booking.status === "CONFIRMED" && booking.handover_state?.inspection_status === "COMPLETED" && (
                 <ButtonLink href={ownerPickupPhotosPath(booking.id)} variant="outline" className="px-3 py-1.5 text-xs">
                   Pickup photos

@@ -1,6 +1,7 @@
 "use client";
 
 import { AddToCalendarButton } from "@/components/bookings/add-to-calendar-button";
+import { DownloadReceiptButton } from "@/components/bookings/download-receipt-button";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button, ButtonLink } from "@/components/ui";
@@ -88,6 +89,7 @@ export function OwnerBundleBookingList({ bookings }: { bookings: BundleBooking[]
                 </span>
                 <span className="flex gap-2">
                   <AddToCalendarButton kind="bundle" booking={booking} />
+                  <DownloadReceiptButton kind="bundle" booking={booking} />
                   {next && (
                     <Button
                       className="px-3 py-1.5 text-xs"

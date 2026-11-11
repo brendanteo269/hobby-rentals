@@ -1,6 +1,6 @@
 import "server-only";
 
-import { backendRequest } from "@/lib/api/client";
+import { backendRequest, backendFile } from "@/lib/api/client";
 import type {
   Booking,
   BookingQuote,
@@ -155,6 +155,16 @@ export function cancelBooking(bookingId: string, idempotency_key: string, expect
     `/bookings/${encodeURIComponent(bookingId)}/cancel`,
     { method: "POST", body: JSON.stringify({ idempotency_key, expected_refund_cents }) },
   );
+}
+
+/**
+ * S6-10: the caller's receipt for a confirmed booking, as a PDF. The renter's
+ * copy shows what they paid; the owner's adds what they earn. Once the rental
+ * is settled it also shows where the deposit went and the owner's payout.
+ */
+export function getBookingReceipt(kind: "single" | "bundle", bookingId: string) {
+  const id = encodeURIComponent(bookingId);
+  return backendFile(kind === "bundle" ? `/bundles/bookings/${id}/receipt` : `/bookings/${id}/receipt`);
 }
 
 /** S4-16: one confirmed rental as an .ics file. Bundle bookings have their own route. */
