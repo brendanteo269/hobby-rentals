@@ -12,6 +12,7 @@ import type { Route } from "next";
 import type { BookingPause } from "@/lib/away";
 import type { ListingCondition, LocationArea, SerialStatus } from "@/lib/listings";
 import type { PublicQuestion } from "@/lib/listing-questions";
+import type { ResponseTimeBand } from "@/lib/response-time";
 import type { ReviewCollection } from "@/lib/reviews";
 
 export type PublicListing = {
@@ -35,6 +36,8 @@ export type PublicListing = {
   instant_book_enabled: boolean;
   owner_display_name: string | null;
   owner_verified: boolean;
+  /** S5-17: the owner's usual reply-time band; absent without enough history. */
+  owner_response_time?: ResponseTimeBand | null;
   serial_status: SerialStatus | null;
   reviews: ReviewCollection;
   /** S5-07: questions the owner answered and chose to show; renters are never named. */
@@ -42,6 +45,8 @@ export type PublicListing = {
   updated_at: string;
   /** S5-15: the owner's away period, shown as "Not taking bookings ...". */
   booking_pause?: BookingPause | null;
+  /** S6-02: whether a quick-start guide comes with it; never its content. */
+  has_guide?: boolean;
 };
 
 export type PublicBundleItem = {

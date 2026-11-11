@@ -1,5 +1,6 @@
 import { ListingCard } from "@/components/browse/listing-card";
 import { CardCarousel } from "@/components/listings/card-carousel";
+import { Skeleton } from "@/components/ui";
 import { getSimilarListings } from "@/lib/api/listings";
 import { loadOrEmpty } from "@/lib/similar-listings";
 
@@ -34,7 +35,7 @@ export function SimilarListingsFallback() {
     <section className="mt-16 border-t border-line pt-10" aria-busy="true">
       <h2 className="heading text-lg">Similar listings</h2>
       <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {[0, 1, 2].map((slot) => <div key={slot} className="card aspect-[4/5] animate-pulse bg-surface-muted" />)}
+        {[0, 1, 2].map((slot) => <Skeleton key={slot} className="aspect-[4/5] rounded-2xl" />)}
       </div>
     </section>
   );

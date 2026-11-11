@@ -1,7 +1,9 @@
+import { DeliveryAddressLine } from "@/components/bookings/delivery-address-line";
 import Link from "next/link";
 import type { Route } from "next";
 import { Badge, ButtonLink } from "@/components/ui";
 import { AddToCalendarButton } from "@/components/bookings/add-to-calendar-button";
+import { DownloadReceiptButton } from "@/components/bookings/download-receipt-button";
 import { MessageButton } from "@/components/messages/message-button";
 import { hasLiveOffer, WAITLIST_STATUS_LABELS, type WaitlistEntry } from "@/lib/waitlist";
 import {
@@ -16,6 +18,8 @@ import {
 import type { BundleBooking } from "@/lib/bundles";
 import { BlockedCancelButton, CancelBookingButton } from "@/components/bookings/cancel-booking-button";
 import { OverdueNotice } from "@/components/bookings/overdue-notice";
+import { HigherDepositOffer } from "@/components/bookings/higher-deposit-offer";
+import { isOpenOffer } from "@/lib/booking-risk";
 import { cancellationOutcomeLine } from "@/lib/cancellations";
 import { claimPendingRenter, renterClaimPath } from "@/lib/settlement";
 import { SettlementTracker } from "@/components/bookings/settlement-tracker";
@@ -33,6 +37,8 @@ import { KIT_STATUS_LABELS, type Kit } from "@/lib/booking-groups";
 import { renterKitPath } from "@/lib/routes";
 import { reviewPath, type ReviewEligibility } from "@/lib/reviews";
 import { rentalRowId } from "@/lib/rentals";
+import { guidesByBooking, updatedSinceBooking, type GuideIndexEntry } from "@/lib/guides";
+import { bookingGuidePath } from "@/lib/routes";
 
 /**
  * Every booking the renter has made, single items and bundles alike, each with
@@ -44,12 +50,16 @@ export function RenterBookingList({
   bookings,
   bundleBookings,
   reviewEligibility,
+  guides,
 }: {
   bookings: Booking[];
   /** S2-20: a request for a whole set, shown beside the single-item ones. */
   bundleBookings: BundleBooking[];
   reviewEligibility: ReviewEligibility[];
+  /** S6-02: which current bookings - bundle items included - have a quick-start guide. */
+  guides: GuideIndexEntry[];
 }) {
+  const guideFor = guidesByBooking(guides);
   return (
     <>
       <HashTargetHighlight />
@@ -80,6 +90,20 @@ export function RenterBookingList({
                   {line}
                 </p>
               ))}
+              {/* S6-02: one guide per item, each on the same protected page a single booking's opens. */}
+              {booking.items.some((item) => guideFor.has(item.booking_id)) && (
+                <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                  <span className="text-ink-soft">Quick-start guides:</span>
+                  {booking.items
+                    .filter((item) => guideFor.has(item.booking_id))
+                    .map((item) => (
+                      <Link key={item.booking_id} href={bookingGuidePath(item.booking_id)} className="font-medium underline-offset-2 hover:underline">
+                        {item.listing_name ?? "Item"}
+                        {updatedSinceBooking(guideFor.get(item.booking_id)!, guideFor.get(item.booking_id)!.booked_at) && " (updated)"}
+                      </Link>
+                    ))}
+                </p>
+              )}
               {booking.settlement_state && !booking.cancellation_outcome ? (
                 <div className="mt-3">
                   <SettlementTracker state={booking.settlement_state} amounts={booking} viewer="renter" />
@@ -96,6 +120,7 @@ export function RenterBookingList({
               <Badge variant={BOOKING_STATUS_BADGE_VARIANT[booking.status]}>{BOOKING_STATUS_LABELS[booking.status]}</Badge>
               <CancelBookingButton kind="bundle" id={booking.id} status={booking.status} />
               <AddToCalendarButton kind="bundle" booking={booking} />
+              <DownloadReceiptButton kind="bundle" booking={booking} />
               {reviewEligibility.find((item) => item.bundle_booking_id === booking.id) && <ButtonLink href={reviewPath(reviewEligibility.find((item) => item.bundle_booking_id === booking.id)!)} variant="accent" className="px-3 py-1.5 text-xs">Rate owner</ButtonLink>}
               {booking.status === "COMPLETED" && (
                 <ButtonLink href={`/bundles/${booking.bundle_id}`} variant="outline" className="px-3 py-1.5 text-xs">
@@ -145,6 +170,7 @@ export function RenterBookingList({
                   {booking.confirmed_meetup_time && `, ${formatDateTime(booking.confirmed_meetup_time)}`}
                 </p>
               )}
+              <DeliveryAddressLine booking={booking} className="mt-1 text-sm" />
               {booking.status === "CONFIRMED" && booking.handover_state && (
                 <div className="mt-4">
                   <HandoverTracker booking={booking} viewer="renter" />
@@ -152,6 +178,16 @@ export function RenterBookingList({
               )}
               {booking.status === "ACTIVE" && booking.return_state && returnStatusLine(booking.return_state, "renter") && (
                 <p className="mt-1 text-sm text-ink-soft">{returnStatusLine(booking.return_state, "renter")}</p>
+              )}
+              {/* S6-05 Scenario 3: the owner will take it at a higher
+                  deposit, and the request waits on the renter's answer. */}
+              {booking.status === "PENDING" && isOpenOffer(booking.deposit_offer) && (
+                <HigherDepositOffer
+                  bookingId={booking.id}
+                  offer={booking.deposit_offer}
+                  depositCents={booking.deposit_cents ?? 0}
+                  side="renter"
+                />
               )}
               <OverdueNotice booking={booking} side="renter" />
               {booking.pending_extension && (
@@ -167,7 +203,10 @@ export function RenterBookingList({
                 accent; the rest are outline so it is obvious what to do. */}
             <div className="flex w-full flex-wrap items-center justify-end gap-2 border-t border-line pt-3 empty:hidden">
               {/* S4-16: first in the row, at its left edge, apart from the actions that move the booking on. */}
-              <AddToCalendarButton booking={booking} className="mr-auto" />
+              <span className="mr-auto flex flex-wrap gap-2 empty:hidden">
+                <AddToCalendarButton booking={booking} />
+                <DownloadReceiptButton booking={booking} />
+              </span>
               {cancelBlockedReason(booking) ? (
                 <BlockedCancelButton label="Cancel booking" reason={cancelBlockedReason(booking)!} />
               ) : (
@@ -212,6 +251,14 @@ export function RenterBookingList({
                 <ConfirmReturnButton bookingId={booking.id} />
               )}
               {reviewEligibility.find((item) => item.booking_id === booking.id) && <ButtonLink href={reviewPath(reviewEligibility.find((item) => item.booking_id === booking.id)!)} variant="accent" className="px-3 py-1.5 text-xs">Rate owner</ButtonLink>}
+              {guideFor.has(booking.id) && (
+                <ButtonLink href={bookingGuidePath(booking.id)} variant="outline" className="gap-1.5 px-3 py-1.5 text-xs">
+                  Quick-start guide
+                  {updatedSinceBooking(guideFor.get(booking.id)!, booking.created_at) && (
+                    <Badge variant="info" className="px-2 py-0.5">Updated</Badge>
+                  )}
+                </ButtonLink>
+              )}
               {MESSAGEABLE_BOOKING_STATUSES.includes(booking.status) && (
                 <MessageButton target={{ kind: "booking", bookingId: booking.id }} className="px-3 py-1.5 text-xs" />
               )}

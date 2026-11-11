@@ -12,6 +12,7 @@ import { browseListings, ListingApiError } from "@/lib/api/listings";
 import {
   PAGE_SIZE,
   RELAX_FILTER_LABELS,
+  browseHref,
   browsePageHref,
   hasActiveFilters,
   parseBrowseFilters,
@@ -22,7 +23,8 @@ import {
 } from "@/lib/browse-params";
 import type { BrowseListingsResponse, SearchSuggestions } from "@/lib/listings";
 import { getCategoryDemandOverview } from "@/lib/api/analytics";
-import { CloudOff, SearchX, Tag, Zap } from "lucide-react";
+import { Camera, CloudOff, SearchX, Tag, Zap } from "lucide-react";
+import { CATEGORY_LABELS } from "@/lib/listings";
 import { SaveSearchButton } from "@/components/saved-searches/save-search-button";
 
 export const metadata = { title: "Browse marketplace — HobbyRentals" };
@@ -65,6 +67,8 @@ export default async function BrowsePage({
         </div>
         <p className="body-copy" aria-live="polite">{resultSummary(total, error, onlySearched, data?.search_mode)}</p>
       </div>
+
+      {filters.photo && <PhotoBanner filters={filters} />}
 
       {/* S5-11: these listings are shown to every renter, so the one who has
           not earned the badge yet is told what booking one will actually do -
@@ -163,6 +167,8 @@ function NoResults({
   error: string | null;
   suggestions?: SearchSuggestions;
 }) {
+  if (!error && filters.photo) return <NoPhotoMatch filters={filters} />;
+
   if (!error && filters.q && suggestions) {
     return <NothingRelevant filters={filters} suggestions={suggestions} />;
   }
@@ -247,5 +253,44 @@ function NothingRelevant({ filters, suggestions }: { filters: BrowseFilters; sug
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * S6-03 Scenario 2: what the photo search read the photo as. Tapping it runs
+ * the plain text search for that item, without the category it guessed.
+ */
+function PhotoBanner({ filters }: { filters: BrowseFilters }) {
+  const category = filters.photo_category ? CATEGORY_LABELS[filters.photo_category] : null;
+  const asText = browseHref({ ...filters, q: filters.photo, photo: "", photo_category: null, page: 1 });
+  return (
+    <p className="mt-4 flex flex-wrap items-center gap-2 bg-surface-muted px-4 py-3 text-sm text-ink-soft">
+      <Camera className="size-4 shrink-0" aria-hidden="true" />
+      <span>
+        Looks like: <strong className="text-ink">{filters.photo}</strong>
+        {category && <>, {category}</>}
+      </span>
+      <Link href={asText as Route} className="underline hover:text-ink">
+        Search &ldquo;{filters.photo}&rdquo; as text instead
+      </Link>
+    </p>
+  );
+}
+
+/** S6-03 Scenario 4: nothing close to the photo, so offer to ask owners for it. */
+function NoPhotoMatch({ filters }: { filters: BrowseFilters }) {
+  return (
+    <EmptyState icon={Camera}
+      title="No close matches"
+      body={`Nobody has listed anything like this ${filters.photo} yet. Post a gear request and owners with one will be told.`}
+      action={
+        <div className="flex flex-wrap justify-center gap-3">
+          <ButtonLink href={`/requests/new?title=${encodeURIComponent(filters.photo)}` as Route}>Post a gear request</ButtonLink>
+          <ButtonLink href={browseHref({ ...filters, q: filters.photo, photo: "", photo_category: null, page: 1 }) as Route} variant="outline">
+            Search as text
+          </ButtonLink>
+        </div>
+      }
+    />
   );
 }

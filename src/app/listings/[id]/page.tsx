@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { Badge, ButtonLink, Container } from "@/components/ui";
+import { Badge, Container } from "@/components/ui";
 import { BookingPauseNotice } from "@/components/listings/booking-pause-notice";
 import { ListingGallery } from "@/components/listings/listing-gallery";
 import { RateLine } from "@/components/browse/listing-card";
@@ -12,7 +12,8 @@ import { formatDate, formatMoney, todayIso } from "@/lib/format";
 import { CATEGORY_LABELS, CONDITION_LABELS, LOCATION_LABELS, passportBadge } from "@/lib/listings";
 import { BookingRequestForm } from "@/components/bookings/booking-request-form";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
-import { InstantBookBadge } from "@/components/listings/instant-book-badge";
+import { ListingPerks } from "@/components/listings/listing-perks";
+import { OwnerListingTools } from "@/components/listings/owner-listing-tools";
 import { PromotedBadge } from "@/components/listings/promoted-badge";
 import { HighDemandBadge } from "@/components/listings/high-demand-badge";
 import { ListingViewTelemetry } from "@/components/analytics/listing-view-telemetry";
@@ -24,6 +25,8 @@ import { ReportListingButton } from "@/components/listings/report-listing-button
 import { getMyWaitlist } from "@/lib/api/waitlist";
 import { getMyAvailabilityAlerts } from "@/lib/api/availability-alerts";
 import { getMyRenterTrust } from "@/lib/api/verification";
+import { getListingPromoCodes } from "@/lib/api/promo-codes";
+import { ListingPromoCodes } from "@/components/listings/listing-promo-codes";
 import { FavouriteButton } from "@/components/listings/favourite-button";
 import { getListingReviews } from "@/lib/api/reviews";
 import { RentalReviewSection } from "@/components/reviews/rental-review-section";
@@ -31,11 +34,16 @@ import { Suspense } from "react";
 import { SimilarListings, SimilarListingsFallback } from "@/components/listings/similar-listings";
 import Link from "next/link";
 import type { Route } from "next";
-import { PersonAvatar } from "@/components/messages/person-avatar";
+import { PersonAvatar } from "@/components/person-avatar";
 import { AskAboutItem } from "@/components/listings/ask-about-item";
 import { ListingQuestionsSection } from "@/components/listings/listing-questions-section";
 import { OwnerQuestionsPanel } from "@/components/listings/owner-questions-panel";
 import { getOwnerQuestions, getPublicQuestions } from "@/lib/api/listing-questions";
+import { OwnerResponseTime } from "@/components/listings/owner-response-time";
+import { ShareButton } from "@/components/listings/share-button";
+import { siteUrl } from "@/lib/env";
+import { gearPath } from "@/lib/gear";
+import { absoluteUrl, shareText } from "@/lib/share";
 
 function fallbackAttributeLabel(key: string) {
   return key.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
@@ -115,6 +123,10 @@ export default async function ListingDetailPage({
   const reviews = await getListingReviews(listing.id).catch(() => ({ average: null, count: 0, reviews: [] }));
   // S5-07: supplementary like the reviews - a failure hides the section, never the page.
   const isOwner = Boolean(user && user.id === listing.owner_id);
+  // S5-12. Owner-only: the endpoint 404s for anyone else, and a code is
+  // something a renter is given rather than something they can read off the
+  // page. Swallowed - a missing panel must not cost the owner the listing.
+  const promoCodes = isOwner ? await getListingPromoCodes(listing.id).catch(() => []) : [];
   const publicQuestions = listing.status === "ACTIVE" ? await getPublicQuestions(listing.id).catch(() => []) : [];
   const ownerQuestions = isOwner ? await getOwnerQuestions(listing.id).catch(() => null) : null;
 
@@ -133,34 +145,22 @@ export default async function ListingDetailPage({
             </p>
             <HighDemandBadge highDemand={categoryDemand?.is_high_demand} />
             <PromotedBadge promoted={listing.is_promoted} />
-            {/* S5-11 Scenario 1: in the label row, with the listing's other
-                labels, rather than down by the booking form - it is a term
-                of this listing and a renter should see it with the price. */}
-            <InstantBookBadge enabled={listing.instant_book_enabled} />
           </div>
           <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
             <h1 className="heading text-3xl">{listing.name}</h1>
-            <FavouriteButton listingId={listing.id} initiallySaved={listing.is_favourited} initialCount={listing.favourite_count} />
-          </div>
-          {user && user.id === listing.owner_id && (
-            <div className="mt-4 flex flex-wrap gap-2">
-              <ButtonLink href={`/listings/${listing.id}/passport`} variant="outline" className="px-4 py-2 text-xs">
-                View Product Passport
-              </ButtonLink>
-              <ButtonLink href={listing.replacement_value_cents == null ? `/listings/${listing.id}/edit#price` : `/listings/${listing.id}/protection`} variant="accent" className="px-4 py-2 text-xs">
-                HobbyShield
-              </ButtonLink>
+            <div className="flex flex-wrap items-center gap-2">
+              {/* S5-16 Scenario 4: a listing that is not live has no public page to share. */}
               {listing.status === "ACTIVE" && (
-                <ButtonLink href={`/listings/${listing.id}/promotion`} variant="outline" className="px-4 py-2 text-xs">
-                  {listing.is_promoted ? "View promotion" : "Promote listing"}
-                </ButtonLink>
+                <ShareButton url={absoluteUrl(gearPath({ name: listing.name, short_id: listing.id.slice(0, 8) }), siteUrl())} text={shareText(listing)} />
               )}
+              <FavouriteButton listingId={listing.id} initiallySaved={listing.is_favourited} initialCount={listing.favourite_count} />
             </div>
-          )}
-
+          </div>
           <div className="mt-4 border-t border-line pt-4">
             <RateLine listing={listing} />
             <p className="body-copy mt-1">{formatMoney(listing.deposit_cents)} deposit</p>
+            {/* S5-11 Scenario 1 / S6-02 Scenario 2: terms of the rental, so with the price. */}
+            <ListingPerks instantBook={listing.instant_book_enabled} guide={listing.has_guide} delivery={listing} />
           </div>
 
           {/* S5-15 Scenario 2: with the price, before the renter scrolls to
@@ -173,12 +173,13 @@ export default async function ListingDetailPage({
 
           <p className="body-copy mt-6 whitespace-pre-line">{listing.description}</p>
           <Link href={`/members/${listing.owner_id}` as Route} className="mt-5 inline-flex items-center gap-2 text-sm text-ink-soft hover:text-ink">
-            <PersonAvatar name={listing.owner_display_name ?? "Member"} size="sm" />
+            <PersonAvatar name={listing.owner_display_name ?? "Member"} imageUrl={listing.owner_avatar_url} size="sm" />
             <span>Listed by <span className="font-medium underline-offset-2 hover:underline">{listing.owner_display_name ?? "Member"}</span></span>
             {/* S4-01 Scenario 3: alongside the owner's details, where a
                 renter is already deciding whether to trust them. */}
             <VerifiedOwnerBadge verified={listing.owner_verified} />
           </Link>
+          <OwnerResponseTime band={listing.owner_response_time} className="mt-1" />
 
           <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-line pt-6 text-sm">
             <div>
@@ -216,15 +217,12 @@ export default async function ListingDetailPage({
           {listing.status === "ACTIVE" && user && !isOwner && <AskAboutItem listingId={listing.id} />}
           {ownerQuestions && <OwnerQuestionsPanel listingId={listing.id} data={ownerQuestions} />}
 
-          {listing.status === "ACTIVE" && user && user.id === listing.owner_id && (
-            <section className="mt-6 border-t border-line pt-6">
-              <h2 className="heading text-lg">Review your pricing</h2>
-              <p className="body-copy mt-1">Get a fresh market recommendation and apply it from the editable price field.</p>
-              <ButtonLink href={`/listings/${listing.id}/edit#price`} variant="outline" className="mt-4 px-4 py-2 text-xs">
-                Review price
-              </ButtonLink>
-            </section>
-          )}
+          {/* The owner's counterpart of the booking form below. Pricing review lives in it. */}
+          {isOwner && <OwnerListingTools listing={listing} />}
+
+          {/* S5-12: what the owner is currently offering on this listing, and
+              why a code a renter mentioned did or did not work. */}
+          {isOwner && <ListingPromoCodes listingId={listing.id} codes={promoCodes} />}
 
           {listing.status === "ACTIVE" && user && user.id !== listing.owner_id && (
             <BookingRequestForm

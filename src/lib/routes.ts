@@ -57,9 +57,24 @@ export function authErrorPath(code: AuthErrorCode): `/auth-error?reason=${AuthEr
  * Renting and owning are not panels: each lives in its own portal (My rentals,
  * My listings), so the profile is only about the member themselves.
  */
-export type ProfileView = "ratings" | "wallet" | "notifications" | "account" | "connected-apps";
+export type ProfileView =
+  | "ratings"
+  | "wallet"
+  | "referrals"
+  | "notifications"
+  | "language"
+  | "account"
+  | "connected-apps";
 
-const PROFILE_VIEWS: readonly ProfileView[] = ["ratings", "wallet", "notifications", "account", "connected-apps"];
+const PROFILE_VIEWS: readonly ProfileView[] = [
+  "ratings",
+  "wallet",
+  "referrals",
+  "notifications",
+  "language",
+  "account",
+  "connected-apps",
+];
 
 export function isProfileView(value: string | undefined): value is ProfileView {
   return PROFILE_VIEWS.includes(value as ProfileView);
@@ -71,6 +86,19 @@ export const DEFAULT_PROFILE_VIEW: ProfileView = "ratings";
 /** The profile page, optionally opened on a particular panel. */
 export function profilePath(view?: ProfileView): "/profile" | `/profile?view=${ProfileView}` {
   return view ? `/profile?view=${view}` : "/profile";
+}
+
+/**
+ * S6-07: a member's referral link. Opened by someone signed out, it remembers
+ * the code and sends them on to sign up.
+ */
+export function referralPath(code: string): `/r/${string}` {
+  return `/r/${encodeURIComponent(code)}`;
+}
+
+/** The signup screen, with a referral code to fill in for the visitor (S6-07). */
+export function signupPath(referralCode?: string | null): "/signup" | `/signup?ref=${string}` {
+  return referralCode ? `/signup?ref=${encodeURIComponent(referralCode)}` : "/signup";
 }
 
 /**
@@ -88,12 +116,22 @@ export const SAVED_SEARCHES_PATH = "/rentals/saved-searches";
  */
 export const RENTER_BOOKINGS_PATH = "/rentals/bookings";
 
-/** The renter's view of one cross-owner kit (S5-09): every owner's item and where it stands. */
+/** The renter's view of one cross-owner bundle (S5-09): every owner's item and where it stands. */
 export function renterKitPath(kitId: string): `/rentals/kits/${string}` {
   return `/rentals/kits/${kitId}`;
 }
 
-/** The builder, opened to rebuild a kit without what an owner turned down (S5-09 Scenario 3). */
+/** S6-02: where an owner writes and edits the quick-start guide for one listing. */
+export function listingGuidePath(listingId: string): `/listings/${string}/guide` {
+  return `/listings/${listingId}/guide`;
+}
+
+/** S6-02: a renter's quick-start guide, reached from their booking. The same page for single, bundle and kit items. */
+export function bookingGuidePath(bookingId: string): `/bookings/${string}/guide` {
+  return `/bookings/${bookingId}/guide`;
+}
+
+/** The builder, opened to rebuild a bundle without what an owner turned down (S5-09 Scenario 3). */
 export function rebuildKitPath(kitId: string): `/bundles/build?from_kit=${string}` {
   return `/bundles/build?from_kit=${encodeURIComponent(kitId)}`;
 }

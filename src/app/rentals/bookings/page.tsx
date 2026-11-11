@@ -3,6 +3,7 @@ import { RenterPortal, requireRenter } from "@/components/renter-portal";
 import { RenterBookingList, RenterKitList, RenterWaitlist } from "@/components/bookings/renter-booking-list";
 import { SuspensionBanner } from "@/components/bookings/suspension-banner";
 import { getRenterActivity } from "@/lib/api/rentals";
+import { getMyGuideIndex } from "@/lib/api/guides";
 import { isRentalFilter, matchesRentalFilter, RENTAL_FILTERS, type RentalFilter } from "@/lib/rentals";
 import { renterBookingsPath } from "@/lib/routes";
 import { SearchX, ShoppingBag } from "lucide-react";
@@ -18,11 +19,15 @@ export default async function RenterBookingsPage({ searchParams }: { searchParam
   await requireRenter();
   const { show } = await searchParams;
   const filter = isRentalFilter(show) ? show : undefined;
-  const { bookings, bundleBookings, kits, waitlist, reviewEligibility, suspension } = await getRenterActivity();
+  const [{ bookings, bundleBookings, kits, waitlist, reviewEligibility, suspension }, guides] = await Promise.all([
+    getRenterActivity(),
+    // S6-02: links to quick-start guides. A failure only hides the links.
+    getMyGuideIndex().catch(() => []),
+  ]);
 
-  // S5-09: an item of a cross-owner kit is the same thing as its kit's card, so
-  // it is not listed again as a booking of its own; the kit's page carries its
-  // actions. The kit shows wherever any of its items would have.
+  // S5-09: an item of a cross-owner bundle is the same thing as its bundle's card, so
+  // it is not listed again as a booking of its own; the bundle's page carries its
+  // actions. The bundle shows wherever any of its items would have.
   const ownBookings = bookings.filter((booking) => !booking.booking_group_id);
   const bookingsUnder = (value: RentalFilter | undefined) => {
     if (value === "waitlist") return { bookings: [], bundleBookings: [], kits: [] };
@@ -88,6 +93,7 @@ export default async function RenterBookingsPage({ searchParams }: { searchParam
                 bookings={shown.bookings}
                 bundleBookings={shown.bundleBookings}
                 reviewEligibility={reviewEligibility}
+                guides={guides}
               />
             )}
 

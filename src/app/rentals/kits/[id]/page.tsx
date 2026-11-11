@@ -4,6 +4,7 @@ import { KitDetail } from "@/components/bundles/kit-detail";
 import { getKit, KitApiError } from "@/lib/api/booking-groups";
 import { getMyBookings } from "@/lib/api/bookings";
 import { getReviewEligibility } from "@/lib/api/reviews";
+import { getMyGuideIndex } from "@/lib/api/guides";
 
 export const metadata = { title: "Bundle request — HobbyRentals" };
 
@@ -17,13 +18,17 @@ export default async function KitPage({ params }: { params: Promise<{ id: string
   });
   // Once an owner has accepted, an item is shown as the booking it is, with the
   // same actions it has anywhere (cancel, meetup, pickup, return, claims).
-  const [bookings, reviewEligibility] = await Promise.all([getMyBookings(), getReviewEligibility().catch(() => [])]);
+  const [bookings, reviewEligibility, guides] = await Promise.all([
+    getMyBookings(),
+    getReviewEligibility().catch(() => []),
+    getMyGuideIndex().catch(() => []),
+  ]);
   const accepted = bookings.filter(
     (booking) => booking.booking_group_id === kit.id && ["CONFIRMED", "ACTIVE", "COMPLETED"].includes(booking.status),
   );
   return (
     <RenterPortal active="Bookings" title="Bookings">
-      <KitDetail kit={kit} acceptedBookings={accepted} reviewEligibility={reviewEligibility} />
+      <KitDetail kit={kit} acceptedBookings={accepted} reviewEligibility={reviewEligibility} guides={guides} />
     </RenterPortal>
   );
 }

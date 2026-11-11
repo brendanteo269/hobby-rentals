@@ -30,6 +30,7 @@ export async function requestPriceRecommendation(input: PricingRecommendationReq
     throw caught;
   }
 }
+import { validateDeliverySettings } from "@/lib/delivery";
 import { dollarsToCents, todayIso } from "@/lib/format";
 import {
   BASELINE_INCOMPLETE,
@@ -143,6 +144,13 @@ function hiddenAttributes(formData: FormData): Record<string, string | number> {
 
 const isString = (value: unknown): value is string => typeof value === "string";
 const isNumber = (value: unknown): value is number => typeof value === "number";
+const isDraftPromoCode = (value: unknown): value is NonNullable<CreateListingRequest["initial_promo_codes"]>[number] =>
+  typeof value === "object" &&
+  value !== null &&
+  typeof (value as { code?: unknown }).code === "string" &&
+  ((value as { discount_type?: unknown }).discount_type === "PERCENT" ||
+    (value as { discount_type?: unknown }).discount_type === "FIXED");
+
 const isBlackout = (value: unknown): value is BlackoutDate =>
   typeof value === "object" &&
   value !== null &&
@@ -201,6 +209,20 @@ function parseListingFields(
     fieldErrors.deposit_cents = "Enter a deposit amount, or 0 for none.";
   }
 
+  // S6-09: the radius and fee inputs only exist while the switch is on, so
+  // off means both are cleared. FastAPI is still the authority on the limits;
+  // this only says which of the two boxes to put the message under.
+  const deliveryEnabled = formData.get("delivery_enabled") === "on";
+  const deliveryRadius = deliveryEnabled ? count(formData, "delivery_radius_km") : null;
+  const deliveryFee = deliveryEnabled ? cents(formData, "delivery_fee") : null;
+  const deliverySettings = {
+    delivery_enabled: deliveryEnabled,
+    delivery_radius_km: deliveryRadius === null || Number.isNaN(deliveryRadius) ? null : deliveryRadius,
+    delivery_fee_cents: deliveryFee === null || Number.isNaN(deliveryFee) ? null : deliveryFee,
+  };
+  const deliveryProblem = validateDeliverySettings(deliverySettings);
+  if (deliveryProblem) fieldErrors[deliveryProblem.field] = deliveryProblem.message;
+
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
 
   return {
@@ -211,6 +233,7 @@ function parseListingFields(
       category,
       condition: condition as CreateListingRequest["condition"],
       location_area: locationArea as CreateListingRequest["location_area"],
+      ...deliverySettings,
       price_per_day_cents: pricePerDay,
       price_per_week_cents: pricePerWeek,
       deposit_cents: deposit!,
@@ -271,6 +294,9 @@ export async function submitListing(
     has_custom_availability: text(formData, "has_custom_availability") === "true",
     custom_available_days: hiddenList(formData, "custom_available_days", isNumber),
     initial_blackouts: hiddenList(formData, "initial_blackouts", isBlackout),
+    // S5-12: codes written while the listing was being created, applied to
+    // it by the API once it exists.
+    initial_promo_codes: hiddenList(formData, "initial_promo_codes", isDraftPromoCode),
     attributes: hiddenAttributes(formData),
     ...(serial && { serial }),
   };

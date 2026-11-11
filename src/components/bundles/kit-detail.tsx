@@ -4,14 +4,15 @@ import { Badge, ButtonLink, ImageSlot } from "@/components/ui";
 import { RenterBookingList } from "@/components/bookings/renter-booking-list";
 import { BOOKING_STATUS_BADGE_VARIANT, BOOKING_STATUS_LABELS, type Booking } from "@/lib/bookings";
 import type { ReviewEligibility } from "@/lib/reviews";
+import type { GuideIndexEntry } from "@/lib/guides";
 import { KIT_STATUS_LABELS, kitFailureMessage, pendingItemCount, type Kit, type KitItem } from "@/lib/booking-groups";
 import { formatDateRange, formatMoney } from "@/lib/format";
 import { rebuildKitPath } from "@/lib/routes";
 import { WithdrawKitButton } from "./withdraw-kit-button";
 
 /**
- * One cross-owner kit as the renter follows it (S5-09 Scenario 4): every
- * owner's item with its own status in one view, and the next step for the kit
+ * One cross-owner bundle as the renter follows it (S5-09 Scenario 4): every
+ * owner's item with its own status in one view, and the next step for the bundle
  * as a whole. An item is still an ordinary booking, so its meetup, pickup,
  * return and settlement happen on its own row in Bookings, linked from here.
  */
@@ -19,11 +20,14 @@ export function KitDetail({
   kit,
   acceptedBookings,
   reviewEligibility,
+  guides,
 }: {
   kit: Kit;
-  /** The kit's items an owner has accepted, as the bookings they are. */
+  /** The bundle's items an owner has accepted, as the bookings they are. */
   acceptedBookings: Booking[];
   reviewEligibility: ReviewEligibility[];
+  /** S6-02: so each accepted item links to its owner's quick-start guide, as it would in Bookings. */
+  guides: GuideIndexEntry[];
 }) {
   const waiting = pendingItemCount(kit);
   const anyAccepted = kit.items.some((item) => item.status !== "PENDING");
@@ -64,7 +68,7 @@ export function KitDetail({
           ))}
       </ul>
       {acceptedBookings.length > 0 && (
-        <RenterBookingList bookings={acceptedBookings} bundleBookings={[]} reviewEligibility={reviewEligibility} />
+        <RenterBookingList bookings={acceptedBookings} bundleBookings={[]} reviewEligibility={reviewEligibility} guides={guides} />
       )}
     </div>
   );

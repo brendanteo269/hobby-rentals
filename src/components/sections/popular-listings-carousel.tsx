@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { scrollEdgeMask } from "@/components/ui";
 import { ListingCard } from "@/components/browse/listing-card";
 import type { PopularListingCard } from "@/lib/listings";
 
@@ -31,7 +32,7 @@ export function PopularListingsCarousel({ listings }: { listings: PopularListing
 
   return (
     <div className="relative mt-8">
-      <div className="-mx-1 overflow-hidden px-1">
+      <div className="-mx-1 overflow-hidden px-1" style={{ maskImage: scrollEdgeMask(canMove) }}>
         <ul ref={trackRef} onScroll={syncPosition} className="flex snap-x snap-mandatory gap-5 overflow-x-auto pb-3 pr-6 [scrollbar-width:thin]" aria-label="Popular listings">
           {listings.map((listing) => <ListingCard key={listing.id} listing={listing} highDemand={listing.is_high_demand} className="min-w-[17rem] snap-start sm:min-w-[18.5rem]" />)}
         </ul>

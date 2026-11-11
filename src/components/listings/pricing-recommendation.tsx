@@ -6,6 +6,7 @@ import { requestPriceRecommendation } from "@/app/listings/actions";
 import { centsToDollars, formatMoney } from "@/lib/format";
 import { CONDITION_LABELS, type ListingCondition } from "@/lib/listings";
 import type { PricingCycle, PricingRecommendation } from "@/lib/pricing";
+import { forecastWeeksPhrase } from "@/lib/demand-forecast";
 
 export function PricingRecommendationPanel({
   category,
@@ -57,7 +58,8 @@ export function PricingRecommendationPanel({
       <p className="font-medium">Recommended rental price: {formatMoney(result.suggested_price_cents)} / {billingCycle === "DAY" ? "day" : "week"}</p>
       <p className="mt-1 text-ink-soft">Range: {formatMoney(result.lower_price_cents!)} – {formatMoney(result.upper_price_cents!)}</p>
       {result.demand?.is_high_demand && <p className="mt-3"><span className="font-medium">High demand detected (+{result.demand.surge_percentage}%).</span> The category’s recent activity raised this suggestion by {Math.round((result.demand.suggested_multiplier - 1) * 100)}%.</p>}
-      {onApply && <Button type="button" className="mt-4" onClick={() => onApply(centsToDollars(result.suggested_price_cents!))}>Apply {formatMoney(result.suggested_price_cents)}</Button>}
+      {result.forecast_high_weeks.length > 0 && <p className="mt-3"><span className="font-medium">Demand forecast: High for {forecastWeeksPhrase(result.forecast_high_weeks.map((week) => week.week_start))}.</span> Worth keeping those dates open.</p>}
+      {onApply && <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2"><Button type="button" onClick={() => onApply(centsToDollars(result.suggested_price_cents!))}>Apply {formatMoney(result.suggested_price_cents)}</Button><p className="text-xs text-ink-soft">Fills in your price. Nothing changes until you save.</p></div>}
       <div className="mt-4 border-t border-line pt-3"><p className="font-medium">Based on {result.usable_comparables_count} active comparables</p>{result.matching_tier === "CATEGORY" && <p className="mt-1 text-xs text-ink-soft">Using a broader category comparison because fewer than three closer matches were available.</p>}<ul className="mt-2 space-y-2 text-ink-soft">{visibleComparables.map((item) => <li key={item.id}><p>{item.name} · {item.brand} · {CONDITION_LABELS[item.condition]} · {formatMoney(billingCycle === "DAY" ? item.normalized_daily_rate_cents : item.normalized_daily_rate_cents * 7)} / {billingCycle === "DAY" ? "day" : "week"}</p><p className="text-xs">Matched on: {item.matched_attributes.join(", ")}</p></li>)}</ul>{hiddenComparableCount > 0 && <Button type="button" variant="outline" className="mt-3" onClick={() => setShowAllComparables(true)}>Show all {sortedComparables.length} comparables</Button>}{showAllComparables && sortedComparables.length > 5 && <Button type="button" variant="outline" className="mt-3" onClick={() => setShowAllComparables(false)}>Show fewer comparables</Button>}{result.outliers_excluded_count > 0 && <p className="mt-2 text-xs text-ink-soft">{result.outliers_excluded_count} outlier{result.outliers_excluded_count === 1 ? "" : "s"} beyond 1.5× IQR excluded.</p>}</div>
     </div>}
   </div>;

@@ -65,6 +65,11 @@ export type NotificationType =
   // and a renter told an owner has it.
   | "GEAR_REQUEST_POSTED_OWNER"
   | "GEAR_REQUEST_OFFERED"
+  // S6-05: the owner accepting on condition of a bigger deposit, and the
+  // renter's answer either way.
+  | "BOOKING_DEPOSIT_OFFER"
+  | "BOOKING_DEPOSIT_OFFER_ACCEPTED_OWNER"
+  | "BOOKING_DEPOSIT_OFFER_DECLINED_OWNER"
   // S2-19: handover meetup coordination on a confirmed booking.
   | "MEETUP_PROPOSED"
   | "MEETUP_ACCEPTED"
@@ -75,6 +80,8 @@ export type NotificationType =
   | "SAVED_SEARCH_MATCH"
   // S5-03: renters started searching for something the owner's listing does not cover.
   | "SEARCH_GAP_RISING"
+  // S6-06: the owner has blocked days in a week forecast to be in high demand.
+  | "DEMAND_HIGH_BLOCKED_OWNER"
   // S3-21: the owner's listing was reported and is under review.
   | "LISTING_REPORTED_OWNER"
   | "ACCOUNT_REPORTED"
@@ -92,7 +99,12 @@ export type NotificationType =
   | "HOBBYSHIELD_EXPIRING_TODAY"
   | "HOBBYSHIELD_EXPIRED"
   // S2-16: the other party sent a plain text/attachment message.
-  | "MESSAGE_RECEIVED";
+  | "MESSAGE_RECEIVED"
+  // S6-07: referral credit, to the member who invited a friend and to the
+  // friend; and, at signup, the friend told their code counted.
+  | "REFERRAL_APPLIED_REFEREE"
+  | "REFERRAL_REWARDED_REFERRER"
+  | "REFERRAL_REWARDED_REFEREE";
 
 /** Mirrors app/notification_catalog.py NotificationCategory. */
 export type NotificationCategory =
@@ -203,17 +215,24 @@ export const NOTIFICATION_TYPE_LABELS: Record<NotificationType, string> = {
   AVAILABILITY_ALERT_FULFILLED: "Watched dates free",
   GEAR_REQUEST_POSTED_OWNER: "Gear request posted",
   GEAR_REQUEST_OFFERED: "Offer on your request",
+  BOOKING_DEPOSIT_OFFER: "Higher deposit offered",
+  BOOKING_DEPOSIT_OFFER_ACCEPTED_OWNER: "Higher deposit agreed",
+  BOOKING_DEPOSIT_OFFER_DECLINED_OWNER: "Higher deposit declined",
   MEETUP_PROPOSED: "Meetup proposed",
   MEETUP_ACCEPTED: "Meetup confirmed",
   LISTING_DEACTIVATED: "Listing deactivated",
   LISTING_REACTIVATED: "Listing reactivated",
   SAVED_SEARCH_MATCH: "Saved search match",
   SEARCH_GAP_RISING: "New search trend",
+  DEMAND_HIGH_BLOCKED_OWNER: "High demand ahead",
   HOBBYSHIELD_EXPIRING_7_DAYS: "HobbyShield expires in seven days",
   HOBBYSHIELD_EXPIRING_3_DAYS: "HobbyShield expires in three days",
   HOBBYSHIELD_EXPIRING_TODAY: "HobbyShield expires today",
   HOBBYSHIELD_EXPIRED: "HobbyShield expired",
   MESSAGE_RECEIVED: "New message",
+  REFERRAL_APPLIED_REFEREE: "Referral applied",
+  REFERRAL_REWARDED_REFERRER: "Referral credit earned",
+  REFERRAL_REWARDED_REFEREE: "Welcome reward added",
 };
 
 export const NOTIFICATION_TYPES = Object.keys(NOTIFICATION_TYPE_LABELS) as NotificationType[];

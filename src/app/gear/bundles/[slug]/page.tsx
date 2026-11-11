@@ -3,12 +3,14 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { ButtonLink, Container, ImageSlot } from "@/components/ui";
 import { RentalReviewSection } from "@/components/reviews/rental-review-section";
+import { ShareButton } from "@/components/listings/share-button";
 import { BookingPauseNotice } from "@/components/listings/booking-pause-notice";
 import { getPublicBundle } from "@/lib/api/public";
 import { formatMoney, todayIso } from "@/lib/format";
 import { siteUrl } from "@/lib/env";
 import { gearBundlePath, gearPath, loginToAct, shortIdFrom } from "@/lib/gear";
 import { CATEGORY_LABELS } from "@/lib/listings";
+import { absoluteUrl, shareText } from "@/lib/share";
 import { createClient } from "@/lib/supabase/server";
 
 type Props = { params: Promise<{ slug: string }> };
@@ -60,6 +62,9 @@ export default async function PublicBundlePage({ params }: Props) {
       <div className="mx-auto max-w-3xl">
         <p className="eyebrow">Gear bundle · {bundle.items.length} {bundle.items.length === 1 ? "item" : "items"}</p>
         <h1 className="heading mt-3 text-3xl">{bundle.name}</h1>
+        <div className="mt-3">
+          <ShareButton url={absoluteUrl(canonical, siteUrl())} text={shareText(bundle)} what="bundle" />
+        </div>
         {bundle.booking_pause && (
           <div className="mt-4">
             <BookingPauseNotice pause={bundle.booking_pause} today={todayIso()} />

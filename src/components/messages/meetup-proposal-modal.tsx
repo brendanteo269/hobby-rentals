@@ -1,8 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Button, Input, Modal, Select } from "@/components/ui";
-import { proposeBookingMeetup } from "@/app/messages/actions";
+import { checkBookingMeetupConflicts, proposeBookingMeetup } from "@/app/messages/actions";
+import { MeetupConflictWarning } from "./meetup-conflict-warning";
+import { PostalAddressFields } from "@/components/postal-address-fields";
+import { usePostalAddress } from "@/components/use-postal-address";
+import { clashingTimes, toTimeOfDayValue, type MeetupConflictCheck } from "@/lib/meetup-conflicts";
 import { combineDateAndTime, composeMeetupLocation, TIME_OF_DAY_OPTIONS } from "@/lib/meetups";
 import { LOCATION_AREAS, LOCATION_LABELS, isLocationArea, type LocationArea } from "@/lib/listings";
 import { formatDate } from "@/lib/format";
@@ -39,62 +43,13 @@ export function MeetupProposalModal({
   const [mode, setMode] = useState<"area" | "custom">(prefillArea ? "area" : "custom");
   const [area, setArea] = useState<LocationArea | "">(prefillArea ?? "");
   const [detail, setDetail] = useState("");
-  const [postal, setPostal] = useState("");
-  const [address, setAddress] = useState("");
-  const [postalLookup, setPostalLookup] = useState<"idle" | "loading" | "found" | "not-found" | "error">("idle");
+  // The postal-code lookup is shared with the delivery form; it is paused while an area is chosen instead.
+  const postalAddress = usePostalAddress(mode === "custom");
+  const { address } = postalAddress;
   const [times, setTimes] = useState<string[]>([""]);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // The postal code a lookup has already resolved address for. Switching to
-  // "Choose an area" and back to "Custom address" re-runs this effect (mode
-  // is one of its triggers), but re-fetching the same postal code would
-  // silently overwrite any edit made to the address field since - skipped
-  // whenever the postal code itself hasn't actually changed.
-  const resolvedPostalRef = useRef<string | null>(null);
-
-  // Looks up the postal code once it's a complete 6-digit SG code, debounced
-  // so it doesn't fire on every keystroke. The resolved address only ever
-  // pre-fills the (still freely editable) address field - a lookup never
-  // blocks or overwrites something the renter/owner has already typed over.
-  useEffect(() => {
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      if (mode !== "custom" || !/^\d{6}$/.test(postal)) {
-        setPostalLookup("idle");
-        return;
-      }
-      if (postal === resolvedPostalRef.current) {
-        setPostalLookup("found");
-        return;
-      }
-      setPostalLookup("loading");
-      void (async () => {
-        try {
-          const response = await fetch(`/api/onemap/search?postal=${postal}`, { signal: controller.signal });
-          const body = (await response.json()) as { results?: { address: string }[]; error?: string };
-          if (!response.ok || !body.results) {
-            setPostalLookup("error");
-            return;
-          }
-          if (body.results.length === 0) {
-            setPostalLookup("not-found");
-            return;
-          }
-          resolvedPostalRef.current = postal;
-          setAddress(body.results[0].address);
-          setPostalLookup("found");
-        } catch (caught) {
-          if (!(caught instanceof DOMException && caught.name === "AbortError")) setPostalLookup("error");
-        }
-      })();
-    }, 400);
-
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [mode, postal]);
+  const [conflicts, setConflicts] = useState<MeetupConflictCheck | null>(null);
 
   const location = composeMeetupLocation(
     mode === "area" ? { mode, area, detail } : { mode, address },
@@ -110,12 +65,12 @@ export function MeetupProposalModal({
     setTimes((current) => current.filter((_, i) => i !== index));
   }
 
-  async function submit() {
-    if (!canSubmit) return;
+  /** Sends the proposal; `acknowledged` once the person has seen and accepted a clash warning. */
+  async function send(acknowledged: boolean) {
     setIsSending(true);
     setError(null);
     try {
-      const result = await proposeBookingMeetup(bookingId, location, validTimes);
+      const result = await proposeBookingMeetup(bookingId, location, validTimes, acknowledged);
       if ("error" in result) {
         setError(result.error);
         return;
@@ -127,7 +82,37 @@ export function MeetupProposalModal({
     }
   }
 
+  /** S6-01: checks the times first; a clash or an away owner is shown before anything is sent. */
+  async function submit() {
+    if (!canSubmit) return;
+    setIsSending(true);
+    setError(null);
+    const result = await checkBookingMeetupConflicts(bookingId, validTimes);
+    setIsSending(false);
+    if ("error" in result) {
+      setError(result.error);
+      return;
+    }
+    if (result.check.blocked_reason || clashingTimes(result.check).length > 0) {
+      setConflicts(result.check);
+      return;
+    }
+    await send(false);
+  }
+
+  /** Swaps a suggested free slot in for the clashing time and returns to the form to review it. */
+  function pickSuggestion(clashingTime: string, suggestion: string) {
+    const slot = toTimeOfDayValue(suggestion);
+    setTimes((current) => {
+      // Keep each remaining time unique so the same slot isn't offered twice.
+      const next = current.map((t) => (combineDateAndTime(pickupDate, t) === clashingTime ? slot : t));
+      return next.filter((t, i) => next.indexOf(t) === i);
+    });
+    setConflicts(null);
+  }
+
   return (
+    <>
     <Modal title="Propose a meetup" onClose={onClose}>
       <div className="mt-5 space-y-4">
         <div>
@@ -186,30 +171,8 @@ export function MeetupProposalModal({
               Custom address
             </label>
             {mode === "custom" && (
-              <div className="ml-6 max-w-sm space-y-2">
-                <div>
-                  <Input
-                    value={postal}
-                    onChange={(event) => setPostal(event.target.value.replace(/\D/g, "").slice(0, 6))}
-                    inputMode="numeric"
-                    placeholder="Postal code, e.g. 118956"
-                  />
-                  {postalLookup === "loading" && <p className="mt-1 text-xs text-ink-soft">Looking up address…</p>}
-                  {postalLookup === "found" && (
-                    <p className="mt-1 text-xs text-ink-soft">Address filled in below — edit it if needed.</p>
-                  )}
-                  {postalLookup === "not-found" && (
-                    <p className="mt-1 text-xs text-ink-soft">No address found for that postal code.</p>
-                  )}
-                  {postalLookup === "error" && (
-                    <p className="mt-1 text-xs text-ink-soft">Couldn&apos;t look that up — type the address below.</p>
-                  )}
-                </div>
-                <Input
-                  value={address}
-                  onChange={(event) => setAddress(event.target.value)}
-                  placeholder="e.g. 123 Example St"
-                />
+              <div className="ml-6">
+                <PostalAddressFields lookup={postalAddress} />
               </div>
             )}
           </div>
@@ -276,5 +239,15 @@ export function MeetupProposalModal({
         </Button>
       </div>
     </Modal>
+    {conflicts && (
+      <MeetupConflictWarning
+        check={conflicts}
+        isSending={isSending}
+        onClose={() => setConflicts(null)}
+        onGoAhead={() => void send(true)}
+        onPickSuggestion={pickSuggestion}
+      />
+    )}
+    </>
   );
 }

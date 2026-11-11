@@ -1,6 +1,6 @@
 import "server-only";
 
-import { backendRequest } from "@/lib/api/client";
+import { backendRequest, backendFile } from "@/lib/api/client";
 import type {
   Booking,
   BookingQuote,
@@ -10,6 +10,7 @@ import type {
   DeclineReason,
 } from "@/lib/bookings";
 import type { CancellationPreview, CancellationRecord } from "@/lib/cancellations";
+import type { DeliveryChoice } from "@/lib/delivery";
 import type { ClaimSettlement, DamageClaim, RentalDispute, RepairEstimate } from "@/lib/settlement";
 
 // Re-exported so existing callers keep importing the quote from here.
@@ -21,10 +22,14 @@ export function createBooking(
   end_date: string,
   idempotency_key: string,
   damage_protection = false,
+  /** S5-12: the code the renter typed. The server prices it; we never send an amount. */
+  promo_code: string | null = null,
+  /** S6-09: deliver to this address. The server refuses one outside the listing's radius. */
+  delivery: DeliveryChoice | null = null,
 ) {
   return backendRequest<Booking>("/bookings", {
     method: "POST",
-    body: JSON.stringify({ listing_id, start_date, end_date, idempotency_key, damage_protection }),
+    body: JSON.stringify({ listing_id, start_date, end_date, idempotency_key, damage_protection, promo_code, delivery }),
   });
 }
 
@@ -33,6 +38,8 @@ export function getBookingQuote(
   startDate: string,
   endDate: string,
   damageProtection = false,
+  promoCode: string | null = null,
+  delivery: DeliveryChoice | null = null,
 ) {
   const query = new URLSearchParams({
     listing_id: listingId,
@@ -40,6 +47,12 @@ export function getBookingQuote(
     end_date: endDate,
     damage_protection: String(damageProtection),
   });
+  if (promoCode) query.set("promo_code", promoCode);
+  if (delivery) {
+    query.set("delivery_address", delivery.address);
+    query.set("delivery_lat", String(delivery.lat));
+    query.set("delivery_lng", String(delivery.lng));
+  }
   return backendRequest<BookingQuote>(`/bookings/quote?${query.toString()}`);
 }
 
@@ -142,6 +155,16 @@ export function cancelBooking(bookingId: string, idempotency_key: string, expect
     `/bookings/${encodeURIComponent(bookingId)}/cancel`,
     { method: "POST", body: JSON.stringify({ idempotency_key, expected_refund_cents }) },
   );
+}
+
+/**
+ * S6-10: the caller's receipt for a confirmed booking, as a PDF. The renter's
+ * copy shows what they paid; the owner's adds what they earn. Once the rental
+ * is settled it also shows where the deposit went and the owner's payout.
+ */
+export function getBookingReceipt(kind: "single" | "bundle", bookingId: string) {
+  const id = encodeURIComponent(bookingId);
+  return backendFile(kind === "bundle" ? `/bundles/bookings/${id}/receipt` : `/bookings/${id}/receipt`);
 }
 
 /** S4-16: one confirmed rental as an .ics file. Bundle bookings have their own route. */

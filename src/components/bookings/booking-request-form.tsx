@@ -11,9 +11,13 @@ import {
 } from "@/components/bookings/availability-calendar";
 import { BookingQuoteSummary } from "@/components/bookings/booking-quote-summary";
 import { DamageProtectionField } from "@/components/bookings/damage-protection-field";
+import { DeliveryField } from "@/components/bookings/delivery-field";
+import { PromoCodeField } from "@/components/bookings/promo-code-field";
+import { usePostalAddress } from "@/components/use-postal-address";
 import { quoteBooking, requestBooking } from "@/app/bookings/actions";
 import type { BookingQuote } from "@/lib/api/bookings";
 import type { Booking } from "@/lib/bookings";
+import { OUTSIDE_RADIUS_CODE, type DeliveryChoice } from "@/lib/delivery";
 import { formatDate, formatMoney } from "@/lib/format";
 import { RENTALS_PATH } from "@/lib/routes";
 import {
@@ -140,6 +144,21 @@ export function BookingRequestForm({
   // S2-09. Kept here rather than read off the quote so the renter's choice
   // survives re-picking dates, and so toggling it can re-price immediately.
   const [damageProtection, setDamageProtection] = useState(false);
+  // S5-12. Two values, not one: what is typed in the box, and what the
+  // server accepted. Re-pricing must send the accepted one, so editing the
+  // box without applying it cannot quietly change the price.
+  const [promoInput, setPromoInput] = useState("");
+  const [appliedCode, setAppliedCode] = useState<string | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  // S6-09. Three things, as with the promo code: whether the renter ticked
+  // delivery, the address the server accepted and priced (which is what
+  // re-pricing sends), and whether it refused the address as out of range.
+  // The postal-address state lives here so re-pricing the summary does not
+  // clear what the renter typed.
+  const [deliveryWanted, setDeliveryWanted] = useState(false);
+  const [delivery, setDelivery] = useState<DeliveryChoice | null>(null);
+  const [deliveryUnavailable, setDeliveryUnavailable] = useState(false);
+  const postalAddress = usePostalAddress(deliveryWanted);
   // Generated once per quoted date range and reused across retries of
   // submitting it (e.g. a request that times out but actually succeeds
   // server-side), so a double-submit places only one wallet hold. A new
@@ -184,11 +203,11 @@ export function BookingRequestForm({
    * fourth copy of this is a fourth chance to forget the key.
    */
   const priceRange = useCallback(
-    (start: string, end: string, protection: boolean) => {
+    (start: string, end: string, protection: boolean, code: string | null = null, choice: DeliveryChoice | null = null) => {
       setQuote(null);
       setIdempotencyKey(null);
       startPricing(async () => {
-        const result = await quoteBooking(listingId, start, end, protection);
+        const result = await quoteBooking(listingId, start, end, protection, code, choice);
         if ("error" in result) setError(result.error);
         else {
           setQuote(result.quote);
@@ -226,8 +245,43 @@ export function BookingRequestForm({
       setIdempotencyKey(null);
     } else if (endDates.includes(day)) {
       setEndDate(day);
-      priceRange(startDate, day, damageProtection);
+      priceRange(startDate, day, damageProtection, appliedCode, delivery);
     }
+  }
+
+  /**
+   * S5-12 Scenario 2 and 3: applying a code re-prices through the server.
+   *
+   * The renter sends a code and never an amount, so a rejected one
+   * (Scenario 3) comes back as the reason it was rejected and the price
+   * stays where it was.
+   */
+  function applyPromo(code: string | null) {
+    setPromoError(null);
+    clearOutcome();
+    if (!startDate || !endDate) {
+      setAppliedCode(code);
+      return;
+    }
+    setQuote(null);
+    setIdempotencyKey(null);
+    startPricing(async () => {
+      const result = await quoteBooking(listingId, startDate, endDate, damageProtection, code, delivery);
+      if ("error" in result) {
+        // The dates are unchanged and still priced as they were; only the
+        // code failed, so it is the code that is reported.
+        setPromoError(result.error);
+        const previous = await quoteBooking(listingId, startDate, endDate, damageProtection, appliedCode, delivery);
+        if (!("error" in previous)) {
+          setQuote(previous.quote);
+          setIdempotencyKey(crypto.randomUUID());
+        }
+        return;
+      }
+      setAppliedCode(code);
+      setQuote(result.quote);
+      setIdempotencyKey(crypto.randomUUID());
+    });
   }
 
   /**
@@ -239,14 +293,55 @@ export function BookingRequestForm({
     setDamageProtection(selected);
     if (!startDate || !endDate) return;
     clearOutcome();
-    priceRange(startDate, endDate, selected);
+    priceRange(startDate, endDate, selected, appliedCode, delivery);
+  }
+
+  /**
+   * S6-09 Scenarios 2 and 3: asks the server to price delivery to this
+   * address, or without delivery when `choice` is null.
+   *
+   * The quote is left on screen while pricing: this sits inside the summary,
+   * and clearing the quote would unmount it mid-click. The submit button is
+   * disabled while pricing and the key is dropped, so the old figure cannot
+   * be sent. If the server refuses the address as outside the radius the
+   * renter is told so, and the price goes back to what it was without delivery.
+   */
+  function chooseDelivery(choice: DeliveryChoice | null) {
+    if (!startDate || !endDate) return;
+    clearOutcome();
+    setDeliveryUnavailable(false);
+    setIdempotencyKey(null);
+    startPricing(async () => {
+      const result = await quoteBooking(listingId, startDate, endDate, damageProtection, appliedCode, choice);
+      if ("error" in result) {
+        if (result.code === OUTSIDE_RADIUS_CODE) setDeliveryUnavailable(true);
+        else setError(result.error);
+        const fallback = await quoteBooking(listingId, startDate, endDate, damageProtection, appliedCode, null);
+        setDelivery(null);
+        if (!("error" in fallback)) {
+          setQuote(fallback.quote);
+          setIdempotencyKey(crypto.randomUUID());
+        }
+        return;
+      }
+      setDelivery(choice);
+      setQuote(result.quote);
+      setIdempotencyKey(crypto.randomUUID());
+    });
+  }
+
+  /** Unticking drops an accepted address from the price at once. */
+  function toggleDelivery(wanted: boolean) {
+    setDeliveryWanted(wanted);
+    setDeliveryUnavailable(false);
+    if (!wanted && delivery) chooseDelivery(null);
   }
 
   function submit() {
     if (!startDate || !endDate || !idempotencyKey) return;
     clearOutcome();
     startSending(async () => {
-      const result = await requestBooking(listingId, startDate, endDate, idempotencyKey, damageProtection);
+      const result = await requestBooking(listingId, startDate, endDate, idempotencyKey, damageProtection, appliedCode, delivery);
       if ("error" in result) {
         setError(result.error);
         setErrorCode(result.code);
@@ -334,11 +429,37 @@ export function BookingRequestForm({
         </p>
       )}
 
+      {/* S5-12: after the dates, before the breakdown it changes. */}
+      {startDate && endDate && (
+        <PromoCodeField
+          value={promoInput}
+          onChange={setPromoInput}
+          appliedCode={appliedCode}
+          error={promoError}
+          disabled={isPending}
+          onApply={() => applyPromo(promoInput.trim())}
+          onRemove={() => {
+            setPromoInput("");
+            applyPromo(null);
+          }}
+        />
+      )}
+
       {quote && (
         <>
           <DamageProtectionField
             offer={quote.damage_protection}
             onChange={toggleProtection}
+            disabled={isPending}
+          />
+          <DeliveryField
+            offer={quote.delivery}
+            wanted={deliveryWanted}
+            onWantedChange={toggleDelivery}
+            lookup={postalAddress}
+            applied={delivery}
+            unavailable={deliveryUnavailable}
+            onApply={chooseDelivery}
             disabled={isPending}
           />
           <BookingQuoteSummary quote={quote} />

@@ -12,6 +12,7 @@ import { NewMessageToaster } from "./messages/new-message-toaster";
 import { NotificationBell } from "./notifications/notification-bell";
 import { getNotificationCounts } from "@/lib/api/notifications";
 import { getOwnProfile } from "@/lib/profile";
+import { getOwnAvatarUrl } from "@/lib/api/profile-avatar";
 import { defaultDashboardPath } from "@/lib/routes";
 
 /**
@@ -34,7 +35,9 @@ export async function SiteHeader() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const [counts, profile] = user ? await Promise.all([notificationCounts(), getOwnProfile()]) : [null, null];
+  const [counts, profile, avatarUrl] = user
+    ? await Promise.all([notificationCounts(), getOwnProfile(), getOwnAvatarUrl()])
+    : [null, null, null];
   // The side onboarding would send the member to: their listings if they
   // only own, their rentals otherwise.
   const dashboardPath = defaultDashboardPath({
@@ -45,7 +48,7 @@ export async function SiteHeader() {
   return (
     // Sticky, so the bell, messages and "+ New" stay in reach down long pages.
     // z-30 keeps it under modals and the location sheet (z-40/z-50).
-    <header className="sticky top-0 z-30 border-b border-line bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90">
+    <header className="sticky top-0 z-30 print:hidden border-b border-line bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/90">
       <Container className="flex h-16 items-center justify-between gap-6">
         <div className="flex h-full items-center gap-8">
           <Link href="/" className="flex items-center gap-2">
@@ -75,7 +78,7 @@ export async function SiteHeader() {
                 />
                 <MobileMenu dashboardPath={dashboardPath} />
               </div>
-              <AccountMenu name={profile?.display_name ?? null} email={user.email ?? ""} signOutAction={signOut} />
+              <AccountMenu name={profile?.display_name ?? null} email={user.email ?? ""} avatarUrl={avatarUrl} signOutAction={signOut} />
             </>
           ) : (
             <ButtonLink href="/login" className="h-9 py-0">Log in / Sign up</ButtonLink>

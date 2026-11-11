@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { CloudOff, MapPin } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getOwnProfile } from "@/lib/profile";
+import { getOwnProfile, verifiedContactNumber } from "@/lib/profile";
 import { getMyOwnerVerification, getMyRenterTrust } from "@/lib/api/verification";
 import { VerifiedOwnerBadge } from "@/components/listings/verified-owner-badge";
 import { hasAnsweredRequests, responseRatePercent } from "@/lib/verification";
@@ -22,10 +22,16 @@ import { AccountSettings } from "@/components/account-settings";
 import { CreditWallet } from "@/components/credit-wallet";
 import { NotificationPreferences } from "@/components/notification-preferences";
 import { getNotificationPreferences } from "@/lib/api/notifications";
+import { getLanguagePreferences } from "@/lib/api/translation";
+import { LanguagePreferencesForm } from "@/components/language-preferences";
 import { ConnectedApps } from "@/components/connected-apps";
 import { getAssistantTokens } from "@/lib/api/assistant-tokens";
+import { getMyReferrals } from "@/lib/api/referrals";
+import { ReferAFriend } from "@/components/referrals/refer-a-friend";
 import { BackendApiError } from "@/lib/api/client";
 import { getPublicMember } from "@/lib/api/reviews";
+import { getOwnAvatarUrl } from "@/lib/api/profile-avatar";
+import { ProfileAvatarEditor } from "@/components/profile-photo-field";
 import { isInsightsPeriod } from "@/lib/owner-insights";
 
 export const metadata = { title: "Your profile — HobbyRentals" };
@@ -73,11 +79,20 @@ export default async function ProfilePage({
   const active: ProfileView = resolveView(view);
   const ratings = active === "ratings" ? await getPublicMember(user.id).catch(() => null) : null;
   const preferences = active === "notifications" ? await getNotificationPreferences() : null;
+  const languagePreferences = active === "language" ? await getLanguagePreferences() : null;
   // Only a backend refusal is swallowed: backendRequest signs a member out by
   // throwing a redirect, which has to keep travelling.
   const assistantTokens =
     active === "connected-apps"
       ? await getAssistantTokens().catch((error) => {
+          if (error instanceof BackendApiError) return null;
+          throw error;
+        })
+      : null;
+  // S6-07. Swallowed the same way as the connected apps above.
+  const referrals =
+    active === "referrals"
+      ? await getMyReferrals().catch((error) => {
           if (error instanceof BackendApiError) return null;
           throw error;
         })
@@ -91,17 +106,22 @@ export default async function ProfilePage({
   // S4-01: the owner's own badge standing. Swallowed - a badge missing from
   // your own profile must not cost you the page, and it says nothing a renter
   // cannot already see.
-  const [verification, renterTrust] = await Promise.all([
+  const [verification, renterTrust, avatarUrl] = await Promise.all([
     getMyOwnerVerification().catch(() => undefined),
     // S4-06, swallowed for the same reason: a badge missing from your own
     // profile must not cost you the page.
     getMyRenterTrust().catch(() => undefined),
+    // Falls back to null on its own, for the same reason.
+    getOwnAvatarUrl(),
   ]);
 
   return (
     <Container className="py-16">
       <p className="eyebrow">Member since {memberSince}</p>
-      <h1 className="heading mt-3 text-3xl">{profile.display_name ?? "Your profile"}</h1>
+      <div className="mt-3 flex items-center gap-4">
+        <ProfileAvatarEditor name={profile.display_name ?? user.email ?? null} initialUrl={avatarUrl} />
+        <h1 className="heading text-3xl">{profile.display_name ?? "Your profile"}</h1>
+      </div>
       <p className="body-copy mt-2 flex flex-wrap items-center gap-3">
         {user.email}
         {/* About the email address, not the owner. Named in full so it cannot
@@ -154,7 +174,18 @@ export default async function ProfilePage({
         <div className="mt-8">
           {active === "ratings" && <RatingsView profile={ratings} />}
           {active === "wallet" && <CreditWallet />}
+          {active === "referrals" &&
+            (referrals ? (
+              <ReferAFriend summary={referrals} />
+            ) : (
+              <EmptyState
+                icon={CloudOff}
+                title="Your referral link could not be loaded"
+                body="Try refreshing this page in a moment."
+              />
+            ))}
           {preferences && <NotificationPreferences preferences={preferences} />}
+          {languagePreferences && <LanguagePreferencesForm preferences={languagePreferences} />}
           {active === "connected-apps" &&
             (assistantTokens ? (
               <ConnectedApps tokens={assistantTokens} />
@@ -170,7 +201,10 @@ export default async function ProfilePage({
               email={user.email ?? ""}
               emailVerified={isVerified}
               displayName={profile.display_name}
-              contactNumber={profile.contact_number}
+              mobile={{
+                number: profile.contact_number,
+                verified: verifiedContactNumber(profile) !== null,
+              }}
               defaultPickupLocation={profile.default_pickup_location}
               bio={profile.bio}
               roles={roles}

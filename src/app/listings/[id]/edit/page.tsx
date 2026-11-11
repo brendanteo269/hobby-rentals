@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
-import { Container } from "@/components/ui";
+import { ButtonLink, Container } from "@/components/ui";
 import { ListingForm } from "@/components/listings/listing-form";
 import { SearchGapPanel } from "@/components/listings/search-gap-panel";
 import { updateListing } from "@/app/listings/actions";
 import { getListingFormContext } from "@/app/listings/form-context";
+import { getListingPromoCodes } from "@/lib/api/promo-codes";
 import { getListing, getListingAvailability } from "@/lib/api/listings";
+import { listingGuidePath } from "@/lib/routes";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Edit listing — HobbyRentals" };
@@ -24,11 +26,14 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
   const supabase = await createClient();
   // The blackouts and bookings come from the availability endpoint, which is
   // owner-only - so it 404s for anyone the ownership check below would reject.
-  const [listing, availability, { data: { user } }, context] = await Promise.all([
+  const [listing, availability, { data: { user } }, context, promoCodes] = await Promise.all([
     getListing(id).catch(() => null),
     getListingAvailability(id).catch(() => null),
     supabase.auth.getUser(),
     getListingFormContext(),
+    // S5-12. Swallowed like the availability above: a missing codes list
+    // must not cost the owner the whole edit form.
+    getListingPromoCodes(id).catch(() => []),
   ]);
 
   if (!listing || !availability || listing.owner_id !== user?.id || listing.status === "REMOVED") {
@@ -55,6 +60,7 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
           <ListingForm
             action={updateListing.bind(null, listing.id)}
             listing={listing}
+            promoCodes={promoCodes}
             availability={{
               blackouts: availability.blackouts,
               bookedRanges: availability.confirmed_bookings,
@@ -62,6 +68,21 @@ export default async function EditListingPage({ params }: { params: Promise<{ id
             {...context}
           />
         </div>
+
+        {/* S6-02: the guide is saved on its own page, because its edits reach current renters and these do not. */}
+        <section className="mt-10 card flex flex-wrap items-center justify-between gap-4 p-6">
+          <div>
+            <h2 className="heading text-lg">Quick-start guide</h2>
+            <p className="body-copy mt-1">
+              {listing.has_guide
+                ? "Your setup steps, safety tips and packing notes. Edits reach current renters straight away."
+                : "Help renters set up and use this safely without messaging you."}
+            </p>
+          </div>
+          <ButtonLink href={listingGuidePath(listing.id)} variant="outline" className="px-4 py-2 text-xs">
+            {listing.has_guide ? "Edit guide" : "Add a guide"}
+          </ButtonLink>
+        </section>
       </div>
     </Container>
   );

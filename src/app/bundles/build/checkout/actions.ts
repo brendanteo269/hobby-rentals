@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createKit, KitApiError, quoteKit } from "@/lib/api/booking-groups";
 import type { CreateKitRequest, KitItemRequest, KitQuote } from "@/lib/booking-groups";
 
-/** Why a kit could not be priced or requested, for the checkout to act on. */
+/** Why a bundle could not be priced or requested, for the checkout to act on. */
 type KitFailureResult = { error: string; code?: string; shortfallCents?: number; listingId?: string };
 
 export type QuoteKitResult = KitFailureResult | { quote: KitQuote };
@@ -17,7 +17,7 @@ function failure(error: unknown): KitFailureResult {
   throw error;
 }
 
-/** S5-09 Scenario 1: the kit priced as it would be booked, grouped by owner. */
+/** S5-09 Scenario 1: the bundle priced as it would be booked, grouped by owner. */
 export async function quoteKitAction(request: {
   start_date: string;
   end_date: string;

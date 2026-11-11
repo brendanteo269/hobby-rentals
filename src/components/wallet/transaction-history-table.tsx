@@ -43,6 +43,9 @@ const typeLabels: Record<TransactionType, string> = {
   RENTAL_PAYOUT: "PAYOUT",
   DAMAGE_DEDUCTION: "DAMAGE",
   DAMAGE_PAYOUT: "DAMAGE",
+  DELIVERY_CHARGE: "DELIVERY",
+  DELIVERY_PAYOUT: "DELIVERY",
+  REFERRAL_CREDIT: "REFERRAL",
 };
 
 /** Which booking a row was for, so a refund can be matched to what was cancelled. */

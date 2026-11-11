@@ -426,6 +426,8 @@ export async function getBookingById(id: string): Promise<AdminBookingDetail | n
         "DAMAGE_DEDUCTION",
         "DAMAGE_PAYOUT",
         "OVERDUE_SETTLEMENT",
+        "DELIVERY_CHARGE",
+        "DELIVERY_PAYOUT",
       ])
       .order("created_at", { ascending: true }),
     supabase.from("bookings").select("booking_source").eq("id", id).maybeSingle(),

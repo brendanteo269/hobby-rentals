@@ -24,6 +24,8 @@ type Props = {
    * is as writable as the URL it came from.
    */
   next?: string | null;
+  /** S6-07, signup only: the code from the referral link the visitor arrived by, to start the field with. */
+  referralCode?: string;
 };
 
 const COPY = {
@@ -47,9 +49,9 @@ const COPY = {
   },
 } as const;
 
-const EMPTY: AuthValues = { email: "", display_name: "", terms: false };
+const EMPTY: AuthValues = { email: "", display_name: "", terms: false, referral_code: "" };
 
-export function AuthForm({ mode, action, notice, next }: Props) {
+export function AuthForm({ mode, action, notice, next, referralCode = "" }: Props) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const copy = COPY[mode];
 
@@ -57,7 +59,7 @@ export function AuthForm({ mode, action, notice, next }: Props) {
   // signup, their name and their acceptance of the terms — see
   // useSubmissionAttempt. The password is not preserved, deliberately: it is
   // the one field worth retyping rather than sending back through the server.
-  const [values, setValues] = useState<AuthValues>(EMPTY);
+  const [values, setValues] = useState<AuthValues>({ ...EMPTY, referral_code: referralCode });
   const attempt = useSubmissionAttempt(state, (next) => {
     if (next?.values) setValues(next.values);
   });
@@ -113,6 +115,20 @@ export function AuthForm({ mode, action, notice, next }: Props) {
           minLength={8}
           hint={mode === "signup" ? PASSWORD_REQUIREMENTS_HINT : undefined}
         />
+
+        {mode === "signup" && (
+          <Field
+            label="Referral code"
+            id="referral_code"
+            name="referral_code"
+            type="text"
+            autoComplete="off"
+            autoCapitalize="characters"
+            value={values.referral_code}
+            onChange={(event) => set("referral_code", event.target.value)}
+            hint="Optional. Invited by a friend? You'll both get credit after your first rental."
+          />
+        )}
 
         {mode === "signup" && (
           <label className="flex cursor-pointer items-start gap-3 text-sm">

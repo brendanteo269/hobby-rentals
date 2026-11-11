@@ -41,7 +41,7 @@ export function loadBundleSnapshot(): BundleSnapshot | null {
   }
 }
 
-/** Forgets the snapshot, once the kit has been requested: it is no longer a draft to come back to. */
+/** Forgets the snapshot, once the bundle has been requested: it is no longer a draft to come back to. */
 export function clearBundleSnapshot(): void {
   try {
     sessionStorage.removeItem(KEY);

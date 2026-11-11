@@ -65,6 +65,8 @@ export const PROTECTED_PREFIXES = [
   // S3-13 Scenario 5: the renter portal. A visitor is sent to log in before
   // the page fetches any booking.
   "/rentals",
+  // S6-11: the forum is for signed-in members.
+  "/community",
 ];
 
 export function requiresSignIn(pathname: string): boolean {

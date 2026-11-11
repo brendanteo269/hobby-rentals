@@ -1,4 +1,4 @@
-import type { ComponentProps } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { ChevronDown, Search, type LucideIcon } from "lucide-react";
 
 /**
@@ -38,11 +38,14 @@ export function SearchBar({
   placeholder,
   defaultValue,
   icon: Icon = Search,
+  trailing,
 }: {
   label: string;
   placeholder: string;
   defaultValue: string;
   icon?: LucideIcon;
+  /** A control drawn inside the pill, left of Search (S6-03: search by photo). */
+  trailing?: ReactNode;
 }) {
   return (
     <div className="relative">
@@ -57,8 +60,9 @@ export function SearchBar({
         defaultValue={defaultValue}
         placeholder={placeholder}
         autoComplete="off"
-        className="h-14 w-full rounded-full border border-line bg-white pl-14 pr-32 text-base outline-none transition-colors placeholder:text-ink-soft/70 focus:border-ink"
+        className={`h-14 w-full rounded-full border border-line bg-white pl-14 ${trailing ? "pr-44" : "pr-32"} text-base outline-none transition-[border-color,box-shadow] placeholder:text-ink-soft/70 focus:border-ink focus:shadow-card-hover`}
       />
+      {trailing}
       <button
         type="submit"
         className="absolute right-2 top-1/2 h-10 -translate-y-1/2 rounded-full bg-accent px-6 text-sm font-medium text-white transition-colors hover:bg-accent-dark focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2"

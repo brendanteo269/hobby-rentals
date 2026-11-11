@@ -1,6 +1,7 @@
 import { formatMoney } from "@/lib/format";
 import { isLocationArea, LOCATION_LABELS } from "@/lib/listings";
 import type { BookingStatus } from "@/lib/bookings";
+import type { MessageTranslation } from "@/lib/translation";
 
 /** LISTING = an enquiry thread opened from a listing; BOOKING = opened from a booking. */
 export type ConversationScope = "LISTING" | "BOOKING";
@@ -39,6 +40,8 @@ export type Conversation = {
   booking_end_date: string | null;
   other_party_id: string;
   other_party_name: string | null;
+  /** Their profile photo, or null to show their initial. */
+  other_party_avatar_url?: string | null;
   other_party_role: ConversationRole;
   /** S3-24: the other party is suspended or banned, so the thread takes no more messages. */
   other_party_unavailable: boolean;
@@ -88,6 +91,8 @@ export type Message = {
   /** S2-19: set when this message announced a meetup proposal or its acceptance - see MeetupProposal. */
   meetup_event_type: "PROPOSED" | "ACCEPTED" | null;
   meetup_proposal: MeetupProposal | null;
+  /** S6-04: present for a reader with "Always translate" on; `body` above is still the original. */
+  translation?: MessageTranslation | null;
   created_at: string;
 };
 
@@ -159,4 +164,18 @@ export type NeedsConfirmation = {
 
 export function needsConfirmation(result: object): result is NeedsConfirmation {
   return "status" in result && result.status === "needs_confirmation";
+}
+
+/** S6-13: a reply the owner may tap to put in their message box. Nothing is sent until they press Send. */
+export type ReplySuggestion = { id: string; type: string; text: string };
+/** after_message_id is the renter message the suggestions answer; null when the chat gets none. */
+export type ReplySuggestions = { after_message_id: string | null; suggestions: ReplySuggestion[] };
+
+/**
+ * S6-13: whether the owner should be offered suggestions now - the viewer is
+ * the owner and the newest message is the renter's text.
+ */
+export function wantsReplySuggestions(messages: Pick<Message, "sender_id" | "body">[], currentUserId: string, viewerIsOwner: boolean): boolean {
+  const last = messages.at(-1);
+  return viewerIsOwner && !!last && last.sender_id !== currentUserId && last.body.trim().length > 0;
 }

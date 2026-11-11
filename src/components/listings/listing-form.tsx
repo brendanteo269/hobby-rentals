@@ -7,7 +7,10 @@ import { Button, ButtonLink, Field, FormError, FormSection, Modal, SelectField, 
 import { AwayModeReminder } from "@/components/away-mode-reminder";
 import type { AwayPeriod } from "@/lib/away";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
+import { DeliveryField } from "@/components/listings/delivery-field";
 import { InstantBookField } from "@/components/listings/instant-book-field";
+import { PromoCodesField } from "@/components/listings/promo-codes-field";
+import type { PromoCode } from "@/lib/promo-codes";
 import { WeeklyAvailabilityField } from "@/components/listings/weekly-availability-field";
 import { PickupLocationField } from "@/components/listings/pickup-location-field";
 import { RentalDurationField } from "@/components/listings/rental-duration-field";
@@ -68,6 +71,7 @@ export function ListingForm({
   depositCapBps,
   categories,
   awayPeriod = null,
+  promoCodes,
 }: {
   action: (prev: ListingFormState, formData: FormData) => Promise<ListingFormState>;
   listing?: Listing;
@@ -78,6 +82,8 @@ export function ListingForm({
   categories: ListingCategoryOption[];
   /** S5-15: the owner's away period, which pauses this listing whatever is set below. */
   awayPeriod?: AwayPeriod | null;
+  /** S5-12: the listing's live codes. Absent while creating one. */
+  promoCodes?: PromoCode[];
 }) {
   const editing = listing !== undefined;
   const [state, formAction, pending] = useActionState<ListingFormState, FormData>(action, undefined);
@@ -356,6 +362,13 @@ export function ListingForm({
           onValueChange={setPickupLocation}
           error={errors.location_area}
         />
+
+        {/* S6-09: below the collection area, since the radius is measured from it. */}
+        <DeliveryField
+          initial={listing}
+          radiusError={errors.delivery_radius_km}
+          feeError={errors.delivery_fee_cents}
+        />
       </FormSection>
 
       {!editing && (
@@ -468,6 +481,11 @@ export function ListingForm({
           error={errors.blackout_dates}
         />
       </FormSection>
+
+      {/* S5-12 Scenario 1: under availability, as the story asks. Its own
+          form, so adding a code saves immediately rather than waiting for
+          the listing to be saved around it. */}
+      <PromoCodesField listingId={editing ? listing.id : undefined} codes={promoCodes} />
 
       <div className="rounded-2xl border border-line bg-surface-muted p-6 sm:p-8">
         <FormError message={state?.error} />

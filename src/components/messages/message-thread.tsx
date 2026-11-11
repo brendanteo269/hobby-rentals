@@ -5,7 +5,8 @@ import type { Message } from "@/lib/conversations";
 import { formatChatTimestamp } from "@/lib/format";
 import { AttachmentLightbox } from "./attachment-lightbox";
 import { MeetupProposalCard } from "./meetup-proposal-card";
-import { PersonAvatar } from "./person-avatar";
+import { MessageTranslationBlock } from "./message-translation-block";
+import { PersonAvatar } from "@/components/person-avatar";
 
 /**
  * A thread's messages, oldest first. Read-only and permanent: a message is
@@ -20,6 +21,7 @@ export function MessageThread({
   messages,
   currentUserId,
   otherPartyName,
+  otherPartyAvatarUrl = null,
   hasMore = false,
   isLoadingMore = false,
   onLoadEarlier,
@@ -27,11 +29,14 @@ export function MessageThread({
   confirmedMeetupProposalId = null,
   onMeetupAccepted,
   onMeetupRejected,
+  bookingId,
+  canTranslate = false,
 }: {
   messages: Message[];
   currentUserId: string;
   /** Shown next to the other party's own bubbles - the viewer's own need no name/avatar, their side and colour already say whose they are. */
   otherPartyName: string | null;
+  otherPartyAvatarUrl?: string | null;
   /** S2-16: whether an earlier page of this thread exists - shows the "Load earlier messages" control at the top. */
   hasMore?: boolean;
   isLoadingMore?: boolean;
@@ -43,6 +48,10 @@ export function MessageThread({
   onMeetupAccepted?: (message: Message) => void;
   /** None of the pending proposal's times work - opens the propose-a-meetup modal. */
   onMeetupRejected?: () => void;
+  /** The booking this conversation is about, for the meetup clash check (S6-01). */
+  bookingId?: string;
+  /** S6-04: the reader has chosen a language, so incoming messages get a Translate button. */
+  canTranslate?: boolean;
 }) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
@@ -93,9 +102,10 @@ export function MessageThread({
               message.meetup_event_type === "ACCEPTED" && message.meetup_proposal.id !== confirmedMeetupProposalId;
             return (
               <li key={message.id} className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"}`}>
-                {!mine && <PersonAvatar name={otherPartyName} size="sm" />}
+                {!mine && <PersonAvatar name={otherPartyName} imageUrl={otherPartyAvatarUrl} size="sm" />}
                 <MeetupProposalCard
                   message={message}
+                  bookingId={bookingId}
                   isActionable={isActionable}
                   pendingReschedule={pendingReschedule}
                   rescheduled={supersededByLaterAcceptance}
@@ -109,7 +119,7 @@ export function MessageThread({
           const hasAttachments = message.attachment_urls.length > 0;
           return (
             <li key={message.id} className={`flex items-end gap-2 ${mine ? "justify-end" : "justify-start"}`}>
-              {!mine && <PersonAvatar name={otherPartyName} size="sm" />}
+              {!mine && <PersonAvatar name={otherPartyName} imageUrl={otherPartyAvatarUrl} size="sm" />}
               <div
                 className={`min-w-0 rounded-2xl px-4 py-3 text-sm leading-relaxed ${hasAttachments ? "w-full max-w-[85%] sm:max-w-sm" : "max-w-[70%]"} ${mine ? "bg-ink text-white" : "bg-surface-muted text-ink"}`}
               >
@@ -134,6 +144,7 @@ export function MessageThread({
                   </ul>
                 )}
                 {message.body && <p className="whitespace-pre-line [overflow-wrap:anywhere]">{message.body}</p>}
+                {!mine && <MessageTranslationBlock message={message} currentUserId={currentUserId} canTranslate={canTranslate} />}
                 <p className={`mt-1.5 text-[0.6875rem] ${mine ? "text-white/70" : "text-ink-soft"}`}>
                   <time dateTime={message.created_at}>{formatChatTimestamp(message.created_at)}</time>
                 </p>

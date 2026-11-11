@@ -14,6 +14,8 @@
 
 import { unavailableUntilLabel } from "@/lib/away";
 import { formatDate } from "@/lib/format";
+import type { PromoDiscountType } from "@/lib/promo-codes";
+import type { ResponseTimeBand } from "@/lib/response-time";
 
 export type ListingCategory = string;
 
@@ -107,6 +109,8 @@ export type ListingCard = {
   price_per_week_cents: number | null;
   deposit_cents: number;
   location_area: LocationArea;
+  /** S6-09: the card's "Delivery available" badge. */
+  delivery_enabled?: boolean;
   /** The passport's serial status, for the card's badge (S2-30). */
   serial_status: SerialStatus | null;
   /**
@@ -188,14 +192,22 @@ export type Listing = {
   owner_id: string;
   /** Detail responses include only this public owner identity field. */
   owner_display_name?: string | null;
+  /** The owner's profile photo, or null to show their initial. */
+  owner_avatar_url?: string | null;
   /** S4-01: whether this listing's owner currently holds the Verified Owner badge. */
   owner_verified?: boolean;
+  /** S5-17: the owner's usual reply-time band; absent without enough history. */
+  owner_response_time?: ResponseTimeBand | null;
   name: string;
   description: string;
   category: ListingCategory;
   brand: string;
   condition: ListingCondition;
   location_area: LocationArea;
+  /** S6-09: set when the owner delivers, within delivery_radius_km of the listing's area, for a flat fee. */
+  delivery_enabled?: boolean;
+  delivery_radius_km?: number | null;
+  delivery_fee_cents?: number | null;
   price_per_day_cents: number | null;
   price_per_week_cents: number | null;
   deposit_cents: number;
@@ -229,6 +241,8 @@ export type Listing = {
   is_favourited: boolean;
   /** S3-28: server-computed - ACTIVE with a promotion still running. */
   is_promoted?: boolean;
+  /** S6-02: detail responses only. Whether a quick-start guide exists - never its content. */
+  has_guide?: boolean;
 };
 
 /** A listing in the member's saved-items page. Unavailable rows stay visible
@@ -254,7 +268,7 @@ export const MAX_LISTING_PHOTOS = 8;
  * "passport" photos are condition evidence, stored apart from listing photos;
  * "return" photos are a renter's return evidence, private in the same way.
  */
-export type PhotoKind = "listing" | "passport" | "return" | "pickup" | "claim" | "rebuttal";
+export type PhotoKind = "listing" | "passport" | "return" | "pickup" | "claim" | "rebuttal" | "guide";
 
 /** S2-04 Scenario 2: the four angles a baseline covers, in capture order. */
 export const BASELINE_ANGLES = [
@@ -441,6 +455,10 @@ export type CreateListingRequest = {
   location_area: LocationArea;
   deposit_cents: number;
   replacement_value_cents?: number | null;
+  /** S6-09. Optional; off when omitted. */
+  delivery_enabled?: boolean;
+  delivery_radius_km?: number | null;
+  delivery_fee_cents?: number | null;
   /**
    * Price per rental block is a choice, not two mandatory fields: at least
    * one of these two must be set (FastAPI 422s otherwise), but neither is
@@ -458,6 +476,19 @@ export type CreateListingRequest = {
   /** S5-11: off unless the owner turns it on. */
   instant_book_enabled?: boolean;
   initial_blackouts?: BlackoutDate[];
+  /**
+   * S5-12: discount codes written while creating the listing. Applied by the
+   * API once the listing exists, as initial_blackouts are.
+   */
+  initial_promo_codes?: {
+    code: string;
+    discount_type: PromoDiscountType;
+    percent_off: number | null;
+    amount_off_cents: number | null;
+    starts_on: string;
+    ends_on: string;
+    usage_limit: number | null;
+  }[];
   /** May be empty for a saved draft; recording its baseline later sets them. */
   photo_keys: string[];
 /** Values validated against the selected category's current schema on create. */
@@ -497,6 +528,9 @@ export type UpdateListingRequest = Partial<
     | "category"
     | "condition"
     | "location_area"
+    | "delivery_enabled"
+    | "delivery_radius_km"
+    | "delivery_fee_cents"
     | "deposit_cents"
     | "replacement_value_cents"
     | "price_per_day_cents"

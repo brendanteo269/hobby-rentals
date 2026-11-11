@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } f
 import { Button, Modal } from "@/components/ui";
 import type { CropTransform } from "@/lib/image-crop";
 
-/** The square preview's CSS size in px - also what a saved crop visually represents, since every ImageSlot card renders these photos at aspect-square too. */
+/** The square preview's CSS size in px - also what a saved crop visually represents, since every ImageSlot card renders these photos at aspect-square too (and an avatar at a circle inscribed in it). */
 const VIEWPORT = 320;
 const MAX_SCALE = 3;
 
@@ -17,20 +17,29 @@ type DragState = { pointerId: number; startX: number; startY: number; cropX: num
 /**
  * Pan/zoom editor for one photo's original, uncropped file.
  *
- * Pure UI - it only reports the chosen CropTransform back via `onSave`.
- * PhotoUploadField owns turning that into pixels (cropBitmapToFile) and
- * re-uploading, the same way it already owns the initial upload.
+ * Pure UI - it only reports the chosen CropTransform back via `onSave`. The
+ * caller (PhotoUploadField, ProfilePhotoField) owns turning that into pixels
+ * (cropBitmapToFile) and uploading, the same way it owns the initial upload.
+ *
+ * `shape="circle"` only rounds the preview: the crop is still the square the
+ * circle is drawn in, so the member sees exactly what an avatar will show.
  */
 export function PhotoCropModal({
   file,
   initialCrop,
   onCancel,
   onSave,
+  shape = "square",
+  title = "Adjust photo",
+  saveLabel = "Save crop",
 }: {
   file: File;
   initialCrop: CropTransform;
   onCancel: () => void;
   onSave: (crop: CropTransform) => void;
+  shape?: "square" | "circle";
+  title?: string;
+  saveLabel?: string;
 }) {
   const [naturalSize, setNaturalSize] = useState<{ width: number; height: number } | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -86,10 +95,10 @@ export function PhotoCropModal({
   }
 
   return (
-    <Modal title="Adjust photo" onClose={onCancel}>
+    <Modal title={title} onClose={onCancel}>
       <div className="mt-5">
         <div
-          className="relative mx-auto touch-none overflow-hidden rounded-lg bg-surface-muted"
+          className={`relative mx-auto touch-none overflow-hidden bg-surface-muted ${shape === "circle" ? "rounded-full" : "rounded-lg"}`}
           style={{ width: VIEWPORT, height: VIEWPORT }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
@@ -146,7 +155,7 @@ export function PhotoCropModal({
           Cancel
         </Button>
         <Button type="button" disabled={!naturalSize} onClick={() => onSave(crop)}>
-          Save crop
+          {saveLabel}
         </Button>
       </div>
     </Modal>

@@ -1,5 +1,7 @@
+import type { BookingRisk, DepositOffer } from "@/lib/booking-risk";
 import type { BundleAdjustments } from "@/lib/bundles";
 import type { CancellationOutcome } from "@/lib/cancellations";
+import type { DeliveryOffer } from "@/lib/delivery";
 import type { ExtensionRequest } from "@/lib/extensions";
 import type { SettlementState } from "@/lib/settlement";
 import type { ReturnState } from "@/lib/returns";
@@ -34,7 +36,11 @@ export type EscrowHold = {
 export type Booking = {
   id: string;
   listing_id: string;
-  /** S5-09: set when this item was requested as part of a cross-owner kit. */
+  /** S6-09: delivered bookings carry the address the owner brings the item to. */
+  delivery_selected?: boolean;
+  delivery_address?: string | null;
+  delivery_fee_cents?: number;
+  /** S5-09: set when this item was requested as part of a cross-owner bundle. */
   booking_group_id?: string | null;
   /** What was rented. Set on the bookings lists only, as bundle_name is for a bundle. */
   listing_name?: string | null;
@@ -43,6 +49,8 @@ export type Booking = {
   renter_name?: string | null;
   /** S4-06: whether they hold the Trusted Renter badge. Owner's list only. */
   renter_trusted?: boolean;
+  /** S6-05 Scenario 3: the higher-deposit offer on this booking, if any. */
+  deposit_offer?: DepositOffer | null;
   owner_id: string;
   /** Whose item it is. Set on the renter's list only; null when the owner has no display name. */
   owner_name?: string | null;
@@ -153,11 +161,18 @@ export type DamageProtectionOffer = {
 };
 
 export type BookingQuote = {
+  /** S6-09: a line of its own - no promo code reduces it and the platform fee is not charged on it. */
+  delivery: DeliveryOffer;
   rental_days: number;
   price_per_day_cents: number | null;
   price_per_week_cents: number | null;
   lines: BookingQuoteLine[];
   rental_subtotal_cents: number;
+  /** S5-12: the rental before any code, and what the code took off it. */
+  gross_rental_subtotal_cents: number;
+  promo_discount_cents: number;
+  /** The code that produced the discount, echoed back by the server. */
+  promo_code?: string | null;
   platform_fee_bps: number;
   platform_fee_cents: number;
   deposit_cents: number;
@@ -255,7 +270,11 @@ export function requestReviewPath(kind: RequestKind, id: string) {
 /** One unanswered request, as the owner's request list shows it. */
 export type BookingRequestSummary = {
   id: string;
-  /** S5-09: the cross-owner kit this is the owner's part of; the request then covers all their items in it. */
+  /** S6-09: where the owner delivers this, if the renter chose delivery. */
+  delivery_selected?: boolean;
+  delivery_address?: string | null;
+  delivery_fee_cents?: number;
+  /** S5-09: the cross-owner bundle this is the owner's part of; the request then covers all their items in it. */
   kit_id?: string | null;
   kind: RequestKind;
   /** One of these two, by kind. */
@@ -279,7 +298,7 @@ export type BookingRequestSummary = {
 /** One request as the owner reviews it before deciding. */
 export type BookingRequestDetail = {
   id: string;
-  /** S5-09: see BookingRequestSummary. `items` then lists the owner's items in the kit. */
+  /** S5-09: see BookingRequestSummary. `items` then lists the owner's items in the bundle. */
   kit_id?: string | null;
   kind: RequestKind;
   listing_id: string | null;
@@ -308,7 +327,18 @@ export type BookingRequestDetail = {
   period: { start_date: string; end_date: string; rental_days: number | null };
   /** Set on a cancelled request: who cancelled it, and why if a member's account was suspended or banned. */
   cancellation_outcome?: CancellationOutcome | null;
+  /** S6-05: present on a pending single-listing request; null otherwise. */
+  risk?: BookingRisk | null;
+  /** S6-05 Scenario 3: the higher-deposit offer on this request, if any. */
+  deposit_offer?: DepositOffer | null;
   pricing: {
+    /** S6-09: where the owner delivers this, and the fee that is theirs on top of the rental. */
+    delivery_selected?: boolean;
+    delivery_address?: string | null;
+    delivery_fee_cents?: number;
+    /** S5-12: the code the renter used, and what it took off the rental. */
+    promo_code?: string | null;
+    promo_discount_cents: number;
     price_per_day_cents: number | null;
     price_per_week_cents: number | null;
     rental_subtotal_cents: number | null;

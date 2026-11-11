@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { scrollEdgeMask } from "@/components/ui";
 
 const arrowClass =
   "flex size-9 items-center justify-center rounded-full border border-line bg-white text-ink transition-colors hover:bg-surface-muted disabled:cursor-default disabled:opacity-40 disabled:hover:bg-white";
@@ -61,6 +62,7 @@ export function CardCarousel({ title, children }: { title: string; children: Rea
       <ul
         ref={trackRef}
         onScroll={update}
+        style={{ maskImage: scrollEdgeMask({ left: canScroll.back, right: canScroll.forward }) }}
         className="mt-6 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {children}

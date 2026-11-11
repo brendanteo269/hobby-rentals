@@ -26,8 +26,15 @@ import {
   getExtensionQuote,
   requestExtension,
 } from "@/lib/api/extensions";
+import {
+  acceptHigherDeposit,
+  declineHigherDeposit,
+  offerHigherDeposit,
+} from "@/lib/api/deposit-offers";
 import { BackendApiError } from "@/lib/api/client";
 import type { Booking, BookingQuote, BookingStatus, DeclineReason } from "@/lib/bookings";
+import type { DepositOffer } from "@/lib/booking-risk";
+import type { DeliveryChoice } from "@/lib/delivery";
 import type { BundleBooking, BundleQuote } from "@/lib/bundles";
 import type { CancellableKind, CancellationPreview, CancellationRecord } from "@/lib/cancellations";
 import type { ExtensionQuote, ExtensionRequest } from "@/lib/extensions";
@@ -37,7 +44,8 @@ export type BookingActionResult =
   | { error: string; code?: string; shortfallCents?: number }
   | { booking: Booking };
 
-export type BookingQuoteResult = { error: string } | { quote: BookingQuote };
+/** `code` is set when the server named the reason, such as OUTSIDE_RADIUS for a delivery address out of range. */
+export type BookingQuoteResult = { error: string; code?: string } | { quote: BookingQuote };
 
 async function run(action: () => Promise<Booking>): Promise<BookingActionResult> {
   try {
@@ -54,16 +62,47 @@ async function run(action: () => Promise<Booking>): Promise<BookingActionResult>
   }
 }
 
+/**
+ * S6-05 Scenario 3: the owner accepting on condition the deposit doubles.
+ *
+ * Not `run`, which returns a booking: this returns the offer, because the
+ * booking has not changed - it is still pending, now waiting on the renter.
+ */
+export async function offerHigherDepositOn(
+  bookingId: string,
+): Promise<{ error: string } | { offer: DepositOffer }> {
+  try {
+    const offer = await offerHigherDeposit(bookingId);
+    revalidatePath("/", "layout");
+    return { offer };
+  } catch (error) {
+    if (error instanceof BackendApiError) return { error: error.message };
+    throw error;
+  }
+}
+
+/** The renter agreeing: the extra is held and the booking is confirmed. */
+export async function acceptDepositOffer(bookingId: string): Promise<BookingActionResult> {
+  return run(() => acceptHigherDeposit(bookingId));
+}
+
+/** The renter turning the terms down, which withdraws their request. */
+export async function declineDepositOffer(bookingId: string): Promise<BookingActionResult> {
+  return run(() => declineHigherDeposit(bookingId));
+}
+
 export async function quoteBooking(
   listingId: string,
   startDate: string,
   endDate: string,
   damageProtection = false,
+  promoCode: string | null = null,
+  delivery: DeliveryChoice | null = null,
 ): Promise<BookingQuoteResult> {
   try {
-    return { quote: await getBookingQuote(listingId, startDate, endDate, damageProtection) };
+    return { quote: await getBookingQuote(listingId, startDate, endDate, damageProtection, promoCode, delivery) };
   } catch (error) {
-    if (error instanceof BackendApiError) return { error: error.message };
+    if (error instanceof BackendApiError) return { error: error.message, code: error.code };
     throw error;
   }
 }
@@ -74,8 +113,10 @@ export async function requestBooking(
   endDate: string,
   idempotencyKey: string,
   damageProtection = false,
+  promoCode: string | null = null,
+  delivery: DeliveryChoice | null = null,
 ) {
-  return run(() => createBooking(listingId, startDate, endDate, idempotencyKey, damageProtection));
+  return run(() => createBooking(listingId, startDate, endDate, idempotencyKey, damageProtection, promoCode, delivery));
 }
 
 export async function changeBookingStatus(bookingId: string, nextStatus: BookingStatus) {

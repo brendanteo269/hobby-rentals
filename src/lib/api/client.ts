@@ -36,7 +36,7 @@ export class BackendApiError extends Error {
     public readonly fieldErrors: FieldErrors = {},
     public readonly code?: string,
     public readonly shortfallCents?: number,
-    /** S5-09: which listing of a kit a KIT_ITEM_UNAVAILABLE refusal is about. */
+    /** S5-09: which listing of a bundle a KIT_ITEM_UNAVAILABLE refusal is about. */
     public readonly listingId?: string,
   ) {
     super(message);
@@ -84,11 +84,22 @@ function parseFieldErrors(detail: unknown): FieldErrors {
   return errors;
 }
 
-/** Shared FastAPI client for Server Components, Server Actions and Route Handlers. */
-export async function backendRequest<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+/**
+ * A rule the service applies itself, beyond Pydantic's, arrives as
+ * {message, field_errors: {path: message}} (S6-02's guide checks); its entries
+ * join the validation ones under the same keys.
+ */
+function stringEntries(value: unknown): FieldErrors {
+  if (value === null || typeof value !== "object") return {};
+  return Object.fromEntries(Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === "string"));
+}
+
+/**
+ * Sends one request to FastAPI as the signed-in member: the step every
+ * backend call shares. Redirects to /login without a session, or when the
+ * backend says the token has expired.
+ */
+async function authorizedFetch(path: string, options: RequestInit): Promise<Response> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -129,42 +140,58 @@ export async function backendRequest<T>(
   // explanation, rather than surfacing a raw 401 to the member.
   if (res.status === 401) redirect("/login?reason=expired");
 
+  return res;
+}
+
+/** The BackendApiError for a failed response, from FastAPI's `detail`. */
+function backendError(status: number, body: unknown): BackendApiError {
+  const detail =
+    body !== null && typeof body === "object" && "detail" in body
+      ? body.detail
+      : undefined;
+
+  const fieldErrors = {
+    ...parseFieldErrors(detail),
+    ...(detail !== null && typeof detail === "object" && "field_errors" in detail ? stringEntries(detail.field_errors) : {}),
+  };
+  // A 422 carries its specifics per field, so the summary stays generic and
+  // the form puts each message where the member is looking. A conflict may
+  // arrive as {message, ...context} - the blackout endpoint attaches the
+  // booking it collided with - and its message is the part to show.
+  const code = detail !== null && typeof detail === "object" && "code" in detail && typeof detail.code === "string"
+    ? detail.code
+    : undefined;
+  const shortfallCents = detail !== null && typeof detail === "object" && "shortfall_cents" in detail && typeof detail.shortfall_cents === "number"
+    ? detail.shortfall_cents
+    : undefined;
+  const listingId = detail !== null && typeof detail === "object" && "listing_id" in detail && typeof detail.listing_id === "string"
+    ? detail.listing_id
+    : undefined;
+  const message =
+    typeof detail === "string"
+      ? detail
+      : detail !== null && typeof detail === "object" && "message" in detail && typeof detail.message === "string"
+        ? detail.message
+        : Object.keys(fieldErrors).length > 0
+          ? "Please correct the highlighted fields."
+          : `Backend request failed (${status})`;
+
+  return new BackendApiError(message, status, fieldErrors, code, shortfallCents, listingId);
+}
+
+/** Shared FastAPI client for Server Components, Server Actions and Route Handlers. */
+export async function backendRequest<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<T> {
+  const res = await authorizedFetch(path, options);
+
   // 204 has no body by definition; parsing it would read as a broken reply.
   if (res.status === 204) return undefined as T;
 
   const body: unknown = await res.json().catch(() => null);
 
-  if (!res.ok) {
-    const detail =
-      body !== null && typeof body === "object" && "detail" in body
-        ? body.detail
-        : undefined;
-
-    const fieldErrors = parseFieldErrors(detail);
-    // A 422 carries its specifics per field, so the summary stays generic and
-    // the form puts each message where the member is looking. A conflict may
-    // arrive as {message, ...context} - the blackout endpoint attaches the
-    // booking it collided with - and its message is the part to show.
-    const code = detail !== null && typeof detail === "object" && "code" in detail && typeof detail.code === "string"
-      ? detail.code
-      : undefined;
-    const shortfallCents = detail !== null && typeof detail === "object" && "shortfall_cents" in detail && typeof detail.shortfall_cents === "number"
-      ? detail.shortfall_cents
-      : undefined;
-    const listingId = detail !== null && typeof detail === "object" && "listing_id" in detail && typeof detail.listing_id === "string"
-      ? detail.listing_id
-      : undefined;
-    const message =
-      typeof detail === "string"
-        ? detail
-        : detail !== null && typeof detail === "object" && "message" in detail && typeof detail.message === "string"
-          ? detail.message
-          : Object.keys(fieldErrors).length > 0
-            ? "Please correct the highlighted fields."
-            : `Backend request failed (${res.status})`;
-
-    throw new BackendApiError(message, res.status, fieldErrors, code, shortfallCents, listingId);
-  }
+  if (!res.ok) throw backendError(res.status, body);
 
   if (body === null) {
     throw new BackendApiError("Invalid response from backend API", res.status);
@@ -172,4 +199,22 @@ export async function backendRequest<T>(
 
   // Types describe the backend contract; they do not validate it at runtime.
   return body as T;
+}
+
+/** A file the backend sends as-is (a PDF, say), base64-encoded so a Server Action can hand it to the browser. */
+export type BackendFile = { filename: string; contentType: string; base64: string };
+
+/**
+ * GETs a file from FastAPI as the signed-in member. Errors arrive as JSON
+ * like any other endpoint's and become the same BackendApiError.
+ */
+export async function backendFile(path: string): Promise<BackendFile> {
+  const res = await authorizedFetch(path, {});
+  if (!res.ok) throw backendError(res.status, await res.json().catch(() => null));
+  const disposition = res.headers.get("Content-Disposition") ?? "";
+  return {
+    filename: /filename="([^"]+)"/.exec(disposition)?.[1] ?? "download",
+    contentType: res.headers.get("Content-Type") ?? "application/octet-stream",
+    base64: Buffer.from(await res.arrayBuffer()).toString("base64"),
+  };
 }

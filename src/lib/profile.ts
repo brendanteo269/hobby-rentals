@@ -9,7 +9,10 @@ import { createClient } from "@/lib/supabase/server";
 export type Profile = {
   id: string;
   display_name: string | null;
+  /** E.164 once verified; a member onboarded before verification may have free text here. */
   contact_number: string | null;
+  /** When contact_number was proven by a texted code. See verifiedContactNumber. */
+  contact_number_verified_at: string | null;
   /** Where they hand gear over as an owner. Null when they do not own. */
   default_pickup_location: string | null;
   bio: string | null;
@@ -22,7 +25,7 @@ export type Profile = {
 };
 
 const PROFILE_COLUMNS =
-  "id, display_name, contact_number, default_pickup_location, bio, wants_to_rent, wants_to_own, onboarded_at, created_at, updated_at";
+  "id, display_name, contact_number, contact_number_verified_at, default_pickup_location, bio, wants_to_rent, wants_to_own, onboarded_at, created_at, updated_at";
 
 /**
  * Reads the signed-in member's profile.
@@ -50,4 +53,15 @@ export async function getOwnProfile(): Promise<Profile | null> {
     return null;
   }
   return data;
+}
+
+/**
+ * The member's contact number when it has been verified, else null. A number
+ * typed before verification existed stays in contact_number, so reading that
+ * column alone would treat it as proven.
+ */
+export function verifiedContactNumber(
+  profile: Pick<Profile, "contact_number" | "contact_number_verified_at">,
+): string | null {
+  return profile.contact_number_verified_at ? profile.contact_number : null;
 }

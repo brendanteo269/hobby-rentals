@@ -10,7 +10,7 @@ export const metadata = { title: "Build a bundle for your activity — HobbyRent
  * bundles an owner publishes (/bundles): this one is built for the renter on
  * request, from the listings of any owners, and is not stored.
  *
- * S5-09 Scenario 3: `?from_kit=` opens it prefilled from a kit an owner turned
+ * S5-09 Scenario 3: `?from_kit=` opens it prefilled from a bundle an owner turned
  * down, to build it again without the declined items.
  */
 export default async function BuildBundlePage({ searchParams }: { searchParams: Promise<{ from_kit?: string }> }) {
@@ -30,7 +30,7 @@ export default async function BuildBundlePage({ searchParams }: { searchParams: 
   );
 }
 
-/** What to rebuild from, or nothing if the kit is not the renter's or has nothing to rebuild: the plain builder is then the right page. */
+/** What to rebuild from, or nothing if the bundle is not the renter's or has nothing to rebuild: the plain builder is then the right page. */
 async function rebuildFrom(kitId: string): Promise<KitRebuild | undefined> {
   try {
     return (await getKit(kitId)).rebuild ?? undefined;

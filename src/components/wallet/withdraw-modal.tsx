@@ -6,7 +6,9 @@ import { MIN_WITHDRAWAL_CENTS, formatWalletAmount, walletAuthHeader, type Wallet
 
 type Props = {
   apiUrl: string;
-  availableCents: number;
+  /** The available balance less referral credit, which cannot be withdrawn (S6-07). */
+  withdrawableCents: number;
+  creditCents: number;
   onClose: () => void;
   onWalletRefresh: () => Promise<WalletState>;
   onSuccess: (message: string) => void;
@@ -16,8 +18,8 @@ type Props = {
 // backend reserves the amount and records the withdrawal atomically, and
 // this modal's job stops there too. There is no real bank/card linking to
 // check or manage.
-export function WithdrawModal({ apiUrl, availableCents, onClose, onWalletRefresh, onSuccess }: Props) {
-  const [amount, setAmount] = useState((availableCents / 100).toFixed(2));
+export function WithdrawModal({ apiUrl, withdrawableCents, creditCents, onClose, onWalletRefresh, onSuccess }: Props) {
+  const [amount, setAmount] = useState((withdrawableCents / 100).toFixed(2));
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   // Generated once per mount (one modal open = one withdrawal attempt) and
@@ -36,8 +38,8 @@ export function WithdrawModal({ apiUrl, availableCents, onClose, onWalletRefresh
       setError(`Minimum withdrawal is ${formatWalletAmount(MIN_WITHDRAWAL_CENTS)}.`);
       return;
     }
-    if (cents > availableCents) {
-      setError(`Amount exceeds your available balance of ${formatWalletAmount(availableCents)}.`);
+    if (cents > withdrawableCents) {
+      setError(`Amount exceeds your withdrawable balance of ${formatWalletAmount(withdrawableCents)}.`);
       return;
     }
     setLoading(true);
@@ -80,15 +82,20 @@ export function WithdrawModal({ apiUrl, availableCents, onClose, onWalletRefresh
       <form className="mt-6 space-y-5" onSubmit={submit} noValidate>
         <div className="rounded-2xl border border-line bg-surface-muted p-4">
           <p className="eyebrow">Withdrawable now</p>
-          <p className="mt-1 text-3xl">{formatWalletAmount(availableCents)}</p>
+          <p className="mt-1 text-3xl">{formatWalletAmount(withdrawableCents)}</p>
           <p className="body-copy mt-2">Funds held in escrow stay locked until the related booking is released.</p>
+          {creditCents > 0 && (
+            <p className="body-copy mt-1">
+              {formatWalletAmount(creditCents)} referral credit can be spent on rentals but not withdrawn.
+            </p>
+          )}
         </div>
         <Field
           label="Amount"
           id="withdraw-amount"
           type="number"
           min={MIN_WITHDRAWAL_CENTS / 100}
-          max={availableCents / 100}
+          max={withdrawableCents / 100}
           step="0.01"
           value={amount}
           onChange={(event) => {

@@ -1,7 +1,10 @@
 import Link from "next/link";
 import { Badge, EmptyState } from "@/components/ui";
 import { BookingRequestDecision } from "@/components/bookings/booking-request-decision";
+import { DeliveryAddressLine } from "@/components/bookings/delivery-address-line";
 import { TrustedRenterBadge } from "@/components/bookings/trusted-renter-badge";
+import { BookingRiskPanel } from "@/components/bookings/booking-risk-panel";
+import { HigherDepositOffer } from "@/components/bookings/higher-deposit-offer";
 import { RequestCountdown } from "@/components/bookings/request-countdown";
 import { BOOKING_STATUS_LABELS, type BookingRequestDetail } from "@/lib/bookings";
 import { adjustmentLines } from "@/lib/bundle-items";
@@ -46,7 +49,7 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
         </p>
       </div>
       {request.kit_id && (
-        // S5-09: only this owner's part of the renter's kit is shown, and answering
+        // S5-09: only this owner's part of the renter's bundle is shown, and answering
         // covers all of it; what the renter asked other owners for is not theirs to see.
         <p className="mt-2 text-sm text-ink-soft">
           Part of a bundle the renter is requesting from several owners. This request covers your{" "}
@@ -95,6 +98,7 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
 
         <section className="card p-5" aria-labelledby="earnings-heading">
           <p id="earnings-heading" className="eyebrow">Rental and earnings</p>
+          <DeliveryAddressLine booking={pricing} className="mt-2 text-sm" />
           <p className="mt-2 text-sm">
             {formatDate(period.start_date)} – {formatDate(period.end_date)}
             {days > 0 && <span className="text-ink-soft"> · {days} {days === 1 ? "day" : "days"}</span>}
@@ -106,8 +110,31 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
             {pricing.price_per_week_cents !== null && <>
               <dt className="text-ink-soft">Weekly rate</dt><dd className="text-right">{formatMoney(pricing.price_per_week_cents)}</dd>
             </>}
-            <dt className="text-ink-soft">Rental subtotal</dt><dd className="text-right">{money(pricing.rental_subtotal_cents)}</dd>
+            {/* S5-12. With a code, the subtotal above is already net of it,
+                so showing it alone leaves an owner unable to reconcile the
+                rate times the days. Full price, then what their own code
+                took off. */}
+            <dt className="text-ink-soft">Rental subtotal</dt>
+            <dd className="text-right">
+              {money(
+                pricing.promo_discount_cents
+                  ? (pricing.rental_subtotal_cents ?? 0) + pricing.promo_discount_cents
+                  : pricing.rental_subtotal_cents,
+              )}
+            </dd>
+            {pricing.promo_discount_cents > 0 && <>
+              <dt className="text-ink-soft">
+                Your promo code{pricing.promo_code ? ` · ${pricing.promo_code.toUpperCase()}` : ""}
+              </dt>
+              <dd className="text-right">−{formatMoney(pricing.promo_discount_cents)}</dd>
+            </>}
             <dt className="text-ink-soft">Platform fee (paid by renter)</dt><dd className="text-right">{money(pricing.platform_fee_cents)}</dd>
+            {/* S6-09: the renter chose delivery. The fee is the owner's in full, paid when the renter
+                confirms the handover, so it is shown apart from the rental and its commission. */}
+            {pricing.delivery_selected && <>
+              <dt className="text-ink-soft">Delivery fee (paid to you at handover)</dt>
+              <dd className="text-right">{formatMoney(pricing.delivery_fee_cents ?? 0)}</dd>
+            </>}
             <dt className="text-ink-soft">Security deposit (refundable)</dt><dd className="text-right">{money(pricing.deposit_cents)}</dd>
             <dt className="text-ink-soft">Damage protection</dt>
             <dd className="text-right">{pricing.damage_protection.selected ? formatMoney(pricing.damage_protection.fee_cents) : "Not selected"}</dd>
@@ -117,11 +144,36 @@ export function BookingRequestReview({ request }: { request: BookingRequestDetai
             <dd className="border-t border-line pt-2 text-right font-semibold">{money(pricing.owner_net_earnings_cents)}</dd>
           </dl>
         </section>
+
+        {/* S6-05: after the earnings. The owner reads what the booking is
+            worth first, then what to weigh against it. */}
+        {request.risk && <BookingRiskPanel risk={request.risk} />}
       </div>
 
       <div className="mt-8">
         {request.status === "PENDING"
-          ? <BookingRequestDecision kind={request.kind} bookingId={request.id} expiresInSeconds={request.expires_in_seconds} />
+          ? <>
+              <BookingRequestDecision kind={request.kind} bookingId={request.id} expiresInSeconds={request.expires_in_seconds} />
+              {/* S6-05 Scenario 3: the third option, beside accept and
+                  decline.
+                  Offered only on a Medium or High request, as the story
+                  asks - asking a renter with a clean record for twice the
+                  deposit is a cost to them with nothing behind it. An offer
+                  already made still shows whatever the rating, so an owner
+                  waiting on one does not lose sight of it.
+                  Single listings only: a bundle's deposit is the sum of its
+                  items' and doubling it is a different conversation. */}
+              {request.kind === "BOOKING"
+                && (pricing.deposit_cents ?? 0) > 0
+                && (request.deposit_offer || (request.risk && request.risk.level !== "LOW")) && (
+                <HigherDepositOffer
+                  bookingId={request.id}
+                  offer={request.deposit_offer}
+                  depositCents={pricing.deposit_cents ?? 0}
+                  side="owner"
+                />
+              )}
+            </>
           : request.status === "CANCELLED" && request.cancellation_outcome
             // Someone who opens a notification about a cancelled request is told what happened and why.
             ? <EmptyState title="This request was cancelled" body={cancelledBody(request.cancellation_outcome)} />

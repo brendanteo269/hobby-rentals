@@ -75,7 +75,8 @@ export function CreditWallet() {
       {modal === "withdraw" && (
         <WithdrawModal
           apiUrl={apiUrl}
-          availableCents={wallet.availableCents}
+          withdrawableCents={wallet.withdrawableCents}
+          creditCents={wallet.creditCents}
           onClose={closeModal}
           onWalletRefresh={refreshWallet}
           onSuccess={finishWithSuccess}

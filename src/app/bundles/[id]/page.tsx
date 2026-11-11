@@ -12,6 +12,10 @@ import { createClient } from "@/lib/supabase/server";
 import { BundleFavouriteButton } from "@/components/bundles/bundle-favourite-button";
 import { getBundleReviews } from "@/lib/api/reviews";
 import { RentalReviewSection } from "@/components/reviews/rental-review-section";
+import { ShareButton } from "@/components/listings/share-button";
+import { siteUrl } from "@/lib/env";
+import { gearBundlePath } from "@/lib/gear";
+import { absoluteUrl, shareText } from "@/lib/share";
 
 export const metadata = { title: "Bundle — HobbyRentals" };
 
@@ -56,6 +60,10 @@ export default async function BundlePage({ params }: { params: Promise<{ id: str
             <h1 className="heading mt-3 text-3xl">{bundle.name}</h1>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {/* S5-16 Scenario 4: only a published bundle has a public page to share. */}
+            {published && (
+              <ShareButton url={absoluteUrl(gearBundlePath({ name: bundle.name, short_id: bundle.id.slice(0, 8) }), siteUrl())} text={shareText(bundle)} what="bundle" />
+            )}
             <BundleFavouriteButton bundleId={bundle.id} initiallySaved={bundle.is_favourited} initialCount={bundle.favourite_count} />
             {!published && <Badge variant="warning">{BUNDLE_STATUS_LABELS[bundle.status]}</Badge>}
             {isOwner && bundle.status !== "REMOVED" && (

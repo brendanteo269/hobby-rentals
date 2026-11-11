@@ -192,7 +192,7 @@ export function BundleForm({
           name="name"
           maxLength={200}
           required
-          placeholder="Weekend vlogging kit"
+          placeholder="Weekend vlogging bundle"
           error={errors.name}
           value={name}
           onChange={(event) => setName(event.target.value)}
