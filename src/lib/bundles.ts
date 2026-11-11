@@ -54,7 +54,24 @@ export type BundleComponent = {
   is_optional: boolean;
   optional_deduction_cents: number | null;
   /** S5-10: another of the owner's listings, booked in its place when this one is not free for the dates. */
-  alternative: { id: string; name: string; status: ListingStatus } | null;
+  alternative: BundleAlternative | null;
+};
+
+/**
+ * The backup for a required item. The listing's own details ride along so a renter whose dates
+ * need it can look at it - photo, price, brand, area - and decide, not just be told its name.
+ */
+export type BundleAlternative = {
+  id: string;
+  name: string;
+  status: ListingStatus;
+  brand?: string | null;
+  condition?: ListingCondition | null;
+  location_area?: LocationArea | null;
+  photo_urls?: string[];
+  price_per_day_cents?: number | null;
+  price_per_week_cents?: number | null;
+  deposit_cents?: number | null;
 };
 
 export type Bundle = {
@@ -103,9 +120,25 @@ export type BundleUnavailableDate = {
   listing_name: string | null;
 };
 
+/**
+ * A required item that has a backup, and the days each is free (S5-10). A booking
+ * uses the item or its backup for the whole range, never a mix, so the day-by-day
+ * calendar alone can offer a range nobody can book.
+ */
+export type BundleBackupCoverage = {
+  item_id: string;
+  item_name: string;
+  backup_id: string;
+  backup_name: string;
+  item_free: string[];
+  backup_free: string[];
+};
+
 export type BundleAvailability = {
   available_dates: string[];
   unavailable_dates: BundleUnavailableDate[];
+  /** Absent from an older server's reply, which meant every range the days allowed was offered. */
+  backups?: BundleBackupCoverage[];
   /** S5-15: the owner's away period, shown as "Not taking bookings ...". */
   booking_pause?: BookingPause | null;
 };

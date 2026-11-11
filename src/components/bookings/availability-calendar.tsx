@@ -55,6 +55,12 @@ type Props = {
    * to add and leaves it out.
    */
   blockedBy?: (day: string) => string | undefined;
+  /**
+   * Colours a pickable day: "ok" is green and "backup" is orange, with `note` as its tooltip and
+   * screen-reader label. A bundle uses it to show which days stand in a backup item; a single
+   * listing has no such distinction and leaves it out, so its days keep the plain look.
+   */
+  dayTone?: (day: string) => { tone: "ok" | "backup"; note?: string } | undefined;
 };
 
 /**
@@ -78,6 +84,7 @@ export function AvailabilityCalendar({
   endDate,
   onPick,
   blockedBy,
+  dayTone,
 }: Props) {
   const [paged, setPaged] = useState<{ year: number; month: number } | null>(null);
 
@@ -120,9 +127,12 @@ export function AvailabilityCalendar({
           // with the date.
           const reason = selectable ? undefined : reasonByDate.get(day);
           const culprit = reason ? blockedBy?.(day) : undefined;
+          const tone = selectable ? dayTone?.(day) : undefined;
           const note = reason
             ? `${UNAVAILABLE_REASON_LABELS[reason]}${culprit ? ` — ${culprit}` : ""}`
-            : undefined;
+            : tone?.note;
+          // Colour is not the only signal: a backup day also carries its note as a label and tooltip.
+          const toneStyle = tone?.tone === "backup" ? "bg-warning-soft hover:bg-warning/20" : tone?.tone === "ok" ? "bg-success-soft hover:bg-success/20" : "hover:bg-surface-muted";
           // Struck through for a date someone holds - a booking, or a live
           // waitlist offer - and merely dimmed for one the listing never
           // offered. The first may free up; the second will not.
@@ -139,7 +149,7 @@ export function AvailabilityCalendar({
               aria-pressed={selected}
               aria-label={note ? `${formatDate(day)}, ${note.toLowerCase()}` : undefined}
               title={note}
-              className={`aspect-square rounded-lg text-sm transition-colors ${selected ? "bg-ink text-white" : inRange ? "bg-surface-muted text-ink" : selectable ? "hover:bg-surface-muted" : unavailableStyle}`}
+              className={`aspect-square rounded-lg text-sm transition-colors ${selected ? "bg-ink text-white" : inRange ? "bg-surface-muted text-ink" : selectable ? toneStyle : unavailableStyle}`}
             >
               {index + 1}
             </button>

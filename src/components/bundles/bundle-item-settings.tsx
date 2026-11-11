@@ -2,9 +2,9 @@ import { Field, SelectField } from "@/components/ui";
 import { formatMoney } from "@/lib/format";
 
 /** What the owner has set for one chosen item of a bundle (S5-10). Strings, as the inputs hold them. */
-export type ItemSettingState = { optional: boolean; deduction: string; alternative: string };
+export type ItemSettingState = { optional: boolean; deduction: string; alternative: string; deductionEdited: boolean };
 
-export const REQUIRED_ITEM: ItemSettingState = { optional: false, deduction: "", alternative: "" };
+export const REQUIRED_ITEM: ItemSettingState = { optional: false, deduction: "", alternative: "", deductionEdited: false };
 
 /** A listing the owner could name as a backup. */
 export type BackupChoice = { id: string; name: string; price_per_day_cents: number | null };
@@ -23,6 +23,7 @@ export function BundleItemSettings({
   value,
   backups,
   errors,
+  deductionHint,
   onChange,
 }: {
   listingId: string;
@@ -30,6 +31,8 @@ export function BundleItemSettings({
   /** Listings that may be this item's backup: the owner's others, not already in the bundle or another item's backup. */
   backups: BackupChoice[];
   errors: Record<string, string>;
+  /** Says what the pre-filled amount is based on, once the item's and the bundle's prices are known. */
+  deductionHint?: string;
   onChange: (change: Partial<ItemSettingState>) => void;
 }) {
   return (
@@ -55,7 +58,8 @@ export function BundleItemSettings({
           step="0.01"
           inputMode="decimal"
           value={value.deduction}
-          onChange={(event) => onChange({ deduction: event.target.value })}
+          onChange={(event) => onChange({ deduction: event.target.value, deductionEdited: true })}
+          hint={deductionHint}
           error={errors[`deduction_${listingId}`]}
         />
       ) : (

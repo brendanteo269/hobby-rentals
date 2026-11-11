@@ -16,8 +16,9 @@ import { WeeklyAvailabilityField } from "@/components/listings/weekly-availabili
 import { RentalDurationField } from "@/components/listings/rental-duration-field";
 import { BlackoutRulesField } from "@/components/listings/blackout-rules-field";
 import type { BundleFormState } from "@/app/listings/mine/bundles/actions";
-import { centsToDollars, formatMoney, todayIso } from "@/lib/format";
+import { centsToDollars, dollarsToCents, formatMoney, todayIso } from "@/lib/format";
 import { MIN_BUNDLE_ITEMS, type Bundle } from "@/lib/bundles";
+import { suggestedDeductionCents } from "@/lib/bundle-items";
 import { AwayModeReminder } from "@/components/away-mode-reminder";
 import { BundleItemSettings, REQUIRED_ITEM, type ItemSettingState } from "@/components/bundles/bundle-item-settings";
 import type { AwayPeriod } from "@/lib/away";
@@ -82,11 +83,35 @@ export function BundleForm({
           optional: item.is_optional,
           deduction: item.optional_deduction_cents ? centsToDollars(item.optional_deduction_cents) : "",
           alternative: item.alternative?.id ?? "",
+          // A saved amount is the owner's own, so a price change must not overwrite it.
+          deductionEdited: item.is_optional,
         },
       ]),
     ),
   );
   const settingOf = (listingId: string) => itemSettings[listingId] ?? REQUIRED_ITEM;
+  // The bundle's daily price as typed, which the default deduction for an optional item follows.
+  const [bundleRate, setBundleRate] = useState<{ block: "DAY" | "WEEK"; rate: string } | null>(() =>
+    !bundle
+      ? null
+      : bundle.price_per_day_cents !== null
+        ? { block: "DAY", rate: centsToDollars(bundle.price_per_day_cents) }
+        : { block: "WEEK", rate: centsToDollars(bundle.price_per_week_cents ?? 0) },
+  );
+  const dailyOf = (listing: SelectableListing) =>
+    listing.price_per_day_cents ?? (listing.price_per_week_cents !== null ? Math.round(listing.price_per_week_cents / 7) : null);
+  const bundleDailyCents = (() => {
+    const cents = bundleRate ? dollarsToCents(bundleRate.rate) : null;
+    if (cents === null || Number.isNaN(cents) || cents <= 0) return null;
+    return bundleRate?.block === "WEEK" ? Math.round(cents / 7) : cents;
+  })();
+  const chosenDailyCents = activeListings.filter((listing) => selected.includes(listing.id)).map(dailyOf);
+  /** What an optional item takes off by default, or null until the prices are known. */
+  const suggestedFor = (listing: SelectableListing) => {
+    const own = dailyOf(listing);
+    if (own === null || bundleDailyCents === null || chosenDailyCents.some((cents) => cents === null)) return null;
+    return suggestedDeductionCents(own, chosenDailyCents.reduce<number>((sum, cents) => sum + (cents ?? 0), 0), bundleDailyCents);
+  };
   function changeSetting(listingId: string, change: Partial<ItemSettingState>) {
     setItemSettings((current) => ({ ...current, [listingId]: { ...(current[listingId] ?? REQUIRED_ITEM), ...change } }));
   }
@@ -131,6 +156,22 @@ export function BundleForm({
   const [dismissedNotice, setDismissedNotice] = useState<BundleFormState>(undefined);
   const saved = state?.success;
   const showSavedModal = saved !== undefined && state !== dismissedNotice;
+
+  /** The item's settings with an untouched deduction showing its default. */
+  function withSuggestion(listing: SelectableListing): ItemSettingState {
+    const setting = settingOf(listing.id);
+    const suggested = suggestedFor(listing);
+    if (!setting.optional || setting.deductionEdited || suggested === null) return setting;
+    return { ...setting, deduction: centsToDollars(suggested) };
+  }
+  function deductionHintFor(listing: SelectableListing): string | undefined {
+    const own = dailyOf(listing);
+    if (own === null) return undefined;
+    const base = `Listed at ${formatMoney(own)} / day.`;
+    return suggestedFor(listing) === null
+      ? `${base} Set the bundle price to get a suggested amount.`
+      : `${base} Pre-filled from the bundle price; change it if you like.`;
+  }
 
   function toggle(listingId: string) {
     setSelected((current) => (current.includes(listingId) ? current.filter((id) => id !== listingId) : [...current, listingId]));
@@ -219,7 +260,8 @@ export function BundleForm({
                     {checked && (
                       <BundleItemSettings
                         listingId={listing.id}
-                        value={settingOf(listing.id)}
+                        value={withSuggestion(listing)}
+                        deductionHint={deductionHintFor(listing)}
                         backups={backupsFor(listing.id)}
                         errors={errors}
                         onChange={(change) => changeSetting(listing.id, change)}
@@ -258,6 +300,7 @@ export function BundleForm({
           priceError={errors.price_per_day_cents ?? errors.price_per_week_cents}
           depositError={errors.deposit_cents}
           initial={bundle}
+          onRateChange={(block, rate) => setBundleRate(block ? { block, rate } : null)}
         />
       </FormSection>
 

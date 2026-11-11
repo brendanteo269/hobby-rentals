@@ -93,16 +93,16 @@ export default async function BundlePage({ params }: { params: Promise<{ id: str
         <section className="mt-8 border-t border-line pt-6">
           <h2 className="text-base font-semibold uppercase tracking-wide">What&apos;s included</h2>
           <ul className="mt-4 grid gap-4 sm:grid-cols-2">
-            {bundle.items.map((item) => (
-              <li key={item.id} className="card overflow-hidden">
+            {/* Required items first; optional ones close the list, set apart. */}
+            {[...bundle.items].sort((a, b) => Number(a.is_optional) - Number(b.is_optional)).map((item) => (
+              <li key={item.id} className={`card relative overflow-hidden ${item.is_optional ? "border-2 border-dashed border-accent" : ""}`}>
+                {/* Over the photo's top-right corner, so it reads before the name does. */}
+                {item.is_optional && <Badge variant="warning" className="absolute right-3 top-3 z-10 shadow-sm">Optional extra</Badge>}
                 <Link href={`/listings/${item.id}`} className="block">
                   <ImageSlot label={item.name} src={item.photo_urls[0]} className="aspect-[4/3] w-full" />
                   <div className="p-4">
                     <p className="eyebrow">{CATEGORY_LABELS[item.category] ?? item.category} · {item.brand}</p>
-                    <p className="mt-1 text-sm font-medium">
-                      {item.name}
-                      {item.is_optional && <Badge variant="info" className="ml-2">Optional</Badge>}
-                    </p>
+                    <p className="mt-1 text-sm font-medium">{item.name}</p>
                     <p className="body-copy mt-1">
                       {item.price_per_day_cents !== null && `${formatMoney(item.price_per_day_cents)} / day`}
                       {item.price_per_day_cents !== null && item.price_per_week_cents !== null && " · "}
@@ -110,10 +110,7 @@ export default async function BundlePage({ params }: { params: Promise<{ id: str
                       {" on its own"}
                     </p>
                     {item.is_optional && item.optional_deduction_cents !== null && (
-                      <p className="body-copy mt-1">{formatMoney(item.optional_deduction_cents)} off each day if you leave it out.</p>
-                    )}
-                    {item.alternative && (
-                      <p className="body-copy mt-1">If it is out for your dates, {item.alternative.name} is used instead.</p>
+                      <p className="mt-1 text-sm font-medium text-accent-dark">Skip it and save {formatMoney(item.optional_deduction_cents)} each day.</p>
                     )}
                     {item.status !== "ACTIVE" && (
                       <p className="mt-2 text-xs text-accent-dark">
@@ -162,6 +159,9 @@ export default async function BundlePage({ params }: { params: Promise<{ id: str
             optionalItems={bundle.items
               .filter((item) => item.is_optional)
               .map((item) => ({ id: item.id, name: item.name, deduction_cents: item.optional_deduction_cents ?? 0 }))}
+            backupsByItem={Object.fromEntries(
+              bundle.items.flatMap((item) => (item.alternative ? [[item.id, item.alternative] as const] : [])),
+            )}
           />
         )}
         <RentalReviewSection title="Reviews for this bundle" reviews={reviews} emptyBody="This bundle has not received any reviews yet." />
