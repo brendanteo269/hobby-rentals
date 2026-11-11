@@ -390,3 +390,18 @@ export function reportListing(listingId: string, reason: ListingReportReason, ex
     body: JSON.stringify({ reason, explanation }),
   });
 }
+
+/** S6-03: what the vision model saw in a renter's photo, and the search to run for it. */
+export type PhotoQuery = {
+  item_type: string;
+  category: ListingCategory | null;
+  query: string;
+  confident: boolean;
+};
+
+export function photoSearch(imageBase64: string): Promise<PhotoQuery> {
+  return backendRequest<PhotoQuery>("/listings/photo-search", {
+    method: "POST",
+    body: JSON.stringify({ image_base64: imageBase64 }),
+  });
+}

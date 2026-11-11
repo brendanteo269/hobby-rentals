@@ -13,7 +13,7 @@ import { postRequest } from "@/app/requests/actions";
  * plus free text for anything else. Owners are matched on the name alone, so
  * the hint under it is about naming the thing rather than describing it.
  */
-export function PostRequestForm() {
+export function PostRequestForm({ defaultTitle = "" }: { defaultTitle?: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -35,6 +35,7 @@ export function PostRequestForm() {
         name="title"
         required
         maxLength={120}
+        defaultValue={defaultTitle}
         placeholder="Canon R6 camera"
         hint="Name the item as an owner would name their listing — that is what we match on."
       />

@@ -126,3 +126,20 @@ describe("the Instant Book filter (S5-11)", () => {
     expect(href).toContain("verified=1");
   });
 });
+
+describe("photo search label (S6-03)", () => {
+  it("round-trips the photo label with the query it produced", () => {
+    const filters = parseBrowseFilters({ q: "dome tent camping", photo: "dome tent", photo_category: "CAMPING_OUTDOOR" });
+    expect(filters.photo).toBe("");
+    const href = browseHref({ ...filters, photo: "dome tent", photo_category: "CAMPING_OUTDOOR" });
+    const params = Object.fromEntries(new URLSearchParams(href.split("?")[1]));
+    expect(params).toMatchObject({ q: "dome tent camping", photo: "dome tent", photo_q: "dome tent camping", photo_category: "CAMPING_OUTDOOR" });
+    expect(params.category).toBeUndefined();
+    const parsed = parseBrowseFilters(params);
+    expect([parsed.photo, parsed.photo_category, parsed.category]).toEqual(["dome tent", "CAMPING_OUTDOOR", []]);
+  });
+
+  it("drops the label once the member types a different search", () => {
+    expect(parseBrowseFilters({ q: "kayak", photo: "dome tent", photo_q: "dome tent camping" }).photo).toBe("");
+  });
+});

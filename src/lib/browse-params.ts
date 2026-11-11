@@ -43,6 +43,14 @@ export type BrowseFilters = {
   radius_km: number | null;
   sort: BrowseSort;
   page: number;
+  /** S6-03: what a photo search saw ("dome tent"); empty for a typed search. */
+  photo: string;
+  /**
+   * S6-03: the category the photo looked like, shown in the banner but not
+   * filtered on: the eval found a wrong guess (a projector read as photography)
+   * hid the right listings, 86% vs 92% top-5 hits.
+   */
+  photo_category: ListingCategory | null;
 };
 
 /** What Next hands a page for `?a=1&a=2`: a string, a list, or nothing. */
@@ -118,6 +126,10 @@ export function parseBrowseFilters(params: SearchParams): BrowseFilters {
       : sort === "relevance" && q ? "relevance"
       : defaultSort(q),
     page: Math.max(1, Number(first(params.page)) || 1),
+    // Kept only while the query is still the one the photo produced (photo_q):
+    // typing a new search in the same form must not keep saying "Looks like a tent".
+    photo: first(params.photo_q) === q ? first(params.photo).slice(0, 80) : "",
+    photo_category: first(params.photo_q) === q && isCategory(first(params.photo_category)) ? (first(params.photo_category) as ListingCategory) : null,
   };
 }
 
@@ -174,6 +186,11 @@ export function browseHref(filters: BrowseFilters): string {
       : filters.sort;
   if (usable !== defaultSort(filters.q)) search.set("sort", usable);
   if (filters.page > 1) search.set("page", String(filters.page));
+  if (filters.photo && filters.q) {
+    search.set("photo", filters.photo);
+    search.set("photo_q", filters.q);
+    if (filters.photo_category) search.set("photo_category", filters.photo_category);
+  }
 
   const query = search.toString();
   return query ? `/browse?${query}` : "/browse";
