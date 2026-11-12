@@ -88,6 +88,20 @@ export function isSort(value: string): value is ForumSort {
   return value === "hot" || value === "new" || value === "top";
 }
 
+export type CommentSort = "top" | "new";
+export const COMMENT_SORTS: { value: CommentSort; label: string }[] = [
+  { value: "top", label: "Top" },
+  { value: "new", label: "Newest" },
+];
+
+/** Sorts each level of the thread; replies stay under their parent. Ties keep the API's oldest-first order. */
+export function sortComments(comments: ForumComment[], sort: CommentSort): ForumComment[] {
+  const by = sort === "top"
+    ? (a: ForumComment, b: ForumComment) => b.score - a.score
+    : (a: ForumComment, b: ForumComment) => b.created_at.localeCompare(a.created_at);
+  return [...comments].sort(by).map((c) => ({ ...c, replies: sortComments(c.replies, sort) }));
+}
+
 export function isFlair(value: string): value is Flair {
   return (FLAIRS as string[]).includes(value);
 }

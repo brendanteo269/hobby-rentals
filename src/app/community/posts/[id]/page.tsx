@@ -9,14 +9,21 @@ import { GearCardLink } from "@/components/community/gear-card";
 import { ReportButton } from "@/components/community/report-button";
 import { VoteButtons } from "@/components/community/vote-buttons";
 import { ForumApiError, getForumPost } from "@/lib/api/forum";
-import { FLAIR_LABELS, timeAgo } from "@/lib/forum";
+import { COMMENT_SORTS, FLAIR_LABELS, sortComments, timeAgo, type CommentSort } from "@/lib/forum";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = { title: "Community — HobbyRentals" };
 
 /** S6-11: one post with its photos, linked gear, votes and threaded comments. */
-export default async function PostPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PostPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ comments?: string }>;
+}) {
   const { id } = await params;
+  const commentSort: CommentSort = (await searchParams).comments === "new" ? "new" : "top";
   let data;
   try {
     data = await getForumPost(id);
@@ -65,7 +72,25 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
           {data.comments.length === 0 ? (
             <p className="text-sm text-ink-soft">No comments yet.</p>
           ) : (
-            <CommentThread postId={post.id} comments={data.comments} viewerId={user?.id ?? null} />
+            <>
+              <nav aria-label="Sort comments" className="mb-6 flex gap-2">
+                {COMMENT_SORTS.map((option) => {
+                  const active = commentSort === option.value;
+                  return (
+                    <Link
+                      key={option.value}
+                      href={`/community/posts/${post.id}${option.value === "top" ? "" : "?comments=new"}` as Route}
+                      scroll={false}
+                      aria-current={active ? "page" : undefined}
+                      className={`rounded-full px-3 py-1.5 text-sm transition-colors ${active ? "bg-ink text-white" : "bg-surface-muted text-ink-soft hover:text-ink"}`}
+                    >
+                      {option.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+              <CommentThread postId={post.id} comments={sortComments(data.comments, commentSort)} viewerId={user?.id ?? null} />
+            </>
           )}
         </div>
       </section>
