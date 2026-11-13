@@ -58,7 +58,7 @@ export type FlaggedPassport = {
  * wait is at the top. Only DUPLICATE is flagged today.
  */
 export async function listFlaggedPassports(): Promise<{ passports: FlaggedPassport[]; error: string | null }> {
-  // ponytail: first QUEUE_LIMIT only; paginate if the queue ever gets that long.
+  // Known limit: first QUEUE_LIMIT only; paginate if the queue ever gets that long.
   const { data, error } = await createAdminClient()
     .from("product_passports")
     .select("listing_id, serial_number, listing:listings!inner(name, owner_id, status)")

@@ -256,25 +256,7 @@ export async function recordUserReportViewed(reportId: string, reportedUserId: s
 
 /** Records "booking_viewed", unless this booking's own audit trail already has an entry this recent (same reasoning as recordListingViewed). */
 export async function recordBookingViewed(bookingId: string, renterId: string): Promise<void> {
-  await recordRentalViewed("booking_viewed", bookingId, renterId);
-}
-
-/**
- * Records "escrow_viewed" against the rental's renter, so it lands in the same
- * per-booking trail as booking views. For a bundle record `rentalId` is the
- * bundle booking id, which getBookingAuditTrail never asks for - those views
- * are still written, just not surfaced on a booking page.
- */
-export async function recordEscrowViewed(rentalId: string, renterId: string): Promise<void> {
-  await recordRentalViewed("escrow_viewed", rentalId, renterId);
-}
-
-/** Dedupes per action, so opening the booking and then its escrow within the window records both. */
-async function recordRentalViewed(
-  action: "booking_viewed" | "escrow_viewed",
-  bookingId: string,
-  renterId: string,
-): Promise<void> {
+  const action = "booking_viewed";
   const supabase = createAdminClient();
   const { data, error } = await supabase
     .from("admin_audit_log")

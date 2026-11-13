@@ -16,11 +16,6 @@ export function getNotifications(filters: NotificationFilters, limit = NOTIFICAT
   return backendRequest<NotificationPage>(`/notifications?${notificationApiQuery(filters, limit)}`);
 }
 
-export async function getUnreadNotificationCount(): Promise<number> {
-  const { count } = await backendRequest<{ count: number; action_required: number }>("/notifications/unread-count");
-  return count;
-}
-
 export function getNotificationCounts() {
   return backendRequest<{ count: number; action_required: number }>("/notifications/unread-count");
 }

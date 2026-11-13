@@ -35,16 +35,3 @@ export function leaveWaitlist(entryId: string) {
 export function getMyWaitlist(openOnly = false) {
   return backendRequest<WaitlistEntry[]>(`/waitlist/mine${openOnly ? "?open_only=true" : ""}`);
 }
-
-/** Who is waiting on one of the caller's own listings, in queue order. Owner-only. */
-export function getListingWaitlist(listingId: string) {
-  return backendRequest<WaitlistEntry[]>(`/listings/${encodeURIComponent(listingId)}/waitlist`);
-}
-
-/** The caller's open place overlapping these dates, if any. */
-export function getMyWaitlistForDates(listingId: string, startDate: string, endDate: string) {
-  const query = new URLSearchParams({ start_date: startDate, end_date: endDate });
-  return backendRequest<{ entry: WaitlistEntry | null }>(
-    `/listings/${encodeURIComponent(listingId)}/waitlist/mine?${query}`,
-  );
-}

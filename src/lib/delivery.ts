@@ -32,8 +32,6 @@ export type DeliverySettings = {
   delivery_fee_cents: number | null;
 };
 
-export const NO_DELIVERY: DeliveryOffer = { offered: false, selected: false, fee_cents: 0 };
-
 /** The same limits as the server's delivery_service and the listings_delivery_valid constraint. */
 export const MAX_DELIVERY_RADIUS_KM = 50;
 export const MAX_DELIVERY_FEE_CENTS = 50_000;

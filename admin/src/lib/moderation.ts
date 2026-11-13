@@ -22,8 +22,6 @@ export const PAGE_SIZE = 25;
 export const STRIKE_LIMIT = 3;
 export const SUSPENSION_DAYS = 30;
 
-export const KIND_LABELS: Record<ReportKind, string> = { LISTING: "Listing", USER: "User", FORUM_POST: "Forum post", FORUM_COMMENT: "Forum comment" };
-
 export const PRIORITY: Record<Priority, { label: string; tone: StatusTone }> = {
   HIGH: { label: "High", tone: "critical" },
   MEDIUM: { label: "Medium", tone: "warning" },
@@ -100,16 +98,6 @@ export async function getModerationQueue(
   }
   const rows = (data ?? []) as QueuedReport[];
   return { reports: rows, total: rows[0]?.total_count ?? 0, error: null };
-}
-
-/** A report's kind and listing, so one page can open either. Null for an unknown or malformed id. */
-export async function getReportKind(id: string): Promise<{ kind: ReportKind; listing_id: string | null } | null> {
-  const { data, error } = await createAdminClient().from("reports").select("kind, listing_id").eq("id", id).maybeSingle();
-  if (error) {
-    console.error("Report lookup failed:", error.message);
-    return null;
-  }
-  return data as { kind: ReportKind; listing_id: string | null } | null;
 }
 
 /** "3 days", "5 hours", "12 minutes": how long a case has been or was open. */

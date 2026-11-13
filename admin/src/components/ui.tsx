@@ -1,4 +1,3 @@
-import Link from "next/link";
 import type { ComponentProps, ReactNode } from "react";
 import type { StatusTone } from "@/lib/users";
 
@@ -22,14 +21,6 @@ export function Button({ variant = "solid", className = "", children, ...props }
     <button className={`${buttonBase} ${buttonVariants[variant]} ${className}`} {...props}>
       {children}
     </button>
-  );
-}
-
-export function ButtonLink({ variant = "solid", className = "", children, ...props }: ButtonProps & ComponentProps<typeof Link>) {
-  return (
-    <Link className={`${buttonBase} ${buttonVariants[variant]} ${className}`} {...props}>
-      {children}
-    </Link>
   );
 }
 
