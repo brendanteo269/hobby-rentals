@@ -10,11 +10,6 @@ export function getGearRequestBoard() {
   return backendRequest<GearRequest[]>("/gear-requests");
 }
 
-/** The caller's own requests, open or closed. */
-export function getMyGearRequests() {
-  return backendRequest<GearRequest[]>("/gear-requests/mine");
-}
-
 export function getGearRequest(requestId: string) {
   return backendRequest<GearRequestDetail>(`/gear-requests/${encodeURIComponent(requestId)}`);
 }

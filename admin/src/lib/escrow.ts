@@ -1,5 +1,4 @@
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { StatusTone } from "@/lib/users";
 
 /** Ledger row types that belong to a rental's escrow story: the hold, its release, and what settlement (S3-10) or a cancellation did with it. */
 export const ESCROW_LEDGER_TYPES = [
@@ -51,29 +50,6 @@ export const ESCROW_COMPONENT_LABELS: Record<EscrowPart, string> = {
 
 /** Overall hold state computed by the admin_escrow_records view. */
 export type HoldState = "HELD" | "SETTLED" | "RELEASED" | "NONE";
-
-export const HOLD_STATE_LABELS: Record<HoldState, string> = {
-  HELD: "Held in escrow",
-  SETTLED: "Settled",
-  RELEASED: "Released",
-  NONE: "No hold",
-};
-
-export const HOLD_STATE_TONE: Record<HoldState, StatusTone> = {
-  HELD: "positive",
-  SETTLED: "neutral",
-  RELEASED: "neutral",
-  NONE: "neutral",
-};
-
-/** Falls back to the raw slug so an unrecognised state never renders blank. */
-export function holdStateLabel(state: string): string {
-  return HOLD_STATE_LABELS[state as HoldState] ?? state;
-}
-
-export function holdStateTone(state: string): StatusTone {
-  return HOLD_STATE_TONE[state as HoldState] ?? "neutral";
-}
 
 /** One escrow record from admin_get_escrow_hold: a rental with its hold amounts, state and settlement-blocking claim. */
 export type AdminEscrowSummary = {

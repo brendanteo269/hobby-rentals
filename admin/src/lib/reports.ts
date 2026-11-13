@@ -43,7 +43,7 @@ export type QueuedListingReport = {
 
 /** Open listing reports, oldest first so the longest wait leads. */
 export async function listOpenListingReports(): Promise<{ reports: QueuedListingReport[]; error: string | null }> {
-  // ponytail: first 100 only; paginate if the queue ever gets that long (S3-23's queue will).
+  // Known limit: first 100 only; paginate if the queue ever gets that long (S3-23's queue will).
   const { data, error } = await createAdminClient()
     .from("reports")
     .select("id, listing_id, reason_code, created_at, listing:listings!inner(name, status, owner_id)")
@@ -151,18 +151,6 @@ type ReportBooking = {
   listing_name: string | null;
 };
 
-/** One row of the user-report queue, without the message bundle. */
-export type UserReportSummary = {
-  id: string;
-  reason_code: string;
-  status: ReportStatus;
-  created_at: string;
-  reporter: ReportParty;
-  reported: ReportParty;
-  booking: ReportBooking;
-  message_count: number;
-};
-
 /** A user report with its evidence bundle, as GET /admin/user-reports/{id} answers. */
 export type UserReportDetail = {
   id: string;
@@ -190,35 +178,6 @@ export type UserReportDetail = {
     attachment_urls: string[];
   }[];
 };
-
-/**
- * Through the API rather than Supabase, so attachment keys can be signed for
- * viewing. Call only behind requirePortalSession().
- */
-export async function listOpenUserReports(): Promise<{ reports: UserReportSummary[]; error: string | null }> {
-  try {
-    const response = await fetch(`${apiUrl()}/admin/user-reports`, {
-      headers: { "X-Admin-Key": adminApiKey() },
-      cache: "no-store",
-    });
-    if (!response.ok) return { reports: [], error: "Could not load user reports." };
-    return { reports: await response.json(), error: null };
-  } catch (error) {
-    console.error("User report queue failed:", error);
-    return { reports: [], error: "Could not load user reports." };
-  }
-}
-
-/** Null when there is no such report. */
-export async function getUserReport(id: string): Promise<UserReportDetail | null> {
-  const response = await fetch(`${apiUrl()}/admin/user-reports/${encodeURIComponent(id)}`, {
-    headers: { "X-Admin-Key": adminApiKey() },
-    cache: "no-store",
-  });
-  if (response.status === 404) return null;
-  if (!response.ok) throw new Error(`User report lookup failed: ${response.status}`);
-  return response.json();
-}
 
 /**
  * Every user report made about one member, open first, each with its evidence

@@ -44,3 +44,8 @@ next-env.d.ts
 # Supabase CLI state left over from when this repo had its own supabase/ dir.
 # Migrations and config now live in hobby-rentals-server.
 /supabase/
+
+# Written by `next dev` when run under an AI agent.
+AGENTS.md
+CLAUDE.md
+.claude/
