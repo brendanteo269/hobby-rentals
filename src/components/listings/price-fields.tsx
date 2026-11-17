@@ -27,7 +27,7 @@ function priceFrom(priced: Priced): { block: "DAY" | "WEEK"; rate: string } {
  * the backend would then reject - a proactive echo of that rule, not a second
  * one that could drift from it.
  */
-function depositCapHint(depositCapBps: number, block: "DAY" | "WEEK" | null, rate: string): string {
+export function depositCapHint(depositCapBps: number, block: "DAY" | "WEEK" | null, rate: string): string {
   const base = "Held, not charged. Enter 0 for none.";
   const rateCents = dollarsToCents(rate);
   if (block === null || rateCents === null || Number.isNaN(rateCents) || rateCents <= 0) {
