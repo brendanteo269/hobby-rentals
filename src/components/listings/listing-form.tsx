@@ -16,6 +16,7 @@ import { PickupLocationField } from "@/components/listings/pickup-location-field
 import { RentalDurationField } from "@/components/listings/rental-duration-field";
 import { PhotoUploadField } from "@/components/listings/photo-upload-field";
 import { PricePerBlockField } from "@/components/listings/price-per-block-field";
+import { depositCapHint } from "@/components/listings/price-fields";
 import { PricingRecommendationPanel } from "@/components/listings/pricing-recommendation";
 import { ReplacementValueField } from "@/components/listings/replacement-value-field";
 import { HashTargetHighlight } from "@/components/hash-target-highlight";
@@ -99,7 +100,7 @@ export function ListingForm({
     listing?.custom_available_days ?? profileAvailableDays,
   );
   const weeklyDays = customAvailability ? customDays : profileAvailableDays;
-  
+
   const calendarFrom = availableFrom && availableFrom < today ? today : availableFrom;
 
   const [customLocation, setCustomLocation] = useState(
@@ -117,7 +118,6 @@ export function ListingForm({
     )),
   );
   const [attributeLoadError, setAttributeLoadError] = useState<string | null>(null);
-  const [touched, setTouched] = useState<Set<string>>(new Set());
   const touchedRef = useRef<Set<string>>(new Set());
   const [drafting, setDrafting] = useState(false);
   const [draftNotice, setDraftNotice] = useState<string | null>(null);
@@ -154,17 +154,16 @@ export function ListingForm({
     return () => { cancelled = true; };
   }, [fields.category]);
 
-  const updateField =
-    <K extends keyof FieldValues>(key: K) =>
-    (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-      if (key === "category") {
-        setAttributeDefinitions([]);
-        setAttributeValues({});
-        setAttributeLoadError(null);
-      }
-      setTouched((current) => { const next = new Set(current).add(key); touchedRef.current = next; return next; });
-      setFields((current) => ({ ...current, [key]: event.target.value }));
-    };
+  const updateField = (event: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const key = event.target.name as keyof FieldValues;
+    if (key === "category") {
+      setAttributeDefinitions([]);
+      setAttributeValues({});
+      setAttributeLoadError(null);
+    }
+    touchedRef.current.add(key);
+    setFields((current) => ({ ...current, [key]: event.target.value }));
+  };
 
   async function draftFrontPhoto(sessionId: string) {
     const generation = ++draftGeneration.current;
@@ -257,7 +256,7 @@ export function ListingForm({
             required
             error={errors.name}
             value={fields.name}
-            onChange={updateField("name")}
+            onChange={updateField}
           />
           <Field
             label="Brand"
@@ -267,7 +266,7 @@ export function ListingForm({
             required
             error={errors.brand}
             value={fields.brand}
-            onChange={updateField("brand")}
+            onChange={updateField}
           />
         </div>
 
@@ -281,7 +280,7 @@ export function ListingForm({
           hint="What is included, and anything a renter should know before collecting."
           error={errors.description}
           value={fields.description}
-          onChange={updateField("description")}
+          onChange={updateField}
         />
 
         <div className="grid gap-4 sm:grid-cols-2">
@@ -292,7 +291,7 @@ export function ListingForm({
             required
             error={errors.category}
             value={fields.category}
-            onChange={updateField("category")}
+            onChange={updateField}
           >
             <option value="" disabled>
               Choose one
@@ -311,7 +310,7 @@ export function ListingForm({
             required
             error={errors.condition}
             value={fields.condition}
-            onChange={updateField("condition")}
+            onChange={updateField}
           >
             <option value="" disabled>
               Choose one
@@ -334,7 +333,7 @@ export function ListingForm({
                 const value = attributeValues[definition.attribute_key] ?? "";
                 const setValue = (next: string) => {
                   const key = `attributes.${definition.attribute_key}`;
-                  setTouched((current) => { const updated = new Set(current).add(key); touchedRef.current = updated; return updated; });
+                  touchedRef.current.add(key);
                   setAttributeValues((current) => ({ ...current, [definition.attribute_key]: definition.data_type === "number" && next !== "" ? Number(next) : next }));
                 };
                 return definition.data_type === "select" ? (
@@ -397,7 +396,7 @@ export function ListingForm({
           inputMode="decimal"
           placeholder="0.00"
           required
-          hint="Held as security during a rental, not charged. Enter 0 if no deposit is required."
+          hint={depositCapHint(depositCapBps, priceBlock, priceRate)}
           error={errors.deposit_cents}
           className="max-w-xs"
           value={deposit}
